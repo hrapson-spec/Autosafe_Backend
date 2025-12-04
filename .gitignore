@@ -1,0 +1,16 @@
+# Environment and OS noise
+.venv/
+env/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Large Data Files (Ignored)
+*.csv
+*.db
+MOT Test Results/
+MOT Test Failures/
+MOT testing data results (2024)-2/
