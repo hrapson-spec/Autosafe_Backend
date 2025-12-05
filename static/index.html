@@ -8,6 +8,8 @@
     <meta name="description"
         content="Find out how likely your car is to fail its MOT test. Based on real UK government data.">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -178,6 +180,10 @@
         </footer>
     </div>
 
+    <script>
+        // Dynamically set year max to current year + 1
+        document.getElementById('year').max = new Date().getFullYear() + 1;
+    </script>
     <script src="/static/script.js"></script>
 </body>
 

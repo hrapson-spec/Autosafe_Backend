@@ -64,6 +64,13 @@ function setupEventListeners() {
 async function loadMakes() {
     makeSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
 
+    // Check if offline
+    if (!navigator.onLine) {
+        makeSelect.innerHTML = '<option value="" disabled selected>Offline</option>';
+        showError('You appear to be offline. Please check your connection.');
+        return;
+    }
+
     try {
         const res = await fetch(`${API_BASE}/makes`);
         const makes = await res.json();

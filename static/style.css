@@ -473,25 +473,30 @@ input::placeholder {
     background: var(--danger-red);
 }
 
-.concern-status {
-    font-size: 0.8rem;
-    font-weight: 600;
+.concern-status,
+.concern-level {
+    font-size: 0.85rem;
+    font-weight: 500;
     white-space: nowrap;
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-sm);
+    flex-shrink: 0;
 }
 
-.concern-status.status-low {
+.concern-status.status-low,
+.concern-level.level-low {
     color: var(--success-green);
     background: var(--success-bg);
 }
 
-.concern-status.status-medium {
+.concern-status.status-medium,
+.concern-level.level-medium {
     color: var(--warning-amber);
     background: var(--warning-bg);
 }
 
-.concern-status.status-high {
+.concern-status.status-high,
+.concern-level.level-high {
     color: var(--danger-red);
     background: var(--danger-bg);
 }
