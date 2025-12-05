@@ -206,6 +206,17 @@ function getRiskLevel(riskValue) {
     }
 }
 
+// ===== Component Icons =====
+const COMPONENT_ICONS = {
+    'Brakes': '🛞',
+    'Suspension': '🔧',
+    'Tyres': '⭕',
+    'Steering': '🎯',
+    'Visibility': '👁️',
+    'Lights & Electrics': '💡',
+    'Body & Chassis': '🚗'
+};
+
 // ===== Display Component Concerns =====
 function displayConcerns(data) {
     const grid = document.getElementById('concernsGrid');
@@ -217,7 +228,11 @@ function displayConcerns(data) {
         if (key.startsWith('Risk_') && !key.includes('CI_')) {
             const rawName = key.replace('Risk_', '').replace(/_/g, ' ');
             const displayName = COMPONENT_NAMES[rawName] || rawName;
-            components.push({ name: displayName, value: value || 0 });
+            components.push({
+                name: displayName,
+                value: value || 0,
+                icon: COMPONENT_ICONS[displayName] || '🔩'
+            });
         }
     }
 
@@ -225,22 +240,62 @@ function displayConcerns(data) {
     components.sort((a, b) => b.value - a.value);
     const topConcerns = components.slice(0, 5);
 
-    topConcerns.forEach(comp => {
+    // Handle case where no component data is available
+    if (topConcerns.length === 0) {
+        const noData = document.createElement('p');
+        noData.className = 'no-data-message';
+        noData.textContent = 'Component breakdown not available for this vehicle.';
+        grid.appendChild(noData);
+        return;
+    }
+
+    topConcerns.forEach((comp, index) => {
         const concernLevel = getConcernLevel(comp.value);
+        const barWidth = Math.min(Math.max(comp.value * 500, 10), 100); // Scale for visibility
 
         const card = document.createElement('div');
-        card.className = `concern-card concern-${concernLevel.class}`;
+        card.className = 'concern-card';
+        card.style.animationDelay = `${index * 0.1}s`;
 
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'concern-name';
-        nameSpan.textContent = comp.name;
+        // Icon
+        const iconDiv = document.createElement('div');
+        iconDiv.className = `concern-icon icon-${concernLevel.class}`;
+        iconDiv.textContent = comp.icon;
 
-        const levelSpan = document.createElement('span');
-        levelSpan.className = `concern-level level-${concernLevel.class}`;
-        levelSpan.textContent = concernLevel.label;
+        // Details container
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'concern-details';
 
-        card.appendChild(nameSpan);
-        card.appendChild(levelSpan);
+        // Name
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'concern-name';
+        nameDiv.textContent = comp.name;
+
+        // Progress bar
+        const barContainer = document.createElement('div');
+        barContainer.className = 'concern-bar-container';
+
+        const bar = document.createElement('div');
+        bar.className = `concern-bar bar-${concernLevel.class}`;
+        bar.style.width = '0%';
+        barContainer.appendChild(bar);
+
+        // Animate bar after render
+        setTimeout(() => {
+            bar.style.width = `${barWidth}%`;
+        }, 100 + index * 100);
+
+        detailsDiv.appendChild(nameDiv);
+        detailsDiv.appendChild(barContainer);
+
+        // Status badge
+        const statusSpan = document.createElement('span');
+        statusSpan.className = `concern-status status-${concernLevel.class}`;
+        statusSpan.textContent = concernLevel.label;
+
+        card.appendChild(iconDiv);
+        card.appendChild(detailsDiv);
+        card.appendChild(statusSpan);
         grid.appendChild(card);
     });
 }
@@ -248,11 +303,11 @@ function displayConcerns(data) {
 // ===== Get Concern Level =====
 function getConcernLevel(value) {
     if (value < CONCERN_THRESHOLDS.low) {
-        return { class: 'low', label: 'Low concern' };
+        return { class: 'low', label: '✓ OK' };
     } else if (value < CONCERN_THRESHOLDS.medium) {
-        return { class: 'medium', label: 'Medium concern' };
+        return { class: 'medium', label: 'Check' };
     } else {
-        return { class: 'high', label: 'High concern' };
+        return { class: 'high', label: 'Watch!' };
     }
 }
 

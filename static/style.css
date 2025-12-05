@@ -390,9 +390,17 @@ input::placeholder {
     gap: var(--space-md);
 }
 
+.no-data-message {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: var(--space-lg);
+}
+
 .concern-card {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-md);
     padding: var(--space-md);
     background: var(--background);
@@ -437,6 +445,7 @@ input::placeholder {
     color: var(--text-primary);
     font-size: 0.95rem;
     margin-bottom: var(--space-xs);
+    flex: 1;
 }
 
 .concern-bar-container {
