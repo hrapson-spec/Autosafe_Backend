@@ -28,6 +28,22 @@ async def close_pool():
         await _pool.close()
         _pool = None
 
+def normalize_columns(row_dict: Dict) -> Dict:
+    """Convert lowercase PostgreSQL column names back to expected format.
+    
+    Examples:
+        total_tests -> Total_Tests
+        failure_risk -> Failure_Risk
+        risk_brakes -> Risk_Brakes
+    """
+    normalized = {}
+    for key, value in row_dict.items():
+        # Convert to Title_Case (each word capitalized, joined by underscore)
+        parts = key.split('_')
+        new_key = '_'.join(part.capitalize() for part in parts)
+        normalized[new_key] = value
+    return normalized
+
 async def get_makes() -> List[str]:
     """Return a list of all unique vehicle makes."""
     pool = await get_pool()
@@ -71,7 +87,7 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
         )
         
         if row:
-            return dict(row)
+            return normalize_columns(dict(row))
         
         # Check if model exists at all
         exists = await conn.fetchrow(
