@@ -45,7 +45,9 @@ def normalize_columns(row_dict: Dict) -> Dict:
     return normalized
 
 async def get_makes() -> List[str]:
-    """Return a list of all unique vehicle makes."""
+    """Return a list of all unique canonical vehicle makes."""
+    from consolidate_models import normalize_make, MAJOR_MAKES
+    
     pool = await get_pool()
     if not pool:
         return None  # Fallback to mock data
@@ -56,63 +58,128 @@ async def get_makes() -> List[str]:
         for row in rows:
             parts = row['model_id'].split(' ', 1)
             if len(parts) > 0:
-                makes.add(parts[0])
-        return sorted(list(makes))
+                canonical = normalize_make(parts[0])
+                if canonical:  # Filter out None (garbage makes)
+                    makes.add(canonical)
+        
+        # Sort with major makes first, then alphabetically
+        def sort_key(make):
+            if make in MAJOR_MAKES:
+                return (0, MAJOR_MAKES.index(make))
+            return (1, make)
+        
+        return sorted(list(makes), key=sort_key)
 
 async def get_models(make: str) -> List[str]:
-    """Return a list of models for a given make."""
+    """Return a list of consolidated base models for a given make."""
+    from consolidate_models import extract_base_model, get_canonical_models_for_make, CANONICAL_MAKES
+    
     pool = await get_pool()
     if not pool:
         return None  # Fallback to mock data
     
+    # Handle canonical make lookups (e.g., "MERCEDES-BENZ" needs to search "MERCEDES")
+    search_patterns = [make.upper()]
+    
+    # Add reverse mappings for compound makes
+    for raw, canonical in CANONICAL_MAKES.items():
+        if canonical == make.upper():
+            search_patterns.append(raw)
+    
     async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT DISTINCT model_id FROM mot_risk WHERE model_id LIKE $1",
-            f"{make.upper()}%"
-        )
-        return sorted([row['model_id'] for row in rows])
+        # Get all model_ids for this make (and its aliases)
+        all_models = set()
+        for pattern in search_patterns:
+            rows = await conn.fetch(
+                "SELECT DISTINCT model_id FROM mot_risk WHERE model_id LIKE $1",
+                f"{pattern}%"
+            )
+            for row in rows:
+                base_model = extract_base_model(row['model_id'], make)
+                if base_model and len(base_model) > 1:
+                    all_models.add(base_model)
+        
+        # Get known models for this make and put them first
+        known = get_canonical_models_for_make(make)
+        
+        def sort_key(model):
+            if model in known:
+                return (0, known.index(model))
+            return (1, model)
+        
+        return sorted(list(all_models), key=sort_key)
 
 async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[Dict]:
-    """Get risk data for a specific vehicle configuration."""
+    """Get aggregated risk data for a vehicle, combining all variants."""
     pool = await get_pool()
     if not pool:
         return None  # Fallback to mock data
     
     async with pool.acquire() as conn:
-        # Try exact match first
-        row = await conn.fetchrow(
-            """SELECT * FROM mot_risk 
-               WHERE model_id = $1 AND age_band = $2 AND mileage_band = $3""",
-            model_id, age_band, mileage_band
+        # model_id is now "MAKE MODEL" (e.g., "FORD FIESTA")
+        # We need to find all variants and aggregate their risk
+        
+        # Search for all variants of this base model
+        rows = await conn.fetch(
+            """SELECT 
+                SUM(total_tests) as total_tests,
+                SUM(total_failures) as total_failures,
+                SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as failure_risk,
+                SUM(risk_brakes * total_tests) / NULLIF(SUM(total_tests), 0) as risk_brakes,
+                SUM(risk_suspension * total_tests) / NULLIF(SUM(total_tests), 0) as risk_suspension,
+                SUM(risk_tyres * total_tests) / NULLIF(SUM(total_tests), 0) as risk_tyres,
+                SUM(risk_steering * total_tests) / NULLIF(SUM(total_tests), 0) as risk_steering,
+                SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) as risk_visibility,
+                SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) as risk_lamps_reflectors_and_electrical_equipment,
+                SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) as risk_body_chassis_structure
+               FROM mot_risk 
+               WHERE model_id LIKE $1 
+               AND age_band = $2 AND mileage_band = $3""",
+            f"{model_id}%", age_band, mileage_band
         )
         
-        if row:
-            return normalize_columns(dict(row))
+        if rows and rows[0]['total_tests']:
+            result = {
+                "Model_Id": model_id,
+                "Age_Band": age_band,
+                "Mileage_Band": mileage_band,
+                "Total_Tests": int(rows[0]['total_tests']),
+                "Total_Failures": int(rows[0]['total_failures']) if rows[0]['total_failures'] else 0,
+                "Failure_Risk": float(rows[0]['failure_risk']) if rows[0]['failure_risk'] else 0.0,
+                "Risk_Brakes": float(rows[0]['risk_brakes']) if rows[0]['risk_brakes'] else 0.0,
+                "Risk_Suspension": float(rows[0]['risk_suspension']) if rows[0]['risk_suspension'] else 0.0,
+                "Risk_Tyres": float(rows[0]['risk_tyres']) if rows[0]['risk_tyres'] else 0.0,
+                "Risk_Steering": float(rows[0]['risk_steering']) if rows[0]['risk_steering'] else 0.0,
+                "Risk_Visibility": float(rows[0]['risk_visibility']) if rows[0]['risk_visibility'] else 0.0,
+                "Risk_Lamps_Reflectors_And_Electrical_Equipment": float(rows[0]['risk_lamps_reflectors_and_electrical_equipment']) if rows[0]['risk_lamps_reflectors_and_electrical_equipment'] else 0.0,
+                "Risk_Body_Chassis_Structure": float(rows[0]['risk_body_chassis_structure']) if rows[0]['risk_body_chassis_structure'] else 0.0,
+            }
+            return result
         
-        # Check if model exists at all
+        # No data for this specific band - try any band for this model
         exists = await conn.fetchrow(
-            "SELECT 1 FROM mot_risk WHERE model_id = $1 LIMIT 1",
-            model_id
+            "SELECT 1 FROM mot_risk WHERE model_id LIKE $1 LIMIT 1",
+            f"{model_id}%"
         )
         
         if not exists:
-            # Try to find a suggestion
-            suggestion = await conn.fetchrow(
-                "SELECT DISTINCT model_id FROM mot_risk WHERE model_id LIKE $1 LIMIT 1",
-                f"%{model_id.split()[-1]}%"  # Search by last word (model name)
-            )
-            return {"error": "not_found", "suggestion": suggestion['model_id'] if suggestion else None}
+            return {"error": "not_found", "suggestion": None}
         
-        # Model exists but specific band doesn't - return average
-        avg_row = await conn.fetchrow(
-            "SELECT AVG(failure_risk) as avg_risk FROM mot_risk WHERE model_id = $1",
-            model_id
+        # Model exists but specific band doesn't - return overall average
+        avg_rows = await conn.fetch(
+            """SELECT 
+                SUM(total_tests) as total_tests,
+                SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as avg_risk
+               FROM mot_risk WHERE model_id LIKE $1""",
+            f"{model_id}%"
         )
         
         return {
-            "model_id": model_id,
-            "age_band": age_band,
-            "mileage_band": mileage_band,
+            "Model_Id": model_id,
+            "Age_Band": age_band,
+            "Mileage_Band": mileage_band,
             "note": "Exact age/mileage match not found. Returning model average.",
-            "Failure_Risk": float(avg_row['avg_risk']) if avg_row['avg_risk'] else 0.0
+            "Total_Tests": int(avg_rows[0]['total_tests']) if avg_rows[0]['total_tests'] else 0,
+            "Failure_Risk": float(avg_rows[0]['avg_risk']) if avg_rows[0]['avg_risk'] else 0.0
         }
+
