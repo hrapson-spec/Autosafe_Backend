@@ -18,6 +18,7 @@ class DefectConfig:
     DETAIL_FILE = "item_detail.csv"
     GROUP_FILE = "item_group.csv"
     OUTPUT_FILE = "defects_summary.csv"
+    ADVISORIES_OUTPUT_FILE = "advisories_summary.csv"
     CHUNK_SIZE = 1_000_000
     VEHICLE_CLASS = "4"  # Standard cars
     
@@ -99,6 +100,7 @@ def process_defects_pipeline():
     relevant_failures = []
     total_matched = 0
     total_unmatched = 0
+    advisory_counts = []  # Track advisories separately
     
     for filename in all_files:
         logging.info(f"Reading {os.path.basename(filename)}...")
@@ -114,22 +116,31 @@ def process_defects_pipeline():
             )
             
             for chunk in chunk_iterator:
-                chunk = chunk[chunk["rfr_type_code"].isin(["F", "P"])]
-                chunk["category"] = chunk["rfr_id"].map(rfr_mapping)
+                # Separate failures from advisories
+                failures = chunk[chunk["rfr_type_code"].isin(["F", "P"])]
+                advisories = chunk[chunk["rfr_type_code"] == "A"]
                 
-                matched = chunk["category"].notna().sum()
-                unmatched = chunk["category"].isna().sum()
+                # Process failures (existing logic)
+                failures["category"] = failures["rfr_id"].map(rfr_mapping)
+                
+                matched = failures["category"].notna().sum()
+                unmatched = failures["category"].isna().sum()
                 total_matched += matched
                 total_unmatched += unmatched
                 
-                chunk = chunk.dropna(subset=["category"])
+                failures = failures.dropna(subset=["category"])
                 
-                if not chunk.empty:
+                if not failures.empty:
                     chunk_pivoted = pd.crosstab(
-                        chunk["test_id"],
-                        chunk["category"]
+                        failures["test_id"],
+                        failures["category"]
                     ).clip(upper=1)
                     relevant_failures.append(chunk_pivoted)
+                
+                # Process advisories (new: count per test)
+                if not advisories.empty:
+                    adv_counts = advisories.groupby("test_id").size().reset_index(name="advisory_count")
+                    advisory_counts.append(adv_counts)
         except Exception as e:
             logging.error(f"Error processing file {filename}: {e}")
             continue
@@ -148,6 +159,16 @@ def process_defects_pipeline():
         logging.info(f"Columns: {list(final_df.columns)}")
     else:
         logging.error("No matching defects found.")
+    
+    # Save advisory counts
+    if advisory_counts:
+        advisories_df = pd.concat(advisory_counts).groupby("test_id").sum().reset_index()
+        advisories_df.set_index("test_id", inplace=True)
+        advisories_df.index = advisories_df.index.astype(str)
+        advisories_df.to_csv(DefectConfig.ADVISORIES_OUTPUT_FILE)
+        logging.info(f"SUCCESS: Saved {len(advisories_df):,} advisory records to '{DefectConfig.ADVISORIES_OUTPUT_FILE}'")
+    else:
+        logging.info("No advisories found to save.")
 
 if __name__ == "__main__":
     process_defects_pipeline()

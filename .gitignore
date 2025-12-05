@@ -14,3 +14,8 @@ __pycache__/
 MOT Test Results/
 MOT Test Failures/
 MOT testing data results (2024)-2/
+
+# Framework design documents
+MOT Failure Risk Framework Design.pdf
+framework_design_extracted.txt
+

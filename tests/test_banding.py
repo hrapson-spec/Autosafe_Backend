@@ -19,8 +19,10 @@ class TestBanding(unittest.TestCase):
         self.assertEqual(get_age_band(5.9), '3-5')
         self.assertEqual(get_age_band(6), '6-10')
         self.assertEqual(get_age_band(10.9), '6-10')
-        self.assertEqual(get_age_band(11), '10+')
-        self.assertEqual(get_age_band(20), '10+')
+        self.assertEqual(get_age_band(11), '10-15')
+        self.assertEqual(get_age_band(15.9), '10-15')
+        self.assertEqual(get_age_band(16), '15+')
+        self.assertEqual(get_age_band(25), '15+')
 
     def test_get_mileage_band(self):
         self.assertEqual(get_mileage_band(pd.NA), 'Unknown')

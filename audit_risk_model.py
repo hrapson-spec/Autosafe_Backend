@@ -144,6 +144,43 @@ def audit_risk_model(file_path, golden_file_path=None):
     elif golden_file_path:
         logging.warning(f"Golden file {golden_file_path} not found. Skipping regression test.")
 
+    # ---------------------------------------------------------
+    # 6. BRIER SCORE (Probability Calibration)
+    # ---------------------------------------------------------
+    logging.info("\n--- TEST 6: BRIER SCORE (CALIBRATION) ---")
+    if 'Failure_Risk' in df.columns:
+        # Calculate observed failure rate per row
+        df['observed_rate'] = df['Total_Failures'] / df['Total_Tests'].clip(lower=1)
+        
+        # Weighted Brier score (weighted by sample size)
+        weights = df['Total_Tests']
+        squared_errors = (df['Failure_Risk'] - df['observed_rate']) ** 2
+        weighted_brier = (squared_errors * weights).sum() / weights.sum()
+        unweighted_brier = squared_errors.mean()
+        
+        logging.info(f"Weighted Brier Score: {weighted_brier:.6f}")
+        logging.info(f"Unweighted Brier Score: {unweighted_brier:.6f}")
+        
+        # Interpretation
+        if weighted_brier < 0.001:
+            logging.info("PASS: Excellent calibration (Brier < 0.001)")
+        elif weighted_brier < 0.01:
+            logging.info("PASS: Good calibration (Brier < 0.01)")
+        elif weighted_brier < 0.05:
+            logging.warning("WARNING: Moderate calibration (Brier < 0.05)")
+        else:
+            logging.error("FAIL: Poor calibration (Brier >= 0.05)")
+        
+        # Check for systematic over/under prediction
+        mean_predicted = df['Failure_Risk'].mean()
+        mean_observed = df['observed_rate'].mean()
+        bias = mean_predicted - mean_observed
+        logging.info(f"Prediction Bias: {bias:+.4f} ({'over-predicting' if bias > 0 else 'under-predicting'})")
+        
+        df.drop(columns=['observed_rate'], inplace=True)
+    else:
+        logging.warning("SKIP: 'Failure_Risk' column not found for Brier score calculation.")
+
 if __name__ == "__main__":
     import sys
     file_path = 'FINAL_MOT_REPORT.csv'
