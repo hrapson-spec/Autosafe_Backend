@@ -1,56 +1,74 @@
 """
-Confidence interval utilities for risk estimation.
-Implements Wilson score interval for binomial proportions.
+Confidence Interval Calculations for AutoSafe
+Uses Wilson score interval for binomial proportions
 """
 import math
+from typing import Tuple
 
 
-def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tuple:
+def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> Tuple[float, float]:
     """
-    Calculate Wilson score interval for binomial proportion.
+    Calculate the Wilson score confidence interval for a binomial proportion.
     
-    More accurate than simple normal approximation, especially for
-    small sample sizes or extreme proportions.
+    This is the recommended method for small sample sizes and proportions near 0 or 1.
     
     Args:
-        successes: Number of "success" events (e.g., failures)
-        total: Total number of trials (e.g., tests)
-        confidence: Confidence level (default 0.95 for 95% CI)
+        successes: Number of "successes" (failures in MOT context)
+        total: Total number of trials (tests)
+        confidence: Confidence level (default 95%)
     
     Returns:
-        Tuple of (lower_bound, upper_bound) for the confidence interval
+        Tuple of (lower_bound, upper_bound) for the true proportion
     """
     if total == 0:
-        return 0.0, 1.0
+        return (0.0, 0.0)
     
-    # Z-score for confidence level
-    z = 1.96 if confidence == 0.95 else 2.576 if confidence == 0.99 else 1.645
+    # Z-score for confidence level (1.96 for 95%)
+    z = 1.96 if confidence == 0.95 else 1.645 if confidence == 0.90 else 2.576
     
-    p = successes / total
     n = total
+    p_hat = successes / n
     
     denominator = 1 + z**2 / n
-    center = (p + z**2 / (2 * n)) / denominator
-    margin = z * math.sqrt((p * (1 - p) + z**2 / (4 * n)) / n) / denominator
+    center = (p_hat + z**2 / (2*n)) / denominator
     
-    return max(0.0, center - margin), min(1.0, center + margin)
+    spread = z * math.sqrt((p_hat * (1 - p_hat) + z**2 / (4*n)) / n) / denominator
+    
+    lower = max(0, center - spread)
+    upper = min(1, center + spread)
+    
+    return (lower, upper)
 
 
 def classify_confidence(total_tests: int) -> str:
     """
-    Classify confidence level based on sample size.
+    Classify the confidence level based on sample size.
     
     Args:
-        total_tests: Number of tests in the sample
+        total_tests: Number of MOT tests in the sample
     
     Returns:
-        Human-readable confidence classification
+        Confidence level string: "High", "Good", or "Limited"
     """
-    if total_tests >= 1000:
+    if total_tests >= 10000:
         return "High"
-    elif total_tests >= 100:
-        return "Medium"
-    elif total_tests >= 20:
-        return "Low"
+    elif total_tests >= 1000:
+        return "Good"
     else:
-        return "Very Low"
+        return "Limited"
+
+
+def margin_of_error(successes: int, total: int, confidence: float = 0.95) -> float:
+    """
+    Calculate the margin of error for the estimate.
+    
+    Args:
+        successes: Number of failures
+        total: Total tests
+        confidence: Confidence level
+    
+    Returns:
+        Margin of error as a decimal (e.g., 0.02 = ±2%)
+    """
+    lower, upper = wilson_interval(successes, total, confidence)
+    return (upper - lower) / 2
