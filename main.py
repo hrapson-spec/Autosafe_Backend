@@ -12,12 +12,50 @@ import os
 # Import database module for PostgreSQL
 import database as db
 from utils import get_age_band, get_mileage_band
+import logging
+import sys
+
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API")
 
 # Check for PostgreSQL first, then SQLite
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_FILE = 'autosafe.db'
+
+# Rate Limiting Setup
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring."""
+    db_status = "disconnected"
+    if DATABASE_URL:
+        try:
+            pool = await db.get_pool()
+            if pool:
+                db_status = "connected"
+        except Exception:
+            db_status = "error"
+    
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat(),
+        "database": db_status
+    }
 
 # SQLite fallback connection (for local development)
 import sqlite3
@@ -52,7 +90,8 @@ MOCK_RISK = {
 
 
 @app.get("/api/makes", response_model=List[str])
-async def get_makes():
+@limiter.limit("100/minute")
+async def get_makes(request: Request):
     """Return a list of all unique vehicle makes."""
     # Try PostgreSQL first
     if DATABASE_URL:
@@ -77,7 +116,8 @@ async def get_makes():
 
 
 @app.get("/api/models", response_model=List[str])
-async def get_models(make: str = Query(..., description="Vehicle Make (e.g., FORD)")):
+@limiter.limit("100/minute")
+async def get_models(request: Request, make: str = Query(..., description="Vehicle Make (e.g., FORD)")):
     """Return a list of models for a given make."""
     # Try PostgreSQL first
     if DATABASE_URL:
@@ -98,7 +138,9 @@ async def get_models(make: str = Query(..., description="Vehicle Make (e.g., FOR
 
 
 @app.get("/api/risk")
+@limiter.limit("50/minute")
 async def get_risk(
+    request: Request,
     make: str = Query(..., description="Vehicle Make (e.g., FORD)"),
     model: str = Query(..., description="Vehicle Model (e.g., FIESTA)"),
     year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year (1900-2025)"),

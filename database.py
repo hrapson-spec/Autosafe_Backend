@@ -11,22 +11,35 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 # PostgreSQL connection pool (lazy initialization)
 _pool = None
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 async def get_pool():
     """Get or create the connection pool."""
     global _pool
     if _pool is None and DATABASE_URL:
         import asyncpg
-        # Railway uses postgres:// but asyncpg needs postgresql://
-        db_url = DATABASE_URL.replace("postgres://", "postgresql://")
-        _pool = await asyncpg.create_pool(db_url, min_size=1, max_size=10)
+        try:
+            # Railway uses postgres:// but asyncpg needs postgresql://
+            db_url = DATABASE_URL.replace("postgres://", "postgresql://")
+            _pool = await asyncpg.create_pool(db_url, min_size=1, max_size=10)
+            logger.info("Database connection pool created")
+        except Exception as e:
+            logger.error(f"Failed to create database connection pool: {e}")
+            return None
     return _pool
 
 async def close_pool():
     """Close the connection pool."""
     global _pool
     if _pool:
-        await _pool.close()
-        _pool = None
+        try:
+            await _pool.close()
+            _pool = None
+            logger.info("Database connection pool closed")
+        except Exception as e:
+            logger.error(f"Error closing database pool: {e}")
 
 def normalize_columns(row_dict: Dict) -> Dict:
     """Convert lowercase PostgreSQL column names back to expected format.
