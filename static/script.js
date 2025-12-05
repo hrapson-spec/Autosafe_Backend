@@ -12,9 +12,12 @@ const resultsPanel = document.getElementById('resultsPanel');
 
 // Load Makes on Start
 async function loadMakes() {
+    makeSelect.innerHTML = '<option value="" disabled selected>Loading makes...</option>';
     try {
         const res = await fetch(`${API_BASE}/makes`);
         const makes = await res.json();
+
+        makeSelect.innerHTML = '<option value="" disabled selected>Select Make</option>';
         makes.forEach(make => {
             const option = document.createElement('option');
             option.value = make;
@@ -23,7 +26,28 @@ async function loadMakes() {
         });
     } catch (err) {
         console.error('Failed to load makes', err);
+        makeSelect.innerHTML = '<option value="" disabled selected>Error loading makes</option>';
+        showError('Failed to load vehicle makes. Please refresh.');
     }
+}
+
+function showError(message) {
+    // Create or get error banner
+    let banner = document.getElementById('errorBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'errorBanner';
+        banner.className = 'error-banner hidden';
+        document.querySelector('.container').prepend(banner);
+    }
+
+    banner.textContent = message;
+    banner.classList.remove('hidden');
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        banner.classList.add('hidden');
+    }, 5000);
 }
 
 // Load Models when Make changes
@@ -39,9 +63,6 @@ makeSelect.addEventListener('change', async () => {
         modelSelect.innerHTML = '<option value="" disabled selected>Select Model</option>';
         models.forEach(modelId => {
             // modelId is "MAKE MODEL", we want to show just "MODEL"
-            // But we need to pass the "MODEL" part to the API? 
-            // The API expects "model" parameter. 
-            // If model_id is "FORD FIESTA", and make is "FORD", model param should be "FIESTA".
             const modelName = modelId.replace(make + ' ', '');
 
             const option = document.createElement('option');
@@ -53,6 +74,7 @@ makeSelect.addEventListener('change', async () => {
     } catch (err) {
         console.error('Failed to load models', err);
         modelSelect.innerHTML = '<option value="" disabled selected>Error loading models</option>';
+        showError('Failed to load models. Please try again.');
     }
 });
 
@@ -66,6 +88,10 @@ form.addEventListener('submit', async (e) => {
     analyzeBtn.disabled = true;
     resultsPanel.classList.add('hidden');
 
+    // Hide any previous errors
+    const banner = document.getElementById('errorBanner');
+    if (banner) banner.classList.add('hidden');
+
     const make = makeSelect.value;
     const model = modelSelect.value;
     const year = yearInput.value;
@@ -77,13 +103,19 @@ form.addEventListener('submit', async (e) => {
 
         if (!res.ok) {
             const errData = await res.json();
+            // Handle validation errors (422) nicely
+            if (res.status === 422 && errData.detail) {
+                const msg = errData.detail[0].msg;
+                const loc = errData.detail[0].loc[1]; // field name
+                throw new Error(`${loc}: ${msg}`);
+            }
             throw new Error(errData.detail || 'Failed to analyze risk');
         }
 
         const data = await res.json();
         displayResults(data, year);
     } catch (err) {
-        alert(err.message);
+        showError(err.message);
     } finally {
         btnText.classList.remove('hidden');
         loader.classList.add('hidden');
@@ -156,10 +188,19 @@ function displayResults(data, year) {
         }
 
         card.className = 'component-card';
-        card.innerHTML = `
-            <span class="comp-name">${comp.name}</span>
-            <span class="comp-val ${textClass}">${compPercent}</span>
-        `;
+
+        // Create elements safely to prevent XSS
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'comp-name';
+        nameSpan.textContent = comp.name;
+
+        const valSpan = document.createElement('span');
+        valSpan.className = `comp-val ${textClass}`;
+        valSpan.textContent = compPercent;
+
+        card.appendChild(nameSpan);
+        card.appendChild(valSpan);
+
         componentsGrid.appendChild(card);
     });
 }
