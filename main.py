@@ -101,8 +101,8 @@ async def get_models(make: str = Query(..., description="Vehicle Make (e.g., FOR
 async def get_risk(
     make: str = Query(..., description="Vehicle Make (e.g., FORD)"),
     model: str = Query(..., description="Vehicle Model (e.g., FIESTA)"),
-    year: int = Query(..., description="Vehicle Registration Year"),
-    mileage: int = Query(..., description="Vehicle Mileage")
+    year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year (1900-2025)"),
+    mileage: int = Query(..., ge=0, le=999999, description="Vehicle Mileage (0-999,999)")
 ):
     """Calculate risk for a specific vehicle."""
     # Calculate age and bands
