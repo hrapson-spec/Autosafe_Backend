@@ -86,9 +86,12 @@ async def get_models(make: str) -> List[str]:
         if canonical == make.upper():
             search_patterns.append(raw)
     
+    # Get curated list of known models for this make
+    known_models = get_canonical_models_for_make(make)
+    
     async with pool.acquire() as conn:
         # Get all model_ids for this make (and its aliases)
-        all_models = set()
+        found_models = set()
         for pattern in search_patterns:
             rows = await conn.fetch(
                 "SELECT DISTINCT model_id FROM mot_risk WHERE model_id LIKE $1",
@@ -97,17 +100,16 @@ async def get_models(make: str) -> List[str]:
             for row in rows:
                 base_model = extract_base_model(row['model_id'], make)
                 if base_model and len(base_model) > 1:
-                    all_models.add(base_model)
+                    found_models.add(base_model)
         
-        # Get known models for this make and put them first
-        known = get_canonical_models_for_make(make)
+        # If we have a curated list, only return models from it that exist in data
+        if known_models:
+            result = [m for m in known_models if m in found_models]
+            return result
         
-        def sort_key(model):
-            if model in known:
-                return (0, known.index(model))
-            return (1, model)
-        
-        return sorted(list(all_models), key=sort_key)
+        # For non-curated makes, return alphabetic models only (capped)
+        clean = [m for m in found_models if len(m) >= 3 and m.isalpha()]
+        return sorted(clean)[:30]
 
 async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[Dict]:
     """Get aggregated risk data for a vehicle, combining all variants."""

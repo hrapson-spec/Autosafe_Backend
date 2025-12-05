@@ -57,7 +57,7 @@ MODEL_PATTERNS = [
 ]
 
 def normalize_make(raw_make: str) -> str:
-    """Convert raw make to canonical form."""
+    """Convert raw make to canonical form. Returns None for non-major makes."""
     if not raw_make:
         return None
     
@@ -65,18 +65,19 @@ def normalize_make(raw_make: str) -> str:
     
     # Check explicit mappings first
     if make in CANONICAL_MAKES:
-        return CANONICAL_MAKES[make]
+        return CANONICAL_MAKES[make]  # May return None for garbage
     
     # Check if it's a known major make
     if make in MAJOR_MAKES:
         return make
     
-    # Try partial matches for compound makes
+    # Try partial matches for compound makes (e.g., "LAND" -> "LAND ROVER")
     for major in MAJOR_MAKES:
-        if make.startswith(major.split()[0]):
+        if make.startswith(major.split()[0]) and major.split()[0] == make:
             return major
     
-    return make  # Return as-is if no mapping found
+    # Return None for unknown makes - we only want curated makes
+    return None
 
 def extract_base_model(model_id: str, make: str) -> str:
     """Extract base model name from full model_id."""
@@ -88,21 +89,54 @@ def extract_base_model(model_id: str, make: str) -> str:
     if model.startswith(make.upper()):
         model = model[len(make):].strip()
     
+    # Skip entries that start with special chars, numbers, or are too short
+    if not model or len(model) < 2:
+        return None
+    if model[0] in './-()':
+        return None
+    
     # Apply cleaning patterns
     for pattern, replacement in MODEL_PATTERNS:
         model = re.sub(pattern, replacement, model, flags=re.IGNORECASE)
     
-    # Get first 2 words as base model (e.g., "FIESTA ZETEC" -> "FIESTA")
+    # Get the first word as base model name
     words = model.split()
-    if len(words) >= 1:
-        # Check if second word is a variant (ZETEC, ST, GTI, etc.)
-        variants = ['ZETEC', 'ST', 'GTI', 'RS', 'AMG', 'M', 'S', 'SPORT', 'LINE',
-                   'ACTIVE', 'TITANIUM', 'VIGNALE', 'GHIA', 'LX', 'SE', 'SRI']
-        if len(words) >= 2 and words[1] not in variants:
-            return ' '.join(words[:2])
-        return words[0]
+    if not words:
+        return None
     
-    return model.strip()
+    first_word = words[0]
+    
+    # Skip if first word is a trim level, not a model
+    trim_words = ['ZETEC', 'ST', 'GTI', 'RS', 'AMG', 'SPORT', 'LINE', 'ACTIVE', 
+                  'TITANIUM', 'VIGNALE', 'GHIA', 'LX', 'SE', 'SRI', 'EDITION',
+                  'STYLE', 'TREND', 'BASE', 'HYBRID', 'TURBO', 'DIESEL', 'PETROL',
+                  'MOTORHOME', 'CAMPER', 'VAN', 'BUS', 'MINIBUS', 'PICKUP', 'UNCLASSIFIED']
+    if first_word in trim_words:
+        return None
+    
+    # Handle BMW/AUDI/MERCEDES - allow alphanumeric models
+    if make.upper() in ['BMW', 'AUDI', 'MERCEDES-BENZ', 'PEUGEOT', 'CITROEN']:
+        if re.match(r'^[A-Z]?\d', first_word):
+            # Normalize BMW: 320D, 330I, 520D -> 3 SERIES, 5 SERIES
+            if make.upper() == 'BMW' and re.match(r'^\d', first_word):
+                series_num = first_word[0]
+                return f"{series_num} SERIES"
+            return first_word
+    
+    # For other makes, skip if model is purely numeric or starts with number
+    if re.match(r'^\d', first_word):
+        return None
+    
+    # Skip very short or suspicious names
+    if len(first_word) < 2:
+        return None
+    
+    # Only allow models that are mostly alphabetic
+    alpha_count = sum(1 for c in first_word if c.isalpha())
+    if alpha_count < len(first_word) * 0.6:  # At least 60% alphabetic
+        return None
+    
+    return first_word
 
 def get_canonical_models_for_make(make: str) -> dict:
     """Get mapping of raw models to canonical models for a given make."""
