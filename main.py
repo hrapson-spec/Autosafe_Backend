@@ -5,7 +5,7 @@ Uses PostgreSQL (DATABASE_URL) if available, otherwise falls back to SQLite or D
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from typing import List, Dict, Optional
+from typing import List, Dict
 from datetime import datetime
 import os
 
@@ -13,6 +13,7 @@ import os
 import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
+from consolidate_models import extract_base_model
 import logging
 import sys
 
@@ -25,6 +26,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API")
+
+# CORS Middleware - Allow cross-origin requests
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Check for PostgreSQL first, then SQLite
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -150,7 +161,29 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
         query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ?"
         rows = conn.execute(query, (f"{make.upper()}%",)).fetchall()
         conn.close()
-        return sorted([row['model_id'] for row in rows])
+        
+        all_models = set(row['model_id'] for row in rows)
+        display_models = set()
+        
+        for mid in all_models:
+            clean = extract_base_model(mid, make)
+            if not clean:
+                display_models.add(mid)
+                continue
+                
+            clean_full_id = f"{make.upper()} {clean}"
+            
+            if clean_full_id in all_models:
+                # The base model exists in the DB.
+                # Only add it if THIS is the base model.
+                if mid == clean_full_id:
+                    display_models.add(mid)
+            else:
+                # The base model does NOT exist in the DB.
+                # So we must show this variant.
+                display_models.add(mid)
+                
+        return sorted(list(display_models))
     
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
@@ -160,9 +193,9 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
 @limiter.limit("50/minute")
 async def get_risk(
     request: Request,
-    make: str = Query(..., description="Vehicle Make (e.g., FORD)"),
-    model: str = Query(..., description="Vehicle Model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year (1900-2025)"),
+    make: str = Query(..., max_length=50, description="Vehicle Make (e.g., FORD)"),
+    model: str = Query(..., max_length=100, description="Vehicle Model (e.g., FIESTA)"),
+    year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year"),
     mileage: int = Query(..., ge=0, le=999999, description="Vehicle Mileage (0-999,999)")
 ):
     """Calculate risk for a specific vehicle."""
