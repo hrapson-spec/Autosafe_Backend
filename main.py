@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
 from datetime import datetime
 import os
+import time
 
 # Import database module for PostgreSQL
 import database as db
@@ -24,6 +25,13 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
+
+# Response caching for expensive queries
+_cache = {
+    "makes": {"data": None, "time": 0},
+    "models": {}  # Keyed by make
+}
+CACHE_TTL = 3600  # 1 hour cache TTL
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API")
 
@@ -122,11 +130,20 @@ def add_confidence_intervals(result: dict) -> dict:
 @app.get("/api/makes", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
-    """Return a list of all unique vehicle makes."""
+    """Return a list of all unique vehicle makes (cached for 1 hour)."""
+    global _cache
+    
+    # Check cache first
+    if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
+        logger.info("Returning cached makes list")
+        return _cache["makes"]["data"]
+    
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
+            _cache["makes"] = {"data": result, "time": time.time()}
+            logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
     
     # Fallback to SQLite
@@ -139,7 +156,10 @@ async def get_makes(request: Request):
             parts = row['model_id'].split(' ', 1)
             if len(parts) > 0:
                 makes.add(parts[0])
-        return sorted(list(makes))
+        result = sorted(list(makes))
+        _cache["makes"] = {"data": result, "time": time.time()}
+        logger.info(f"Cached {len(result)} makes from SQLite")
+        return result
     
     # Demo mode
     return sorted(MOCK_MAKES)
@@ -148,11 +168,21 @@ async def get_makes(request: Request):
 @app.get("/api/models", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_models(request: Request, make: str = Query(..., description="Vehicle Make (e.g., FORD)")):
-    """Return a list of models for a given make."""
+    """Return a list of models for a given make (cached for 1 hour)."""
+    global _cache
+    cache_key = make.upper()
+    
+    # Check cache first
+    if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
+        logger.info(f"Returning cached models for {cache_key}")
+        return _cache["models"][cache_key]["data"]
+    
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
+            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
     
     # Fallback to SQLite
@@ -182,8 +212,11 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
                 # The base model does NOT exist in the DB.
                 # So we must show this variant.
                 display_models.add(mid)
-                
-        return sorted(list(display_models))
+        
+        result = sorted(list(display_models))
+        _cache["models"][cache_key] = {"data": result, "time": time.time()}
+        logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
+        return result
     
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS

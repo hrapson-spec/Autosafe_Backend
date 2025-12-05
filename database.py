@@ -23,7 +23,7 @@ async def get_pool():
         try:
             # Railway uses postgres:// but asyncpg needs postgresql://
             db_url = DATABASE_URL.replace("postgres://", "postgresql://")
-            _pool = await asyncpg.create_pool(db_url, min_size=1, max_size=10)
+            _pool = await asyncpg.create_pool(db_url, min_size=5, max_size=20)
             logger.info("Database connection pool created")
         except Exception as e:
             logger.error(f"Failed to create database connection pool: {e}")
