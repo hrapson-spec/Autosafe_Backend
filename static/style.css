@@ -367,68 +367,159 @@ input::placeholder {
 /* ===== Concerns Section ===== */
 .concerns-section {
     margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
 }
 
 .concerns-title {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-xs);
+}
+
+.concerns-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
 }
 
 .concerns-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: var(--space-md);
 }
 
 .concern-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--space-md);
     padding: var(--space-md);
     background: var(--background);
     border-radius: var(--radius-md);
-    border-left: 4px solid transparent;
+    transition: transform 0.2s;
 }
 
-.concern-card.concern-low {
-    border-left-color: var(--success-green);
+.concern-card:hover {
+    transform: translateX(4px);
 }
 
-.concern-card.concern-medium {
-    border-left-color: var(--warning-amber);
+.concern-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
 }
 
-.concern-card.concern-high {
-    border-left-color: var(--danger-red);
+.concern-icon.icon-low {
+    background: var(--success-bg);
+}
+
+.concern-icon.icon-medium {
+    background: var(--warning-bg);
+}
+
+.concern-icon.icon-high {
+    background: var(--danger-bg);
+}
+
+.concern-details {
+    flex: 1;
+    min-width: 0;
 }
 
 .concern-name {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-primary);
+    font-size: 0.95rem;
+    margin-bottom: var(--space-xs);
 }
 
-.concern-level {
-    font-size: 0.85rem;
-    font-weight: 500;
+.concern-bar-container {
+    height: 6px;
+    background: var(--border-color);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.concern-bar {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.5s ease-out;
+}
+
+.concern-bar.bar-low {
+    background: var(--success-green);
+}
+
+.concern-bar.bar-medium {
+    background: var(--warning-amber);
+}
+
+.concern-bar.bar-high {
+    background: var(--danger-red);
+}
+
+.concern-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-sm);
 }
 
-.concern-level.level-low {
+.concern-status.status-low {
     color: var(--success-green);
     background: var(--success-bg);
 }
 
-.concern-level.level-medium {
+.concern-status.status-medium {
     color: var(--warning-amber);
     background: var(--warning-bg);
 }
 
-.concern-level.level-high {
+.concern-status.status-high {
     color: var(--danger-red);
     background: var(--danger-bg);
+}
+
+/* Parts Legend */
+.parts-legend {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-top: var(--space-md);
+    padding: var(--space-sm) 0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.legend-dot.legend-high {
+    background: var(--danger-red);
+}
+
+.legend-dot.legend-medium {
+    background: var(--warning-amber);
+}
+
+.legend-dot.legend-low {
+    background: var(--success-green);
 }
 
 /* ===== Guidance Box ===== */
@@ -555,7 +646,17 @@ input::placeholder {
     text-align: center;
     padding: var(--space-lg) 0;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+.app-footer a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+}
+
+.app-footer a:hover {
+    color: var(--trust-blue);
 }
 
 /* ===== Error Banner ===== */
