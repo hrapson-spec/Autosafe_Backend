@@ -5,7 +5,8 @@ def get_age_band(age):
     if age < 3: return '0-3'
     elif age < 6: return '3-5'
     elif age < 11: return '6-10'
-    else: return '10+'
+    elif age < 16: return '10-15'
+    else: return '15+'
 
 def get_mileage_band(miles):
     if pd.isna(miles) or miles < 0: return 'Unknown'

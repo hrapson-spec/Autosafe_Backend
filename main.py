@@ -12,6 +12,7 @@ import os
 # Import database module for PostgreSQL
 import database as db
 from utils import get_age_band, get_mileage_band
+from confidence import wilson_interval, classify_confidence
 import logging
 import sys
 
@@ -89,6 +90,24 @@ MOCK_RISK = {
 }
 
 
+def add_confidence_intervals(result: dict) -> dict:
+    """
+    Add Wilson confidence intervals to a risk result.
+    Modifies the result dict in place and returns it.
+    """
+    if 'Total_Tests' in result and 'Total_Failures' in result:
+        total_tests = result['Total_Tests']
+        total_failures = result['Total_Failures']
+        
+        # Calculate 95% confidence interval for failure risk
+        ci_lower, ci_upper = wilson_interval(total_failures, total_tests)
+        result['Failure_Risk_CI_Lower'] = round(ci_lower, 4)
+        result['Failure_Risk_CI_Upper'] = round(ci_upper, 4)
+        result['Confidence_Level'] = classify_confidence(total_tests)
+    
+    return result
+
+
 @app.get("/api/makes", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
@@ -163,7 +182,7 @@ async def get_risk(
                 if result.get("suggestion"):
                     detail += f" Did you mean '{result['suggestion']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            return result
+            return add_confidence_intervals(result)
     
     # Fallback to SQLite
     conn = get_sqlite_connection()
@@ -198,12 +217,12 @@ async def get_risk(
             }
         
         conn.close()
-        return dict(row)
+        return add_confidence_intervals(dict(row))
     
     # Demo mode
     response = MOCK_RISK.copy()
     response["model_id"] = model_id
-    return response
+    return add_confidence_intervals(response)
 
 
 # Mount static files at /static (only if the folder exists)
