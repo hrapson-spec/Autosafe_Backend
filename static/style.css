@@ -110,6 +110,26 @@ body {
     font-size: 0.9rem;
 }
 
+.beta-badge {
+    background: var(--warning-amber);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.footer-links {
+    margin-top: var(--space-sm);
+}
+
+.footer-links a {
+    margin: 0 var(--space-xs);
+}
+
 /* ===== Main Content ===== */
 .main-content {
     flex: 1;
