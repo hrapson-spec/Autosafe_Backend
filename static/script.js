@@ -182,6 +182,9 @@ function displayResults(data, make, model, year) {
     const totalTests = data.Total_Tests || 0;
     document.getElementById('totalTests').textContent = totalTests.toLocaleString();
 
+    // Cost estimate (opt-in)
+    displayCostEstimate(data);
+
     // Component concerns
     displayConcerns(data);
 
@@ -190,6 +193,43 @@ function displayResults(data, make, model, year) {
 
     // Confidence
     displayConfidence(data);
+}
+
+// ===== Display Cost Estimate (Opt-in) =====
+function displayCostEstimate(data) {
+    const costSection = document.getElementById('costSection');
+    const costDetails = document.getElementById('costDetails');
+    const costEstimate = document.getElementById('costEstimate');
+    const costDisclaimer = document.getElementById('costDisclaimer');
+    const costToggleBtn = document.getElementById('costToggleBtn');
+
+    // Check if we have cost data
+    const costData = data.Repair_Cost_Estimate;
+    if (!costData) {
+        costSection.classList.add('hidden');
+        return;
+    }
+
+    // Populate cost display
+    costEstimate.textContent = `If this car fails its MOT, typical repairs cost ${costData.display}.`;
+    costDisclaimer.textContent = costData.disclaimer;
+
+    // Reset toggle state
+    costDetails.classList.add('hidden');
+    costToggleBtn.textContent = 'Show estimate';
+
+    // Setup toggle handler
+    costToggleBtn.onclick = () => {
+        if (costDetails.classList.contains('hidden')) {
+            costDetails.classList.remove('hidden');
+            costToggleBtn.textContent = 'Hide';
+        } else {
+            costDetails.classList.add('hidden');
+            costToggleBtn.textContent = 'Show estimate';
+        }
+    };
+
+    costSection.classList.remove('hidden');
 }
 
 // ===== Convert Risk to Natural Language =====

@@ -377,6 +377,65 @@ input::placeholder {
     margin-right: auto;
 }
 
+/* ===== Cost Estimate Section ===== */
+.cost-section {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--success-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.cost-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.cost-question {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cost-toggle-btn {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: inherit;
+    color: var(--success-green);
+    background: white;
+    border: 1.5px solid var(--success-green);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cost-toggle-btn:hover {
+    background: var(--success-green);
+    color: white;
+}
+
+.cost-details {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.cost-estimate {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--success-green);
+    margin-bottom: var(--space-xs);
+}
+
+.cost-disclaimer {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 /* ===== Trust Badge ===== */
 .trust-badge {
     display: flex;
