@@ -437,7 +437,7 @@ function displayGuidance(riskLevel, data) {
 
 // ===== Display Confidence =====
 function displayConfidence(data) {
-    const badge = document.getElementById('confidenceBadge');
+    const confidenceElement = document.getElementById('confidenceLevel');
     const totalTests = data.Total_Tests || 0;
 
     // Use server-provided confidence level if available, otherwise calculate
@@ -452,16 +452,7 @@ function displayConfidence(data) {
         }
     }
 
-    badge.textContent = confidenceLevel;
-    badge.className = 'confidence-badge';
-
-    if (confidenceLevel === 'High') {
-        badge.classList.add('confidence-high');
-    } else if (confidenceLevel === 'Good') {
-        badge.classList.add('confidence-good');
-    } else {
-        badge.classList.add('confidence-limited');
-    }
+    confidenceElement.textContent = confidenceLevel;
 }
 
 // ===== Show Search Panel =====

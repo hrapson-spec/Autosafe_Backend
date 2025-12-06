@@ -471,24 +471,20 @@ input::placeholder {
     line-height: 1.5;
 }
 
-/* ===== Trust Badge ===== */
-.trust-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--trust-blue-bg);
-    border-radius: var(--radius-full);
-    font-size: 0.85rem;
-    color: var(--trust-blue);
-    margin: var(--space-lg) auto;
-    width: fit-content;
+/* ===== Data Credibility ===== */
+/* Merged trust badge + confidence into single subtle line */
+.data-credibility {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
 }
 
-.check-icon {
-    width: 18px;
-    height: 18px;
+.data-credibility strong {
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* ===== Concerns Section ===== */
@@ -674,61 +670,18 @@ input::placeholder {
     background: var(--success-green);
 }
 
-/* ===== Guidance Box ===== */
-.guidance-box {
-    display: flex;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--trust-blue-bg);
-    border-radius: var(--radius-md);
-    margin-top: var(--space-lg);
-    border: 1px solid rgba(30, 64, 175, 0.1);
-}
-
-.guidance-icon {
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
+/* ===== Guidance (De-boxed, Integrated) ===== */
+/* Removed blue box - guidance flows naturally as text */
 .guidance-text {
-    font-size: 0.9rem;
-    color: var(--trust-blue);
-    line-height: 1.5;
-}
-
-/* ===== Confidence Section ===== */
-.confidence-section {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--border-color);
-}
-
-.confidence-label {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.confidence-badge {
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
-    background: var(--success-bg);
-    color: var(--success-green);
-}
-
-.confidence-badge.confidence-good {
-    background: var(--trust-blue-bg);
-    color: var(--trust-blue);
-}
-
-.confidence-badge.confidence-limited {
-    background: var(--warning-bg);
-    color: var(--warning-amber);
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-top: var(--space-md);
+    font-weight: 500;
+    max-width: 36ch;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .info-btn {
