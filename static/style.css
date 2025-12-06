@@ -108,6 +108,16 @@ body {
 .tagline {
     color: var(--text-secondary);
     font-size: 0.9rem;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.headline {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    margin-top: var(--space-sm);
 }
 
 .beta-badge {
