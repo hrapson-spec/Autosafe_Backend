@@ -33,7 +33,7 @@
         <!-- Search Panel -->
         <main class="main-content">
             <section class="search-card" id="searchPanel">
-                <h2 class="section-title">Enter your car details</h2>
+                <h2 class="section-title">Tell us about your car</h2>
 
                 <form id="riskForm">
                     <div class="form-group">
@@ -94,6 +94,14 @@
                     </p>
                 </div>
 
+                <!-- Guidance Box - Immediately answers "What should I do?" -->
+                <div class="guidance-box" id="guidanceBox">
+                    <div class="guidance-icon">💡</div>
+                    <p class="guidance-text" id="guidanceText">
+                        This car has a good track record. A standard pre-purchase inspection should be sufficient.
+                    </p>
+                </div>
+
                 <!-- Trust Badge -->
                 <div class="trust-badge" id="trustBadge">
                     <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -103,10 +111,16 @@
                     <span>Based on <strong id="totalTests">0</strong> real MOT tests</span>
                 </div>
 
+                <!-- Data Confidence -->
+                <div class="confidence-section">
+                    <span class="confidence-label">Data confidence:</span>
+                    <span class="confidence-badge" id="confidenceBadge">High</span>
+                </div>
+
                 <!-- Repair Cost Estimate Section -->
                 <div class="cost-section" id="costSection">
                     <div class="cost-header">
-                        <span class="cost-question">💰 What might repairs cost if it fails?</span>
+                        <span class="cost-question">What might repairs cost if it fails?</span>
                         <button class="cost-toggle-btn" id="costToggleBtn" aria-expanded="false"
                             aria-controls="costDetails">Show estimate</button>
                     </div>
@@ -123,14 +137,6 @@
                     <div class="concerns-grid" id="concernsGrid">
                         <!-- Populated by JS -->
                     </div>
-                </div>
-
-                <!-- Guidance Box -->
-                <div class="guidance-box" id="guidanceBox">
-                    <div class="guidance-icon">💡</div>
-                    <p class="guidance-text" id="guidanceText">
-                        This car has a good track record. A standard pre-purchase inspection should be sufficient.
-                    </p>
                 </div>
 
                 <!-- Check Another Button -->
