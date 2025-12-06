@@ -180,11 +180,19 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
         if not exists:
             return {"error": "not_found", "suggestion": None}
         
-        # Model exists but specific band doesn't - return overall average
+        # Model exists but specific band doesn't - return overall average WITH component data
         avg_rows = await conn.fetch(
             """SELECT 
                 SUM(total_tests) as total_tests,
-                SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as avg_risk
+                SUM(total_failures) as total_failures,
+                SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as failure_risk,
+                SUM(risk_brakes * total_tests) / NULLIF(SUM(total_tests), 0) as risk_brakes,
+                SUM(risk_suspension * total_tests) / NULLIF(SUM(total_tests), 0) as risk_suspension,
+                SUM(risk_tyres * total_tests) / NULLIF(SUM(total_tests), 0) as risk_tyres,
+                SUM(risk_steering * total_tests) / NULLIF(SUM(total_tests), 0) as risk_steering,
+                SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) as risk_visibility,
+                SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) as risk_lamps_reflectors_and_electrical_equipment,
+                SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) as risk_body_chassis_structure
                FROM mot_risk WHERE model_id LIKE $1""",
             f"{model_id}%"
         )
@@ -195,6 +203,14 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             "Mileage_Band": mileage_band,
             "note": "Exact age/mileage match not found. Returning model average.",
             "Total_Tests": int(avg_rows[0]['total_tests']) if avg_rows[0]['total_tests'] else 0,
-            "Failure_Risk": float(avg_rows[0]['avg_risk']) if avg_rows[0]['avg_risk'] else 0.0
+            "Total_Failures": int(avg_rows[0]['total_failures']) if avg_rows[0]['total_failures'] else 0,
+            "Failure_Risk": float(avg_rows[0]['failure_risk']) if avg_rows[0]['failure_risk'] else 0.0,
+            "Risk_Brakes": float(avg_rows[0]['risk_brakes']) if avg_rows[0]['risk_brakes'] else 0.0,
+            "Risk_Suspension": float(avg_rows[0]['risk_suspension']) if avg_rows[0]['risk_suspension'] else 0.0,
+            "Risk_Tyres": float(avg_rows[0]['risk_tyres']) if avg_rows[0]['risk_tyres'] else 0.0,
+            "Risk_Steering": float(avg_rows[0]['risk_steering']) if avg_rows[0]['risk_steering'] else 0.0,
+            "Risk_Visibility": float(avg_rows[0]['risk_visibility']) if avg_rows[0]['risk_visibility'] else 0.0,
+            "Risk_Lamps_Reflectors_And_Electrical_Equipment": float(avg_rows[0]['risk_lamps_reflectors_and_electrical_equipment']) if avg_rows[0]['risk_lamps_reflectors_and_electrical_equipment'] else 0.0,
+            "Risk_Body_Chassis_Structure": float(avg_rows[0]['risk_body_chassis_structure']) if avg_rows[0]['risk_body_chassis_structure'] else 0.0,
         }
 
