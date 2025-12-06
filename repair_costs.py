@@ -220,6 +220,6 @@ def calculate_expected_repair_cost(risk_data: Dict) -> Optional[Dict]:
         "cost_min": int(fail_min),
         "cost_mid": int(fail_mid),
         "cost_max": int(fail_max),
-        "display": f"around £{int(fail_mid)}, often £{int(fail_min)}–£{int(fail_max)}",
+        "display": f"usually cost around £{int(fail_mid)}, often between £{int(fail_min)} and £{int(fail_max)}",
         "disclaimer": "Guide prices only—actual costs vary by garage, region and vehicle condition."
     }
