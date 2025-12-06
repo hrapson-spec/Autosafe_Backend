@@ -73,7 +73,7 @@
             </section>
 
             <!-- Results Panel (Hidden by default) -->
-            <section class="results-card hidden" id="resultsPanel">
+            <section class="results-card hidden" id="resultsPanel" aria-live="polite">
                 <!-- Vehicle Header -->
                 <div class="vehicle-header">
                     <span class="vehicle-name" id="vehicleName">Ford Fiesta</span>
@@ -106,7 +106,8 @@
                 <div class="cost-section" id="costSection">
                     <div class="cost-header">
                         <span class="cost-question">💰 What might repairs cost if it fails?</span>
-                        <button class="cost-toggle-btn" id="costToggleBtn">Show estimate</button>
+                        <button class="cost-toggle-btn" id="costToggleBtn" aria-expanded="false"
+                            aria-controls="costDetails">Show estimate</button>
                     </div>
                     <div class="cost-details hidden" id="costDetails">
                         <p class="cost-estimate" id="costEstimate"></p>

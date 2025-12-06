@@ -216,20 +216,31 @@ function displayCostEstimate(data) {
     costEstimate.textContent = `If this car fails its MOT, typical repairs cost ${costData.display}.`;
     costDisclaimer.textContent = costData.disclaimer;
 
-    // Reset toggle state
-    costDetails.classList.add('hidden');
-    costToggleBtn.textContent = 'Show estimate';
+    // Setup toggle
+    const toggleBtn = document.getElementById('costToggleBtn');
+    const detailsDiv = document.getElementById('costDetails');
 
-    // Setup toggle handler
-    costToggleBtn.onclick = () => {
-        if (costDetails.classList.contains('hidden')) {
-            costDetails.classList.remove('hidden');
-            costToggleBtn.textContent = 'Hide';
+    // Reset state
+    detailsDiv.classList.add('hidden');
+    toggleBtn.textContent = 'Show estimate';
+    toggleBtn.setAttribute('aria-expanded', 'false');
+
+    // Remove old listener to prevent duplicates (simple way)
+    const newBtn = toggleBtn.cloneNode(true);
+    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+
+    newBtn.addEventListener('click', () => {
+        const isHidden = detailsDiv.classList.contains('hidden');
+        if (isHidden) {
+            detailsDiv.classList.remove('hidden');
+            newBtn.textContent = 'Hide estimate';
+            newBtn.setAttribute('aria-expanded', 'true');
         } else {
-            costDetails.classList.add('hidden');
-            costToggleBtn.textContent = 'Show estimate';
+            detailsDiv.classList.add('hidden');
+            newBtn.textContent = 'Show estimate';
+            newBtn.setAttribute('aria-expanded', 'false');
         }
-    };
+    });
 
     costSection.classList.remove('hidden');
 }
