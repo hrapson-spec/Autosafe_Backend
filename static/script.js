@@ -212,8 +212,10 @@ function displayCostEstimate(data) {
         return;
     }
 
-    // Populate cost display
-    costEstimate.textContent = `If this car fails its MOT, typical repairs cost ${costData.display}.`;
+    // Populate cost display - use innerHTML to allow bold price emphasis
+    // Format prices in bold by wrapping £XXX values in <strong> tags
+    const formattedDisplay = costData.display.replace(/£(\d+)/g, '<strong>£$1</strong>');
+    costEstimate.innerHTML = `If this car fails its MOT, typical repairs cost ${formattedDisplay}.`;
     costDisclaimer.textContent = costData.disclaimer;
 
     // Setup toggle

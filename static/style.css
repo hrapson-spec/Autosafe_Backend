@@ -434,9 +434,14 @@ input::placeholder {
 
 .cost-estimate {
     font-size: 1rem;
-    font-weight: 600;
-    color: var(--success-green);
+    font-weight: 400;
+    color: var(--text-primary);
     margin-bottom: var(--space-xs);
+}
+
+.cost-estimate strong {
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 .cost-disclaimer {
