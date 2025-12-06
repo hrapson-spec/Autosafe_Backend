@@ -174,7 +174,6 @@ function displayResults(data, make, model, year) {
     const gaugeCircle = document.getElementById('gaugeCircle');
     gaugeCircle.className = 'gauge-circle risk-' + riskLevel.class;
     document.getElementById('riskLevel').textContent = riskLevel.label;
-    document.getElementById('riskExplanation').textContent = riskLevel.explanation;
 
     // Natural language risk stat
     document.getElementById('riskStat').textContent = getRiskNaturalLanguage(riskValue);
