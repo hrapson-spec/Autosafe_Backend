@@ -798,6 +798,72 @@ input::placeholder {
 }
 
 /* ===== Utilities ===== */
+
+/* ===== Confidence Indicator ===== */
+.confidence-badge {
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s;
+}
+
+.confidence-badge:hover {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+.confidence-badge strong {
+    font-weight: 600;
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.confidence-badge[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.confidence-details {
+    margin-top: var(--space-sm);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.text-high {
+    color: var(--success-green);
+}
+
+.text-medium {
+    color: var(--warning-amber);
+}
+
+.text-low {
+    color: var(--text-secondary);
+    /* Neutral for low confidence to avoid alarm */
+}
+
 .hidden {
     display: none !important;
 }

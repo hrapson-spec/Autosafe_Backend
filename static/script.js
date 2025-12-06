@@ -436,23 +436,59 @@ function displayGuidance(riskLevel, data) {
 }
 
 // ===== Display Confidence =====
+// ===== Display Confidence =====
 function displayConfidence(data) {
-    const confidenceElement = document.getElementById('confidenceLevel');
-    const totalTests = data.Total_Tests || 0;
+    const confidenceLevelEl = document.getElementById('confidenceLevel');
+    const totalTestsEl = document.getElementById('totalTests');
+    const toggleBtn = document.getElementById('confidenceToggle');
+    const detailsDiv = document.getElementById('confidenceDetails');
 
-    // Use server-provided confidence level if available, otherwise calculate
-    let confidenceLevel = data.Confidence_Level;
-    if (!confidenceLevel) {
-        if (totalTests >= 10000) {
-            confidenceLevel = 'High';
-        } else if (totalTests >= 1000) {
-            confidenceLevel = 'Good';
-        } else {
-            confidenceLevel = 'Limited';
-        }
+    if (!confidenceLevelEl || !totalTestsEl || !toggleBtn || !detailsDiv) return;
+
+    const totalTests = data.Total_Tests || 0;
+    totalTestsEl.textContent = totalTests.toLocaleString();
+
+    // Determine confidence level
+    // High: > 10,000
+    // Medium: 1,000 - 10,000
+    // Low: < 1,000
+    let level = 'Low';
+    let levelClass = 'text-low';
+
+    if (totalTests >= 10000) {
+        level = 'High';
+        levelClass = 'text-high';
+    } else if (totalTests >= 1000) {
+        level = 'Medium';
+        levelClass = 'text-medium';
     }
 
-    confidenceElement.textContent = confidenceLevel;
+    // Update UI
+    confidenceLevelEl.textContent = level;
+
+    // Remove old classes and add new one
+    confidenceLevelEl.classList.remove('text-high', 'text-medium', 'text-low');
+    confidenceLevelEl.classList.add(levelClass);
+
+    // Setup toggle (clone to remove old listeners)
+    const newBtn = toggleBtn.cloneNode(true);
+    toggleBtn.parentNode.replaceChild(newBtn, toggleBtn);
+
+    // Reset state
+    detailsDiv.classList.add('hidden');
+    newBtn.setAttribute('aria-expanded', 'false');
+
+    newBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent scroll jump if it's a button
+        const isHidden = detailsDiv.classList.contains('hidden');
+        if (isHidden) {
+            detailsDiv.classList.remove('hidden');
+            newBtn.setAttribute('aria-expanded', 'true');
+        } else {
+            detailsDiv.classList.add('hidden');
+            newBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
 
 // ===== Show Search Panel =====
