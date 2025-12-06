@@ -400,21 +400,20 @@ input::placeholder {
 }
 
 .cost-toggle-btn {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.8rem;
-    font-weight: 500;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.9rem;
+    font-weight: 600;
     font-family: inherit;
-    color: var(--success-green);
-    background: white;
-    border: 1.5px solid var(--success-green);
+    color: white;
+    background: var(--success-green);
+    border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .cost-toggle-btn:hover {
-    background: var(--success-green);
-    color: white;
+    background: var(--success-green-light);
 }
 
 .cost-details {
