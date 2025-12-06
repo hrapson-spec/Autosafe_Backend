@@ -460,12 +460,23 @@ input::placeholder {
     min-width: 0;
 }
 
+.concern-name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
 .concern-name {
     font-weight: 600;
     color: var(--text-primary);
     font-size: 0.95rem;
-    margin-bottom: var(--space-xs);
-    flex: 1;
+}
+
+.concern-percent {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
 }
 
 .concern-bar-container {

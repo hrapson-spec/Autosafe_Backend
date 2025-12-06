@@ -259,6 +259,7 @@ function displayConcerns(data) {
     topConcerns.forEach((comp, index) => {
         const concernLevel = getConcernLevel(comp.value);
         const barWidth = Math.min(Math.max(comp.value * 500, 10), 100); // Scale for visibility
+        const percentValue = (comp.value * 100).toFixed(0); // Convert to percentage
 
         const card = document.createElement('div');
         card.className = 'concern-card';
@@ -273,10 +274,20 @@ function displayConcerns(data) {
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'concern-details';
 
-        // Name
-        const nameDiv = document.createElement('div');
+        // Name row with percentage
+        const nameRow = document.createElement('div');
+        nameRow.className = 'concern-name-row';
+
+        const nameDiv = document.createElement('span');
         nameDiv.className = 'concern-name';
         nameDiv.textContent = comp.name;
+
+        const percentSpan = document.createElement('span');
+        percentSpan.className = 'concern-percent';
+        percentSpan.textContent = `${percentValue}%`;
+
+        nameRow.appendChild(nameDiv);
+        nameRow.appendChild(percentSpan);
 
         // Progress bar
         const barContainer = document.createElement('div');
@@ -292,7 +303,7 @@ function displayConcerns(data) {
             bar.style.width = `${barWidth}%`;
         }, 100 + index * 100);
 
-        detailsDiv.appendChild(nameDiv);
+        detailsDiv.appendChild(nameRow);
         detailsDiv.appendChild(barContainer);
 
         // Status badge
