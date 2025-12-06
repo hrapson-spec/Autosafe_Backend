@@ -15,7 +15,12 @@ MOT Test Results/
 MOT Test Failures/
 MOT testing data results (2024)-2/
 
-# Framework design documents
-MOT Failure Risk Framework Design.pdf
-framework_design_extracted.txt
+# Test results and profiling data
+*_results*.json
+load_test_results.json
+performance_audit*.json
+*.prof
+
+# Reference documents (PDFs)
+*.pdf
 
