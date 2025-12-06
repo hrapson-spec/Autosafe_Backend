@@ -364,6 +364,19 @@ input::placeholder {
     margin: 0 auto;
 }
 
+.risk-stat {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--background);
+    border-radius: var(--radius-md);
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* ===== Trust Badge ===== */
 .trust-badge {
     display: flex;

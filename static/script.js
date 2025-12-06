@@ -176,6 +176,9 @@ function displayResults(data, make, model, year) {
     document.getElementById('riskLevel').textContent = riskLevel.label;
     document.getElementById('riskExplanation').textContent = riskLevel.explanation;
 
+    // Natural language risk stat
+    document.getElementById('riskStat').textContent = getRiskNaturalLanguage(riskValue);
+
     // Trust badge
     const totalTests = data.Total_Tests || 0;
     document.getElementById('totalTests').textContent = totalTests.toLocaleString();
@@ -188,6 +191,23 @@ function displayResults(data, make, model, year) {
 
     // Confidence
     displayConfidence(data);
+}
+
+// ===== Convert Risk to Natural Language =====
+function getRiskNaturalLanguage(riskValue) {
+    // Convert decimal to "Roughly X in Y" format
+    if (riskValue <= 0.01) return 'Fewer than 1 in 100 MOT tests result in a fail.';
+    if (riskValue <= 0.02) return 'Roughly 1 in 50 MOT tests result in a fail.';
+    if (riskValue <= 0.04) return 'Roughly 1 in 25 MOT tests result in a fail.';
+    if (riskValue <= 0.06) return 'Roughly 1 in 20 MOT tests result in a fail.';
+    if (riskValue <= 0.08) return 'Roughly 1 in 12 MOT tests result in a fail.';
+    if (riskValue <= 0.12) return 'Roughly 1 in 10 MOT tests result in a fail.';
+    if (riskValue <= 0.17) return 'Roughly 1 in 6 MOT tests result in a fail.';
+    if (riskValue <= 0.22) return 'Roughly 1 in 5 MOT tests result in a fail.';
+    if (riskValue <= 0.28) return 'Roughly 1 in 4 MOT tests result in a fail.';
+    if (riskValue <= 0.38) return 'Roughly 1 in 3 MOT tests result in a fail.';
+    if (riskValue <= 0.55) return 'Roughly 1 in 2 MOT tests result in a fail.';
+    return 'More than half of MOT tests result in a fail.';
 }
 
 // ===== Get Risk Level =====
