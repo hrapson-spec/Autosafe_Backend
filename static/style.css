@@ -787,6 +787,19 @@ input::placeholder {
     border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
+/* Inline field errors */
+.inline-error {
+    display: block;
+    color: var(--danger-red);
+    font-size: 0.8rem;
+    margin-top: var(--space-xs);
+}
+
+.field-error {
+    border-color: var(--danger-red) !important;
+    background: var(--danger-bg) !important;
+}
+
 /* ===== Utilities ===== */
 .hidden {
     display: none !important;

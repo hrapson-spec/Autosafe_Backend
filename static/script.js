@@ -17,7 +17,6 @@ const btnText = analyzeBtn.querySelector('.btn-text');
 const searchPanel = document.getElementById('searchPanel');
 const resultsPanel = document.getElementById('resultsPanel');
 const checkAnotherBtn = document.getElementById('checkAnotherBtn');
-const infoBtn = document.getElementById('infoBtn');
 const infoModal = document.getElementById('infoModal');
 const closeModalBtn = document.getElementById('closeModalBtn');
 
@@ -45,6 +44,10 @@ const COMPONENT_NAMES = {
 
 // ===== Initialize App =====
 async function init() {
+    // Set default year to 3 years ago (common used car age)
+    const defaultYear = new Date().getFullYear() - 3;
+    yearInput.value = defaultYear;
+
     await loadMakes();
     setupEventListeners();
 }
@@ -53,7 +56,6 @@ function setupEventListeners() {
     makeSelect.addEventListener('change', handleMakeChange);
     form.addEventListener('submit', handleSubmit);
     checkAnotherBtn.addEventListener('click', showSearchPanel);
-    infoBtn.addEventListener('click', () => infoModal.classList.remove('hidden'));
     closeModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
     infoModal.addEventListener('click', (e) => {
         if (e.target === infoModal) infoModal.classList.add('hidden');
@@ -67,7 +69,7 @@ async function loadMakes() {
     // Check if offline
     if (!navigator.onLine) {
         makeSelect.innerHTML = '<option value="" disabled selected>Offline</option>';
-        showError('You appear to be offline. Please check your connection.');
+        showError('You appear to be offline. Check your connection and refresh the page.');
         return;
     }
 
@@ -84,8 +86,8 @@ async function loadMakes() {
         });
     } catch (err) {
         console.error('Failed to load makes', err);
-        makeSelect.innerHTML = '<option value="" disabled selected>Error loading makes</option>';
-        showError('Could not load vehicle makes. Please refresh the page.');
+        makeSelect.innerHTML = '<option value="" disabled selected>Error loading</option>';
+        showError('Could not load vehicle makes. Try refreshing the page.');
     }
 }
 
@@ -111,7 +113,7 @@ async function handleMakeChange() {
     } catch (err) {
         console.error('Failed to load models', err);
         modelSelect.innerHTML = '<option value="" disabled selected>Error loading</option>';
-        showError('Could not load models. Please try again.');
+        showError('Could not load models. Select a different make or refresh the page.');
     }
 }
 
@@ -456,7 +458,14 @@ function showSearchPanel() {
 }
 
 // ===== Error Handling =====
-function showError(message) {
+function showError(message, fieldId = null) {
+    // If fieldId provided, show inline error near that field
+    if (fieldId) {
+        showInlineError(fieldId, message);
+        return;
+    }
+
+    // Otherwise show banner at top
     let banner = document.getElementById('errorBanner');
     if (!banner) {
         banner = document.createElement('div');
@@ -470,12 +479,43 @@ function showError(message) {
 
     setTimeout(() => {
         banner.classList.add('hidden');
+    }, 8000);
+}
+
+function showInlineError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    const formGroup = field.closest('.form-group');
+    if (!formGroup) return;
+
+    // Remove existing inline error
+    const existing = formGroup.querySelector('.inline-error');
+    if (existing) existing.remove();
+
+    // Create inline error
+    const error = document.createElement('span');
+    error.className = 'inline-error';
+    error.textContent = message;
+    formGroup.appendChild(error);
+
+    // Also highlight the field
+    field.classList.add('field-error');
+
+    // Remove after 5 seconds
+    setTimeout(() => {
+        error.remove();
+        field.classList.remove('field-error');
     }, 5000);
 }
 
 function hideError() {
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
+
+    // Also clear inline errors
+    document.querySelectorAll('.inline-error').forEach(e => e.remove());
+    document.querySelectorAll('.field-error').forEach(f => f.classList.remove('field-error'));
 }
 
 // ===== Start App =====
