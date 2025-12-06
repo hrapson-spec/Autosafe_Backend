@@ -15,6 +15,7 @@ import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
+from repair_costs import calculate_expected_repair_cost
 import logging
 import sys
 
@@ -124,6 +125,17 @@ def add_confidence_intervals(result: dict) -> dict:
         result['Failure_Risk_CI_Upper'] = round(ci_upper, 4)
         result['Confidence_Level'] = classify_confidence(total_tests)
     
+    return result
+
+
+def add_repair_cost_estimate(result: dict) -> dict:
+    """
+    Add expected repair cost estimate to a risk result.
+    Uses the formula: E[cost|fail] = Σ(risk_i × cost_mid_i) / p_fail
+    """
+    cost_estimate = calculate_expected_repair_cost(result)
+    if cost_estimate:
+        result['Repair_Cost_Estimate'] = cost_estimate
     return result
 
 
@@ -248,7 +260,7 @@ async def get_risk(
                 if result.get("suggestion"):
                     detail += f" Did you mean '{result['suggestion']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            return add_confidence_intervals(result)
+            return add_repair_cost_estimate(add_confidence_intervals(result))
     
     # Fallback to SQLite
     conn = get_sqlite_connection()
@@ -283,12 +295,12 @@ async def get_risk(
             }
         
         conn.close()
-        return add_confidence_intervals(dict(row))
+        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
     
     # Demo mode
     response = MOCK_RISK.copy()
     response["model_id"] = model_id
-    return add_confidence_intervals(response)
+    return add_repair_cost_estimate(add_confidence_intervals(response))
 
 
 # Mount static files at /static (only if the folder exists)
