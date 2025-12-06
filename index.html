@@ -26,7 +26,8 @@
                 <span class="logo-text">AutoSafe</span>
                 <span class="beta-badge">BETA</span>
             </div>
-            <p class="tagline">Check any car's MOT reliability</p>
+            <h1 class="headline">Fix it before they find it.</h1>
+            <p class="tagline">See how likely your car is to fail its MOT, what to fix, and what it could cost.</p>
         </header>
 
         <!-- Search Panel -->
@@ -73,7 +74,7 @@
             </section>
 
             <!-- Results Panel (Hidden by default) -->
-            <section class="results-card hidden" id="resultsPanel">
+            <section class="results-card hidden" id="resultsPanel" aria-live="polite">
                 <!-- Vehicle Header -->
                 <div class="vehicle-header">
                     <span class="vehicle-name" id="vehicleName">Ford Fiesta</span>
@@ -88,9 +89,6 @@
                             <span class="risk-label">RISK</span>
                         </div>
                     </div>
-                    <p class="risk-explanation" id="riskExplanation">
-                        This car is less likely to fail its MOT than average.
-                    </p>
                     <p class="risk-stat" id="riskStat">
                         Roughly 1 in 5 MOT tests for this car result in a fail.
                     </p>
@@ -105,6 +103,19 @@
                     <span>Based on <strong id="totalTests">0</strong> real MOT tests</span>
                 </div>
 
+                <!-- Repair Cost Estimate Section -->
+                <div class="cost-section" id="costSection">
+                    <div class="cost-header">
+                        <span class="cost-question">💰 What might repairs cost if it fails?</span>
+                        <button class="cost-toggle-btn" id="costToggleBtn" aria-expanded="false"
+                            aria-controls="costDetails">Show estimate</button>
+                    </div>
+                    <div class="cost-details hidden" id="costDetails">
+                        <p class="cost-estimate" id="costEstimate"></p>
+                        <p class="cost-disclaimer" id="costDisclaimer"></p>
+                    </div>
+                </div>
+
                 <!-- What to Watch Section -->
                 <div class="concerns-section">
                     <h3 class="concerns-title">🔧 Parts most likely to fail</h3>
@@ -114,35 +125,12 @@
                     </div>
                 </div>
 
-                <!-- Parts Legend -->
-                <div class="parts-legend">
-                    <div class="legend-item">
-                        <span class="legend-dot legend-high"></span>
-                        <span>Watch closely</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-dot legend-medium"></span>
-                        <span>Keep an eye on</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-dot legend-low"></span>
-                        <span>Usually fine</span>
-                    </div>
-                </div>
-
                 <!-- Guidance Box -->
                 <div class="guidance-box" id="guidanceBox">
                     <div class="guidance-icon">💡</div>
                     <p class="guidance-text" id="guidanceText">
                         This car has a good track record. A standard pre-purchase inspection should be sufficient.
                     </p>
-                </div>
-
-                <!-- Confidence Indicator -->
-                <div class="confidence-section" id="confidenceSection">
-                    <span class="confidence-label">Data confidence:</span>
-                    <span class="confidence-badge" id="confidenceBadge">High</span>
-                    <button class="info-btn" id="infoBtn" aria-label="More information">?</button>
                 </div>
 
                 <!-- Check Another Button -->

@@ -108,6 +108,16 @@ body {
 .tagline {
     color: var(--text-secondary);
     font-size: 0.9rem;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.headline {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    margin-top: var(--space-sm);
 }
 
 .beta-badge {
@@ -375,6 +385,64 @@ input::placeholder {
     max-width: 320px;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* ===== Cost Estimate Section ===== */
+.cost-section {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--success-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.cost-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.cost-question {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cost-toggle-btn {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: white;
+    background: var(--success-green);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cost-toggle-btn:hover {
+    background: var(--success-green-light);
+}
+
+.cost-details {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.cost-estimate {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--success-green);
+    margin-bottom: var(--space-xs);
+}
+
+.cost-disclaimer {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
 /* ===== Trust Badge ===== */
@@ -727,6 +795,19 @@ input::placeholder {
     text-align: center;
     font-size: 0.9rem;
     border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+/* Inline field errors */
+.inline-error {
+    display: block;
+    color: var(--danger-red);
+    font-size: 0.8rem;
+    margin-top: var(--space-xs);
+}
+
+.field-error {
+    border-color: var(--danger-red) !important;
+    background: var(--danger-bg) !important;
 }
 
 /* ===== Utilities ===== */
