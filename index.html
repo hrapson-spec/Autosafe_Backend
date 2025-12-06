@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoSafe - Check Your Car's MOT Risk</title>
+    <meta name="description"
+        content="Find out how likely your car is to fail its MOT test. Based on real UK government data.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <svg class="shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 12l2 2 4-4" />
+                </svg>
+                <span class="logo-text">AutoSafe</span>
+                <span class="beta-badge">BETA</span>
+            </div>
+            <p class="tagline">Check any car's MOT reliability</p>
+        </header>
+
+        <!-- Search Panel -->
+        <main class="main-content">
+            <section class="search-card" id="searchPanel">
+                <h2 class="section-title">Enter your car details</h2>
+
+                <form id="riskForm">
+                    <div class="form-group">
+                        <label for="make">Make</label>
+                        <div class="select-wrapper">
+                            <select id="make" required>
+                                <option value="" disabled selected>Select make</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="model">Model</label>
+                        <div class="select-wrapper">
+                            <select id="model" required disabled>
+                                <option value="" disabled selected>Select make first</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="year">Year</label>
+                            <input type="number" id="year" placeholder="e.g. 2018" min="1990" max="2026" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mileage">Mileage</label>
+                            <input type="number" id="mileage" placeholder="e.g. 45000" min="0" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="analyzeBtn" class="primary-btn">
+                        <span class="btn-text">Check This Car</span>
+                        <div class="loader hidden"></div>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Panel (Hidden by default) -->
+            <section class="results-card hidden" id="resultsPanel">
+                <!-- Vehicle Header -->
+                <div class="vehicle-header">
+                    <span class="vehicle-name" id="vehicleName">Ford Fiesta</span>
+                    <span class="vehicle-year" id="vehicleYear">2018</span>
+                </div>
+
+                <!-- Main Risk Display -->
+                <div class="risk-display" id="riskDisplay">
+                    <div class="risk-gauge">
+                        <div class="gauge-circle" id="gaugeCircle">
+                            <span class="risk-level" id="riskLevel">LOW</span>
+                            <span class="risk-label">RISK</span>
+                        </div>
+                    </div>
+                    <p class="risk-explanation" id="riskExplanation">
+                        This car is less likely to fail its MOT than average.
+                    </p>
+                </div>
+
+                <!-- Trust Badge -->
+                <div class="trust-badge" id="trustBadge">
+                    <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9 12l2 2 4-4" />
+                    </svg>
+                    <span>Based on <strong id="totalTests">0</strong> real MOT tests</span>
+                </div>
+
+                <!-- What to Watch Section -->
+                <div class="concerns-section">
+                    <h3 class="concerns-title">🔧 Parts most likely to fail</h3>
+                    <p class="concerns-subtitle">Percentage of MOT failures caused by each part</p>
+                    <div class="concerns-grid" id="concernsGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Parts Legend -->
+                <div class="parts-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot legend-high"></span>
+                        <span>Watch closely</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot legend-medium"></span>
+                        <span>Keep an eye on</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot legend-low"></span>
+                        <span>Usually fine</span>
+                    </div>
+                </div>
+
+                <!-- Guidance Box -->
+                <div class="guidance-box" id="guidanceBox">
+                    <div class="guidance-icon">💡</div>
+                    <p class="guidance-text" id="guidanceText">
+                        This car has a good track record. A standard pre-purchase inspection should be sufficient.
+                    </p>
+                </div>
+
+                <!-- Confidence Indicator -->
+                <div class="confidence-section" id="confidenceSection">
+                    <span class="confidence-label">Data confidence:</span>
+                    <span class="confidence-badge" id="confidenceBadge">High</span>
+                    <button class="info-btn" id="infoBtn" aria-label="More information">?</button>
+                </div>
+
+                <!-- Check Another Button -->
+                <button class="secondary-btn" id="checkAnotherBtn">
+                    ← Check another car
+                </button>
+            </section>
+
+            <!-- Info Modal -->
+            <div class="modal-overlay hidden" id="infoModal">
+                <div class="modal-content">
+                    <h3>How this works</h3>
+                    <p>AutoSafe uses official UK DVSA MOT test data to calculate how likely different car models are to
+                        fail their MOT.</p>
+                    <p>We analyse millions of real test results, grouped by:</p>
+                    <ul>
+                        <li>Car make and model</li>
+                        <li>Age of the vehicle</li>
+                        <li>Mileage range</li>
+                    </ul>
+                    <p><strong>Data confidence</strong> indicates how much data we have for your specific combination:
+                    </p>
+                    <ul>
+                        <li><strong>High:</strong> 10,000+ tests</li>
+                        <li><strong>Good:</strong> 1,000-10,000 tests</li>
+                        <li><strong>Limited:</strong> Under 1,000 tests</li>
+                    </ul>
+                    <button class="primary-btn" id="closeModalBtn">Got it</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Contains public sector information licensed under the <a
+                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank"
+                    rel="noopener">Open Government Licence v3.0</a>.</p>
+            <p>Data from UK DVSA • Not official government advice or endorsement.</p>
+            <p class="footer-links">
+                <a href="/static/terms.html">Terms</a> •
+                <a href="/static/privacy.html">Privacy</a> •
+                <a href="mailto:feedback@autosafe.app?subject=AutoSafe Feedback">Send Feedback</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Dynamically set year max to current year + 1
+        document.getElementById('year').max = new Date().getFullYear() + 1;
+    </script>
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
