@@ -388,66 +388,76 @@ input::placeholder {
 }
 
 /* ===== Cost Estimate Section ===== */
+/* Jobs-style minimalist: whitespace over color, typography first */
 .cost-section {
-    margin-top: var(--space-lg);
-    padding: var(--space-md);
-    background: var(--success-bg);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(5, 150, 105, 0.15);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
 }
 
 .cost-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-md);
 }
 
 .cost-question {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
 }
 
+/* Neutral button with clear affordance */
 .cost-toggle-btn {
     padding: var(--space-sm) var(--space-md);
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.85rem;
+    font-weight: 500;
     font-family: inherit;
-    color: white;
-    background: var(--success-green);
-    border: none;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1.5px solid var(--border-color);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .cost-toggle-btn:hover {
-    background: var(--success-green-light);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+    background: var(--background);
+}
+
+.cost-toggle-btn:active {
+    transform: scale(0.98);
 }
 
 .cost-details {
-    margin-top: var(--space-md);
-    padding-top: var(--space-md);
-    border-top: 1px solid rgba(5, 150, 105, 0.15);
+    margin-top: var(--space-lg);
 }
 
 .cost-estimate {
     font-size: 1rem;
     font-weight: 400;
     color: var(--text-primary);
-    margin-bottom: var(--space-xs);
+    line-height: 1.6;
+    margin-bottom: var(--space-sm);
+    max-width: 32ch;
+    /* Optimal line length for readability */
 }
 
 .cost-estimate strong {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
 }
 
 .cost-disclaimer {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-style: italic;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: normal;
+    line-height: 1.5;
 }
 
 /* ===== Trust Badge ===== */
