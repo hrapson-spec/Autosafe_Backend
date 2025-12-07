@@ -111,37 +111,11 @@ def check_model_year(model_id: str, year: int) -> dict:
     """
     Check if a model+year combination is valid.
     
-    Returns:
-        dict with 'valid' bool and 'message' if invalid
+    TEMPORARY FIX: Always return valid. 
+    The original implementation relied on a local SQLite database which does not exist
+    in the production environment (PostgreSQL). This caused Internal Server Errors.
+    We are bypassing this check to restore service availability.
     """
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-        SELECT first_year, last_year FROM model_years WHERE model_id = ?
-    """, (model_id,))
-    
-    row = cursor.fetchone()
-    conn.close()
-    
-    if not row:
-        # Model not found in our records
-        return {'valid': True, 'message': None}  # Allow unknown models through
-    
-    first_year, last_year = row
-    
-    if year > last_year:
-        return {
-            'valid': False,
-            'message': f"No {year} {model_id} exists in our records. This model was last produced around {last_year}."
-        }
-    
-    if year < first_year:
-        return {
-            'valid': False,
-            'message': f"No {year} {model_id} exists in our records. This model wasn't produced until around {first_year}."
-        }
-    
     return {'valid': True, 'message': None}
 
 
