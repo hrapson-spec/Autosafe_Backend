@@ -33,8 +33,25 @@ _cache = {
     "models": {}  # Keyed by make
 }
 CACHE_TTL = 3600  # 1 hour cache TTL
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - startup and shutdown."""
+    # Startup
+    if DATABASE_URL:
+        logger.info("Initializing database connection pool...")
+        await db.get_pool()
+    
+    yield  # Application runs here
+    
+    # Shutdown
+    logger.info("Shutting down, closing database pool...")
+    await db.close_pool()
+
+
+app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
 # CORS Middleware - Allow cross-origin requests
 from fastapi.middleware.cors import CORSMiddleware
@@ -250,6 +267,12 @@ async def get_risk(
     model_id = f"{make.upper()} {model.upper()}"
     age_band = get_age_band(age)
     mileage_band = get_mileage_band(mileage)
+    
+    # Validate model+year combination (check if model was produced that year)
+    from populate_model_years import check_model_year
+    year_check = check_model_year(model_id, year)
+    if not year_check['valid']:
+        raise HTTPException(status_code=400, detail=year_check['message'])
     
     # Try PostgreSQL first
     if DATABASE_URL:
