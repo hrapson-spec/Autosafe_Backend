@@ -80,9 +80,10 @@ body {
 }
 
 /* ===== Header ===== */
+/* Generous breathing room at top for premium, calm feel */
 .app-header {
     text-align: center;
-    padding: var(--space-xl) 0 var(--space-lg);
+    padding: var(--space-2xl) 0 var(--space-xl);
 }
 
 .logo {
@@ -90,50 +91,57 @@ body {
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
-    margin-bottom: var(--space-xs);
+    margin-bottom: var(--space-md);
 }
 
+/* Larger icon to anchor the page */
 .shield-icon {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     color: var(--trust-blue);
 }
 
 .logo-text {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     color: var(--trust-blue);
+    letter-spacing: -0.02em;
 }
 
-.tagline {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    max-width: 320px;
-    margin: 0 auto;
-}
-
+/* Headline is the emotional hero - larger, bolder */
 .headline {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: var(--space-xs);
-    margin-top: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    margin-top: var(--space-md);
+    letter-spacing: -0.02em;
+}
+
+/* Tagline supports the headline */
+.tagline {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    max-width: 340px;
+    margin: 0 auto;
+    line-height: 1.5;
 }
 
 .beta-badge {
     background: var(--warning-amber);
     color: white;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
     padding: 0.15rem 0.4rem;
     border-radius: var(--radius-sm);
     margin-left: var(--space-sm);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    vertical-align: middle;
 }
 
 .footer-links {
-    margin-top: var(--space-sm);
+    margin-top: var(--space-xs);
 }
 
 .footer-links a {
@@ -146,20 +154,23 @@ body {
 }
 
 /* ===== Cards ===== */
+/* Softer card presence - less boxy, more integrated */
 .search-card,
 .results-card {
     background: var(--card-bg);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
     margin-bottom: var(--space-lg);
 }
 
+/* Form title is secondary to the headline */
 .section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--space-lg);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
 }
 
 /* ===== Form Styles ===== */
@@ -388,81 +399,92 @@ input::placeholder {
 }
 
 /* ===== Cost Estimate Section ===== */
+/* Jobs-style minimalist: whitespace over color, typography first */
 .cost-section {
-    margin-top: var(--space-lg);
-    padding: var(--space-md);
-    background: var(--success-bg);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(5, 150, 105, 0.15);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
 }
 
 .cost-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-md);
 }
 
 .cost-question {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
 }
 
+/* Neutral button with clear affordance */
 .cost-toggle-btn {
     padding: var(--space-sm) var(--space-md);
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.85rem;
+    font-weight: 500;
     font-family: inherit;
-    color: white;
-    background: var(--success-green);
-    border: none;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border: 1.5px solid var(--border-color);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .cost-toggle-btn:hover {
-    background: var(--success-green-light);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+    background: var(--background);
+}
+
+.cost-toggle-btn:active {
+    transform: scale(0.98);
 }
 
 .cost-details {
-    margin-top: var(--space-md);
-    padding-top: var(--space-md);
-    border-top: 1px solid rgba(5, 150, 105, 0.15);
+    margin-top: var(--space-lg);
 }
 
 .cost-estimate {
     font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-bottom: var(--space-sm);
+    max-width: 32ch;
+    /* Optimal line length for readability */
+}
+
+.cost-estimate strong {
     font-weight: 600;
-    color: var(--success-green);
-    margin-bottom: var(--space-xs);
+    color: var(--text-primary);
 }
 
 .cost-disclaimer {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: normal;
+    line-height: 1.5;
+}
+
+/* ===== Data Credibility ===== */
+/* Merged trust badge + confidence into single subtle line */
+.data-credibility {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.data-credibility strong {
     color: var(--text-secondary);
-    font-style: italic;
-}
-
-/* ===== Trust Badge ===== */
-.trust-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--trust-blue-bg);
-    border-radius: var(--radius-full);
-    font-size: 0.85rem;
-    color: var(--trust-blue);
-    margin: var(--space-lg) auto;
-    width: fit-content;
-}
-
-.check-icon {
-    width: 18px;
-    height: 18px;
+    font-weight: 500;
 }
 
 /* ===== Concerns Section ===== */
@@ -648,61 +670,18 @@ input::placeholder {
     background: var(--success-green);
 }
 
-/* ===== Guidance Box ===== */
-.guidance-box {
-    display: flex;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--trust-blue-bg);
-    border-radius: var(--radius-md);
-    margin-top: var(--space-lg);
-    border: 1px solid rgba(30, 64, 175, 0.1);
-}
-
-.guidance-icon {
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
+/* ===== Guidance (De-boxed, Integrated) ===== */
+/* Removed blue box - guidance flows naturally as text */
 .guidance-text {
-    font-size: 0.9rem;
-    color: var(--trust-blue);
-    line-height: 1.5;
-}
-
-/* ===== Confidence Section ===== */
-.confidence-section {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--border-color);
-}
-
-.confidence-label {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-.confidence-badge {
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
-    background: var(--success-bg);
-    color: var(--success-green);
-}
-
-.confidence-badge.confidence-good {
-    background: var(--trust-blue-bg);
-    color: var(--trust-blue);
-}
-
-.confidence-badge.confidence-limited {
-    background: var(--warning-bg);
-    color: var(--warning-amber);
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin-top: var(--space-md);
+    font-weight: 500;
+    max-width: 36ch;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .info-btn {
@@ -768,21 +747,29 @@ input::placeholder {
 }
 
 /* ===== Footer ===== */
+/* Near-invisible - legal text should not compete for attention */
 .app-footer {
     text-align: center;
-    padding: var(--space-lg) 0;
+    padding: var(--space-md) 0;
+    color: var(--border-color);
+    font-size: 0.65rem;
+    line-height: 1.5;
+    opacity: 0.7;
+}
+
+.app-footer:hover {
+    opacity: 1;
     color: var(--text-muted);
-    font-size: 0.75rem;
-    line-height: 1.6;
 }
 
 .app-footer a {
-    color: var(--text-secondary);
-    text-decoration: underline;
+    color: inherit;
+    text-decoration: none;
 }
 
 .app-footer a:hover {
-    color: var(--trust-blue);
+    text-decoration: underline;
+    color: var(--text-secondary);
 }
 
 /* ===== Error Banner ===== */
@@ -811,6 +798,72 @@ input::placeholder {
 }
 
 /* ===== Utilities ===== */
+
+/* ===== Confidence Indicator ===== */
+.confidence-badge {
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s;
+}
+
+.confidence-badge:hover {
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+.confidence-badge strong {
+    font-weight: 600;
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.confidence-badge[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.confidence-details {
+    margin-top: var(--space-sm);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.text-high {
+    color: var(--success-green);
+}
+
+.text-medium {
+    color: var(--warning-amber);
+}
+
+.text-low {
+    color: var(--text-secondary);
+    /* Neutral for low confidence to avoid alarm */
+}
+
 .hidden {
     display: none !important;
 }
