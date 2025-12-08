@@ -39,10 +39,20 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - startup and shutdown."""
-    # Startup
-    if DATABASE_URL:
-        logger.info("Initializing database connection pool...")
+    # Startup: Build SQLite from compressed data if needed (Build-on-Boot pattern)
+    import build_db
+    build_db.ensure_database()
+    
+    # After building, check if we should use SQLite or PostgreSQL
+    global DATABASE_URL
+    if os.path.exists(DB_FILE):
+        logger.info(f"Using local {DB_FILE} (embedded SQLite - fastest)")
+        DATABASE_URL = None
+    elif DATABASE_URL:
+        logger.info("Initializing PostgreSQL connection pool...")
         await db.get_pool()
+    else:
+        logger.warning("No database available - using demo mode")
     
     yield  # Application runs here
     
@@ -71,10 +81,6 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 # Minimum total tests required for a make/model to appear in UI dropdowns
 # This filters out typos, garbage entries, and extremely rare vehicles
 MIN_TESTS_FOR_UI = 100
-
-if os.path.exists(DB_FILE):
-    logger.info(f"Found local {DB_FILE}, using embedded database instead of PostgreSQL")
-    DATABASE_URL = None
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
