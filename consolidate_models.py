@@ -89,10 +89,10 @@ def extract_base_model(model_id: str, make: str) -> str:
     if model.startswith(make.upper()):
         model = model[len(make):].strip()
     
-    # Skip entries that start with special chars, numbers, or are too short
-    if not model or len(model) < 2:
+    # Skip entries that start with special chars
+    if not model:
         return None
-    if model[0] in './-()':
+    if model[0] in './­-()':
         return None
     
     # Apply cleaning patterns
@@ -114,8 +114,9 @@ def extract_base_model(model_id: str, make: str) -> str:
     if first_word in trim_words:
         return None
     
-    # Handle makes that have numeric/alphanumeric models (500, 208, 3 SERIES, A3, etc.)
-    numeric_model_makes = ['BMW', 'AUDI', 'MERCEDES-BENZ', 'PEUGEOT', 'CITROEN', 'FIAT', 'MAZDA', 'LEXUS', 'VOLVO', 'HYUNDAI', 'KIA']
+    # Handle makes that have numeric/alphanumeric models (500, 208, 3, A3, etc.)
+    # These makes can have single-digit model names like MG 3, Peugeot 208, Mazda 3
+    numeric_model_makes = ['BMW', 'AUDI', 'MERCEDES-BENZ', 'PEUGEOT', 'CITROEN', 'FIAT', 'MAZDA', 'LEXUS', 'VOLVO', 'HYUNDAI', 'KIA', 'MG']
     if make.upper() in numeric_model_makes:
         if re.match(r'^[A-Z]?\d', first_word):
             # Normalize BMW: 320D, 330I, 520D -> 3 SERIES, 5 SERIES
@@ -128,7 +129,7 @@ def extract_base_model(model_id: str, make: str) -> str:
     if re.match(r'^\d', first_word):
         return None
     
-    # Skip very short or suspicious names
+    # Skip very short or suspicious names (but allow numeric models handled above)
     if len(first_word) < 2:
         return None
     
@@ -173,7 +174,8 @@ def get_canonical_models_for_make(make: str) -> dict:
         "SUBARU": ["IMPREZA", "FORESTER", "OUTBACK", "XV", "BRZ", "LEGACY", "WRX"],
         "JEEP": ["RENEGADE", "COMPASS", "CHEROKEE", "GRAND CHEROKEE", "WRANGLER"],
         "DACIA": ["SANDERO", "DUSTER", "LOGAN", "JOGGER", "SPRING"],
-        "MG": ["ZS", "HS", "5", "3", "MG3", "MG5", "ZS EV", "TF", "ZR", "ZT"],
+        "MG": ["ZS", "HS", "3", "4", "5", "6", "MG3", "MG5", "ZS EV", "TF", "ZR", "ZT", "ZT-T", 
+               "MGA", "MGB", "MGC", "MGF", "MIDGET", "MAGNETTE", "METRO", "MAESTRO", "RV8", "GS"],
     }
     return KNOWN_MODELS.get(make.upper(), [])
 
