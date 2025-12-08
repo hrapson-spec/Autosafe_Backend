@@ -68,6 +68,10 @@ app.add_middleware(
 DB_FILE = 'autosafe.db'
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# Minimum total tests required for a make/model to appear in UI dropdowns
+# This filters out typos, garbage entries, and extremely rare vehicles
+MIN_TESTS_FOR_UI = 100
+
 if os.path.exists(DB_FILE):
     logger.info(f"Found local {DB_FILE}, using embedded database instead of PostgreSQL")
     DATABASE_URL = None
@@ -183,17 +187,20 @@ async def get_makes(request: Request):
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        rows = conn.execute("SELECT DISTINCT model_id FROM risks").fetchall()
+        # Only return makes with sufficient test volume
+        query = """
+            SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
+                   SUM(Total_Tests) as test_count
+            FROM risks
+            GROUP BY make
+            HAVING SUM(Total_Tests) >= ?
+        """
+        rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
         conn.close()
-        makes = set()
-        for row in rows:
-            parts = row['model_id'].split(' ', 1)
-            if len(parts) > 0:
-                makes.add(parts[0])
-        result = sorted(list(makes))
-        _cache["makes"] = {"data": result, "time": time.time()}
-        logger.info(f"Cached {len(result)} makes from SQLite")
-        return result
+        makes = sorted(set(row['make'] for row in rows))
+        _cache["makes"] = {"data": makes, "time": time.time()}
+        logger.info(f"Cached {len(makes)} makes from SQLite")
+        return makes
     
     # Demo mode
     return sorted(MOCK_MAKES)
@@ -222,14 +229,21 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ?"
-        rows = conn.execute(query, (f"{make.upper()}%",)).fetchall()
+        # Only return models with sufficient test volume
+        query = """
+            SELECT model_id, SUM(Total_Tests) as test_count
+            FROM risks 
+            WHERE model_id LIKE ?
+            GROUP BY model_id
+            HAVING SUM(Total_Tests) >= ?
+        """
+        rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
         conn.close()
         
-        all_models = set(row['model_id'] for row in rows)
+        all_models = {row['model_id']: row['test_count'] for row in rows}
         display_models = set()
         
-        for mid in all_models:
+        for mid in all_models.keys():
             clean = extract_base_model(mid, make)
             if not clean:
                 display_models.add(mid)
