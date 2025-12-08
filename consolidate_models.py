@@ -89,10 +89,10 @@ def extract_base_model(model_id: str, make: str) -> str:
     if model.startswith(make.upper()):
         model = model[len(make):].strip()
     
-    # Skip entries that start with special chars, numbers, or are too short
-    if not model or len(model) < 2:
+    # Skip entries that start with special chars
+    if not model:
         return None
-    if model[0] in './-()':
+    if model[0] in './­-()':
         return None
     
     # Apply cleaning patterns
@@ -114,8 +114,9 @@ def extract_base_model(model_id: str, make: str) -> str:
     if first_word in trim_words:
         return None
     
-    # Handle makes that have numeric/alphanumeric models (500, 208, 3 SERIES, A3, etc.)
-    numeric_model_makes = ['BMW', 'AUDI', 'MERCEDES-BENZ', 'PEUGEOT', 'CITROEN', 'FIAT', 'MAZDA', 'LEXUS', 'VOLVO']
+    # Handle makes that have numeric/alphanumeric models (500, 208, 3, A3, etc.)
+    # These makes can have single-digit model names like MG 3, Peugeot 208, Mazda 3
+    numeric_model_makes = ['BMW', 'AUDI', 'MERCEDES-BENZ', 'PEUGEOT', 'CITROEN', 'FIAT', 'MAZDA', 'LEXUS', 'VOLVO', 'HYUNDAI', 'KIA', 'MG']
     if make.upper() in numeric_model_makes:
         if re.match(r'^[A-Z]?\d', first_word):
             # Normalize BMW: 320D, 330I, 520D -> 3 SERIES, 5 SERIES
@@ -128,7 +129,7 @@ def extract_base_model(model_id: str, make: str) -> str:
     if re.match(r'^\d', first_word):
         return None
     
-    # Skip very short or suspicious names
+    # Skip very short or suspicious names (but allow numeric models handled above)
     if len(first_word) < 2:
         return None
     
@@ -144,36 +145,37 @@ def get_canonical_models_for_make(make: str) -> dict:
     # This would be populated from database analysis
     # Key popular models by make
     KNOWN_MODELS = {
-        "FORD": ["FIESTA", "FOCUS", "MONDEO", "PUMA", "KUGA", "MUSTANG", "RANGER", "TRANSIT", "ECOSPORT", "S-MAX", "GALAXY", "KA", "C-MAX", "B-MAX", "TOURNEO", "ESCORT", "CAPRI", "SIERRA"],
-        "VAUXHALL": ["CORSA", "ASTRA", "INSIGNIA", "MOKKA", "CROSSLAND", "GRANDLAND", "ADAM", "ZAFIRA", "MERIVA", "COMBO", "VECTRA", "VIVARO", "MOVANO"],
-        "VOLKSWAGEN": ["GOLF", "POLO", "PASSAT", "TIGUAN", "T-ROC", "TOURAN", "TOUAREG", "ARTEON", "ID.3", "ID.4", "UP", "BEETLE", "SCIROCCO", "CADDY", "TRANSPORTER", "SHARAN"],
-        "BMW": ["1 SERIES", "2 SERIES", "3 SERIES", "4 SERIES", "5 SERIES", "6 SERIES", "7 SERIES", "8 SERIES", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "I3", "I4", "IX", "M3", "M5"],
-        "AUDI": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8", "E-TRON", "RS3", "RS4", "RS6"],
-        "MERCEDES-BENZ": ["A CLASS", "B CLASS", "C CLASS", "E CLASS", "S CLASS", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "AMG GT", "SL", "SLC", "SPRINTER", "VITO"],
+        "FORD": ["FIESTA", "FOCUS", "MONDEO", "PUMA", "KUGA", "MUSTANG", "RANGER", "TRANSIT", "ECOSPORT", "S-MAX", "GALAXY", "KA", "C-MAX", "B-MAX", "TOURNEO", "ESCORT", "CAPRI", "SIERRA", "CORTINA", "ORION", "EDGE", "EXPLORER", "MAVERICK"],
+        "VAUXHALL": ["CORSA", "ASTRA", "INSIGNIA", "MOKKA", "CROSSLAND", "GRANDLAND", "ADAM", "ZAFIRA", "MERIVA", "COMBO", "VECTRA", "VIVARO", "MOVANO", "AGILA", "AMPERA", "ANTARA", "TIGRA", "CALIBRA", "NOVA", "VIVA", "OMEGA", "CAVALIER"],
+        "VOLKSWAGEN": ["GOLF", "POLO", "PASSAT", "TIGUAN", "T-ROC", "TOURAN", "TOUAREG", "ARTEON", "ID.3", "ID.4", "UP", "BEETLE", "SCIROCCO", "CADDY", "TRANSPORTER", "SHARAN", "AMAROK", "JETTA", "BORA", "LUPO", "EOS", "CORRADO"],
+        "BMW": ["1 SERIES", "2 SERIES", "3 SERIES", "4 SERIES", "5 SERIES", "6 SERIES", "7 SERIES", "8 SERIES", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "I3", "I4", "IX", "M2", "M3", "M4", "M5", "M6", "M8", "ALPINA"],
+        "AUDI": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8", "E-TRON", "RS3", "RS4", "RS6", "S3", "S4", "S5"],
+        "MERCEDES-BENZ": ["A-CLASS", "B-CLASS", "C-CLASS", "E-CLASS", "S-CLASS", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "AMG", "SL", "SLC", "SPRINTER", "VITO", "V-CLASS"],
         "TOYOTA": ["YARIS", "COROLLA", "CAMRY", "RAV4", "C-HR", "AYGO", "PRIUS", "LAND CRUISER", "HILUX", "SUPRA", "GR86", "AURIS", "AVENSIS", "VERSO"],
         "HONDA": ["CIVIC", "JAZZ", "HR-V", "CR-V", "ACCORD", "NSX", "E", "FIT", "INSIGHT", "PILOT"],
-        "NISSAN": ["MICRA", "JUKE", "QASHQAI", "X-TRAIL", "LEAF", "NAVARA", "GT-R", "370Z", "NOTE", "PULSAR"],
-        "PEUGEOT": ["108", "208", "308", "508", "2008", "3008", "5008", "PARTNER", "RIFTER", "EXPERT", "BOXER"],
-        "RENAULT": ["CLIO", "MEGANE", "CAPTUR", "KADJAR", "SCENIC", "TWINGO", "ZOE", "TRAFIC", "MASTER", "KANGOO"],
-        "KIA": ["PICANTO", "RIO", "CEED", "SPORTAGE", "SORENTO", "NIRO", "STONIC", "EV6", "SOUL", "OPTIMA"],
-        "HYUNDAI": ["I10", "I20", "I30", "TUCSON", "KONA", "SANTA FE", "IONIQ", "IX35", "GETZ"],
-        "FIAT": ["500", "PANDA", "PUNTO", "GRANDE", "TIPO", "500X", "500L", "DUCATO", "DOBLO", "BRAVO", "STILO"],
-        "SEAT": ["IBIZA", "LEON", "ARONA", "ATECA", "TARRACO", "ALHAMBRA", "MII"],
-        "SKODA": ["FABIA", "OCTAVIA", "SUPERB", "KODIAQ", "KAROQ", "KAMIQ", "SCALA", "CITIGO"],
-        "MINI": ["HATCH", "CLUBMAN", "COUNTRYMAN", "CONVERTIBLE", "PACEMAN", "COUPE"],
-        "MAZDA": ["2", "3", "6", "CX-3", "CX-5", "CX-30", "MX-5", "RX-8"],
-        "CITROEN": ["C1", "C3", "C4", "C5", "BERLINGO", "DISPATCH", "RELAY", "DS3", "DS4", "DS5"],
-        "SUZUKI": ["SWIFT", "VITARA", "JIMNY", "IGNIS", "S-CROSS", "ALTO", "SPLASH", "SX4"],
-        "VOLVO": ["V40", "V60", "V90", "S60", "S90", "XC40", "XC60", "XC90", "C30", "C70"],
-        "JAGUAR": ["XE", "XF", "XJ", "F-TYPE", "F-PACE", "E-PACE", "I-PACE"],
-        "LAND ROVER": ["DEFENDER", "DISCOVERY", "RANGE ROVER", "EVOQUE", "VELAR", "FREELANDER"],
+        "NISSAN": ["MICRA", "JUKE", "QASHQAI", "X-TRAIL", "LEAF", "NAVARA", "GT-R", "370Z", "NOTE", "PULSAR", "ALMERA", "PRIMERA"],
+        "PEUGEOT": ["108", "208", "308", "508", "2008", "3008", "5008", "PARTNER", "RIFTER", "EXPERT", "BOXER", "107", "207", "307", "407"],
+        "RENAULT": ["CLIO", "MEGANE", "CAPTUR", "KADJAR", "SCENIC", "TWINGO", "ZOE", "TRAFIC", "MASTER", "KANGOO", "LAGUNA", "ESPACE"],
+        "KIA": ["PICANTO", "RIO", "CEED", "SPORTAGE", "SORENTO", "NIRO", "STONIC", "EV6", "SOUL", "OPTIMA", "VENGA", "CARENS"],
+        "HYUNDAI": ["I10", "I20", "I30", "TUCSON", "KONA", "SANTA FE", "IONIQ", "IX35", "GETZ", "I40", "IX20"],
+        "FIAT": ["500", "PANDA", "PUNTO", "GRANDE", "TIPO", "500X", "500L", "DUCATO", "DOBLO", "BRAVO", "STILO", "MULTIPLA"],
+        "SEAT": ["IBIZA", "LEON", "ARONA", "ATECA", "TARRACO", "ALHAMBRA", "MII", "TOLEDO", "ALTEA"],
+        "SKODA": ["FABIA", "OCTAVIA", "SUPERB", "KODIAQ", "KAROQ", "KAMIQ", "SCALA", "CITIGO", "YETI", "ROOMSTER"],
+        "MINI": ["HATCH", "CLUBMAN", "COUNTRYMAN", "CONVERTIBLE", "PACEMAN", "COUPE", "ONE", "COOPER"],
+        "MAZDA": ["2", "3", "6", "CX-3", "CX-5", "CX-30", "MX-5", "RX-8", "CX-7"],
+        "CITROEN": ["C1", "C3", "C4", "C5", "BERLINGO", "DISPATCH", "RELAY", "DS3", "DS4", "DS5", "SAXO", "XSARA", "PICASSO"],
+        "SUZUKI": ["SWIFT", "VITARA", "JIMNY", "IGNIS", "S-CROSS", "ALTO", "SPLASH", "SX4", "WAGON"],
+        "VOLVO": ["V40", "V60", "V90", "S60", "S90", "XC40", "XC60", "XC90", "C30", "C70", "S40", "V50", "V70"],
+        "JAGUAR": ["XE", "XF", "XJ", "F-TYPE", "F-PACE", "E-PACE", "I-PACE", "X-TYPE", "S-TYPE"],
+        "LAND ROVER": ["DEFENDER", "DISCOVERY", "RANGE ROVER", "EVOQUE", "VELAR", "FREELANDER", "SPORT"],
         "PORSCHE": ["911", "CAYENNE", "MACAN", "PANAMERA", "TAYCAN", "BOXSTER", "CAYMAN"],
-        "LEXUS": ["IS", "ES", "GS", "LS", "NX", "RX", "UX", "LC", "RC"],
-        "MITSUBISHI": ["OUTLANDER", "ASX", "L200", "SHOGUN", "ECLIPSE", "MIRAGE", "COLT"],
+        "LEXUS": ["IS", "ES", "GS", "LS", "NX", "RX", "UX", "LC", "RC", "CT"],
+        "MITSUBISHI": ["OUTLANDER", "ASX", "L200", "SHOGUN", "ECLIPSE", "MIRAGE", "COLT", "LANCER", "GRANDIS"],
         "SUBARU": ["IMPREZA", "FORESTER", "OUTBACK", "XV", "BRZ", "LEGACY", "WRX"],
         "JEEP": ["RENEGADE", "COMPASS", "CHEROKEE", "GRAND CHEROKEE", "WRANGLER"],
         "DACIA": ["SANDERO", "DUSTER", "LOGAN", "JOGGER", "SPRING"],
-        "MG": ["ZS", "HS", "5", "3", "MG3", "MG5", "ZS EV"],
+        "MG": ["ZS", "HS", "3", "4", "5", "6", "MG3", "MG5", "ZS EV", "TF", "ZR", "ZT", "ZT-T", 
+               "MGA", "MGB", "MGC", "MGF", "MIDGET", "MAGNETTE", "METRO", "MAESTRO", "RV8", "GS"],
     }
     return KNOWN_MODELS.get(make.upper(), [])
 

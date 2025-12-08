@@ -229,6 +229,8 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
+        from consolidate_models import get_canonical_models_for_make
+        
         # Only return models with sufficient test volume
         query = """
             SELECT model_id, SUM(Total_Tests) as test_count
@@ -240,28 +242,24 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
         rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
         conn.close()
         
-        all_models = {row['model_id']: row['test_count'] for row in rows}
-        display_models = set()
+        # Extract base models from found entries
+        found_models = {}
+        for row in rows:
+            base_model = extract_base_model(row['model_id'], make)
+            if base_model and len(base_model) > 1:
+                if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                    found_models[base_model] = row['test_count']
         
-        for mid in all_models.keys():
-            clean = extract_base_model(mid, make)
-            if not clean:
-                display_models.add(mid)
-                continue
-                
-            clean_full_id = f"{make.upper()} {clean}"
-            
-            if clean_full_id in all_models:
-                # The base model exists in the DB.
-                # Only add it if THIS is the base model.
-                if mid == clean_full_id:
-                    display_models.add(mid)
-            else:
-                # The base model does NOT exist in the DB.
-                # So we must show this variant.
-                display_models.add(mid)
+        # Get curated list of known models for this make
+        known_models = get_canonical_models_for_make(make)
         
-        result = sorted(list(display_models))
+        if known_models:
+            # Only return models from curated list that exist in data
+            result = sorted([m for m in known_models if m in found_models])
+        else:
+            # For non-curated makes, return alphabetic models only (capped)
+            result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
+        
         _cache["models"][cache_key] = {"data": result, "time": time.time()}
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
