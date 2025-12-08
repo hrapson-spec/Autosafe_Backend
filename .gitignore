@@ -8,9 +8,10 @@ __pycache__/
 .vscode/
 *.log
 
-# Large Data Files (Ignored)
+# Large Data Files (Ignored - except compressed production data)
 *.csv
 *.db
+!prod_data_clean.csv.gz
 MOT Test Results/
 MOT Test Failures/
 MOT testing data results (2024)-2/
