@@ -15,6 +15,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Minimum total tests required for a make/model to appear in UI dropdowns
+# This filters out typos, garbage entries, and extremely rare vehicles
+# while keeping all legitimate production cars (even rare ones have >100 tests)
+MIN_TESTS_FOR_UI = 100
+
 async def get_pool():
     """Get or create the connection pool."""
     global _pool
@@ -58,7 +63,7 @@ def normalize_columns(row_dict: Dict) -> Dict:
     return normalized
 
 async def get_makes() -> List[str]:
-    """Return a list of all unique canonical vehicle makes."""
+    """Return a list of all unique canonical vehicle makes with minimum test volume."""
     from consolidate_models import normalize_make, MAJOR_MAKES
     
     pool = await get_pool()
@@ -66,14 +71,19 @@ async def get_makes() -> List[str]:
         return None  # Fallback to mock data
     
     async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT DISTINCT model_id FROM mot_risk")
+        # Only return makes with sufficient test volume to filter out garbage
+        rows = await conn.fetch("""
+            SELECT SUBSTRING(model_id FROM '^[^ ]+') as make, SUM(total_tests) as test_count
+            FROM mot_risk
+            GROUP BY make
+            HAVING SUM(total_tests) >= $1
+        """, MIN_TESTS_FOR_UI)
+        
         makes = set()
         for row in rows:
-            parts = row['model_id'].split(' ', 1)
-            if len(parts) > 0:
-                canonical = normalize_make(parts[0])
-                if canonical:  # Filter out None (garbage makes)
-                    makes.add(canonical)
+            canonical = normalize_make(row['make'])
+            if canonical:  # Filter out None (garbage makes)
+                makes.add(canonical)
         
         # Sort with major makes first, then alphabetically
         def sort_key(make):
@@ -84,7 +94,7 @@ async def get_makes() -> List[str]:
         return sorted(list(makes), key=sort_key)
 
 async def get_models(make: str) -> List[str]:
-    """Return a list of consolidated base models for a given make."""
+    """Return a list of consolidated base models for a given make with minimum test volume."""
     from consolidate_models import extract_base_model, get_canonical_models_for_make, CANONICAL_MAKES
     
     pool = await get_pool()
@@ -103,26 +113,32 @@ async def get_models(make: str) -> List[str]:
     known_models = get_canonical_models_for_make(make)
     
     async with pool.acquire() as conn:
-        # Get all model_ids for this make (and its aliases)
-        found_models = set()
+        # Get all model_ids for this make with sufficient test volume
+        found_models = {}  # model -> test_count
         for pattern in search_patterns:
-            rows = await conn.fetch(
-                "SELECT DISTINCT model_id FROM mot_risk WHERE model_id LIKE $1",
-                f"{pattern}%"
-            )
+            rows = await conn.fetch("""
+                SELECT model_id, SUM(total_tests) as test_count
+                FROM mot_risk 
+                WHERE model_id LIKE $1
+                GROUP BY model_id
+                HAVING SUM(total_tests) >= $2
+            """, f"{pattern}%", MIN_TESTS_FOR_UI)
+            
             for row in rows:
                 base_model = extract_base_model(row['model_id'], make)
                 if base_model and len(base_model) > 1:
-                    found_models.add(base_model)
+                    # Keep track of highest test count for each base model
+                    if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                        found_models[base_model] = row['test_count']
         
         # If we have a curated list, only return models from it that exist in data
         if known_models:
             result = [m for m in known_models if m in found_models]
-            return result
+            return sorted(result)  # Alphabetical order
         
         # For non-curated makes, return alphabetic models only (capped)
-        clean = [m for m in found_models if len(m) >= 3 and m.isalpha()]
-        return sorted(clean)[:30]
+        clean = [m for m in found_models.keys() if len(m) >= 3 and m.isalpha()]
+        return sorted(clean)[:30]  # Alphabetical order
 
 async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[Dict]:
     """Get aggregated risk data for a vehicle, combining all variants."""

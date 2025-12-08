@@ -15,6 +15,7 @@ import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
+from repair_costs import calculate_expected_repair_cost
 import logging
 import sys
 
@@ -32,8 +33,25 @@ _cache = {
     "models": {}  # Keyed by make
 }
 CACHE_TTL = 3600  # 1 hour cache TTL
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle - startup and shutdown."""
+    # Startup
+    if DATABASE_URL:
+        logger.info("Initializing database connection pool...")
+        await db.get_pool()
+    
+    yield  # Application runs here
+    
+    # Shutdown
+    logger.info("Shutting down, closing database pool...")
+    await db.close_pool()
+
+
+app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
 # CORS Middleware - Allow cross-origin requests
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,8 +64,17 @@ app.add_middleware(
 )
 
 # Check for PostgreSQL first, then SQLite
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
 DB_FILE = 'autosafe.db'
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Minimum total tests required for a make/model to appear in UI dropdowns
+# This filters out typos, garbage entries, and extremely rare vehicles
+MIN_TESTS_FOR_UI = 100
+
+if os.path.exists(DB_FILE):
+    logger.info(f"Found local {DB_FILE}, using embedded database instead of PostgreSQL")
+    DATABASE_URL = None
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -127,6 +154,17 @@ def add_confidence_intervals(result: dict) -> dict:
     return result
 
 
+def add_repair_cost_estimate(result: dict) -> dict:
+    """
+    Add expected repair cost estimate to a risk result.
+    Uses the formula: E[cost|fail] = Σ(risk_i × cost_mid_i) / p_fail
+    """
+    cost_estimate = calculate_expected_repair_cost(result)
+    if cost_estimate:
+        result['Repair_Cost_Estimate'] = cost_estimate
+    return result
+
+
 @app.get("/api/makes", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
@@ -149,17 +187,20 @@ async def get_makes(request: Request):
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        rows = conn.execute("SELECT DISTINCT model_id FROM risks").fetchall()
+        # Only return makes with sufficient test volume
+        query = """
+            SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
+                   SUM(Total_Tests) as test_count
+            FROM risks
+            GROUP BY make
+            HAVING SUM(Total_Tests) >= ?
+        """
+        rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
         conn.close()
-        makes = set()
-        for row in rows:
-            parts = row['model_id'].split(' ', 1)
-            if len(parts) > 0:
-                makes.add(parts[0])
-        result = sorted(list(makes))
-        _cache["makes"] = {"data": result, "time": time.time()}
-        logger.info(f"Cached {len(result)} makes from SQLite")
-        return result
+        makes = sorted(set(row['make'] for row in rows))
+        _cache["makes"] = {"data": makes, "time": time.time()}
+        logger.info(f"Cached {len(makes)} makes from SQLite")
+        return makes
     
     # Demo mode
     return sorted(MOCK_MAKES)
@@ -188,14 +229,21 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ?"
-        rows = conn.execute(query, (f"{make.upper()}%",)).fetchall()
+        # Only return models with sufficient test volume
+        query = """
+            SELECT model_id, SUM(Total_Tests) as test_count
+            FROM risks 
+            WHERE model_id LIKE ?
+            GROUP BY model_id
+            HAVING SUM(Total_Tests) >= ?
+        """
+        rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
         conn.close()
         
-        all_models = set(row['model_id'] for row in rows)
+        all_models = {row['model_id']: row['test_count'] for row in rows}
         display_models = set()
         
-        for mid in all_models:
+        for mid in all_models.keys():
             clean = extract_base_model(mid, make)
             if not clean:
                 display_models.add(mid)
@@ -239,6 +287,12 @@ async def get_risk(
     age_band = get_age_band(age)
     mileage_band = get_mileage_band(mileage)
     
+    # Validate model+year combination (check if model was produced that year)
+    from populate_model_years import check_model_year
+    year_check = check_model_year(model_id, year)
+    if not year_check['valid']:
+        raise HTTPException(status_code=400, detail=year_check['message'])
+    
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_risk(model_id, age_band, mileage_band)
@@ -248,7 +302,7 @@ async def get_risk(
                 if result.get("suggestion"):
                     detail += f" Did you mean '{result['suggestion']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            return add_confidence_intervals(result)
+            return add_repair_cost_estimate(add_confidence_intervals(result))
     
     # Fallback to SQLite
     conn = get_sqlite_connection()
@@ -283,12 +337,12 @@ async def get_risk(
             }
         
         conn.close()
-        return add_confidence_intervals(dict(row))
+        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
     
     # Demo mode
     response = MOCK_RISK.copy()
     response["model_id"] = model_id
-    return add_confidence_intervals(response)
+    return add_repair_cost_estimate(add_confidence_intervals(response))
 
 
 # Mount static files at /static (only if the folder exists)
