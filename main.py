@@ -64,8 +64,13 @@ app.add_middleware(
 )
 
 # Check for PostgreSQL first, then SQLite
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
 DB_FILE = 'autosafe.db'
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if os.path.exists(DB_FILE):
+    logger.info(f"Found local {DB_FILE}, using embedded database instead of PostgreSQL")
+    DATABASE_URL = None
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
