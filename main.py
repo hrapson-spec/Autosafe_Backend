@@ -7,15 +7,20 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict
 from datetime import datetime
+from contextlib import asynccontextmanager
+from functools import lru_cache
+import asyncio
 import os
 import time
+import sqlite3
 
 # Import database module for PostgreSQL
 import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
-from consolidate_models import extract_base_model
+from consolidate_models import extract_base_model, get_canonical_models_for_make
 from repair_costs import calculate_expected_repair_cost
+from populate_model_years import check_model_year
 import logging
 import sys
 
@@ -30,10 +35,14 @@ logger = logging.getLogger(__name__)
 # Response caching for expensive queries
 _cache = {
     "makes": {"data": None, "time": 0},
-    "models": {}  # Keyed by make
+    "models": {},  # Keyed by make
+    "risk": {}  # Keyed by (model_id, age_band, mileage_band)
 }
 CACHE_TTL = 3600  # 1 hour cache TTL
-from contextlib import asynccontextmanager
+RISK_CACHE_SIZE = 1000  # Max number of risk results to cache
+
+# Async lock for cache stampede prevention
+_cache_lock = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -96,23 +105,38 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def health_check():
     """Health check endpoint for monitoring."""
     db_status = "disconnected"
-    if DATABASE_URL:
+    db_type = "none"
+
+    # Check SQLite first (preferred when available)
+    if os.path.exists(DB_FILE):
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.execute("SELECT 1 FROM risks LIMIT 1")
+            conn.close()
+            db_status = "connected"
+            db_type = "sqlite"
+        except sqlite3.Error:
+            db_status = "error"
+            db_type = "sqlite"
+    # Fall back to PostgreSQL check
+    elif DATABASE_URL:
         try:
             pool = await db.get_pool()
             if pool:
                 db_status = "connected"
+                db_type = "postgresql"
         except Exception:
             db_status = "error"
-    
+            db_type = "postgresql"
+
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "database": db_status
+        "database": db_status,
+        "database_type": db_type
     }
 
 # SQLite fallback connection (for local development)
-import sqlite3
-
 def get_sqlite_connection():
     """Get SQLite connection if available."""
     if not os.path.exists(DB_FILE):
@@ -176,38 +200,46 @@ def add_repair_cost_estimate(result: dict) -> dict:
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
     global _cache
-    
-    # Check cache first
+
+    # Check cache first (without lock for reads)
     if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
         logger.info("Returning cached makes list")
         return _cache["makes"]["data"]
-    
-    # Try PostgreSQL first
-    if DATABASE_URL:
-        result = await db.get_makes()
-        if result is not None:
-            _cache["makes"] = {"data": result, "time": time.time()}
-            logger.info(f"Cached {len(result)} makes from PostgreSQL")
-            return result
-    
-    # Fallback to SQLite
-    conn = get_sqlite_connection()
-    if conn:
-        # Only return makes with sufficient test volume
-        query = """
-            SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
-                   SUM(Total_Tests) as test_count
-            FROM risks
-            GROUP BY make
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
-        conn.close()
-        makes = sorted(set(row['make'] for row in rows))
-        _cache["makes"] = {"data": makes, "time": time.time()}
-        logger.info(f"Cached {len(makes)} makes from SQLite")
-        return makes
-    
+
+    # Use lock to prevent cache stampede - only one request refreshes cache
+    async with _cache_lock:
+        # Double-check cache after acquiring lock (another request may have refreshed)
+        if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
+            return _cache["makes"]["data"]
+
+        # Try PostgreSQL first
+        if DATABASE_URL:
+            result = await db.get_makes()
+            if result is not None:
+                _cache["makes"] = {"data": result, "time": time.time()}
+                logger.info(f"Cached {len(result)} makes from PostgreSQL")
+                return result
+
+        # Fallback to SQLite
+        conn = get_sqlite_connection()
+        if conn:
+            try:
+                # Only return makes with sufficient test volume
+                query = """
+                    SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
+                           SUM(Total_Tests) as test_count
+                    FROM risks
+                    GROUP BY make
+                    HAVING SUM(Total_Tests) >= ?
+                """
+                rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
+                makes = sorted(set(row['make'] for row in rows))
+                _cache["makes"] = {"data": makes, "time": time.time()}
+                logger.info(f"Cached {len(makes)} makes from SQLite")
+                return makes
+            finally:
+                conn.close()
+
     # Demo mode
     return sorted(MOCK_MAKES)
 
@@ -218,12 +250,12 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     """Return a list of models for a given make (cached for 1 hour)."""
     global _cache
     cache_key = make.upper()
-    
-    # Check cache first
+
+    # Check cache first (without lock for reads)
     if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
         logger.info(f"Returning cached models for {cache_key}")
         return _cache["models"][cache_key]["data"]
-    
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
@@ -231,45 +263,45 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             _cache["models"][cache_key] = {"data": result, "time": time.time()}
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
-    
+
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        from consolidate_models import get_canonical_models_for_make
-        
-        # Only return models with sufficient test volume
-        query = """
-            SELECT model_id, SUM(Total_Tests) as test_count
-            FROM risks 
-            WHERE model_id LIKE ?
-            GROUP BY model_id
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
-        conn.close()
-        
-        # Extract base models from found entries
-        found_models = {}
-        for row in rows:
-            base_model = extract_base_model(row['model_id'], make)
-            if base_model and len(base_model) > 1:
-                if base_model not in found_models or row['test_count'] > found_models[base_model]:
-                    found_models[base_model] = row['test_count']
-        
-        # Get curated list of known models for this make
-        known_models = get_canonical_models_for_make(make)
-        
-        if known_models:
-            # Only return models from curated list that exist in data
-            result = sorted([m for m in known_models if m in found_models])
-        else:
-            # For non-curated makes, return alphabetic models only (capped)
-            result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
-        
-        _cache["models"][cache_key] = {"data": result, "time": time.time()}
-        logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
-        return result
-    
+        try:
+            # Only return models with sufficient test volume
+            query = """
+                SELECT model_id, SUM(Total_Tests) as test_count
+                FROM risks
+                WHERE model_id LIKE ?
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= ?
+            """
+            rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
+
+            # Extract base models from found entries
+            found_models = {}
+            for row in rows:
+                base_model = extract_base_model(row['model_id'], make)
+                if base_model and len(base_model) > 1:
+                    if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                        found_models[base_model] = row['test_count']
+
+            # Get curated list of known models for this make
+            known_models = get_canonical_models_for_make(make)
+
+            if known_models:
+                # Only return models from curated list that exist in data
+                result = sorted([m for m in known_models if m in found_models])
+            else:
+                # For non-curated makes, return alphabetic models only (capped)
+                result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
+
+            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
+            return result
+        finally:
+            conn.close()
+
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
 
@@ -290,13 +322,18 @@ async def get_risk(
     model_id = f"{make.upper()} {model.upper()}"
     age_band = get_age_band(age)
     mileage_band = get_mileage_band(mileage)
-    
+
     # Validate model+year combination (check if model was produced that year)
-    from populate_model_years import check_model_year
     year_check = check_model_year(model_id, year)
     if not year_check['valid']:
         raise HTTPException(status_code=400, detail=year_check['message'])
-    
+
+    # Check risk cache first
+    cache_key = (model_id, age_band, mileage_band)
+    if cache_key in _cache["risk"] and (time.time() - _cache["risk"][cache_key]["time"]) < CACHE_TTL:
+        logger.info(f"Returning cached risk for {model_id}")
+        return _cache["risk"][cache_key]["data"]
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_risk(model_id, age_band, mileage_band)
@@ -306,47 +343,63 @@ async def get_risk(
                 if result.get("suggestion"):
                     detail += f" Did you mean '{result['suggestion']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            return add_repair_cost_estimate(add_confidence_intervals(result))
-    
+            final_result = add_repair_cost_estimate(add_confidence_intervals(result))
+            _cache_risk_result(cache_key, final_result)
+            return final_result
+
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ? AND mileage_band = ?"
-        row = conn.execute(query, (model_id, age_band, mileage_band)).fetchone()
-        
-        if not row:
-            check_query = "SELECT 1 FROM risks WHERE model_id = ?"
-            exists = conn.execute(check_query, (model_id,)).fetchone()
-            
-            if not exists:
-                like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
-                suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
-                conn.close()
-                
-                detail = "Vehicle model not found."
-                if suggestion:
-                    detail += f" Did you mean '{suggestion['model_id']}'?"
-                raise HTTPException(status_code=404, detail=detail)
-            
-            avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
-            avg_row = conn.execute(avg_query, (model_id,)).fetchone()
+        try:
+            query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ? AND mileage_band = ?"
+            row = conn.execute(query, (model_id, age_band, mileage_band)).fetchone()
+
+            if not row:
+                check_query = "SELECT 1 FROM risks WHERE model_id = ?"
+                exists = conn.execute(check_query, (model_id,)).fetchone()
+
+                if not exists:
+                    like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
+                    suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
+
+                    detail = "Vehicle model not found."
+                    if suggestion:
+                        detail += f" Did you mean '{suggestion['model_id']}'?"
+                    raise HTTPException(status_code=404, detail=detail)
+
+                avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
+                avg_row = conn.execute(avg_query, (model_id,)).fetchone()
+
+                return {
+                    "model_id": model_id,
+                    "age_band": age_band,
+                    "mileage_band": mileage_band,
+                    "note": "Exact age/mileage match not found. Returning model average.",
+                    "Failure_Risk": avg_row['avg_risk'] if avg_row else 0.0
+                }
+
+            final_result = add_repair_cost_estimate(add_confidence_intervals(dict(row)))
+            _cache_risk_result(cache_key, final_result)
+            return final_result
+        finally:
             conn.close()
-            
-            return {
-                "model_id": model_id,
-                "age_band": age_band,
-                "mileage_band": mileage_band,
-                "note": "Exact age/mileage match not found. Returning model average.",
-                "Failure_Risk": avg_row['avg_risk'] if avg_row else 0.0
-            }
-        
-        conn.close()
-        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
-    
+
     # Demo mode
     response = MOCK_RISK.copy()
     response["model_id"] = model_id
     return add_repair_cost_estimate(add_confidence_intervals(response))
+
+
+def _cache_risk_result(cache_key: tuple, result: dict):
+    """Cache a risk result, evicting oldest entries if cache is full."""
+    global _cache
+    # Simple LRU-like eviction: remove oldest entries if cache is full
+    if len(_cache["risk"]) >= RISK_CACHE_SIZE:
+        # Remove oldest 10% of entries
+        sorted_keys = sorted(_cache["risk"].keys(), key=lambda k: _cache["risk"][k]["time"])
+        for old_key in sorted_keys[:RISK_CACHE_SIZE // 10]:
+            del _cache["risk"][old_key]
+    _cache["risk"][cache_key] = {"data": result, "time": time.time()}
 
 
 # Mount static files at /static (only if the folder exists)

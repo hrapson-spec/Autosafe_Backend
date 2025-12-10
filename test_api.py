@@ -15,7 +15,13 @@ class TestAPI(unittest.TestCase):
     def test_read_root(self):
         response = client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Welcome", response.json()["message"])
+        # Root endpoint returns HTML if static folder exists, otherwise JSON with "AutoSafe API"
+        if response.headers.get("content-type", "").startswith("text/html"):
+            # HTML response from static/index.html
+            self.assertIn("html", response.text.lower())
+        else:
+            # JSON response when static folder doesn't exist
+            self.assertIn("AutoSafe", response.json()["message"])
 
     def test_get_makes(self):
         # This test relies on the DB being populated. 

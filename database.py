@@ -96,46 +96,47 @@ async def get_makes() -> List[str]:
 async def get_models(make: str) -> List[str]:
     """Return a list of consolidated base models for a given make with minimum test volume."""
     from consolidate_models import extract_base_model, get_canonical_models_for_make, CANONICAL_MAKES
-    
+
     pool = await get_pool()
     if not pool:
         return None  # Fallback to mock data
-    
+
     # Handle canonical make lookups (e.g., "MERCEDES-BENZ" needs to search "MERCEDES")
-    search_patterns = [make.upper()]
-    
+    search_patterns = [f"{make.upper()}%"]
+
     # Add reverse mappings for compound makes
     for raw, canonical in CANONICAL_MAKES.items():
         if canonical == make.upper():
-            search_patterns.append(raw)
-    
+            search_patterns.append(f"{raw}%")
+
     # Get curated list of known models for this make
     known_models = get_canonical_models_for_make(make)
-    
+
     async with pool.acquire() as conn:
+        # OPTIMIZATION: Single query with all patterns using LIKE ANY
+        # This eliminates N+1 query pattern for makes with multiple aliases
+        rows = await conn.fetch("""
+            SELECT model_id, SUM(total_tests) as test_count
+            FROM mot_risk
+            WHERE model_id LIKE ANY($1::text[])
+            GROUP BY model_id
+            HAVING SUM(total_tests) >= $2
+        """, search_patterns, MIN_TESTS_FOR_UI)
+
         # Get all model_ids for this make with sufficient test volume
         found_models = {}  # model -> test_count
-        for pattern in search_patterns:
-            rows = await conn.fetch("""
-                SELECT model_id, SUM(total_tests) as test_count
-                FROM mot_risk 
-                WHERE model_id LIKE $1
-                GROUP BY model_id
-                HAVING SUM(total_tests) >= $2
-            """, f"{pattern}%", MIN_TESTS_FOR_UI)
-            
-            for row in rows:
-                base_model = extract_base_model(row['model_id'], make)
-                if base_model and len(base_model) > 1:
-                    # Keep track of highest test count for each base model
-                    if base_model not in found_models or row['test_count'] > found_models[base_model]:
-                        found_models[base_model] = row['test_count']
-        
+        for row in rows:
+            base_model = extract_base_model(row['model_id'], make)
+            if base_model and len(base_model) > 1:
+                # Keep track of highest test count for each base model
+                if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                    found_models[base_model] = row['test_count']
+
         # If we have a curated list, only return models from it that exist in data
         if known_models:
             result = [m for m in known_models if m in found_models]
             return sorted(result)  # Alphabetical order
-        
+
         # For non-curated makes, return alphabetic models only (capped)
         clean = [m for m in found_models.keys() if len(m) >= 3 and m.isalpha()]
         return sorted(clean)[:30]  # Alphabetical order

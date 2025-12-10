@@ -27,5 +27,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # - 2 workers instead of 4 to match available resources
 # - keep-alive for connection reuse
 # - timeout for slow requests
-CMD python init_db.py && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 30
+# Note: Database initialization is handled by main.py lifespan handler (build_db.ensure_database)
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 30
 
