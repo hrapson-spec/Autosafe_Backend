@@ -8,9 +8,7 @@ Uses pre-calculated mass centers (weighted mean mileage per bucket)
 rather than geometric midpoints, as recommended by the expert.
 """
 
-from typing import Dict, List, Tuple, Optional
-import numpy as np
-
+from typing import Dict, Tuple
 
 # Mileage bucket definitions with empirically-derived mass centers
 # These should be updated from actual data when pipeline runs

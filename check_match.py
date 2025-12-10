@@ -1,6 +1,7 @@
-import pandas as pd
 import glob
 import os
+
+import pandas as pd
 
 print("--- DIAGNOSTIC: CHECKING ID MATCHES ---")
 
@@ -22,7 +23,7 @@ if result_files:
     results = pd.read_csv(result_files[0])
     # Apply your cleaning fix
     results['test_id'] = results['test_id'].astype(str).str.split('.').str[0]
-    print(f"Sample Result IDs: {results['test_id'].head(5].tolist()}")
+    print(f"Sample Result IDs: {results['test_id'].head(5).tolist()}")
     
     # 3. Calculate Overlap
     # Check how many IDs from results exist in the defects list

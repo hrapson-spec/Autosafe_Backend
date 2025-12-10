@@ -1,7 +1,7 @@
-import pandas as pd
-import numpy as np
 import logging
 import os
+
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

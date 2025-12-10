@@ -31,7 +31,7 @@ async def get_risk_with_interpolation(
         Dict with interpolated risk values
     """
     from database import get_pool
-    from interpolation import interpolate_risk, get_mileage_bucket
+    from interpolation import get_mileage_bucket, interpolate_risk
     
     pool = await get_pool()
     if not pool:

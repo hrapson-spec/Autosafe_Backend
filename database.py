@@ -3,7 +3,7 @@ AutoSafe Database Module - PostgreSQL Connection
 Uses DATABASE_URL environment variable from Railway.
 """
 import os
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 # Check if we have a database URL
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -46,25 +46,9 @@ async def close_pool():
         except Exception as e:
             logger.error(f"Error closing database pool: {e}")
 
-def normalize_columns(row_dict: Dict) -> Dict:
-    """Convert lowercase PostgreSQL column names back to expected format.
-    
-    Examples:
-        total_tests -> Total_Tests
-        failure_risk -> Failure_Risk
-        risk_brakes -> Risk_Brakes
-    """
-    normalized = {}
-    for key, value in row_dict.items():
-        # Convert to Title_Case (each word capitalized, joined by underscore)
-        parts = key.split('_')
-        new_key = '_'.join(part.capitalize() for part in parts)
-        normalized[new_key] = value
-    return normalized
-
 async def get_makes() -> List[str]:
     """Return a list of all unique canonical vehicle makes with minimum test volume."""
-    from consolidate_models import normalize_make, MAJOR_MAKES
+    from consolidate_models import MAJOR_MAKES, normalize_make
     
     pool = await get_pool()
     if not pool:
@@ -95,7 +79,7 @@ async def get_makes() -> List[str]:
 
 async def get_models(make: str) -> List[str]:
     """Return a list of consolidated base models for a given make with minimum test volume."""
-    from consolidate_models import extract_base_model, get_canonical_models_for_make, CANONICAL_MAKES
+    from consolidate_models import CANONICAL_MAKES, extract_base_model, get_canonical_models_for_make
 
     pool = await get_pool()
     if not pool:

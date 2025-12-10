@@ -1,13 +1,12 @@
-import unittest
-import pandas as pd
 import os
 import sys
-from io import StringIO
+import unittest
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from process_defects import load_rfr_mapping, DefectConfig
+from process_defects import load_rfr_mapping
+
 
 class TestDefectProcessing(unittest.TestCase):
 

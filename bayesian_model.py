@@ -18,16 +18,16 @@ Requirements:
 Note: This is scaffolding for future implementation. The actual MCMC
 inference is computationally intensive and should be run offline.
 """
-import pandas as pd
-import numpy as np
 import logging
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 # Check for optional PyMC dependency
 try:
-    import pymc as pm
     import arviz as az
+    import pymc as pm
     PYMC_AVAILABLE = True
 except ImportError:
     PYMC_AVAILABLE = False

@@ -1,12 +1,14 @@
-import unittest
-import pandas as pd
-import sys
 import os
+import sys
+import unittest
+
+import pandas as pd
 
 # Add parent directory to path to import utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import get_age_band, get_mileage_band
+
 
 class TestBanding(unittest.TestCase):
 

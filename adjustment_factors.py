@@ -12,16 +12,16 @@ lower risk (replacement), while failures on systemic components indicate
 higher risk (chronic condition).
 """
 
+from typing import Dict, Optional
+
 import pandas as pd
-import numpy as np
-from typing import Dict, Optional, Tuple
+
 from component_classification import (
-    get_component_type,
-    get_base_adjustment_factor,
-    apply_protective_time_decay,
+    CATEGORY_CLASSIFICATION,
     ComponentType,
-    AdjustmentDirection,
-    CATEGORY_CLASSIFICATION
+    apply_protective_time_decay,
+    get_base_adjustment_factor,
+    get_component_type,
 )
 
 

@@ -4,8 +4,9 @@ Export Production-Ready CSV for AutoSafe deployment.
 This script creates a slim CSV with only the columns needed by the API,
 reducing file size from ~1GB to ~50MB for efficient Git deployment.
 """
-import pandas as pd
 import logging
+
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

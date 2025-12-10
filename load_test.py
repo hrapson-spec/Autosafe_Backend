@@ -3,15 +3,16 @@
 AutoSafe Performance Load Testing Script
 Measures response times, throughput, and error rates under various load conditions.
 """
-import asyncio
-import httpx
-import time
-import statistics
 import argparse
+import asyncio
 import json
-from dataclasses import dataclass, asdict
-from typing import List, Dict, Optional
+import statistics
+import time
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from typing import Dict, List
+
+import httpx
 
 
 @dataclass

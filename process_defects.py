@@ -1,7 +1,8 @@
-import pandas as pd
 import glob
-import os
 import logging
+import os
+
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(

@@ -6,12 +6,12 @@ Usage:
     import build_db
     build_db.ensure_database()  # Call on app startup
 """
-import gzip
 import csv
-import sqlite3
-import os
-import time
+import gzip
 import logging
+import os
+import sqlite3
+import time
 
 logger = logging.getLogger(__name__)
 

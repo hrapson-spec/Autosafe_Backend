@@ -2,27 +2,27 @@
 AutoSafe API - MOT Risk Prediction
 Uses PostgreSQL (DATABASE_URL) if available, otherwise falls back to SQLite or Demo Mode.
 """
+import asyncio
+import logging
+import os
+import sqlite3
+import sys
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import List
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from typing import List, Dict
-from datetime import datetime
-from contextlib import asynccontextmanager
-from functools import lru_cache
-import asyncio
-import os
-import time
-import sqlite3
 
 # Import database module for PostgreSQL
 import database as db
-from utils import get_age_band, get_mileage_band
-from confidence import wilson_interval, classify_confidence
+from confidence import classify_confidence, wilson_interval
 from consolidate_models import extract_base_model, get_canonical_models_for_make
-from repair_costs import calculate_expected_repair_cost
 from populate_model_years import check_model_year
-import logging
-import sys
+from repair_costs import calculate_expected_repair_cost
+from utils import get_age_band, get_mileage_band
 
 # Configure structured logging
 logging.basicConfig(
@@ -74,6 +74,7 @@ app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifes
 
 # CORS Middleware - Allow cross-origin requests
 from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -93,8 +94,8 @@ MIN_TESTS_FOR_UI = 100
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.requests import Request
 
 limiter = Limiter(key_func=get_remote_address)

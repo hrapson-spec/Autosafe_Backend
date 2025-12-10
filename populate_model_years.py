@@ -8,8 +8,8 @@ For each model, we estimate:
 
 The estimation is based on age bands observed in the MOT data.
 """
-import sqlite3
 import os
+import sqlite3
 
 DB_FILE = 'autosafe.db'
 

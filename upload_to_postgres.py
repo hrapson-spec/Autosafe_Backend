@@ -2,10 +2,10 @@
 Upload FINAL_MOT_REPORT.csv to Railway PostgreSQL.
 Run locally with: DATABASE_URL="postgresql://..." python upload_to_postgres.py
 """
-import os
-import sys
 import csv
+import os
 import re
+import sys
 
 # Increase CSV field size limit for large fields
 csv.field_size_limit(sys.maxsize)

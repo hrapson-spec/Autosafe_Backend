@@ -1,7 +1,9 @@
-import pandas as pd
 import glob
-import os
 import logging
+import os
+
+import pandas as pd
+
 from utils import get_age_band, get_mileage_band
 
 # Configure logging

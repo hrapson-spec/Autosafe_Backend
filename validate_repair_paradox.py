@@ -10,19 +10,17 @@ Generates a JSON report with calculated multipliers and validation status.
 """
 
 import json
-import os
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
+from adjustment_factors import generate_adjustment_factor_table
 from component_classification import (
-    get_component_type,
-    get_all_category_classifications,
-    ComponentType,
     DEFAULT_ADJUSTMENT_FACTORS,
     FULL_PROTECTION_MONTHS,
-    NEUTRAL_BY_MONTHS
+    NEUTRAL_BY_MONTHS,
+    ComponentType,
+    get_all_category_classifications,
 )
-from adjustment_factors import generate_adjustment_factor_table
 
 
 def validate_adjustment_directions() -> Dict[str, Any]:

@@ -1,13 +1,13 @@
 """
 Tests for the confidence interval module.
 """
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from confidence import wilson_interval, classify_confidence
+from confidence import classify_confidence, wilson_interval
 
 
 class TestWilsonInterval(unittest.TestCase):

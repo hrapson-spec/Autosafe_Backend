@@ -2,7 +2,6 @@
 Make/Model Consolidation Script
 Creates canonical mappings for makes and models to simplify user selection.
 """
-import os
 import re
 
 # Canonical Make Mappings - normalize variations to standard names

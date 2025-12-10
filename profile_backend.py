@@ -1,9 +1,11 @@
 import cProfile
+import os
 import pstats
-import uvicorn
 import signal
 import sys
-import os
+
+import uvicorn
+
 
 def run_server():
     # Run uvicorn programmatically
