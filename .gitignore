@@ -13,3 +13,17 @@ venv/
 # IDE
 .idea/
 .vscode/
+
+# Generated data files
+*.parquet
+*.csv
+
+# Test data directories
+MOT Test Failures/
+MOT Test Results/
+
+# Generated reports (keep template, ignore output)
+evaluation_report.md
+
+# Logs
+*.log
