@@ -16,6 +16,8 @@ from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
+from database_interpolation import get_risk_with_interpolation
+from interpolation import interpolate_risk, get_mileage_bucket, MILEAGE_BUCKETS
 import logging
 import sys
 
@@ -297,9 +299,9 @@ async def get_risk(
     if not year_check['valid']:
         raise HTTPException(status_code=400, detail=year_check['message'])
     
-    # Try PostgreSQL first
+    # Try PostgreSQL first (with interpolation for smooth risk curves)
     if DATABASE_URL:
-        result = await db.get_risk(model_id, age_band, mileage_band)
+        result = await get_risk_with_interpolation(model_id, age_band, mileage)
         if result is not None:
             if "error" in result and result["error"] == "not_found":
                 detail = "Vehicle model not found."
@@ -308,30 +310,33 @@ async def get_risk(
                 raise HTTPException(status_code=404, detail=detail)
             return add_repair_cost_estimate(add_confidence_intervals(result))
     
-    # Fallback to SQLite
+    # Fallback to SQLite (with interpolation)
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ? AND mileage_band = ?"
-        row = conn.execute(query, (model_id, age_band, mileage_band)).fetchone()
-        
-        if not row:
+        # Fetch all mileage bands for this model/age to enable interpolation
+        query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ?"
+        rows = conn.execute(query, (model_id, age_band)).fetchall()
+
+        if not rows:
+            # Check if model exists at all
             check_query = "SELECT 1 FROM risks WHERE model_id = ?"
             exists = conn.execute(check_query, (model_id,)).fetchone()
-            
+
             if not exists:
                 like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
                 suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
                 conn.close()
-                
+
                 detail = "Vehicle model not found."
                 if suggestion:
                     detail += f" Did you mean '{suggestion['model_id']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            
+
+            # Model exists but no data for this age band - return average
             avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
             avg_row = conn.execute(avg_query, (model_id,)).fetchone()
             conn.close()
-            
+
             return {
                 "model_id": model_id,
                 "age_band": age_band,
@@ -339,9 +344,47 @@ async def get_risk(
                 "note": "Exact age/mileage match not found. Returning model average.",
                 "Failure_Risk": avg_row['avg_risk'] if avg_row else 0.0
             }
-        
+
         conn.close()
-        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
+
+        # Build bucket data for interpolation
+        bucket_data = {}
+        total_tests_all = 0
+        total_failures_all = 0
+
+        risk_fields = ["Failure_Risk", "Risk_Brakes", "Risk_Suspension", "Risk_Tyres",
+                       "Risk_Steering", "Risk_Visibility", "Risk_Body_Chassis_Structure"]
+
+        for row in rows:
+            row_dict = dict(row)
+            band = row_dict.get('mileage_band')
+            if band and row_dict.get('Total_Tests'):
+                total_tests_all += int(row_dict['Total_Tests'])
+                total_failures_all += int(row_dict.get('Total_Failures', 0))
+                bucket_data[band] = {field: float(row_dict.get(field, 0) or 0) for field in risk_fields}
+
+        current_bucket = get_mileage_bucket(mileage)
+
+        # Build result with interpolated values
+        result = {
+            "model_id": model_id,
+            "age_band": age_band,
+            "mileage_band": current_bucket,
+            "Actual_Mileage": mileage,
+            "Total_Tests": total_tests_all,
+            "Total_Failures": total_failures_all,
+            "Interpolated": len(bucket_data) > 1,
+        }
+
+        # Interpolate each risk field
+        for field in risk_fields:
+            bucket_risks = {band: data.get(field, 0.0) for band, data in bucket_data.items()}
+            if bucket_risks:
+                result[field] = round(interpolate_risk(mileage, "mileage", bucket_risks), 6)
+            else:
+                result[field] = 0.0
+
+        return add_repair_cost_estimate(add_confidence_intervals(result))
     
     # Demo mode
     response = MOCK_RISK.copy()
