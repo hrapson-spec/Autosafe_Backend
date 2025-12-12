@@ -29,7 +29,7 @@ def calculate_risk_pipeline():
 
     logging.info("Loading defect summary...")
     defects_df = pd.read_csv(RiskConfig.DEFECTS_FILE, index_col='test_id')
-    defects_df.index = defects_df.index.astype(str)
+    defects_df.index = pd.Index(defects_df.index.astype('int64'), name='test_id')
     defect_cols = defects_df.columns.tolist()
     logging.info(f"Loaded {len(defects_df):,} defect records with columns: {defect_cols}")
 
@@ -50,7 +50,7 @@ def calculate_risk_pipeline():
         cols = ['test_id', 'test_date', 'first_use_date', 'test_mileage', 'make', 'model', 'test_result']
         
         for chunk in pd.read_csv(filename, sep=',', usecols=cols, chunksize=500000, low_memory=False):
-            chunk['test_id'] = chunk['test_id'].astype(str)
+            chunk['test_id'] = pd.to_numeric(chunk['test_id'], errors='coerce').fillna(0).astype('int64')
             
             chunk['test_date'] = pd.to_datetime(chunk['test_date'], errors='coerce')
             chunk['first_use_date'] = pd.to_datetime(chunk['first_use_date'], errors='coerce')

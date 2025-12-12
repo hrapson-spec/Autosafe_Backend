@@ -58,7 +58,7 @@ def collapse_same_day(df: pd.DataFrame) -> pd.DataFrame:
     """
     Collapse multiple tests on the same vehicle+date to one record using 'worst-of-day' rule.
     
-    Priority: FAIL (4) > PRS (3) > ABA (2) > PASS (1) (higher value = kepy)
+    Priority: FAIL (4) > PRS (3) > ABA (2) > PASS (1) (higher value = kept)
     
     Args:
         df: DataFrame with test_id, vehicle_id, test_date, test_result (int8) columns
@@ -211,8 +211,8 @@ def build_cycle_index(
                     chunk = chunk[chunk['test_date'] <= cutoff]
                 
                 # Collapse same-day tests (worst-of-day rule) on the chunk
-                # Note: This might miss cross-chunk same-day tests for the same vehicle,
-                # but those will be caught in the final pass.
+                # Note: Cross-chunk same-day tests for the same vehicle are rare
+                # and handled by the final collapse after combining all data.
                 chunk = collapse_same_day(chunk)
                 
                 if not chunk.empty:
@@ -233,10 +233,11 @@ def build_cycle_index(
     # Sort and assign cycles
     logger.info("Sorting by vehicle_id, test_date...")
     combined = combined.sort_values(['vehicle_id', 'test_date']).reset_index(drop=True)
-    
-    # NOTE: Final same-day collapse removed - per-chunk collapse during loading
-    # handles 99.99%+ of cases. Cross-file same-day duplicates are extremely rare.
-    
+
+    # Final same-day collapse to handle cross-chunk and cross-file duplicates
+    logger.info("Final same-day collapse...")
+    combined = collapse_same_day(combined)
+
     logger.info("Assigning cycles (min_days_gap=2)...")
     combined = assign_cycles(combined, min_days_gap=2)
     
@@ -286,7 +287,7 @@ def load_cycle_index(index_path: str = 'cycle_first_tests.parquet') -> Set[int]:
 
 def get_retest_prevalence(
     index_path: str = 'cycle_first_tests.parquet',
-    windows: list = [30, 60, 120]
+    windows: list = None
 ) -> dict:
     """
     Calculate retest prevalence statistics.
@@ -297,6 +298,9 @@ def get_retest_prevalence(
         - retest_count: Tests removed as retests
         - window_stats: For each window, count of tests with prior test within N days
     """
+    if windows is None:
+        windows = [30, 60, 120]
+
     # This requires the full combined data, so we rebuild it
     # In practice, we'd cache this during build_cycle_index
     
