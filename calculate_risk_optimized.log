@@ -1,0 +1,18 @@
+2025-12-12 16:24:23,451 - INFO - --- STARTING RISK CALCULATION (Baseline Model) ---
+✓ Schema validation passed: 14 test_result files validated
+2025-12-12 16:24:23,456 - INFO - Loading defect summary...
+2025-12-12 16:24:46,903 - INFO - Loaded 29,255,189 defect records with columns: ['Body, Structure and General Items', 'Body, chassis, structure', 'Brake performance', 'Brakes', 'Buses and coaches supplementary tests', "Driver's View of the Road", 'Driving Controls and Speed Limiters', 'Exhaust, Fuel and Emissions', 'Identification of the vehicle', 'Items Not Tested', 'Lamps, reflectors and electrical equipment', 'Lights', 'Motor tricycles and quadricycles', 'Noise, emissions and leaks', 'Non-component advisories', 'Registration Plates and VIN', 'Seat Belts and Supplementary Restraint Systems', 'Seat belt installation check', 'Seat belts and supplementary restraint systems', 'Speedometer and speed limiter', 'Steering', 'Suspension', 'Towbars', 'Tyres', 'Visibility', 'Wheels']
+2025-12-12 16:24:46,904 - INFO - Loading cycle filter index from cycle_first_tests.parquet...
+2025-12-12 16:24:47,845 - INFO - Loaded 98,363,030 cycle-first test IDs
+Traceback (most recent call last):
+  File "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/calculate_risk.py", line 253, in <module>
+    calculate_risk_pipeline(cutoff_date=args.cutoff_date)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/calculate_risk.py", line 101, in calculate_risk_pipeline
+    if cycle_filter_ids:
+       ^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/pandas/core/indexes/base.py", line 3197, in __nonzero__
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: The truth value of a Index is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
