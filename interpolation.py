@@ -9,7 +9,6 @@ rather than geometric midpoints, as recommended by the expert.
 """
 
 from typing import Dict, List, Tuple, Optional
-import numpy as np
 
 
 # Mileage bucket definitions with empirically-derived mass centers

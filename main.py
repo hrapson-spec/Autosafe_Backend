@@ -14,6 +14,13 @@ import time
 import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
+from interpolation import (
+    interpolate_risk,
+    MILEAGE_ORDER,
+    AGE_ORDER,
+    MILEAGE_BUCKETS,
+    AGE_BUCKETS
+)
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 import logging
@@ -171,6 +178,124 @@ def add_repair_cost_estimate(result: dict) -> dict:
     return result
 
 
+def get_adjacent_mileage_bands(mileage_band: str) -> List[str]:
+    """Get the current and adjacent mileage bands for interpolation."""
+    try:
+        idx = MILEAGE_ORDER.index(mileage_band)
+        bands = [mileage_band]
+        if idx > 0:
+            bands.append(MILEAGE_ORDER[idx - 1])
+        if idx < len(MILEAGE_ORDER) - 1:
+            bands.append(MILEAGE_ORDER[idx + 1])
+        return bands
+    except ValueError:
+        return [mileage_band]
+
+
+def get_adjacent_age_bands(age_band: str) -> List[str]:
+    """Get the current and adjacent age bands for interpolation."""
+    try:
+        idx = AGE_ORDER.index(age_band)
+        bands = [age_band]
+        if idx > 0:
+            bands.append(AGE_ORDER[idx - 1])
+        if idx < len(AGE_ORDER) - 1:
+            bands.append(AGE_ORDER[idx + 1])
+        return bands
+    except ValueError:
+        return [age_band]
+
+
+def interpolate_risk_result(
+    base_result: dict,
+    bucket_data: Dict[str, Dict[str, float]],
+    actual_mileage: int,
+    actual_age: float,
+    mileage_band: str,
+    age_band: str
+) -> dict:
+    """
+    Apply bilinear interpolation to risk values using actual mileage and age.
+
+    This preserves the continuous signal from age/mileage instead of
+    discretizing into coarse bins, improving ranking (AUC).
+
+    Args:
+        base_result: The base result dict from the exact bucket match
+        bucket_data: Dict mapping (age_band, mileage_band) tuples to risk dicts
+        actual_mileage: The actual vehicle mileage
+        actual_age: The actual vehicle age in years
+        mileage_band: The mileage band the vehicle falls into
+        age_band: The age band the vehicle falls into
+
+    Returns:
+        Result dict with interpolated risk values
+    """
+    result = dict(base_result)
+
+    # Get all risk field names
+    risk_fields = [k for k in base_result.keys()
+                   if k.startswith("Risk_") or k == "Failure_Risk"]
+
+    if not risk_fields:
+        return result
+
+    # Step 1: Interpolate along mileage axis (for the current age band)
+    mileage_risks_at_current_age = {}
+    for mb in MILEAGE_ORDER:
+        key = (age_band, mb)
+        if key in bucket_data:
+            mileage_risks_at_current_age[mb] = bucket_data[key]
+
+    # Step 2: If we have adjacent age bands, interpolate along age axis too
+    # For now, primarily interpolate on mileage (as noted in interpolation.py,
+    # mileage is the primary continuous variable)
+
+    for field in risk_fields:
+        # Build dict of mileage_band -> risk for this field
+        field_by_mileage = {
+            mb: data.get(field, 0.0)
+            for mb, data in mileage_risks_at_current_age.items()
+            if field in data
+        }
+
+        if len(field_by_mileage) >= 2:
+            # We have enough data points to interpolate
+            interpolated = interpolate_risk(actual_mileage, "mileage", field_by_mileage)
+            result[field] = round(interpolated, 6)
+        # Otherwise keep the original value
+
+    # Add metadata about interpolation
+    result["interpolated"] = True
+    result["actual_mileage"] = actual_mileage
+    result["actual_age"] = actual_age
+
+    return result
+
+
+def fetch_bucket_data_sqlite(conn, model_id: str, age_band: str, mileage_bands: List[str]) -> Dict[tuple, dict]:
+    """
+    Fetch risk data for multiple mileage bands from SQLite.
+
+    Returns dict mapping (age_band, mileage_band) -> risk data dict
+    """
+    placeholders = ",".join("?" * len(mileage_bands))
+    query = f"""
+        SELECT * FROM risks
+        WHERE model_id = ? AND age_band = ? AND mileage_band IN ({placeholders})
+    """
+    params = [model_id, age_band] + mileage_bands
+    rows = conn.execute(query, params).fetchall()
+
+    result = {}
+    for row in rows:
+        row_dict = dict(row)
+        key = (row_dict.get('age_band'), row_dict.get('mileage_band'))
+        result[key] = row_dict
+
+    return result
+
+
 @app.get("/api/makes", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
@@ -308,30 +433,35 @@ async def get_risk(
                 raise HTTPException(status_code=404, detail=detail)
             return add_repair_cost_estimate(add_confidence_intervals(result))
     
-    # Fallback to SQLite
+    # Fallback to SQLite with interpolation
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ? AND mileage_band = ?"
-        row = conn.execute(query, (model_id, age_band, mileage_band)).fetchone()
-        
-        if not row:
+        # Fetch adjacent mileage bands for interpolation
+        mileage_bands = get_adjacent_mileage_bands(mileage_band)
+        bucket_data = fetch_bucket_data_sqlite(conn, model_id, age_band, mileage_bands)
+
+        # Check if we have any data for the current bucket
+        current_key = (age_band, mileage_band)
+        if current_key not in bucket_data:
+            # No exact match - check if model exists at all
             check_query = "SELECT 1 FROM risks WHERE model_id = ?"
             exists = conn.execute(check_query, (model_id,)).fetchone()
-            
+
             if not exists:
                 like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
                 suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
                 conn.close()
-                
+
                 detail = "Vehicle model not found."
                 if suggestion:
                     detail += f" Did you mean '{suggestion['model_id']}'?"
                 raise HTTPException(status_code=404, detail=detail)
-            
+
+            # Model exists but not for this age/mileage combination
             avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
             avg_row = conn.execute(avg_query, (model_id,)).fetchone()
             conn.close()
-            
+
             return {
                 "model_id": model_id,
                 "age_band": age_band,
@@ -339,9 +469,23 @@ async def get_risk(
                 "note": "Exact age/mileage match not found. Returning model average.",
                 "Failure_Risk": avg_row['avg_risk'] if avg_row else 0.0
             }
-        
+
         conn.close()
-        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
+
+        # Get the base result from the exact bucket match
+        base_result = bucket_data[current_key]
+
+        # Apply interpolation using actual mileage and age values
+        interpolated_result = interpolate_risk_result(
+            base_result=base_result,
+            bucket_data=bucket_data,
+            actual_mileage=mileage,
+            actual_age=age,
+            mileage_band=mileage_band,
+            age_band=age_band
+        )
+
+        return add_repair_cost_estimate(add_confidence_intervals(interpolated_result))
     
     # Demo mode
     response = MOCK_RISK.copy()
