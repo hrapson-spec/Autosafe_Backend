@@ -1,7 +1,7 @@
 """
 Advisory Signal Validation
 
-Two high-value validation checks to ensure advisory features add genuine predictive signal:
+Three high-value validation checks to ensure advisory features add genuine predictive signal:
 
 1. Within-strata monotonicity: Compute fail rate by advisory band WITHIN age bands.
    If the gradient persists inside strata, advisories add independent signal
@@ -12,6 +12,12 @@ Two high-value validation checks to ensure advisory features add genuine predict
    - LINKAGE_FAIL: Should have history but join failed (vehicle age > 3 years)
 
    This prevents weight drift across DEV/OOT as the linkage failure mix changes.
+
+3. Bucket stability check: Compare fail rates for each bucket across DEV/OOT years.
+   If a bucket's fail rate shifts dramatically (e.g., 23.9% -> 11.9%), it is NOT
+   a stable semantic group - it's partly a function of dataset window/linkage mechanics.
+   Unstable buckets should not receive fixed weights as they will wash out incremental
+   gains from other features and distort calibration.
 """
 
 import pandas as pd
@@ -61,6 +67,14 @@ class ValidationConfig:
         '3-4': lambda x: (x >= 3) & (x <= 4),
         '5+': lambda x: x >= 5,
     }
+
+    # Bucket stability thresholds
+    # If fail rate shifts by more than this between DEV/OOT, bucket is unstable
+    STABILITY_THRESHOLD = 0.05  # 5 percentage points
+
+    # DEV/OOT year configuration
+    DEV_YEAR = 2023
+    OOT_YEAR = 2024
 
 
 def get_advisory_band(count: int) -> str:
@@ -539,6 +553,127 @@ def check_no_history_decomposition(df: pd.DataFrame,
     return results
 
 
+def check_bucket_stability(df: pd.DataFrame) -> Dict:
+    """
+    Check 3: Bucket stability across DEV/OOT
+
+    Compare fail rates for each history_status bucket between DEV and OOT years.
+    Unstable buckets (large fail rate shift) should not receive fixed weights.
+
+    Key insight: If LINKAGE_FAIL shows 23.9% fail rate in DEV but 11.9% in OOT,
+    it's not a stable semantic group - it's partly a function of linkage mechanics.
+
+    Args:
+        df: DataFrame with 'test_year', 'history_status', 'is_failure' columns
+
+    Returns:
+        Dict with stability assessment per bucket
+    """
+    logging.info("\n" + "="*70)
+    logging.info("CHECK 3: BUCKET STABILITY ACROSS DEV/OOT")
+    logging.info("="*70)
+
+    results = {
+        'by_bucket': {},
+        'unstable_buckets': [],
+        'recommendation': None
+    }
+
+    dev_year = ValidationConfig.DEV_YEAR
+    oot_year = ValidationConfig.OOT_YEAR
+    threshold = ValidationConfig.STABILITY_THRESHOLD
+
+    # Filter to DEV and OOT years
+    dev_df = df[df['test_year'] == dev_year]
+    oot_df = df[df['test_year'] == oot_year]
+
+    if len(dev_df) == 0:
+        logging.warning(f"No data for DEV year {dev_year}")
+        return results
+    if len(oot_df) == 0:
+        logging.warning(f"No data for OOT year {oot_year}")
+        return results
+
+    print(f"\nComparing fail rates between DEV ({dev_year}) and OOT ({oot_year})")
+    print(f"Stability threshold: {threshold:.1%} fail rate shift")
+    print()
+    print(f"{'Bucket':<20} {'DEV N':>12} {'DEV Rate':>10} {'OOT N':>12} {'OOT Rate':>10} {'Shift':>10} {'Status':>12}")
+    print("-" * 90)
+
+    # Get all unique buckets
+    all_buckets = df['history_status'].dropna().unique()
+
+    for bucket in ['HAS_HISTORY', 'FIRST_TEST', 'LINKAGE_FAIL']:
+        if bucket not in all_buckets:
+            continue
+
+        dev_bucket = dev_df[dev_df['history_status'] == bucket]
+        oot_bucket = oot_df[oot_df['history_status'] == bucket]
+
+        dev_n = len(dev_bucket)
+        oot_n = len(oot_bucket)
+
+        if dev_n < 100 or oot_n < 100:
+            status = "SKIP (n<100)"
+            print(f"{bucket:<20} {dev_n:>12,} {'N/A':>10} {oot_n:>12,} {'N/A':>10} {'N/A':>10} {status:>12}")
+            continue
+
+        dev_rate = dev_bucket['is_failure'].mean()
+        oot_rate = oot_bucket['is_failure'].mean()
+        shift = abs(dev_rate - oot_rate)
+
+        is_stable = shift <= threshold
+        status = "STABLE" if is_stable else "UNSTABLE"
+
+        if not is_stable:
+            results['unstable_buckets'].append(bucket)
+
+        results['by_bucket'][bucket] = {
+            'dev_n': int(dev_n),
+            'dev_rate': float(dev_rate),
+            'oot_n': int(oot_n),
+            'oot_rate': float(oot_rate),
+            'shift': float(shift),
+            'is_stable': is_stable
+        }
+
+        shift_str = f"{shift:+.1%}" if dev_rate <= oot_rate else f"{-shift:+.1%}"
+        print(f"{bucket:<20} {dev_n:>12,} {dev_rate:>10.1%} {oot_n:>12,} {oot_rate:>10.1%} {shift_str:>10} {status:>12}")
+
+    # Summary and recommendations
+    print()
+    print(f"{'='*70}")
+    print("BUCKET STABILITY SUMMARY")
+    print(f"{'='*70}")
+
+    if results['unstable_buckets']:
+        print(f"\n*** UNSTABLE BUCKETS DETECTED: {results['unstable_buckets']} ***")
+        print()
+        print("These buckets have fail rates that shift significantly between DEV and OOT.")
+        print("This indicates they are NOT stable semantic groups - they're partly a function")
+        print("of dataset window and linkage mechanics.")
+        print()
+        print("IMPLICATIONS:")
+        print("  1. Any fixed weight learned on DEV will be miscalibrated on OOT")
+        print("  2. Learned weights for unstable buckets can wash out gains from other features")
+        print("  3. If two buckets have similar weights despite 2x different fail rates,")
+        print("     the weights may not be fit correctly or features are interacting strongly")
+        print()
+        print("RECOMMENDATIONS:")
+        print("  1. DO NOT use unstable buckets as categorical features with fixed weights")
+        print("  2. Instead, impute missing values with age-band or segment-level averages")
+        print("  3. Or use the bucket only for records where linkage is known to work")
+
+        results['recommendation'] = 'DO_NOT_USE_UNSTABLE_BUCKETS'
+    else:
+        print("\nAll buckets are stable across DEV/OOT.")
+        results['recommendation'] = 'BUCKETS_OK'
+
+    print(f"{'='*70}")
+
+    return results
+
+
 def run_advisory_validation(sample_frac: float = 0.1):
     """
     Run all advisory signal validation checks.
@@ -579,6 +714,16 @@ def run_advisory_validation(sample_frac: float = 0.1):
 
     results['no_history'] = check_no_history_decomposition(df, prev_test_df)
 
+    # Check 3: Bucket stability (requires history_status from Check 2)
+    # Re-classify if not already done
+    if 'history_status' not in df.columns:
+        df['has_prev_test'] = False  # Assume no linkage for stability check
+        df['history_status'] = df.apply(
+            lambda row: classify_history_status(row['age_years'], row['has_prev_test']),
+            axis=1
+        )
+    results['bucket_stability'] = check_bucket_stability(df)
+
     # Summary
     print("\n" + "="*70)
     print("VALIDATION SUMMARY")
@@ -586,14 +731,19 @@ def run_advisory_validation(sample_frac: float = 0.1):
 
     mono_result = results['monotonicity'].get('is_independent_signal')
     drift_result = results['no_history'].get('weight_drift_risk', {}).get('is_high_risk')
+    unstable_buckets = results['bucket_stability'].get('unstable_buckets', [])
 
     print(f"1. Advisory adds independent signal: {mono_result}")
     print(f"2. High weight drift risk: {drift_result}")
+    print(f"3. Unstable buckets: {unstable_buckets if unstable_buckets else 'None'}")
 
-    if mono_result and not drift_result:
+    if mono_result and not drift_result and not unstable_buckets:
         print("\n*** PASS: Advisory features are valid for production ***")
-    elif mono_result and drift_result:
-        print("\n*** CONDITIONAL PASS: Advisory signal is real, but fix NO_HISTORY decomposition ***")
+    elif mono_result and (drift_result or unstable_buckets):
+        print("\n*** CONDITIONAL PASS: Advisory signal is real, but bucket instability detected ***")
+        if unstable_buckets:
+            print(f"    Do NOT use {unstable_buckets} as categorical features with fixed weights")
+            print("    Instead, impute with age-band/segment averages for records with linkage failure")
     elif not mono_result:
         print("\n*** FAIL: Advisory may just be proxying for age - investigate further ***")
 
