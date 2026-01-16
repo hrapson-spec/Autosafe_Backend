@@ -110,8 +110,8 @@ class DVSAClient:
         DVSA_SCOPE: OAuth scope (usually https://tapi.dvsa.gov.uk/.default)
     """
 
-    # DVSA API endpoint (new API as of 2025)
-    BASE_URL = "https://beta.check-mot.service.gov.uk"
+    # DVSA API endpoint (Trade API - matches OAuth scope)
+    BASE_URL = "https://tapi.dvsa.gov.uk"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
