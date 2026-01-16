@@ -110,8 +110,8 @@ class DVSAClient:
         DVSA_SCOPE: OAuth scope (usually https://tapi.dvsa.gov.uk/.default)
     """
 
-    # DVSA API endpoint (new production API as of 2025)
-    BASE_URL = "https://history.mot.api.gov.uk"
+    # DVSA API endpoint - try legacy beta API
+    BASE_URL = "https://beta.check-mot.service.gov.uk"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -318,7 +318,8 @@ class DVSAClient:
                 headers["X-API-Key"] = self.api_key
 
             response = await self._client.get(
-                f"{self.BASE_URL}/v1/trade/vehicles/registration/{vrm}",
+                f"{self.BASE_URL}/trade/vehicles/mot-tests",
+                params={"registration": vrm},
                 headers=headers
             )
 
