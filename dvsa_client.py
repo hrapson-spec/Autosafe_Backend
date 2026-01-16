@@ -145,10 +145,11 @@ class DVSAClient:
             token_url: OAuth token endpoint (or set DVSA_TOKEN_URL env var)
             scope: OAuth scope (or set DVSA_SCOPE env var)
         """
-        self.client_id = client_id or os.environ.get("DVSA_CLIENT_ID")
-        self.client_secret = client_secret or os.environ.get("DVSA_CLIENT_SECRET")
-        self.token_url = token_url or os.environ.get("DVSA_TOKEN_URL")
-        self.scope = scope or os.environ.get("DVSA_SCOPE", "https://tapi.dvsa.gov.uk/.default")
+        # Check both naming conventions for Railway compatibility
+        self.client_id = client_id or os.environ.get("DVSA_CLIENT_ID") or os.environ.get("DVSA_Client_ID")
+        self.client_secret = client_secret or os.environ.get("DVSA_CLIENT_SECRET") or os.environ.get("DVSA_Client_Secret")
+        self.token_url = token_url or os.environ.get("DVSA_TOKEN_URL") or os.environ.get("DVSA_Token_URL") or os.environ.get("DVSA_Token_ID")
+        self.scope = scope or os.environ.get("DVSA_SCOPE") or os.environ.get("DVSA_Scope") or "https://tapi.dvsa.gov.uk/.default"
 
         # Check if credentials are configured
         self.is_configured = all([self.client_id, self.client_secret, self.token_url])
