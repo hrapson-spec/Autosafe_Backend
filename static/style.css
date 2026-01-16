@@ -315,3 +315,95 @@ button:disabled {
         transform: rotate(360deg);
     }
 }
+
+/* Hint text */
+.hint {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+/* Vehicle details */
+.vehicle-details {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    letter-spacing: 0.1em;
+}
+
+/* Confidence badge */
+.confidence-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 10px;
+    background: var(--bg-color);
+}
+
+.confidence-high {
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--risk-low);
+}
+
+.confidence-med {
+    background: rgba(255, 149, 0, 0.15);
+    color: var(--risk-med);
+}
+
+.confidence-low {
+    background: rgba(255, 59, 48, 0.15);
+    color: var(--risk-high);
+}
+
+/* Repair cost section */
+.repair-cost-section {
+    background: var(--bg-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.repair-cost-section h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.cost-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.cost-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.cost-value::before {
+    content: "£";
+}
+
+.cost-range {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Source note */
+.source-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--divider);
+}

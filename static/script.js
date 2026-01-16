@@ -1,35 +1,21 @@
 const API_BASE = '/api';
 
-const makeSelect = document.getElementById('make');
-const modelSelect = document.getElementById('model');
-const yearInput = document.getElementById('year');
-const mileageInput = document.getElementById('mileage');
+const registrationInput = document.getElementById('registration');
+const postcodeInput = document.getElementById('postcode');
 const form = document.getElementById('riskForm');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
 const resultsPanel = document.getElementById('resultsPanel');
 
-// Load Makes on Start
-async function loadMakes() {
-    makeSelect.innerHTML = '<option value="" disabled selected>Loading makes...</option>';
-    try {
-        const res = await fetch(`${API_BASE}/makes`);
-        const makes = await res.json();
+// Auto-uppercase and format inputs
+registrationInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+});
 
-        makeSelect.innerHTML = '<option value="" disabled selected>Select Make</option>';
-        makes.forEach(make => {
-            const option = document.createElement('option');
-            option.value = make;
-            option.textContent = make;
-            makeSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Failed to load makes', err);
-        makeSelect.innerHTML = '<option value="" disabled selected>Error loading makes</option>';
-        showError('Failed to load vehicle makes. Please refresh.');
-    }
-}
+postcodeInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+});
 
 function showError(message) {
     // Create or get error banner
@@ -50,40 +36,13 @@ function showError(message) {
     }, 5000);
 }
 
-// Load Models when Make changes
-makeSelect.addEventListener('change', async () => {
-    const make = makeSelect.value;
-    modelSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
-    modelSelect.disabled = true;
-
-    try {
-        const res = await fetch(`${API_BASE}/models?make=${encodeURIComponent(make)}`);
-        const models = await res.json();
-
-        modelSelect.innerHTML = '<option value="" disabled selected>Select Model</option>';
-        models.forEach(modelId => {
-            // modelId is "MAKE MODEL", we want to show just "MODEL"
-            const modelName = modelId.replace(make + ' ', '');
-
-            const option = document.createElement('option');
-            option.value = modelName;
-            option.textContent = modelName;
-            modelSelect.appendChild(option);
-        });
-        modelSelect.disabled = false;
-    } catch (err) {
-        console.error('Failed to load models', err);
-        modelSelect.innerHTML = '<option value="" disabled selected>Error loading models</option>';
-        showError('Failed to load models. Please try again.');
-    }
-});
-
 // Handle Form Submit
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     // UI Loading State
-    btnText.classList.add('hidden');
+    btnText.textContent = 'Fetching vehicle history...';
+    btnText.classList.remove('hidden');
     loader.classList.remove('hidden');
     analyzeBtn.disabled = true;
     resultsPanel.classList.add('hidden');
@@ -92,13 +51,11 @@ form.addEventListener('submit', async (e) => {
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
 
-    const make = makeSelect.value;
-    const model = modelSelect.value;
-    const year = yearInput.value;
-    const mileage = mileageInput.value;
+    const registration = registrationInput.value.replace(/\s/g, '');
+    const postcode = postcodeInput.value;
 
     try {
-        const url = `${API_BASE}/risk?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}&mileage=${mileage}`;
+        const url = `${API_BASE}/risk?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}`;
         const res = await fetch(url);
 
         if (!res.ok) {
@@ -113,26 +70,33 @@ form.addEventListener('submit', async (e) => {
         }
 
         const data = await res.json();
-        displayResults(data, year);
+        displayResults(data);
     } catch (err) {
         showError(err.message);
     } finally {
-        btnText.classList.remove('hidden');
+        btnText.textContent = 'Check MOT Risk';
         loader.classList.add('hidden');
         analyzeBtn.disabled = false;
     }
 });
 
-function displayResults(data, year) {
+function displayResults(data) {
     resultsPanel.classList.remove('hidden');
 
     // Update Header
-    document.getElementById('vehicleTag').textContent = `${data.model_id} (${year})`;
-    document.getElementById('totalTests').textContent = data.Total_Tests.toLocaleString();
-    document.getElementById('totalFailures').textContent = data.Total_Failures.toLocaleString();
+    const vehicleTag = document.getElementById('vehicleTag');
+    const vehicleDetails = document.getElementById('vehicleDetails');
+
+    vehicleTag.textContent = data.vehicle + (data.year ? ` (${data.year})` : '');
+    vehicleDetails.textContent = data.registration;
+
+    // Update stats
+    document.getElementById('lastMOTDate').textContent = data.last_mot_date || '-';
+    document.getElementById('lastMOTResult').textContent = data.last_mot_result || '-';
+    document.getElementById('mileage').textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
 
     // Update Main Risk
-    const risk = data.Failure_Risk;
+    const risk = data.failure_risk;
     const riskPercent = (risk * 100).toFixed(1) + '%';
 
     const riskValueEl = document.getElementById('riskValue');
@@ -158,16 +122,45 @@ function displayResults(data, year) {
         riskText.classList.add('text-high');
     }
 
+    // Update confidence badge
+    const confidenceBadge = document.getElementById('confidenceBadge');
+    confidenceBadge.textContent = data.confidence_level + ' Confidence';
+    confidenceBadge.className = 'confidence-badge';
+    if (data.confidence_level === 'High') {
+        confidenceBadge.classList.add('confidence-high');
+    } else if (data.confidence_level === 'Medium') {
+        confidenceBadge.classList.add('confidence-med');
+    } else {
+        confidenceBadge.classList.add('confidence-low');
+    }
+
+    // Update repair cost
+    if (data.repair_cost_estimate) {
+        const repairCost = data.repair_cost_estimate;
+        document.getElementById('repairCostValue').textContent = repairCost.expected;
+        document.getElementById('repairCostRange').textContent =
+            `Range: ${repairCost.range_low} - ${repairCost.range_high}`;
+    }
+
     // Update Components
     const componentsGrid = document.getElementById('componentsGrid');
     componentsGrid.innerHTML = '';
 
-    // Extract Risk_ columns
+    // Extract risk_ fields
     const components = [];
-    for (const [key, value] of Object.entries(data)) {
-        if (key.startsWith('Risk_')) {
-            const name = key.replace('Risk_', '').replace(/_/g, ' ');
-            components.push({ name, value });
+    const riskFieldMap = {
+        'risk_brakes': 'Brakes',
+        'risk_suspension': 'Suspension',
+        'risk_tyres': 'Tyres',
+        'risk_steering': 'Steering',
+        'risk_visibility': 'Visibility',
+        'risk_lamps': 'Lights',
+        'risk_body': 'Body/Structure',
+    };
+
+    for (const [key, name] of Object.entries(riskFieldMap)) {
+        if (data[key] !== undefined) {
+            components.push({ name, value: data[key] });
         }
     }
 
@@ -203,7 +196,15 @@ function displayResults(data, year) {
 
         componentsGrid.appendChild(card);
     });
-}
 
-// Init
-loadMakes();
+    // Update source note
+    const sourceNote = document.getElementById('sourceNote');
+    if (data.prediction_source) {
+        sourceNote.textContent = `Prediction: ${data.prediction_source}`;
+        if (data.note) {
+            sourceNote.textContent += ` - ${data.note}`;
+        }
+    } else {
+        sourceNote.textContent = '';
+    }
+}

@@ -1,21 +1,34 @@
 """
-AutoSafe API - MOT Risk Prediction
-Uses PostgreSQL (DATABASE_URL) if available, otherwise falls back to SQLite or Demo Mode.
+AutoSafe API - MOT Risk Prediction (V55)
+=========================================
+
+Uses V55 CatBoost model with DVSA MOT History API for real-time predictions.
+Falls back to SQLite lookup for vehicles without DVSA history.
 """
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import datetime
 import os
 import time
 
-# Import database module for PostgreSQL
+# Import database module for fallback
 import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
+from regional_defaults import validate_postcode, get_corrosion_index
+
+# V55 imports
+from dvsa_client import (
+    DVSAClient, get_dvsa_client, close_dvsa_client,
+    VRMValidationError, VehicleNotFoundError, DVSAAPIError
+)
+from feature_engineering_v55 import engineer_features
+import model_v55
+
 import logging
 import sys
 
@@ -39,25 +52,40 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - startup and shutdown."""
-    # Startup: Build SQLite from compressed data if needed (Build-on-Boot pattern)
+    # Startup: Load V55 model
+    logger.info("Loading V55 CatBoost model...")
+    if model_v55.load_model():
+        logger.info("V55 model loaded successfully")
+    else:
+        logger.error("Failed to load V55 model - predictions will fail")
+
+    # Build SQLite from compressed data for fallback
     import build_db
     build_db.ensure_database()
-    
-    # After building, check if we should use SQLite or PostgreSQL
+
+    # After building, check if we should use SQLite or PostgreSQL for fallback
     global DATABASE_URL
     if os.path.exists(DB_FILE):
-        logger.info(f"Using local {DB_FILE} (embedded SQLite - fastest)")
+        logger.info(f"Fallback database ready: {DB_FILE}")
         DATABASE_URL = None
     elif DATABASE_URL:
-        logger.info("Initializing PostgreSQL connection pool...")
+        logger.info("Initializing PostgreSQL connection pool for fallback...")
         await db.get_pool()
     else:
-        logger.warning("No database available - using demo mode")
-    
+        logger.warning("No fallback database available")
+
+    # Initialize DVSA client
+    dvsa_client = get_dvsa_client()
+    if dvsa_client.api_key:
+        logger.info("DVSA client initialized with API key")
+    else:
+        logger.warning("DVSA API key not configured - V55 predictions will fail")
+
     yield  # Application runs here
-    
+
     # Shutdown
-    logger.info("Shutting down, closing database pool...")
+    logger.info("Shutting down...")
+    await close_dvsa_client()
     await db.close_pool()
 
 
@@ -275,78 +303,210 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
 
 
 @app.get("/api/risk")
-@limiter.limit("50/minute")
+@limiter.limit("20/minute")
 async def get_risk(
     request: Request,
-    make: str = Query(..., max_length=50, description="Vehicle Make (e.g., FORD)"),
-    model: str = Query(..., max_length=100, description="Vehicle Model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year"),
-    mileage: int = Query(..., ge=0, le=999999, description="Vehicle Mileage (0-999,999)")
+    registration: str = Query(..., min_length=2, max_length=10, description="Vehicle registration (e.g., AB12CDE)"),
+    postcode: str = Query(..., min_length=2, max_length=10, description="UK postcode (e.g., SW1A 1AA)")
 ):
-    """Calculate risk for a specific vehicle."""
-    # Calculate age and bands
-    current_year = datetime.now().year
-    age = current_year - year
+    """
+    Calculate MOT failure risk using V55 model.
+
+    Fetches vehicle history from DVSA API and runs real-time ML prediction.
+    Falls back to lookup-based prediction if no DVSA history available.
+    """
+    # Validate postcode
+    postcode_check = validate_postcode(postcode)
+    if not postcode_check['valid']:
+        raise HTTPException(status_code=400, detail=postcode_check.get('error', 'Invalid postcode'))
+
+    # Get DVSA client
+    dvsa_client = get_dvsa_client()
+
+    try:
+        # Fetch vehicle history from DVSA
+        history = await dvsa_client.fetch_vehicle_history(registration)
+
+        if not history.has_mot_history:
+            # Vehicle exists but no MOT history - use fallback
+            return await _fallback_prediction(
+                registration=history.registration,
+                make=history.make,
+                model=history.model,
+                year=history.manufacture_date.year if history.manufacture_date else None,
+                postcode=postcode,
+                note="Vehicle found but has no MOT history yet (may be new or exempt)"
+            )
+
+        # Engineer features from DVSA data
+        features = engineer_features(history, postcode)
+
+        # Run V55 model prediction
+        if not model_v55.is_model_loaded():
+            raise HTTPException(status_code=503, detail="V55 model not loaded")
+
+        prediction = model_v55.predict_risk(features)
+
+        # Get latest test info
+        latest_test = history.latest_test
+        mileage = latest_test.odometer_value if latest_test else None
+        if mileage and latest_test.odometer_unit == 'km':
+            mileage = int(mileage * 0.621371)
+
+        # Calculate repair cost estimate
+        repair_cost = _estimate_repair_cost(prediction['failure_risk'], prediction['risk_components'])
+
+        # Format response
+        response = {
+            "registration": history.registration,
+            "vehicle": f"{history.make} {history.model}",
+            "year": history.manufacture_date.year if history.manufacture_date else None,
+            "mileage": mileage,
+            "last_mot_date": latest_test.test_date.strftime("%Y-%m-%d") if latest_test else None,
+            "last_mot_result": latest_test.test_result if latest_test else None,
+            "failure_risk": prediction['failure_risk'],
+            "confidence_level": prediction['confidence_level'],
+            "risk_brakes": prediction['risk_components'].get('brakes', 0),
+            "risk_suspension": prediction['risk_components'].get('suspension', 0),
+            "risk_tyres": prediction['risk_components'].get('tyres', 0),
+            "risk_steering": prediction['risk_components'].get('steering', 0),
+            "risk_visibility": prediction['risk_components'].get('visibility', 0),
+            "risk_lamps": prediction['risk_components'].get('lamps', 0),
+            "risk_body": prediction['risk_components'].get('body', 0),
+            "repair_cost_estimate": repair_cost,
+            "prediction_source": "V55 Model",
+            "mot_tests_found": len(history.mot_tests),
+        }
+
+        return response
+
+    except VRMValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except VehicleNotFoundError:
+        # Vehicle not in DVSA - try fallback with manual input
+        raise HTTPException(
+            status_code=404,
+            detail="Vehicle not found in DVSA database. This may be a new vehicle, "
+                   "imported vehicle, or the registration may be incorrect."
+        )
+
+    except DVSAAPIError as e:
+        logger.error(f"DVSA API error: {e}")
+        raise HTTPException(status_code=503, detail=f"DVSA service unavailable: {str(e)}")
+
+
+async def _fallback_prediction(
+    registration: str,
+    make: str,
+    model: str,
+    year: Optional[int],
+    postcode: str,
+    note: str = ""
+) -> Dict:
+    """
+    Fallback prediction using SQLite lookup when DVSA data unavailable.
+    """
+    if not make or not model:
+        raise HTTPException(
+            status_code=404,
+            detail="Insufficient vehicle data for fallback prediction"
+        )
+
     model_id = f"{make.upper()} {model.upper()}"
-    age_band = get_age_band(age)
-    mileage_band = get_mileage_band(mileage)
-    
-    # Validate model+year combination (check if model was produced that year)
-    from populate_model_years import check_model_year
-    year_check = check_model_year(model_id, year)
-    if not year_check['valid']:
-        raise HTTPException(status_code=400, detail=year_check['message'])
-    
-    # Try PostgreSQL first
-    if DATABASE_URL:
-        result = await db.get_risk(model_id, age_band, mileage_band)
-        if result is not None:
-            if "error" in result and result["error"] == "not_found":
-                detail = "Vehicle model not found."
-                if result.get("suggestion"):
-                    detail += f" Did you mean '{result['suggestion']}'?"
-                raise HTTPException(status_code=404, detail=detail)
-            return add_repair_cost_estimate(add_confidence_intervals(result))
-    
-    # Fallback to SQLite
+
+    # Calculate age band if year available
+    if year:
+        age = datetime.now().year - year
+        age_band = get_age_band(age)
+    else:
+        age_band = "6-10"  # Default to middle band
+
+    mileage_band = "30k-60k"  # Default
+
+    # Try SQLite fallback
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ? AND mileage_band = ?"
-        row = conn.execute(query, (model_id, age_band, mileage_band)).fetchone()
-        
-        if not row:
-            check_query = "SELECT 1 FROM risks WHERE model_id = ?"
-            exists = conn.execute(check_query, (model_id,)).fetchone()
-            
-            if not exists:
-                like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
-                suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
-                conn.close()
-                
-                detail = "Vehicle model not found."
-                if suggestion:
-                    detail += f" Did you mean '{suggestion['model_id']}'?"
-                raise HTTPException(status_code=404, detail=detail)
-            
-            avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
-            avg_row = conn.execute(avg_query, (model_id,)).fetchone()
+        query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? LIMIT 1"
+        row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
+
+        if row:
+            result = dict(row)
             conn.close()
-            
+
+            result = add_confidence_intervals(result)
+            result = add_repair_cost_estimate(result)
+
             return {
-                "model_id": model_id,
-                "age_band": age_band,
-                "mileage_band": mileage_band,
-                "note": "Exact age/mileage match not found. Returning model average.",
-                "Failure_Risk": avg_row['avg_risk'] if avg_row else 0.0
+                "registration": registration,
+                "vehicle": model_id,
+                "year": year,
+                "mileage": None,
+                "last_mot_date": None,
+                "failure_risk": result.get('Failure_Risk', 0.28),
+                "confidence_level": "Medium",
+                "risk_brakes": result.get('Risk_Brakes', 0.05),
+                "risk_suspension": result.get('Risk_Suspension', 0.04),
+                "risk_tyres": result.get('Risk_Tyres', 0.03),
+                "risk_steering": result.get('Risk_Steering', 0.02),
+                "risk_visibility": result.get('Risk_Visibility', 0.02),
+                "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+                "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
+                "prediction_source": "Lookup (no MOT history)",
+                "note": note,
             }
-        
+
         conn.close()
-        return add_repair_cost_estimate(add_confidence_intervals(dict(row)))
-    
-    # Demo mode
-    response = MOCK_RISK.copy()
-    response["model_id"] = model_id
-    return add_repair_cost_estimate(add_confidence_intervals(response))
+
+    # Default fallback
+    return {
+        "registration": registration,
+        "vehicle": model_id,
+        "year": year,
+        "mileage": None,
+        "failure_risk": 0.28,  # UK average
+        "confidence_level": "Low",
+        "risk_brakes": 0.05,
+        "risk_suspension": 0.04,
+        "risk_tyres": 0.03,
+        "risk_steering": 0.02,
+        "risk_visibility": 0.02,
+        "risk_lamps": 0.03,
+        "risk_body": 0.02,
+        "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+        "prediction_source": "Lookup (limited data)",
+        "note": note or "Limited prediction - using population averages",
+    }
+
+
+def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
+    """Estimate repair costs based on risk prediction."""
+    # Component repair cost ranges (mid-point estimates)
+    component_costs = {
+        'brakes': 200,
+        'suspension': 350,
+        'tyres': 150,
+        'steering': 300,
+        'visibility': 80,
+        'lamps': 60,
+        'body': 400,
+    }
+
+    # Expected cost = sum of (component_risk * component_cost)
+    expected = sum(
+        risk_components.get(comp, 0) * cost
+        for comp, cost in component_costs.items()
+    )
+
+    # Scale by overall failure probability
+    expected = expected * (failure_risk / 0.28)  # Normalize to average fail rate
+
+    return {
+        "expected": int(round(expected, -1)),  # Round to nearest 10
+        "range_low": int(round(expected * 0.5, -1)),
+        "range_high": int(round(expected * 2, -1)),
+    }
 
 
 # Mount static files at /static (only if the folder exists)

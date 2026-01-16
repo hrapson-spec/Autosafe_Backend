@@ -1,0 +1,333 @@
+"""
+DVSA MOT History API Client
+===========================
+
+Fetches vehicle MOT history from the DVSA API with:
+- VRM (registration) validation and normalization
+- 24-hour response caching
+- Graceful error handling for fallback triggering
+"""
+
+import os
+import re
+import logging
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+
+import httpx
+from cachetools import TTLCache
+
+logger = logging.getLogger(__name__)
+
+
+class VRMValidationError(Exception):
+    """Raised when VRM validation fails hard rules."""
+    pass
+
+
+class DVSAAPIError(Exception):
+    """Raised when DVSA API returns an error."""
+    pass
+
+
+class VehicleNotFoundError(Exception):
+    """Raised when vehicle not found in DVSA database."""
+    pass
+
+
+@dataclass
+class MOTTest:
+    """Represents a single MOT test record."""
+    test_date: datetime
+    test_result: str  # 'PASSED' or 'FAILED'
+    expiry_date: Optional[datetime]
+    odometer_value: Optional[int]
+    odometer_unit: str  # 'mi' or 'km'
+    test_number: str
+    defects: List[Dict[str, Any]]  # Advisory/failure items
+
+
+@dataclass
+class VehicleHistory:
+    """Complete vehicle MOT history from DVSA."""
+    registration: str
+    make: str
+    model: str
+    fuel_type: Optional[str]
+    colour: Optional[str]
+    registration_date: Optional[datetime]
+    manufacture_date: Optional[datetime]
+    engine_size: Optional[int]
+    mot_tests: List[MOTTest]
+
+    @property
+    def latest_test(self) -> Optional[MOTTest]:
+        """Get the most recent MOT test."""
+        if self.mot_tests:
+            return self.mot_tests[0]  # Tests are returned newest-first
+        return None
+
+    @property
+    def has_mot_history(self) -> bool:
+        """Check if vehicle has any MOT history."""
+        return len(self.mot_tests) > 0
+
+
+class DVSAClient:
+    """
+    Client for DVSA MOT History API.
+
+    Usage:
+        client = DVSAClient(api_key="your-key")
+        history = await client.fetch_vehicle_history("AB12CDE")
+    """
+
+    # DVSA API endpoint (new API as of 2025)
+    BASE_URL = "https://history.mot.api.gov.uk"
+
+    # Cache TTL: 24 hours
+    CACHE_TTL_SECONDS = 24 * 60 * 60
+
+    # VRM validation patterns
+    # Basic rules: alphanumeric, 2-8 characters
+    VRM_BASIC_PATTERN = re.compile(r'^[A-Z0-9]{2,8}$')
+
+    # Common UK patterns for user feedback (not hard rejection)
+    UK_PATTERNS = [
+        re.compile(r'^[A-Z]{2}[0-9]{2}[A-Z]{3}$'),  # Current: AB12CDE
+        re.compile(r'^[A-Z][0-9]{1,3}[A-Z]{3}$'),    # Prefix: A123BCD
+        re.compile(r'^[A-Z]{3}[0-9]{1,3}[A-Z]$'),    # Suffix: ABC123D
+        re.compile(r'^[0-9]{1,4}[A-Z]{1,3}$'),       # Dateless: 1234AB
+        re.compile(r'^[A-Z]{1,3}[0-9]{1,4}$'),       # Dateless: AB1234
+    ]
+
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize DVSA client.
+
+        Args:
+            api_key: DVSA API key. If not provided, reads from DVSA_API_KEY env var.
+        """
+        self.api_key = api_key or os.environ.get("DVSA_API_KEY")
+        if not self.api_key:
+            logger.warning("DVSA API key not configured - API calls will fail")
+
+        # 24-hour cache (max 10000 entries)
+        self._cache: TTLCache = TTLCache(maxsize=10000, ttl=self.CACHE_TTL_SECONDS)
+
+        # HTTP client with timeout
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=10.0),
+            headers={
+                "Accept": "application/json+v6",
+                "x-api-key": self.api_key or "",
+            }
+        )
+
+    def normalize_vrm(self, registration: str) -> str:
+        """
+        Normalize a vehicle registration mark (VRM).
+
+        Steps:
+        1. Strip whitespace and convert to uppercase
+        2. Remove spaces
+        3. Hard-block if not alphanumeric or wrong length
+
+        Args:
+            registration: Raw registration input
+
+        Returns:
+            Normalized VRM
+
+        Raises:
+            VRMValidationError: If VRM fails basic validation
+        """
+        # Trim and uppercase
+        vrm = registration.strip().upper()
+
+        # Remove spaces
+        vrm = vrm.replace(" ", "")
+
+        # Hard-block: must be alphanumeric
+        if not vrm.isalnum():
+            raise VRMValidationError(
+                f"Invalid registration format: must contain only letters and numbers"
+            )
+
+        # Hard-block: length 2-8
+        if len(vrm) < 2 or len(vrm) > 8:
+            raise VRMValidationError(
+                f"Invalid registration format: must be 2-8 characters"
+            )
+
+        # Basic pattern check
+        if not self.VRM_BASIC_PATTERN.match(vrm):
+            raise VRMValidationError(
+                f"Invalid registration format: contains invalid characters"
+            )
+
+        return vrm
+
+    def validate_vrm_pattern(self, vrm: str) -> Dict[str, Any]:
+        """
+        Check VRM against common UK patterns for user feedback.
+
+        This does NOT reject non-matching VRMs (older/personalised plates
+        may not match standard patterns).
+
+        Args:
+            vrm: Normalized VRM
+
+        Returns:
+            Dict with 'matches_known_pattern' and optional 'pattern_type'
+        """
+        for i, pattern in enumerate(self.UK_PATTERNS):
+            if pattern.match(vrm):
+                pattern_names = ['current', 'prefix', 'suffix', 'dateless_numeric', 'dateless_alpha']
+                return {
+                    'matches_known_pattern': True,
+                    'pattern_type': pattern_names[i] if i < len(pattern_names) else 'unknown'
+                }
+
+        return {
+            'matches_known_pattern': False,
+            'pattern_type': None,
+            'note': 'Non-standard format - may be personalised or older plate'
+        }
+
+    async def fetch_vehicle_history(self, registration: str) -> VehicleHistory:
+        """
+        Fetch MOT history for a vehicle from DVSA API.
+
+        Args:
+            registration: Vehicle registration (will be normalized)
+
+        Returns:
+            VehicleHistory object with all MOT tests
+
+        Raises:
+            VRMValidationError: If registration fails validation
+            VehicleNotFoundError: If vehicle not in DVSA database
+            DVSAAPIError: If API returns an error
+        """
+        # Normalize VRM
+        vrm = self.normalize_vrm(registration)
+
+        # Check cache first
+        if vrm in self._cache:
+            logger.info(f"Cache hit for {vrm}")
+            return self._cache[vrm]
+
+        # Call DVSA API
+        logger.info(f"Fetching MOT history for {vrm} from DVSA API")
+
+        try:
+            response = await self._client.get(
+                f"{self.BASE_URL}/v1/trade/vehicles/mot-tests",
+                params={"registration": vrm}
+            )
+
+            if response.status_code == 404:
+                raise VehicleNotFoundError(f"Vehicle {vrm} not found in DVSA database")
+
+            if response.status_code == 403:
+                raise DVSAAPIError("DVSA API key invalid or expired")
+
+            if response.status_code == 429:
+                raise DVSAAPIError("DVSA API rate limit exceeded")
+
+            if response.status_code != 200:
+                raise DVSAAPIError(f"DVSA API error: {response.status_code}")
+
+            data = response.json()
+
+            # Parse response
+            history = self._parse_response(vrm, data)
+
+            # Cache result
+            self._cache[vrm] = history
+            logger.info(f"Cached MOT history for {vrm} ({len(history.mot_tests)} tests)")
+
+            return history
+
+        except httpx.TimeoutException:
+            raise DVSAAPIError("DVSA API request timed out")
+        except httpx.RequestError as e:
+            raise DVSAAPIError(f"DVSA API connection error: {str(e)}")
+
+    def _parse_response(self, vrm: str, data: Dict[str, Any]) -> VehicleHistory:
+        """Parse DVSA API response into VehicleHistory object."""
+        # Handle array response (API returns array of vehicles)
+        if isinstance(data, list):
+            if not data:
+                raise VehicleNotFoundError(f"No data returned for {vrm}")
+            vehicle_data = data[0]
+        else:
+            vehicle_data = data
+
+        # Parse MOT tests
+        mot_tests = []
+        for test_data in vehicle_data.get('motTests', []):
+            test = MOTTest(
+                test_date=self._parse_date(test_data.get('completedDate')),
+                test_result=test_data.get('testResult', 'UNKNOWN'),
+                expiry_date=self._parse_date(test_data.get('expiryDate')),
+                odometer_value=test_data.get('odometerValue'),
+                odometer_unit=test_data.get('odometerUnit', 'mi'),
+                test_number=test_data.get('motTestNumber', ''),
+                defects=test_data.get('defects', []) or test_data.get('rfrAndComments', [])
+            )
+            mot_tests.append(test)
+
+        return VehicleHistory(
+            registration=vrm,
+            make=vehicle_data.get('make', 'UNKNOWN'),
+            model=vehicle_data.get('model', 'UNKNOWN'),
+            fuel_type=vehicle_data.get('fuelType'),
+            colour=vehicle_data.get('primaryColour'),
+            registration_date=self._parse_date(vehicle_data.get('registrationDate')),
+            manufacture_date=self._parse_date(vehicle_data.get('manufactureDate')),
+            engine_size=vehicle_data.get('engineSize'),
+            mot_tests=mot_tests
+        )
+
+    def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
+        """Parse date string from DVSA API."""
+        if not date_str:
+            return None
+        try:
+            # DVSA uses ISO format: 2024-01-15 or 2024.01.15
+            date_str = date_str.replace('.', '-')[:10]
+            return datetime.strptime(date_str, '%Y-%m-%d')
+        except (ValueError, TypeError):
+            return None
+
+    async def close(self):
+        """Close the HTTP client."""
+        await self._client.aclose()
+
+    def clear_cache(self):
+        """Clear the response cache."""
+        self._cache.clear()
+        logger.info("DVSA cache cleared")
+
+
+# Singleton instance for app-wide use
+_dvsa_client: Optional[DVSAClient] = None
+
+
+def get_dvsa_client() -> DVSAClient:
+    """Get or create the singleton DVSA client."""
+    global _dvsa_client
+    if _dvsa_client is None:
+        _dvsa_client = DVSAClient()
+    return _dvsa_client
+
+
+async def close_dvsa_client():
+    """Close the singleton DVSA client."""
+    global _dvsa_client
+    if _dvsa_client is not None:
+        await _dvsa_client.close()
+        _dvsa_client = None

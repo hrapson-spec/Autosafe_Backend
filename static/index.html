@@ -12,43 +12,29 @@
     <main class="container">
         <header>
             <h1>AutoSafe</h1>
-            <p class="subtitle">Predict your vehicle's MOT failure risk.</p>
+            <p class="subtitle">Predict your vehicle's MOT failure risk using AI.</p>
         </header>
 
         <div class="card search-panel">
             <form id="riskForm">
                 <div class="form-group">
-                    <label for="make">Make</label>
-                    <div class="select-wrapper">
-                        <select id="make" required>
-                            <option value="" disabled selected>Select Make</option>
-                            <!-- Populated by JS -->
-                        </select>
-                    </div>
+                    <label for="registration">Vehicle Registration</label>
+                    <input type="text" id="registration" placeholder="e.g. AB12 CDE"
+                           maxlength="10" required autocomplete="off"
+                           style="text-transform: uppercase;">
+                    <span class="hint">Enter your UK vehicle registration number</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="model">Model</label>
-                    <div class="select-wrapper">
-                        <select id="model" required disabled>
-                            <option value="" disabled selected>Select Make First</option>
-                            <!-- Populated by JS -->
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="year">Year</label>
-                    <input type="number" id="year" placeholder="e.g. 2018" min="1900" max="2026" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="mileage">Mileage</label>
-                    <input type="number" id="mileage" placeholder="e.g. 45000" min="0" required>
+                    <label for="postcode">Postcode</label>
+                    <input type="text" id="postcode" placeholder="e.g. SW1A 1AA"
+                           maxlength="10" required autocomplete="postal-code"
+                           style="text-transform: uppercase;">
+                    <span class="hint">Used to estimate local corrosion risk</span>
                 </div>
 
                 <button type="submit" id="analyzeBtn">
-                    <span class="btn-text">Analyze Risk</span>
+                    <span class="btn-text">Check MOT Risk</span>
                     <div class="loader hidden"></div>
                 </button>
             </form>
@@ -57,28 +43,44 @@
         <div id="resultsPanel" class="card results-panel hidden">
             <div class="risk-hero">
                 <div class="vehicle-tag" id="vehicleTag">FORD FIESTA (2018)</div>
+                <div class="vehicle-details" id="vehicleDetails"></div>
                 <div class="risk-percentage" id="riskValue">0%</div>
                 <div class="risk-label" id="riskText">Failure Probability</div>
-                <p class="risk-explanation">Percentage of similar vehicles that failed their MOT test.</p>
+                <div class="confidence-badge" id="confidenceBadge">High Confidence</div>
+                <p class="risk-explanation">AI-predicted probability of MOT failure based on vehicle history.</p>
             </div>
 
             <div class="stats-row">
                 <div class="stat-item">
-                    <span class="stat-val" id="totalTests">0</span>
-                    <span class="stat-lbl">Total Tests</span>
+                    <span class="stat-val" id="lastMOTDate">-</span>
+                    <span class="stat-lbl">Last MOT</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-val" id="totalFailures">0</span>
-                    <span class="stat-lbl">Failures</span>
+                    <span class="stat-val" id="lastMOTResult">-</span>
+                    <span class="stat-lbl">Result</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-val" id="mileage">-</span>
+                    <span class="stat-lbl">Mileage</span>
+                </div>
+            </div>
+
+            <div class="repair-cost-section" id="repairCostSection">
+                <h3>Estimated Repair Cost (if fail)</h3>
+                <div class="cost-display">
+                    <span class="cost-value" id="repairCostValue">-</span>
+                    <span class="cost-range" id="repairCostRange"></span>
                 </div>
             </div>
 
             <div class="components-section">
-                <h3 class="components-title">Component Breakdown</h3>
+                <h3 class="components-title">Component Risk Breakdown</h3>
                 <div class="components-grid" id="componentsGrid">
                     <!-- Populated by JS -->
                 </div>
             </div>
+
+            <div class="source-note" id="sourceNote"></div>
         </div>
     </main>
 
