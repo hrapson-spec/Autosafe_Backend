@@ -306,94 +306,127 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
 @limiter.limit("20/minute")
 async def get_risk(
     request: Request,
-    registration: str = Query(..., min_length=2, max_length=10, description="Vehicle registration (e.g., AB12CDE)"),
-    postcode: str = Query(..., min_length=2, max_length=10, description="UK postcode (e.g., SW1A 1AA)")
+    make: str = Query(..., min_length=1, max_length=50, description="Vehicle make (e.g., FORD)"),
+    model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
+    year: int = Query(..., ge=1990, le=2026, description="Year of manufacture")
 ):
     """
-    Calculate MOT failure risk using V55 model.
+    Calculate MOT failure risk using lookup table.
 
-    Fetches vehicle history from DVSA API and runs real-time ML prediction.
-    Falls back to lookup-based prediction if no DVSA history available.
+    Interim solution using pre-computed population averages by make/model/age.
+    Returns confidence level based on sample size in the lookup data.
     """
-    # Validate postcode
-    postcode_check = validate_postcode(postcode)
-    if not postcode_check['valid']:
-        raise HTTPException(status_code=400, detail=postcode_check.get('error', 'Invalid postcode'))
+    # Normalize inputs
+    make_upper = make.strip().upper()
+    model_upper = model.strip().upper()
+    model_id = f"{make_upper} {model_upper}"
 
-    # Get DVSA client
-    dvsa_client = get_dvsa_client()
+    # Calculate age band from year
+    age = datetime.now().year - year
+    age_band = get_age_band(age)
+
+    # Default response (population average)
+    default_response = {
+        "vehicle": model_id,
+        "year": year,
+        "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
+        "failure_risk": 0.28,  # UK population average
+        "confidence_level": "Low",
+        "risk_brakes": 0.05,
+        "risk_suspension": 0.04,
+        "risk_tyres": 0.03,
+        "risk_steering": 0.02,
+        "risk_visibility": 0.02,
+        "risk_lamps": 0.03,
+        "risk_body": 0.02,
+        "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
+    }
+
+    # Try SQLite lookup
+    conn = get_sqlite_connection()
+    if not conn:
+        logger.warning("No database connection available, returning population average")
+        return default_response
 
     try:
-        # Fetch vehicle history from DVSA
-        history = await dvsa_client.fetch_vehicle_history(registration)
+        # Query for exact make/model match with age band
+        # Try with model_id pattern matching
+        query = """
+            SELECT * FROM risks
+            WHERE model_id LIKE ? AND age_band = ?
+            ORDER BY Total_Tests DESC
+            LIMIT 1
+        """
+        row = conn.execute(query, (f"{make_upper} {model_upper}%", age_band)).fetchone()
 
-        if not history.has_mot_history:
-            # Vehicle exists but no MOT history - use fallback
-            return await _fallback_prediction(
-                registration=history.registration,
-                make=history.make,
-                model=history.model,
-                year=history.manufacture_date.year if history.manufacture_date else None,
-                postcode=postcode,
-                note="Vehicle found but has no MOT history yet (may be new or exempt)"
-            )
+        # If not found, try just the make with age band
+        if not row:
+            query = """
+                SELECT * FROM risks
+                WHERE model_id LIKE ? AND age_band = ?
+                ORDER BY Total_Tests DESC
+                LIMIT 1
+            """
+            row = conn.execute(query, (f"{make_upper}%", age_band)).fetchone()
 
-        # Engineer features from DVSA data
-        features = engineer_features(history, postcode)
+        if not row:
+            logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
+            conn.close()
+            return default_response
 
-        # Run V55 model prediction
-        if not model_v55.is_model_loaded():
-            raise HTTPException(status_code=503, detail="V55 model not loaded")
+        result = dict(row)
+        conn.close()
 
-        prediction = model_v55.predict_risk(features)
+        # Calculate confidence level based on sample size
+        total_tests = result.get('Total_Tests', 0)
+        if total_tests >= 1000:
+            confidence_level = "High"
+        elif total_tests >= 100:
+            confidence_level = "Medium"
+        else:
+            confidence_level = "Low"
 
-        # Get latest test info
-        latest_test = history.latest_test
-        mileage = latest_test.odometer_value if latest_test else None
-        if mileage and latest_test.odometer_unit == 'km':
-            mileage = int(mileage * 0.621371)
+        # Add confidence intervals and repair cost estimate
+        result = add_confidence_intervals(result)
+        result = add_repair_cost_estimate(result)
 
-        # Calculate repair cost estimate
-        repair_cost = _estimate_repair_cost(prediction['failure_risk'], prediction['risk_components'])
+        # Format repair cost for display
+        repair_cost = result.get('Repair_Cost_Estimate', {})
+        if isinstance(repair_cost, dict):
+            expected = repair_cost.get('expected', 250)
+            repair_cost_formatted = {
+                "expected": f"£{expected}",
+                "range_low": repair_cost.get('range_low', 100),
+                "range_high": repair_cost.get('range_high', 500),
+            }
+        else:
+            repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
 
-        # Format response
-        response = {
-            "registration": history.registration,
-            "vehicle": f"{history.make} {history.model}",
-            "year": history.manufacture_date.year if history.manufacture_date else None,
-            "mileage": mileage,
-            "last_mot_date": latest_test.test_date.strftime("%Y-%m-%d") if latest_test else None,
-            "last_mot_result": latest_test.test_result if latest_test else None,
-            "failure_risk": prediction['failure_risk'],
-            "confidence_level": prediction['confidence_level'],
-            "risk_brakes": prediction['risk_components'].get('brakes', 0),
-            "risk_suspension": prediction['risk_components'].get('suspension', 0),
-            "risk_tyres": prediction['risk_components'].get('tyres', 0),
-            "risk_steering": prediction['risk_components'].get('steering', 0),
-            "risk_visibility": prediction['risk_components'].get('visibility', 0),
-            "risk_lamps": prediction['risk_components'].get('lamps', 0),
-            "risk_body": prediction['risk_components'].get('body', 0),
-            "repair_cost_estimate": repair_cost,
-            "prediction_source": "V55 Model",
-            "mot_tests_found": len(history.mot_tests),
+        return {
+            "vehicle": model_id,
+            "year": year,
+            "mileage": None,
+            "last_mot_date": None,
+            "last_mot_result": None,
+            "failure_risk": result.get('Failure_Risk', 0.28),
+            "confidence_level": confidence_level,
+            "risk_brakes": result.get('Risk_Brakes', 0.05),
+            "risk_suspension": result.get('Risk_Suspension', 0.04),
+            "risk_tyres": result.get('Risk_Tyres', 0.03),
+            "risk_steering": result.get('Risk_Steering', 0.02),
+            "risk_visibility": result.get('Risk_Visibility', 0.02),
+            "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+            "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+            "repair_cost_estimate": repair_cost_formatted,
         }
 
-        return response
-
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    except VehicleNotFoundError:
-        # Vehicle not in DVSA - try fallback with manual input
-        raise HTTPException(
-            status_code=404,
-            detail="Vehicle not found in DVSA database. This may be a new vehicle, "
-                   "imported vehicle, or the registration may be incorrect."
-        )
-
-    except DVSAAPIError as e:
-        logger.error(f"DVSA API error: {e}")
-        raise HTTPException(status_code=503, detail=f"DVSA service unavailable: {str(e)}")
+    except Exception as e:
+        logger.error(f"Database error during lookup: {e}")
+        if conn:
+            conn.close()
+        return default_response
 
 
 async def _fallback_prediction(

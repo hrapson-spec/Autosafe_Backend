@@ -18,19 +18,30 @@
         <div class="card search-panel">
             <form id="riskForm">
                 <div class="form-group">
-                    <label for="registration">Vehicle Registration</label>
-                    <input type="text" id="registration" placeholder="e.g. AB12 CDE"
-                           maxlength="10" required autocomplete="off"
-                           style="text-transform: uppercase;">
-                    <span class="hint">Enter your UK vehicle registration number</span>
+                    <label for="make">Make</label>
+                    <div class="select-wrapper">
+                        <select id="make" required>
+                            <option value="">Select make...</option>
+                        </select>
+                    </div>
+                    <span class="hint">Select your vehicle manufacturer</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="postcode">Postcode</label>
-                    <input type="text" id="postcode" placeholder="e.g. SW1A 1AA"
-                           maxlength="10" required autocomplete="postal-code"
-                           style="text-transform: uppercase;">
-                    <span class="hint">Used to estimate local corrosion risk</span>
+                    <label for="model">Model</label>
+                    <div class="select-wrapper">
+                        <select id="model" required disabled>
+                            <option value="">Select model...</option>
+                        </select>
+                    </div>
+                    <span class="hint">Select your vehicle model</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <input type="number" id="year" placeholder="e.g. 2018"
+                           min="1990" max="2026" required>
+                    <span class="hint">Year of manufacture</span>
                 </div>
 
                 <button type="submit" id="analyzeBtn">

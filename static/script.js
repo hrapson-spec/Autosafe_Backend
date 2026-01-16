@@ -1,24 +1,64 @@
 const API_BASE = '/api';
 
-const registrationInput = document.getElementById('registration');
-const postcodeInput = document.getElementById('postcode');
+const makeSelect = document.getElementById('make');
+const modelSelect = document.getElementById('model');
+const yearInput = document.getElementById('year');
 const form = document.getElementById('riskForm');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
 const resultsPanel = document.getElementById('resultsPanel');
 
-// Auto-uppercase and format inputs
-registrationInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
-});
+// Load makes on page load
+async function loadMakes() {
+    try {
+        const res = await fetch(`${API_BASE}/makes`);
+        if (!res.ok) throw new Error('Failed to load makes');
+        const makes = await res.json();
 
-postcodeInput.addEventListener('input', (e) => {
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+        makeSelect.innerHTML = '<option value="">Select make...</option>';
+        makes.forEach(make => {
+            const option = document.createElement('option');
+            option.value = make;
+            option.textContent = make;
+            makeSelect.appendChild(option);
+        });
+    } catch (err) {
+        console.error('Error loading makes:', err);
+        showError('Failed to load vehicle makes');
+    }
+}
+
+// Load models when make is selected
+makeSelect.addEventListener('change', async () => {
+    const make = makeSelect.value;
+    modelSelect.innerHTML = '<option value="">Select model...</option>';
+
+    if (!make) {
+        modelSelect.disabled = true;
+        return;
+    }
+
+    try {
+        modelSelect.disabled = true;
+        const res = await fetch(`${API_BASE}/models?make=${encodeURIComponent(make)}`);
+        if (!res.ok) throw new Error('Failed to load models');
+        const models = await res.json();
+
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = model;
+            modelSelect.appendChild(option);
+        });
+        modelSelect.disabled = false;
+    } catch (err) {
+        console.error('Error loading models:', err);
+        showError('Failed to load models for ' + make);
+    }
 });
 
 function showError(message) {
-    // Create or get error banner
     let banner = document.getElementById('errorBanner');
     if (!banner) {
         banner = document.createElement('div');
@@ -30,7 +70,6 @@ function showError(message) {
     banner.textContent = message;
     banner.classList.remove('hidden');
 
-    // Auto-hide after 5 seconds
     setTimeout(() => {
         banner.classList.add('hidden');
     }, 5000);
@@ -41,7 +80,7 @@ form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     // UI Loading State
-    btnText.textContent = 'Fetching vehicle history...';
+    btnText.textContent = 'Analyzing...';
     btnText.classList.remove('hidden');
     loader.classList.remove('hidden');
     analyzeBtn.disabled = true;
@@ -51,19 +90,19 @@ form.addEventListener('submit', async (e) => {
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
 
-    const registration = registrationInput.value.replace(/\s/g, '');
-    const postcode = postcodeInput.value;
+    const make = makeSelect.value;
+    const model = modelSelect.value;
+    const year = yearInput.value;
 
     try {
-        const url = `${API_BASE}/risk?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}`;
+        const url = `${API_BASE}/risk?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
         const res = await fetch(url);
 
         if (!res.ok) {
             const errData = await res.json();
-            // Handle validation errors (422) nicely
             if (res.status === 422 && errData.detail) {
                 const msg = errData.detail[0].msg;
-                const loc = errData.detail[0].loc[1]; // field name
+                const loc = errData.detail[0].loc[1];
                 throw new Error(`${loc}: ${msg}`);
             }
             throw new Error(errData.detail || 'Failed to analyze risk');
@@ -88,7 +127,7 @@ function displayResults(data) {
     const vehicleDetails = document.getElementById('vehicleDetails');
 
     vehicleTag.textContent = data.vehicle + (data.year ? ` (${data.year})` : '');
-    vehicleDetails.textContent = data.registration;
+    vehicleDetails.textContent = '';
 
     // Update stats
     document.getElementById('lastMOTDate').textContent = data.last_mot_date || '-';
@@ -139,15 +178,13 @@ function displayResults(data) {
         const repairCost = data.repair_cost_estimate;
         document.getElementById('repairCostValue').textContent = repairCost.expected;
         document.getElementById('repairCostRange').textContent =
-            `Range: ${repairCost.range_low} - ${repairCost.range_high}`;
+            `Range: £${repairCost.range_low} - £${repairCost.range_high}`;
     }
 
     // Update Components
     const componentsGrid = document.getElementById('componentsGrid');
     componentsGrid.innerHTML = '';
 
-    // Extract risk_ fields
-    const components = [];
     const riskFieldMap = {
         'risk_brakes': 'Brakes',
         'risk_suspension': 'Suspension',
@@ -158,13 +195,13 @@ function displayResults(data) {
         'risk_body': 'Body/Structure',
     };
 
+    const components = [];
     for (const [key, name] of Object.entries(riskFieldMap)) {
         if (data[key] !== undefined) {
             components.push({ name, value: data[key] });
         }
     }
 
-    // Sort by risk descending
     components.sort((a, b) => b.value - a.value);
 
     components.forEach(comp => {
@@ -172,8 +209,6 @@ function displayResults(data) {
         const compPercent = (comp.value * 100).toFixed(1) + '%';
 
         let textClass = 'text-low';
-
-        // Component risk thresholds
         if (comp.value > 0.10) {
             textClass = 'text-high';
         } else if (comp.value > 0.05) {
@@ -182,7 +217,6 @@ function displayResults(data) {
 
         card.className = 'component-card';
 
-        // Create elements safely to prevent XSS
         const nameSpan = document.createElement('span');
         nameSpan.className = 'comp-name';
         nameSpan.textContent = comp.name;
@@ -197,14 +231,10 @@ function displayResults(data) {
         componentsGrid.appendChild(card);
     });
 
-    // Update source note
+    // Update source note (hidden for interim solution)
     const sourceNote = document.getElementById('sourceNote');
-    if (data.prediction_source) {
-        sourceNote.textContent = `Prediction: ${data.prediction_source}`;
-        if (data.note) {
-            sourceNote.textContent += ` - ${data.note}`;
-        }
-    } else {
-        sourceNote.textContent = '';
-    }
+    sourceNote.textContent = '';
 }
+
+// Initialize
+loadMakes();
