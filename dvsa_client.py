@@ -3,6 +3,7 @@ DVSA MOT History API Client
 ===========================
 
 Fetches vehicle MOT history from the DVSA API with:
+- OAuth 2.0 authentication (client credentials flow)
 - VRM (registration) validation and normalization
 - 24-hour response caching
 - Graceful error handling for fallback triggering
@@ -11,6 +12,7 @@ Fetches vehicle MOT history from the DVSA API with:
 import os
 import re
 import logging
+import time
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -19,6 +21,23 @@ import httpx
 from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
+
+
+class OAuthToken:
+    """Manages OAuth 2.0 token with automatic refresh."""
+
+    def __init__(self):
+        self.access_token: Optional[str] = None
+        self.expires_at: float = 0
+
+    def is_valid(self) -> bool:
+        """Check if token is valid (exists and not expired)."""
+        return self.access_token is not None and time.time() < self.expires_at - 60  # 60s buffer
+
+    def set_token(self, access_token: str, expires_in: int):
+        """Set token with expiry."""
+        self.access_token = access_token
+        self.expires_at = time.time() + expires_in
 
 
 class VRMValidationError(Exception):
@@ -78,13 +97,21 @@ class DVSAClient:
     """
     Client for DVSA MOT History API.
 
+    Uses OAuth 2.0 client credentials flow for authentication.
+
     Usage:
-        client = DVSAClient(api_key="your-key")
+        client = DVSAClient()
         history = await client.fetch_vehicle_history("AB12CDE")
+
+    Required environment variables:
+        DVSA_CLIENT_ID: OAuth client ID
+        DVSA_CLIENT_SECRET: OAuth client secret
+        DVSA_TOKEN_URL: OAuth token endpoint
+        DVSA_SCOPE: OAuth scope (usually https://tapi.dvsa.gov.uk/.default)
     """
 
     # DVSA API endpoint (new API as of 2025)
-    BASE_URL = "https://history.mot.api.gov.uk"
+    BASE_URL = "https://beta.check-mot.service.gov.uk"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -102,16 +129,37 @@ class DVSAClient:
         re.compile(r'^[A-Z]{1,3}[0-9]{1,4}$'),       # Dateless: AB1234
     ]
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        token_url: Optional[str] = None,
+        scope: Optional[str] = None,
+    ):
         """
-        Initialize DVSA client.
+        Initialize DVSA client with OAuth 2.0 credentials.
 
         Args:
-            api_key: DVSA API key. If not provided, reads from DVSA_API_KEY env var.
+            client_id: OAuth client ID (or set DVSA_CLIENT_ID env var)
+            client_secret: OAuth client secret (or set DVSA_CLIENT_SECRET env var)
+            token_url: OAuth token endpoint (or set DVSA_TOKEN_URL env var)
+            scope: OAuth scope (or set DVSA_SCOPE env var)
         """
-        self.api_key = api_key or os.environ.get("DVSA_API_KEY")
-        if not self.api_key:
-            logger.warning("DVSA API key not configured - API calls will fail")
+        self.client_id = client_id or os.environ.get("DVSA_CLIENT_ID")
+        self.client_secret = client_secret or os.environ.get("DVSA_CLIENT_SECRET")
+        self.token_url = token_url or os.environ.get("DVSA_TOKEN_URL")
+        self.scope = scope or os.environ.get("DVSA_SCOPE", "https://tapi.dvsa.gov.uk/.default")
+
+        # Check if credentials are configured
+        self.is_configured = all([self.client_id, self.client_secret, self.token_url])
+        if not self.is_configured:
+            logger.warning("DVSA OAuth credentials not fully configured - API calls will fail")
+            logger.warning(f"  CLIENT_ID: {'set' if self.client_id else 'MISSING'}")
+            logger.warning(f"  CLIENT_SECRET: {'set' if self.client_secret else 'MISSING'}")
+            logger.warning(f"  TOKEN_URL: {'set' if self.token_url else 'MISSING'}")
+
+        # OAuth token management
+        self._token = OAuthToken()
 
         # 24-hour cache (max 10000 entries)
         self._cache: TTLCache = TTLCache(maxsize=10000, ttl=self.CACHE_TTL_SECONDS)
@@ -119,11 +167,45 @@ class DVSAClient:
         # HTTP client with timeout
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(30.0, connect=10.0),
-            headers={
-                "Accept": "application/json+v6",
-                "x-api-key": self.api_key or "",
-            }
         )
+
+    async def _get_access_token(self) -> str:
+        """Get valid OAuth access token, refreshing if needed."""
+        if self._token.is_valid():
+            return self._token.access_token
+
+        if not self.is_configured:
+            raise DVSAAPIError("DVSA OAuth credentials not configured")
+
+        logger.info("Fetching new OAuth token from DVSA...")
+
+        try:
+            response = await self._client.post(
+                self.token_url,
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "scope": self.scope,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+
+            if response.status_code != 200:
+                logger.error(f"OAuth token request failed: {response.status_code} - {response.text}")
+                raise DVSAAPIError(f"OAuth authentication failed: {response.status_code}")
+
+            token_data = response.json()
+            self._token.set_token(
+                access_token=token_data["access_token"],
+                expires_in=token_data.get("expires_in", 3600)
+            )
+
+            logger.info("OAuth token obtained successfully")
+            return self._token.access_token
+
+        except httpx.RequestError as e:
+            raise DVSAAPIError(f"OAuth token request failed: {str(e)}")
 
     def normalize_vrm(self, registration: str) -> str:
         """
@@ -223,9 +305,13 @@ class DVSAClient:
         logger.info(f"Fetching MOT history for {vrm} from DVSA API")
 
         try:
+            # Get OAuth access token
+            access_token = await self._get_access_token()
+
             response = await self._client.get(
                 f"{self.BASE_URL}/v1/trade/vehicles/mot-tests",
-                params={"registration": vrm}
+                params={"registration": vrm},
+                headers={"Authorization": f"Bearer {access_token}"}
             )
 
             if response.status_code == 404:
