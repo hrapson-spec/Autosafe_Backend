@@ -12,8 +12,11 @@ import sqlite3
 import os
 import time
 import logging
+import fcntl
 
 logger = logging.getLogger(__name__)
+
+LOCK_FILE = '/tmp/autosafe_db_build.lock'
 
 DB_FILE = 'autosafe.db'
 DATA_FILE = 'prod_data_clean.csv.gz'
@@ -90,12 +93,12 @@ def build_database():
             cursor.executemany(insert_sql, batch)
             total_rows += len(batch)
     
-    # Create indexes for fast queries
+    # Create indexes for fast queries (IF NOT EXISTS to handle race conditions)
     logger.info("Creating indexes...")
-    cursor.execute(f'CREATE INDEX idx_model_id ON {TABLE_NAME} (model_id)')
-    cursor.execute(f'CREATE INDEX idx_age_band ON {TABLE_NAME} (age_band)')
-    cursor.execute(f'CREATE INDEX idx_mileage_band ON {TABLE_NAME} (mileage_band)')
-    cursor.execute(f'CREATE INDEX idx_model_age_mileage ON {TABLE_NAME} (model_id, age_band, mileage_band)')
+    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_id ON {TABLE_NAME} (model_id)')
+    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_age_band ON {TABLE_NAME} (age_band)')
+    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_mileage_band ON {TABLE_NAME} (mileage_band)')
+    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_age_mileage ON {TABLE_NAME} (model_id, age_band, mileage_band)')
     
     conn.commit()
     conn.close()
@@ -108,9 +111,12 @@ def build_database():
 
 
 def ensure_database():
-    """Ensure database exists, building it if necessary."""
+    """Ensure database exists, building it if necessary.
+
+    Uses file locking to prevent multiple workers from building simultaneously.
+    """
+    # Quick check if DB already exists and is valid
     if os.path.exists(DB_FILE):
-        # Verify it's valid
         try:
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
@@ -122,10 +128,43 @@ def ensure_database():
                 return True
         except Exception as e:
             logger.warning(f"Database exists but invalid: {e}")
-            os.remove(DB_FILE)
-    
-    # Build the database
-    return build_database()
+
+    # Use file lock to ensure only one worker builds the database
+    lock_fd = open(LOCK_FILE, 'w')
+    try:
+        # Try to acquire exclusive lock (non-blocking first)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            logger.info("Acquired lock, building database...")
+        except BlockingIOError:
+            # Another process is building, wait for it
+            logger.info("Another worker is building database, waiting...")
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)  # Blocking wait
+            logger.info("Lock acquired after waiting")
+
+        # Check again if DB was built while we waited
+        if os.path.exists(DB_FILE):
+            try:
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+                cursor.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}")
+                count = cursor.fetchone()[0]
+                conn.close()
+                if count > 0:
+                    logger.info(f"Database built by another worker: {count} rows")
+                    return True
+            except Exception as e:
+                logger.warning(f"Database still invalid after wait: {e}")
+                try:
+                    os.remove(DB_FILE)
+                except:
+                    pass
+
+        # Build the database
+        return build_database()
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
 
 
 if __name__ == "__main__":
