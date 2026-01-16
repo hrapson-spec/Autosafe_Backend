@@ -110,8 +110,8 @@ class DVSAClient:
         DVSA_SCOPE: OAuth scope (usually https://tapi.dvsa.gov.uk/.default)
     """
 
-    # DVSA API endpoint (Trade API - matches OAuth scope)
-    BASE_URL = "https://tapi.dvsa.gov.uk"
+    # DVSA API endpoint (new production API as of 2025)
+    BASE_URL = "https://history.mot.api.gov.uk"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -135,6 +135,7 @@ class DVSAClient:
         client_secret: Optional[str] = None,
         token_url: Optional[str] = None,
         scope: Optional[str] = None,
+        api_key: Optional[str] = None,
     ):
         """
         Initialize DVSA client with OAuth 2.0 credentials.
@@ -144,12 +145,14 @@ class DVSAClient:
             client_secret: OAuth client secret (or set DVSA_CLIENT_SECRET env var)
             token_url: OAuth token endpoint (or set DVSA_TOKEN_URL env var)
             scope: OAuth scope (or set DVSA_SCOPE env var)
+            api_key: API key (or set DVSA_API_KEY env var)
         """
         # Check both naming conventions for Railway compatibility
         self.client_id = client_id or os.environ.get("DVSA_CLIENT_ID") or os.environ.get("DVSA_Client_ID")
         self.client_secret = client_secret or os.environ.get("DVSA_CLIENT_SECRET") or os.environ.get("DVSA_Client_Secret")
         self.token_url = token_url or os.environ.get("DVSA_TOKEN_URL") or os.environ.get("DVSA_Token_URL") or os.environ.get("DVSA_Token_ID")
         self.scope = scope or os.environ.get("DVSA_SCOPE") or os.environ.get("DVSA_Scope") or "https://tapi.dvsa.gov.uk/.default"
+        self.api_key = api_key or os.environ.get("DVSA_API_KEY") or os.environ.get("DVSA_Api_Key")
 
         # Check if credentials are configured
         self.is_configured = all([self.client_id, self.client_secret, self.token_url])
@@ -309,10 +312,14 @@ class DVSAClient:
             # Get OAuth access token
             access_token = await self._get_access_token()
 
+            # Build headers - OAuth bearer token required, API key optional
+            headers = {"Authorization": f"Bearer {access_token}"}
+            if self.api_key:
+                headers["X-API-Key"] = self.api_key
+
             response = await self._client.get(
-                f"{self.BASE_URL}/v1/trade/vehicles/mot-tests",
-                params={"registration": vrm},
-                headers={"Authorization": f"Bearer {access_token}"}
+                f"{self.BASE_URL}/v1/trade/vehicles/registration/{vrm}",
+                headers=headers
             )
 
             if response.status_code == 404:
