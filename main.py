@@ -76,10 +76,10 @@ async def lifespan(app: FastAPI):
 
     # Initialize DVSA client
     dvsa_client = get_dvsa_client()
-    if dvsa_client.api_key:
-        logger.info("DVSA client initialized with API key")
+    if dvsa_client.is_configured:
+        logger.info("DVSA client initialized with OAuth credentials")
     else:
-        logger.warning("DVSA API key not configured - V55 predictions will fail")
+        logger.warning("DVSA OAuth credentials not configured - V55 predictions will fail")
 
     yield  # Application runs here
 
