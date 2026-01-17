@@ -1,6 +1,9 @@
 """
-AutoSafe API - MOT Risk Prediction
-Uses PostgreSQL (DATABASE_URL) if available, otherwise falls back to SQLite or Demo Mode.
+AutoSafe API - MOT Risk Prediction (V55)
+=========================================
+
+Uses V55 CatBoost model with DVSA MOT History API for real-time predictions.
+Falls back to SQLite lookup for vehicles without DVSA history.
 """
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -9,65 +12,28 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 import os
 import time
-import sqlite3
 
-# Import database module for PostgreSQL
+# DVLA client for vehicle registration lookup
+from dvla_client import DVLAClient, DVLAError, DVLANotFoundError, DVLARateLimitError, DVLAValidationError
+
+# Import database module for fallback
 import database as db
 from utils import get_age_band, get_mileage_band
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
-from interpolation import interpolate_risk, get_mileage_bucket, MILEAGE_ORDER
-from history_adjustment import HistoryAdjustment, HISTORY_ADJUSTMENT_ENABLED
-from component_risk_adjustment import ComponentRiskAdjustment
-from dvla_client import DVLAClient, DVLAError, DVLANotFoundError, DVLARateLimitError, DVLAValidationError
-from config import (
-    GAP_THRESHOLD_SHORT_DAYS,
-    GAP_THRESHOLD_MEDIUM_DAYS,
-    GAP_THRESHOLD_LONG_DAYS,
-    CACHE_TTL_SECONDS,
-    MIN_TESTS_FOR_UI,
-    MAX_MILEAGE_CAP,
-    MIN_MILEAGE_FOR_OLD_CAR,
-    MAX_MILEAGE_FOR_NEW_CAR,
-    AGE_THRESHOLD_FOR_LOW_MILEAGE,
-    AGE_THRESHOLD_FOR_HIGH_MILEAGE,
+from regional_defaults import validate_postcode, get_corrosion_index
+
+# V55 imports
+from dvsa_client import (
+    DVSAClient, get_dvsa_client, close_dvsa_client,
+    VRMValidationError, VehicleNotFoundError, DVSAAPIError
 )
+from feature_engineering_v55 import engineer_features
+import model_v55
+
 import logging
 import sys
-
-# =============================================================================
-# Application State (Module-level Singletons)
-# =============================================================================
-# These globals are initialized during app startup (lifespan context) and
-# remain constant for the lifetime of the application. This is the standard
-# pattern for FastAPI applications with async connection pools and caches.
-#
-# - _history_adjustment: Loaded once at startup from history_weights.json
-# - _cache: TTL-based response cache for /api/makes and /api/models endpoints
-#
-# For testing, these can be reset via the lifespan context or by restarting
-# the application.
-# =============================================================================
-
-HISTORY_WEIGHTS_FILE = 'history_weights.json'
-COMPONENT_RISK_WEIGHTS_FILE = 'component_risk_weights.json'
-_history_adjustment: Optional[HistoryAdjustment] = None
-_component_risk_adjustment: Optional[ComponentRiskAdjustment] = None
-
-def get_gap_band(days_since_prev: Optional[int]) -> str:
-    """Convert days since previous test to gap band."""
-    if days_since_prev is None:
-        return 'NONE'
-    if days_since_prev < GAP_THRESHOLD_SHORT_DAYS:
-        return '<180d'
-    elif days_since_prev < GAP_THRESHOLD_MEDIUM_DAYS:
-        return '180d-1y'
-    elif days_since_prev < GAP_THRESHOLD_LONG_DAYS:
-        return '1-2y'
-    else:
-        return '2y+'
-
 
 # Configure structured logging
 logging.basicConfig(
@@ -77,19 +43,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Response cache: TTL-based cache for /api/makes and /api/models endpoints.
-# Populated on first request, expires after CACHE_TTL_SECONDS.
-# Protected by _cache_lock to prevent race conditions in async context.
-import asyncio
+# Response caching for expensive queries
 _cache = {
-    "makes": {"data": None, "time": 0},  # {"data": List[str], "time": float}
-    "models": {}  # Dict[str, {"data": List[str], "time": float}] keyed by make
+    "makes": {"data": None, "time": 0},
+    "models": {}  # Keyed by make
 }
-_cache_lock = asyncio.Lock()
-
-# Database configuration - Initialize before lifespan to avoid undefined reference
-DB_FILE = 'autosafe.db'
-DATABASE_URL = os.environ.get("DATABASE_URL")
+CACHE_TTL = 3600  # 1 hour cache TTL
 
 # DVLA API configuration
 DVLA_API_KEY = os.environ.get("DVLA_API_KEY")
@@ -102,48 +61,37 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - startup and shutdown."""
-    global DATABASE_URL, _history_adjustment, _dvla_client
+    # Startup: Load V55 model
+    logger.info("Loading V55 CatBoost model...")
+    if model_v55.load_model():
+        logger.info("V55 model loaded successfully")
+    else:
+        logger.error("Failed to load V55 model - predictions will fail")
 
-    # Startup: Build SQLite from compressed data if needed (Build-on-Boot pattern)
+    # Build SQLite from compressed data for fallback
     import build_db
     build_db.ensure_database()
 
-    # After building, check if we should use SQLite or PostgreSQL
+    # After building, check if we should use SQLite or PostgreSQL for fallback
+    global DATABASE_URL
     if os.path.exists(DB_FILE):
-        logger.info(f"Using local {DB_FILE} (embedded SQLite - fastest)")
+        logger.info(f"Fallback database ready: {DB_FILE}")
         DATABASE_URL = None
     elif DATABASE_URL:
-        logger.info("Initializing PostgreSQL connection pool...")
+        logger.info("Initializing PostgreSQL connection pool for fallback...")
         await db.get_pool()
     else:
-        logger.warning("No database available - using demo mode")
-    
-    # Load history adjustment weights if enabled and available
-    if HISTORY_ADJUSTMENT_ENABLED and os.path.exists(HISTORY_WEIGHTS_FILE):
-        try:
-            _history_adjustment = HistoryAdjustment.load(HISTORY_WEIGHTS_FILE)
-            logger.info(f"Loaded history adjustment weights from {HISTORY_WEIGHTS_FILE}")
-        except Exception as e:
-            logger.warning(f"Failed to load history weights: {e}")
-            _history_adjustment = None
-    else:
-        if not HISTORY_ADJUSTMENT_ENABLED:
-            logger.info("History adjustment disabled by feature flag")
-        else:
-            logger.warning(f"History weights file not found: {HISTORY_WEIGHTS_FILE}")
+        logger.warning("No fallback database available")
 
-    # Load component-specific risk adjustment weights
-    if os.path.exists(COMPONENT_RISK_WEIGHTS_FILE):
-        try:
-            _component_risk_adjustment = ComponentRiskAdjustment.load(COMPONENT_RISK_WEIGHTS_FILE)
-            logger.info(f"Loaded component risk adjustment weights from {COMPONENT_RISK_WEIGHTS_FILE}")
-        except Exception as e:
-            logger.warning(f"Failed to load component risk weights: {e}")
-            _component_risk_adjustment = None
+    # Initialize DVSA client (for MOT history)
+    dvsa_client = get_dvsa_client()
+    if dvsa_client.is_configured:
+        logger.info("DVSA client initialized with OAuth credentials")
     else:
-        logger.info(f"Component risk weights file not found: {COMPONENT_RISK_WEIGHTS_FILE}")
+        logger.warning("DVSA OAuth credentials not configured - V55 predictions will fail")
 
-    # Initialize DVLA client
+    # Initialize DVLA client (for vehicle registration lookup)
+    global _dvla_client
     _dvla_client = DVLAClient(api_key=DVLA_API_KEY, use_test_env=DVLA_USE_TEST_ENV)
     if DVLA_API_KEY:
         logger.info(f"DVLA client initialized (test_env={DVLA_USE_TEST_ENV})")
@@ -153,49 +101,41 @@ async def lifespan(app: FastAPI):
     yield  # Application runs here
 
     # Shutdown
-    logger.info("Shutting down, closing database pool...")
+    logger.info("Shutting down...")
+    await close_dvsa_client()
     await db.close_pool()
 
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
 # CORS Middleware - Allow cross-origin requests
-# Note: allow_credentials=True requires explicit origins (not "*")
 from fastapi.middleware.cors import CORSMiddleware
-
-# Define allowed origins - update this list for production deployments
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
-]
-# Also allow origins from environment variable (comma-separated)
-import os as _os
-if _os.environ.get("ALLOWED_ORIGINS"):
-    ALLOWED_ORIGINS.extend(_os.environ["ALLOWED_ORIGINS"].split(","))
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# MIN_TESTS_FOR_UI imported from config.py
+# Check for PostgreSQL first, then SQLite
+# OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
+DB_FILE = 'autosafe.db'
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# Minimum total tests required for a make/model to appear in UI dropdowns
+# This filters out typos, garbage entries, and extremely rare vehicles
+MIN_TESTS_FOR_UI = 100
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
 
 @app.get("/health")
 async def health_check():
@@ -206,13 +146,9 @@ async def health_check():
             pool = await db.get_pool()
             if pool:
                 db_status = "connected"
-        except (ConnectionError, TimeoutError) as e:
-            logger.warning(f"Database connection error in health check: {e}")
+        except Exception:
             db_status = "error"
-        except Exception as e:
-            logger.error(f"Unexpected error in health check: {e}")
-            db_status = "error"
-
+    
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
@@ -222,7 +158,7 @@ async def health_check():
 # SQLite fallback connection (for local development)
 import sqlite3
 
-def get_sqlite_connection() -> Optional[sqlite3.Connection]:
+def get_sqlite_connection():
     """Get SQLite connection if available."""
     if not os.path.exists(DB_FILE):
         return None
@@ -233,75 +169,6 @@ def get_sqlite_connection() -> Optional[sqlite3.Connection]:
         return conn
     except sqlite3.Error:
         return None
-
-
-def interpolate_sqlite_result(
-    rows: List[sqlite3.Row],
-    actual_mileage: int,
-    model_id: str,
-    age_band: str,
-    mileage_band: str
-) -> Optional[Dict[str, Any]]:
-    """
-    Apply interpolation to SQLite query results across mileage bands.
-    
-    This eliminates 'cliff' discontinuities by smoothly interpolating
-    between bucket centers based on actual mileage.
-    """
-    if not rows:
-        return None
-    
-    # Build mileage band risk data for interpolation
-    mileage_band_risks = {}  # Maps band name to {risk_column: value}
-    total_tests_sum = 0
-    total_failures_sum = 0
-    target_band_row = None  # Row matching the requested mileage_band
-
-    # Identify risk columns (those starting with Risk_ or named Failure_Risk)
-    risk_columns = []
-    if rows:
-        sample_keys = rows[0].keys()
-        risk_columns = [k for k in sample_keys if k.startswith('Risk_') or k == 'Failure_Risk']
-
-    for row in rows:
-        sqlite_row = dict(row)  # Convert sqlite3.Row to dict for .get() support
-        band = sqlite_row['mileage_band']
-        tests = sqlite_row.get('Total_Tests', 0) or 0
-        failures = sqlite_row.get('Total_Failures', 0) or 0
-        total_tests_sum += tests
-        total_failures_sum += failures
-
-        # Store risk values for this band
-        mileage_band_risks[band] = {col: float(sqlite_row[col]) if sqlite_row.get(col) else 0.0 for col in risk_columns}
-
-        # Track if this is the target band
-        if band == mileage_band:
-            target_band_row = sqlite_row
-
-    # If only one band or no data, return raw result
-    if len(mileage_band_risks) <= 1:
-        if target_band_row:
-            return target_band_row
-        elif rows:
-            return dict(rows[0])
-        return None
-    
-    # Build result with interpolated values
-    result = {
-        'model_id': model_id,
-        'age_band': age_band,
-        'mileage_band': mileage_band,
-        'Total_Tests': total_tests_sum,
-        'Total_Failures': total_failures_sum,
-        'Interpolated': True,
-    }
-    
-    # Interpolate each risk column
-    for col in risk_columns:
-        bucket_risks = {band: data.get(col, 0.0) for band, data in mileage_band_risks.items()}
-        result[col] = round(interpolate_risk(actual_mileage, "mileage", bucket_risks), 6)
-    
-    return result
 
 # Mock Data for Demo Mode
 MOCK_MAKES = ["FORD", "VAUXHALL", "VOLKSWAGEN", "BMW", "AUDI"]
@@ -320,7 +187,7 @@ MOCK_RISK = {
 }
 
 
-def add_confidence_intervals(result: Dict[str, Any]) -> Dict[str, Any]:
+def add_confidence_intervals(result: dict) -> dict:
     """
     Add Wilson confidence intervals to a risk result.
     Modifies the result dict in place and returns it.
@@ -338,7 +205,7 @@ def add_confidence_intervals(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def add_repair_cost_estimate(result: Dict[str, Any]) -> Dict[str, Any]:
+def add_repair_cost_estimate(result: dict) -> dict:
     """
     Add expected repair cost estimate to a risk result.
     Uses the formula: E[cost|fail] = Σ(risk_i × cost_mid_i) / p_fail
@@ -349,265 +216,25 @@ def add_repair_cost_estimate(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def get_usage_intensity_band(
-    current_mileage: Optional[int],
-    prev_mileage: Optional[int],
-    days_since_prev: Optional[int]
-) -> Optional[str]:
-    """
-    Compute usage intensity band from mileage trajectory.
-    
-    Returns 'low', 'medium', 'high', or 'unknown' based on annual mileage rate.
-    """
-    if days_since_prev is None or days_since_prev <= 0:
-        return 'unknown'
-    if current_mileage is None or prev_mileage is None:
-        return 'unknown'
-    if current_mileage < prev_mileage:
-        return 'unknown'  # Mileage rollback or error
-    
-    mileage_delta = current_mileage - prev_mileage
-    miles_per_year = mileage_delta * 365.25 / days_since_prev
-    
-    if miles_per_year > 50000:
-        return 'high'  # Cap extreme values
-    elif miles_per_year < 6000:
-        return 'low'
-    elif miles_per_year < 12000:
-        return 'medium'
-    else:
-        return 'high'
-
-
-def apply_history_adjustment(
-    result: Dict[str, Any],
-    prev_outcome: Optional[str],
-    days_since_prev: Optional[int],
-    usage_intensity_band: Optional[str] = None,
-    severity_band: Optional[str] = None,
-    prev_prev_outcome: Optional[str] = None,
-    age_band: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    Apply history adjustment to a risk result.
-
-    Adjusts Failure_Risk based on vehicle history using learned weights.
-    Features (Dec 2025):
-      - Multi-cycle: considers last two outcomes (e.g., FAIL_FAIL vs FAIL_PASS)
-      - Age×Outcome: age-dependent recovery from failures
-      - Severity: weighted advisory score from previous test (NONE, LOW, MEDIUM, HIGH)
-      - Combined: +3.6% AUC lift over single-cycle baseline
-    """
-    global _history_adjustment
-
-    if _history_adjustment is None or prev_outcome is None:
-        return result
-
-    # Get base risk
-    base_risk = result.get('Failure_Risk', 0)
-    if base_risk <= 0:
-        return result
-
-    # Compute gap band
-    gap_band = get_gap_band(days_since_prev)
-
-    # Apply adjustment with all available features
-    adjusted_risk = _history_adjustment.apply(
-        base_risk, prev_outcome, gap_band, days_since_prev,
-        usage_intensity_band=usage_intensity_band,
-        severity_band=severity_band,
-        prev_prev_outcome_band=prev_prev_outcome,
-        age_band=age_band
-    )
-
-    # Update result
-    result['Base_Failure_Risk'] = round(float(base_risk), 6)
-    result['Failure_Risk'] = round(float(adjusted_risk), 6)
-    result['History_Adjustment'] = {
-        'prev_outcome': prev_outcome,
-        'prev_prev_outcome': prev_prev_outcome,
-        'gap_band': gap_band,
-        'usage_intensity_band': usage_intensity_band,
-        'severity_band': severity_band,
-        'age_band': age_band,
-        'adjustment_applied': True
-    }
-
-    return result
-
-
-def apply_component_risk_adjustment(
-    result: Dict[str, Any],
-    component_history: Optional[Dict[str, int]]
-) -> Dict[str, Any]:
-    """
-    Apply component-specific risk adjustments.
-
-    Adjusts individual Risk_X fields (Risk_Brakes, Risk_Suspension, etc.)
-    based on whether the same component failed in the previous MOT cycle.
-
-    For example, if prev_brake_failure=1, Risk_Brakes is increased.
-    This provides actionable component-level predictions.
-    """
-    global _component_risk_adjustment
-
-    if _component_risk_adjustment is None or component_history is None:
-        return result
-
-    # Check if any component history flags are set
-    has_any_history = any(v == 1 for v in component_history.values())
-    if not has_any_history:
-        return result
-
-    # Apply adjustments using the loaded model
-    return _component_risk_adjustment.apply_to_result(result, component_history)
-
-
-# =============================================================================
-# HELPER FUNCTIONS FOR get_risk() DECOMPOSITION
-# =============================================================================
-
-def enrich_risk_response(
-    result: Dict[str, Any],
-    warnings: List[str],
-    prev_outcome: Optional[str],
-    days_since_prev: Optional[int],
-    component_history: Optional[Dict[str, int]] = None,
-    usage_intensity_band: Optional[str] = None,
-    severity_band: Optional[str] = None,
-    prev_prev_outcome: Optional[str] = None,
-    age_band: Optional[str] = None
-) -> Dict[str, Any]:
-    """Apply all enrichment transformations to a risk result.
-
-    Applies in order: confidence intervals -> repair cost -> history adjustment -> component adjustment.
-
-    Args:
-        result: Base risk result dictionary.
-        warnings: List of warning messages to include.
-        prev_outcome: Previous MOT outcome for history adjustment.
-        days_since_prev: Days since previous test for history adjustment.
-        component_history: Dict mapping prev_X_failure to 0/1 flags.
-        usage_intensity_band: Vehicle usage intensity ('low', 'medium', 'high', 'unknown').
-        severity_band: Severity-weighted advisory score (NONE, LOW, MEDIUM, HIGH).
-        prev_prev_outcome: Second-previous MOT outcome for multi-cycle history.
-        age_band: Vehicle age band for age×outcome interaction.
-
-    Returns:
-        Enriched result dictionary.
-    """
-    if warnings:
-        result["warnings"] = warnings
-
-    # Calculate raw proportion (what Wilson interval is centered on)
-    total_tests = result.get('Total_Tests', 0)
-    total_failures = result.get('Total_Failures', 0)
-    raw_proportion = total_failures / total_tests if total_tests > 0 else 0
-
-    result = add_repair_cost_estimate(add_confidence_intervals(result))
-    result = apply_history_adjustment(
-        result, prev_outcome, days_since_prev, usage_intensity_band,
-        severity_band=severity_band,
-        prev_prev_outcome=prev_prev_outcome, age_band=age_band
-    )
-    result = apply_component_risk_adjustment(result, component_history)
-
-    # Shift CI bounds to match actual Failure_Risk (CI was calculated on raw proportion)
-    final_risk = result.get('Failure_Risk', 0)
-    if total_tests > 0 and 'Failure_Risk_CI_Lower' in result and 'Failure_Risk_CI_Upper' in result:
-        delta = final_risk - raw_proportion
-        result['Failure_Risk_CI_Lower'] = round(max(0, result['Failure_Risk_CI_Lower'] + delta), 4)
-        result['Failure_Risk_CI_Upper'] = round(min(1, result['Failure_Risk_CI_Upper'] + delta), 4)
-
-    return result
-
-
-def get_sqlite_fallback_risk(
-    conn: sqlite3.Connection,
-    model_id: str,
-    make: str,
-    age_band: str,
-    mileage_band: str
-) -> Optional[Dict[str, Any]]:
-    """Try make-level then global-level fallback for unseen models.
-
-    Args:
-        conn: SQLite connection (caller responsible for closing).
-        model_id: Full model ID (e.g., "FORD FIESTA").
-        make: Vehicle make.
-        age_band: Age band string.
-        mileage_band: Mileage band string.
-
-    Returns:
-        Fallback risk dict with 'note' explaining source, or None if no data.
-    """
-    # 1. Try Make Average
-    make_query = "SELECT SUM(Total_Failures) as tf, SUM(Total_Tests) as tt FROM risks WHERE model_id LIKE ?"
-    make_row = conn.execute(make_query, (f"{make.upper()} %",)).fetchone()
-
-    if make_row and make_row['tt'] and make_row['tt'] > 0:
-        return {
-            "Model_Id": model_id,
-            "Age_Band": age_band,
-            "Mileage_Band": mileage_band,
-            "note": "Unseen model. Using Make average fallback.",
-            "Failure_Risk": make_row['tf'] / make_row['tt'],
-            "Total_Tests": make_row['tt'],
-        }
-
-    # 2. Try Global Average
-    global_query = "SELECT SUM(Total_Failures) as tf, SUM(Total_Tests) as tt FROM risks"
-    global_row = conn.execute(global_query).fetchone()
-
-    if global_row and global_row['tt'] and global_row['tt'] > 0:
-        return {
-            "Model_Id": model_id,
-            "Age_Band": age_band,
-            "Mileage_Band": mileage_band,
-            "note": "Unseen model. Using Global average fallback.",
-            "Failure_Risk": global_row['tf'] / global_row['tt'],
-            "Total_Tests": global_row['tt'],
-        }
-
-    return None
-
-
-def get_sqlite_model_suggestion(conn: sqlite3.Connection, model: str) -> Optional[str]:
-    """Find a similar model name to suggest for 404 errors.
-
-    Args:
-        conn: SQLite connection.
-        model: Model name to search for.
-
-    Returns:
-        Suggested model_id string, or None if no similar match found.
-    """
-    like_query = "SELECT DISTINCT model_id FROM risks WHERE model_id LIKE ? LIMIT 1"
-    suggestion = conn.execute(like_query, (f"%{model.upper()}%",)).fetchone()
-    return suggestion['model_id'] if suggestion else None
-
-
 @app.get("/api/makes", response_model=List[str])
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
     global _cache
-
-    # Check cache first (with lock to prevent race conditions)
-    async with _cache_lock:
-        if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL_SECONDS:
-            logger.info("Returning cached makes list")
-            return _cache["makes"]["data"]
-
+    
+    # Check cache first
+    if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
+        logger.info("Returning cached makes list")
+        return _cache["makes"]["data"]
+    
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
-            async with _cache_lock:
-                _cache["makes"] = {"data": result, "time": time.time()}
+            _cache["makes"] = {"data": result, "time": time.time()}
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
-
+    
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
@@ -622,11 +249,10 @@ async def get_makes(request: Request):
         rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
         conn.close()
         makes = sorted(set(row['make'] for row in rows))
-        async with _cache_lock:
-            _cache["makes"] = {"data": makes, "time": time.time()}
+        _cache["makes"] = {"data": makes, "time": time.time()}
         logger.info(f"Cached {len(makes)} makes from SQLite")
         return makes
-
+    
     # Demo mode
     return sorted(MOCK_MAKES)
 
@@ -637,38 +263,36 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     """Return a list of models for a given make (cached for 1 hour)."""
     global _cache
     cache_key = make.upper()
-
-    # Check cache first (with lock to prevent race conditions)
-    async with _cache_lock:
-        if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL_SECONDS:
-            logger.info(f"Returning cached models for {cache_key}")
-            return _cache["models"][cache_key]["data"]
-
+    
+    # Check cache first
+    if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
+        logger.info(f"Returning cached models for {cache_key}")
+        return _cache["models"][cache_key]["data"]
+    
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            async with _cache_lock:
-                _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            _cache["models"][cache_key] = {"data": result, "time": time.time()}
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
-
+    
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
         from consolidate_models import get_canonical_models_for_make
-
+        
         # Only return models with sufficient test volume
         query = """
             SELECT model_id, SUM(Total_Tests) as test_count
-            FROM risks
+            FROM risks 
             WHERE model_id LIKE ?
             GROUP BY model_id
             HAVING SUM(Total_Tests) >= ?
         """
         rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
         conn.close()
-
+        
         # Extract base models from found entries
         found_models = {}
         for row in rows:
@@ -676,348 +300,456 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             if base_model and len(base_model) > 1:
                 if base_model not in found_models or row['test_count'] > found_models[base_model]:
                     found_models[base_model] = row['test_count']
-
+        
         # Get curated list of known models for this make
         known_models = get_canonical_models_for_make(make)
-
+        
         if known_models:
             # Only return models from curated list that exist in data
             result = sorted([m for m in known_models if m in found_models])
         else:
             # For non-curated makes, return alphabetic models only (capped)
             result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
-
-        async with _cache_lock:
-            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+        
+        _cache["models"][cache_key] = {"data": result, "time": time.time()}
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
-
+    
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
 
 
 @app.get("/api/risk")
-@limiter.limit("50/minute")
+@limiter.limit("20/minute")
 async def get_risk(
     request: Request,
-    make: str = Query(..., max_length=50, description="Vehicle Make (e.g., FORD)"),
-    model: str = Query(..., max_length=100, description="Vehicle Model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1900, le=datetime.now().year + 1, description="Vehicle Registration Year"),
-    mileage: int = Query(..., ge=0, le=999999, description="Vehicle Mileage (0-999,999)"),
-    prev_outcome: Optional[str] = Query(None, description="Previous MOT outcome: PASS, FAIL, or NONE (optional)"),
-    days_since_prev: Optional[int] = Query(None, ge=0, le=3650, description="Days since previous MOT (0-3650, optional)"),
-    prev_mileage: Optional[int] = Query(None, ge=0, le=999999, description="Previous MOT mileage (optional, for usage intensity)"),
-    prev_prev_outcome: Optional[str] = Query(None, description="Second-previous MOT outcome: PASS, FAIL, or NONE (optional, for multi-cycle)"),
-    # Component history parameters - set to 1 if that component failed in previous MOT
-    prev_brake_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had brake failure (0 or 1)"),
-    prev_tyre_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had tyre failure (0 or 1)"),
-    prev_suspension_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had suspension failure (0 or 1)"),
-    prev_steering_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had steering failure (0 or 1)"),
-    prev_lights_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had lights failure (0 or 1)"),
-    prev_body_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had body/chassis failure (0 or 1)"),
-    prev_emissions_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had emissions failure (0 or 1)"),
-    prev_wheels_failure: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had wheels failure (0 or 1)"),
-    # Component advisory parameters - set to 1 if that component had an advisory in previous MOT
-    prev_brake_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had brake advisory (0 or 1)"),
-    prev_tyre_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had tyre advisory (0 or 1)"),
-    prev_suspension_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had suspension advisory (0 or 1)"),
-    prev_steering_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had steering advisory (0 or 1)"),
-    prev_lights_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had lights advisory (0 or 1)"),
-    prev_body_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had body/chassis advisory (0 or 1)"),
-    prev_emissions_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had emissions advisory (0 or 1)"),
-    prev_wheels_advisory: Optional[int] = Query(None, ge=0, le=1, description="Previous MOT had wheels advisory (0 or 1)"),
+    make: str = Query(..., min_length=1, max_length=50, description="Vehicle make (e.g., FORD)"),
+    model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
+    year: int = Query(..., ge=1990, le=2026, description="Year of manufacture")
 ):
-    """Calculate risk for a specific vehicle.
-
-    If prev_outcome and days_since_prev are provided, the overall Failure_Risk will be
-    adjusted based on vehicle history.
-
-    If prev_prev_outcome is also provided, multi-cycle history is used for improved
-    accuracy (e.g., FAIL→FAIL patterns are riskier than FAIL→PASS).
-
-    If component history parameters (prev_brake_failure, prev_suspension_failure, etc.)
-    are provided, the individual component risks (Risk_Brakes, Risk_Suspension, etc.)
-    will be adjusted. This provides actionable insights - e.g., if brakes failed last
-    year, Risk_Brakes will be increased to reflect the higher recurrence probability.
     """
-    # Calculate age and bands
-    current_year = datetime.now().year
-    age = current_year - year
-    model_id = f"{make.upper()} {model.upper()}"
+    Calculate MOT failure risk using lookup table.
+
+    Interim solution using pre-computed population averages by make/model/age.
+    Returns confidence level based on sample size in the lookup data.
+    """
+    # Normalize inputs
+    make_upper = make.strip().upper()
+    model_upper = model.strip().upper()
+    model_id = f"{make_upper} {model_upper}"
+
+    # Calculate age band from year
+    age = datetime.now().year - year
     age_band = get_age_band(age)
-    mileage_band = get_mileage_band(mileage)
 
-    # Optional: Validate inference features against contracts (gated by env var)
-    if os.getenv('VALIDATE_CONTRACTS', 'false').lower() == 'true':
-        from feature_validation import validate_inference_features
-        inference_features = {'make', 'model', 'model_id', 'age_band', 'mileage_band'}
-        if prev_outcome is not None:
-            inference_features.update({'prev_cycle_outcome_band', 'gap_band'})
-        validate_inference_features(inference_features)
-
-    warnings = []
-    
-    # Validate history parameters if provided
-    if prev_outcome is not None:
-        prev_outcome = prev_outcome.upper()
-        if prev_outcome not in ('PASS', 'FAIL', 'NONE'):
-            raise HTTPException(status_code=400, detail="prev_outcome must be PASS, FAIL, or NONE")
-
-    if prev_prev_outcome is not None:
-        prev_prev_outcome = prev_prev_outcome.upper()
-        if prev_prev_outcome not in ('PASS', 'FAIL', 'NONE'):
-            raise HTTPException(status_code=400, detail="prev_prev_outcome must be PASS, FAIL, or NONE")
-
-    # Build component history dict from parameters (only include if any are provided)
-    # Includes both failure and advisory parameters
-    component_history: Optional[Dict[str, int]] = None
-    component_params = {
-        # Failure parameters
-        'prev_brake_failure': prev_brake_failure,
-        'prev_tyre_failure': prev_tyre_failure,
-        'prev_suspension_failure': prev_suspension_failure,
-        'prev_steering_failure': prev_steering_failure,
-        'prev_lights_failure': prev_lights_failure,
-        'prev_body_failure': prev_body_failure,
-        'prev_emissions_failure': prev_emissions_failure,
-        'prev_wheels_failure': prev_wheels_failure,
-        # Advisory parameters (new - for advisory-to-failure prediction)
-        'prev_brake_advisory': prev_brake_advisory,
-        'prev_tyre_advisory': prev_tyre_advisory,
-        'prev_suspension_advisory': prev_suspension_advisory,
-        'prev_steering_advisory': prev_steering_advisory,
-        'prev_lights_advisory': prev_lights_advisory,
-        'prev_body_advisory': prev_body_advisory,
-        'prev_emissions_advisory': prev_emissions_advisory,
-        'prev_wheels_advisory': prev_wheels_advisory,
+    # Default response (population average)
+    default_response = {
+        "vehicle": model_id,
+        "year": year,
+        "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
+        "failure_risk": 0.28,  # UK population average
+        "confidence_level": "Low",
+        "risk_brakes": 0.05,
+        "risk_suspension": 0.04,
+        "risk_tyres": 0.03,
+        "risk_steering": 0.02,
+        "risk_visibility": 0.02,
+        "risk_lamps": 0.03,
+        "risk_body": 0.02,
+        "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
     }
-    # Only build dict if at least one component param was provided
-    if any(v is not None for v in component_params.values()):
-        component_history = {k: (v if v is not None else 0) for k, v in component_params.items()}
 
-    # Robustness: Mileage Sanity Checks
-    if mileage > MAX_MILEAGE_CAP:
-        mileage = MAX_MILEAGE_CAP
-        mileage_band = get_mileage_band(mileage)  # re-calculate band
-        warnings.append(f"Mileage capped at {MAX_MILEAGE_CAP:,} for risk estimation.")
+    # Try SQLite lookup
+    conn = get_sqlite_connection()
+    if not conn:
+        logger.warning("No database connection available, returning population average")
+        return default_response
 
-    # Robustness: Age/Mileage Contradictions
-    if age > AGE_THRESHOLD_FOR_LOW_MILEAGE and mileage < MIN_MILEAGE_FOR_OLD_CAR:
-        warnings.append(f"Unusually low mileage ({mileage}) for vehicle age ({age} years).")
-    if age < AGE_THRESHOLD_FOR_HIGH_MILEAGE and mileage > MAX_MILEAGE_FOR_NEW_CAR:
-        warnings.append(f"Unusually high mileage ({mileage}) for vehicle age ({age} years).")
-    
-    # Compute usage intensity band from mileage trajectory (if prev_mileage provided)
-    usage_intensity_band = get_usage_intensity_band(mileage, prev_mileage, days_since_prev)
-    
-    # Validate model+year combination (check if model was produced that year)
-    from populate_model_years import check_model_year
-    year_check = check_model_year(model_id, year)
-    if not year_check['valid']:
-        raise HTTPException(status_code=422, detail=year_check['message'])
+    try:
+        # Query for exact make/model match with age band
+        # Try with model_id pattern matching
+        query = """
+            SELECT * FROM risks
+            WHERE model_id LIKE ? AND age_band = ?
+            ORDER BY Total_Tests DESC
+            LIMIT 1
+        """
+        row = conn.execute(query, (f"{make_upper} {model_upper}%", age_band)).fetchone()
 
-    
-    # Try PostgreSQL first
-    if DATABASE_URL:
-        result = await db.get_risk(model_id, age_band, mileage_band)
-        if result is not None:
-            if "error" in result and result["error"] == "not_found":
-                detail = "Vehicle model not found."
-                if result.get("suggestion"):
-                    detail += f" Did you mean '{result['suggestion']}'?"
-                
-                # Check for robustness fallback (Make or Global average)
-                fallback = await db.get_fallback_risk(make)
-                if fallback:
-                    response = {
-                        "Model_Id": model_id,
-                        "Age_Band": age_band,
-                        "Mileage_Band": mileage_band,
-                        "note": f"Unseen model. Using {fallback['level']} average fallback.",
-                        "Failure_Risk": fallback['Failure_Risk'],
-                        "Total_Tests": fallback['Total_Tests']
-                    }
-                    return enrich_risk_response(response, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
+        # If not found, try just the make with age band
+        if not row:
+            query = """
+                SELECT * FROM risks
+                WHERE model_id LIKE ? AND age_band = ?
+                ORDER BY Total_Tests DESC
+                LIMIT 1
+            """
+            row = conn.execute(query, (f"{make_upper}%", age_band)).fetchone()
 
-                raise HTTPException(status_code=404, detail=detail)
+        if not row:
+            logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
+            conn.close()
+            return default_response
 
-            return enrich_risk_response(result, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
-    
-    # Fallback to SQLite with interpolation
+        result = dict(row)
+        conn.close()
+
+        # Calculate confidence level based on sample size
+        total_tests = result.get('Total_Tests', 0)
+        if total_tests >= 1000:
+            confidence_level = "High"
+        elif total_tests >= 100:
+            confidence_level = "Medium"
+        else:
+            confidence_level = "Low"
+
+        # Add confidence intervals and repair cost estimate
+        result = add_confidence_intervals(result)
+        result = add_repair_cost_estimate(result)
+
+        # Format repair cost for display
+        repair_cost = result.get('Repair_Cost_Estimate', {})
+        if isinstance(repair_cost, dict):
+            expected = repair_cost.get('expected', 250)
+            repair_cost_formatted = {
+                "expected": f"£{expected}",
+                "range_low": repair_cost.get('range_low', 100),
+                "range_high": repair_cost.get('range_high', 500),
+            }
+        else:
+            repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
+
+        return {
+            "vehicle": model_id,
+            "year": year,
+            "mileage": None,
+            "last_mot_date": None,
+            "last_mot_result": None,
+            "failure_risk": result.get('Failure_Risk', 0.28),
+            "confidence_level": confidence_level,
+            "risk_brakes": result.get('Risk_Brakes', 0.05),
+            "risk_suspension": result.get('Risk_Suspension', 0.04),
+            "risk_tyres": result.get('Risk_Tyres', 0.03),
+            "risk_steering": result.get('Risk_Steering', 0.02),
+            "risk_visibility": result.get('Risk_Visibility', 0.02),
+            "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+            "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+            "repair_cost_estimate": repair_cost_formatted,
+        }
+
+    except Exception as e:
+        logger.error(f"Database error during lookup: {e}")
+        if conn:
+            conn.close()
+        return default_response
+
+
+@app.get("/api/risk/v55")
+@limiter.limit("20/minute")
+async def get_risk_v55(
+    request: Request,
+    registration: str = Query(..., min_length=2, max_length=8, description="Vehicle registration mark (e.g., AB12CDE)"),
+    postcode: str = Query("", max_length=10, description="UK postcode for regional factors (optional)")
+):
+    """
+    V55 model prediction using real-time DVSA MOT history.
+
+    Returns calibrated failure probability and component-level risks.
+    Falls back to lookup table if DVSA data unavailable.
+    """
+    # Check if model is loaded
+    if not model_v55.is_model_loaded():
+        raise HTTPException(
+            status_code=503,
+            detail="Prediction model not available"
+        )
+
+    # Get DVSA client
+    dvsa_client = get_dvsa_client()
+
+    # Validate and normalize VRM
+    try:
+        vrm = dvsa_client.normalize_vrm(registration)
+    except VRMValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not dvsa_client.is_configured:
+        logger.warning("DVSA not configured, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note="DVSA integration not configured"
+        )
+
+    # Fetch MOT history from DVSA
+    try:
+        history = await dvsa_client.fetch_vehicle_history(vrm)
+        logger.info(f"Fetched DVSA history for {vrm}: {history.make} {history.model}")
+
+    except VehicleNotFoundError:
+        logger.info(f"Vehicle {vrm} not found in DVSA, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note="Vehicle not found in DVSA database"
+        )
+
+    except DVSAAPIError as e:
+        logger.warning(f"DVSA API error for {vrm}: {e}, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note=f"DVSA API unavailable: {str(e)}"
+        )
+
+    # Engineer features from MOT history
+    try:
+        features = engineer_features(history, postcode)
+        logger.info(f"Engineered {len(features)} features for {vrm}")
+    except Exception as e:
+        logger.error(f"Feature engineering failed for {vrm}: {e}")
+        # Fall back to lookup with vehicle info from DVSA
+        year = history.manufacture_date.year if history.manufacture_date else None
+        return await _fallback_prediction(
+            registration=vrm,
+            make=history.make,
+            model=history.model,
+            year=year,
+            postcode=postcode,
+            note=f"Feature engineering error: {str(e)}"
+        )
+
+    # Get V55 model prediction
+    try:
+        prediction = model_v55.predict_risk(features)
+    except Exception as e:
+        logger.error(f"V55 prediction failed for {vrm}: {e}")
+        year = history.manufacture_date.year if history.manufacture_date else None
+        return await _fallback_prediction(
+            registration=vrm,
+            make=history.make,
+            model=history.model,
+            year=year,
+            postcode=postcode,
+            note=f"Model prediction error: {str(e)}"
+        )
+
+    # Extract vehicle info
+    year = history.manufacture_date.year if history.manufacture_date else None
+    last_test = history.mot_tests[0] if history.mot_tests else None
+
+    # Calculate repair cost estimate
+    repair_cost = _estimate_repair_cost(
+        prediction['failure_risk'],
+        prediction['risk_components']
+    )
+
+    return {
+        "registration": vrm,
+        "vehicle": {
+            "make": history.make,
+            "model": history.model,
+            "year": year,
+            "fuel_type": history.fuel_type,
+        },
+        "mileage": last_test.odometer_value if last_test else None,
+        "last_mot_date": last_test.test_date.isoformat() if last_test else None,
+        "last_mot_result": last_test.test_result if last_test else None,
+        "failure_risk": prediction['failure_risk'],
+        "confidence_level": prediction['confidence_level'],
+        "risk_components": prediction['risk_components'],
+        "repair_cost_estimate": repair_cost,
+        "model_version": "v55",
+    }
+
+
+async def _fallback_prediction(
+    registration: str,
+    make: str,
+    model: str,
+    year: Optional[int],
+    postcode: str,
+    note: str = ""
+) -> Dict:
+    """
+    Fallback prediction using SQLite lookup when DVSA data unavailable.
+    Returns population average if vehicle data insufficient.
+    """
+    # If no vehicle data, return population average
+    if not make or not model:
+        return {
+            "registration": registration,
+            "vehicle": None,
+            "year": year,
+            "mileage": None,
+            "last_mot_date": None,
+            "last_mot_result": None,
+            "failure_risk": 0.28,  # UK population average
+            "confidence_level": "Low",
+            "risk_components": {
+                "brakes": 0.05,
+                "suspension": 0.04,
+                "tyres": 0.03,
+                "steering": 0.02,
+                "visibility": 0.02,
+                "lamps": 0.03,
+                "body": 0.02,
+            },
+            "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+            "model_version": "lookup",
+            "note": note or "Vehicle not found - using UK population average",
+        }
+
+    model_id = f"{make.upper()} {model.upper()}"
+
+    # Calculate age band if year available
+    if year:
+        age = datetime.now().year - year
+        age_band = get_age_band(age)
+    else:
+        age_band = "6-10"  # Default to middle band
+
+    mileage_band = "30k-60k"  # Default
+
+    # Try SQLite fallback
     conn = get_sqlite_connection()
     if conn:
-        try:
-            # Fetch ALL mileage bands for this model/age to enable interpolation
-            query = "SELECT * FROM risks WHERE model_id = ? AND age_band = ?"
-            rows = conn.execute(query, (model_id, age_band)).fetchall()
+        query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? LIMIT 1"
+        row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
 
-            if rows:
-                # Apply interpolation using actual mileage
-                result = interpolate_sqlite_result(rows, mileage, model_id, age_band, mileage_band)
-                if result:
-                    return enrich_risk_response(result, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
-
-            # No rows for this age band - check if model exists at all
-            check_query = "SELECT 1 FROM risks WHERE model_id = ?"
-            exists = conn.execute(check_query, (model_id,)).fetchone()
-
-            if not exists:
-                # Model not found - try fallback or 404
-                suggestion = get_sqlite_model_suggestion(conn, model)
-                fallback = get_sqlite_fallback_risk(conn, model_id, make, age_band, mileage_band)
-
-                if fallback:
-                    return enrich_risk_response(fallback, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
-
-                # No fallback available - raise 404
-                detail = "Vehicle model not found."
-                if suggestion:
-                    detail += f" Did you mean '{suggestion}'?"
-                raise HTTPException(status_code=404, detail=detail)
-
-            # Model exists but no data for this age band - use model average
-            avg_query = "SELECT AVG(Failure_Risk) as avg_risk FROM risks WHERE model_id = ?"
-            avg_row = conn.execute(avg_query, (model_id,)).fetchone()
-
-            result = {
-                "Model_Id": model_id,
-                "Age_Band": age_band,
-                "Mileage_Band": mileage_band,
-                "note": "Exact age/mileage match not found. Returning model average.",
-                "Failure_Risk": float(avg_row['avg_risk']) if (avg_row and avg_row['avg_risk'] is not None) else 0.0
-            }
-            return enrich_risk_response(result, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
-        finally:
+        if row:
+            result = dict(row)
             conn.close()
 
-    # Demo mode
-    response = MOCK_RISK.copy()
-    response["Model_Id"] = model_id
-    return enrich_risk_response(response, warnings, prev_outcome, days_since_prev, component_history, usage_intensity_band, prev_prev_outcome=prev_prev_outcome, age_band=age_band)
+            result = add_confidence_intervals(result)
+            result = add_repair_cost_estimate(result)
 
+            return {
+                "registration": registration,
+                "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
+                "mileage": None,
+                "last_mot_date": None,
+                "last_mot_result": None,
+                "failure_risk": result.get('Failure_Risk', 0.28),
+                "confidence_level": "Medium",
+                "risk_components": {
+                    "brakes": result.get('Risk_Brakes', 0.05),
+                    "suspension": result.get('Risk_Suspension', 0.04),
+                    "tyres": result.get('Risk_Tyres', 0.03),
+                    "steering": result.get('Risk_Steering', 0.02),
+                    "visibility": result.get('Risk_Visibility', 0.02),
+                    "lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+                    "body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                },
+                "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
+                "model_version": "lookup",
+                "note": note,
+            }
+
+        conn.close()
+
+    # Default fallback - population average
+    return {
+        "registration": registration,
+        "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
+        "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
+        "failure_risk": 0.28,  # UK average
+        "confidence_level": "Low",
+        "risk_components": {
+            "brakes": 0.05,
+            "suspension": 0.04,
+            "tyres": 0.03,
+            "steering": 0.02,
+            "visibility": 0.02,
+            "lamps": 0.03,
+            "body": 0.02,
+        },
+        "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+        "model_version": "lookup",
+        "note": note or "Limited data - using population averages",
+    }
+
+
+def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
+    """Estimate repair costs based on risk prediction."""
+    # Component repair cost ranges (mid-point estimates)
+    component_costs = {
+        'brakes': 200,
+        'suspension': 350,
+        'tyres': 150,
+        'steering': 300,
+        'visibility': 80,
+        'lamps': 60,
+        'body': 400,
+    }
+
+    # Expected cost = sum of (component_risk * component_cost)
+    expected = sum(
+        risk_components.get(comp, 0) * cost
+        for comp, cost in component_costs.items()
+    )
+
+    # Scale by overall failure probability
+    expected = expected * (failure_risk / 0.28)  # Normalize to average fail rate
+
+    return {
+        "expected": int(round(expected, -1)),  # Round to nearest 10
+        "range_low": int(round(expected * 0.5, -1)),
+        "range_high": int(round(expected * 2, -1)),
+    }
+
+
+# =============================================================================
+# Vehicle Registration Lookup (DVLA)
+# =============================================================================
 
 @app.get("/api/vehicle")
-async def get_vehicle_details(
-    registration: str = Query(..., min_length=2, max_length=8, description="UK Vehicle Registration Number (e.g., AB12CDE)")
+async def get_vehicle(
+    registration: str = Query(..., min_length=2, max_length=8, description="UK vehicle registration number")
 ):
-    """
-    Look up vehicle details by registration number.
+    """Look up vehicle details by registration number.
 
-    Fetches vehicle information from DVLA and combines it with AutoSafe's
-    MOT risk assessment based on the vehicle's make, model, and age.
+    Returns vehicle information from DVLA including make, colour, year,
+    fuel type, and tax/MOT status.
 
-    Returns:
-        Combined DVLA vehicle data and MOT risk assessment.
+    In demo mode (no DVLA_API_KEY), returns mock data for testing.
     """
     global _dvla_client
 
-    # Initialize DVLA client on-demand if not already initialized (for testing without lifespan)
+    # Initialize client on-demand if not already done (for testing)
     if _dvla_client is None:
         _dvla_client = DVLAClient(api_key=DVLA_API_KEY, use_test_env=DVLA_USE_TEST_ENV)
 
     try:
-        # Get vehicle details from DVLA
         dvla_data = await _dvla_client.get_vehicle(registration)
 
-        # Extract vehicle info for risk lookup
-        make = dvla_data.get("make", "").upper()
-        year = dvla_data.get("yearOfManufacture")
-        fuel_type = dvla_data.get("fuelType", "").upper()
-
-        # Try to determine model from DVLA data
-        # Note: DVLA doesn't always return model, so we may need to use make-level fallback
-        model = None  # DVLA API doesn't provide model in standard response
-
-        # Calculate age and mileage bands
-        # Use current year if yearOfManufacture available
-        if year:
-            age = datetime.now().year - year
-            age_band = get_age_band(age)
-        else:
-            age = None
-            age_band = "Unknown"
-
-        # Default mileage (we don't have actual mileage from DVLA)
-        # Use middle of typical range for age
-        estimated_mileage = 10000 * age if age else 50000
-        mileage_band = get_mileage_band(estimated_mileage)
-
-        # Build response
-        response = {
+        return {
             "registration": registration.upper().replace(" ", ""),
-            "dvla": {
-                "make": dvla_data.get("make"),
-                "colour": dvla_data.get("colour"),
-                "yearOfManufacture": dvla_data.get("yearOfManufacture"),
-                "fuelType": dvla_data.get("fuelType"),
-                "engineCapacity": dvla_data.get("engineCapacity"),
-                "taxStatus": dvla_data.get("taxStatus"),
-                "taxDueDate": dvla_data.get("taxDueDate"),
-                "motStatus": dvla_data.get("motStatus"),
-                "motExpiryDate": dvla_data.get("motExpiryDate"),
-                "co2Emissions": dvla_data.get("co2Emissions"),
-            },
+            "dvla": dvla_data,
+            "demo": dvla_data.get("_demo", False)
         }
 
-        # Add demo flag if in demo mode
-        if dvla_data.get("_demo"):
-            response["demo"] = True
-            if dvla_data.get("_note"):
-                response["demo_note"] = dvla_data["_note"]
-
-        # Try to get risk assessment if we have enough info
-        if make and year:
-            try:
-                # Look up risk using make-level average (since DVLA doesn't give model)
-                model_id = make  # Use just make for now
-
-                # Try PostgreSQL first
-                if DATABASE_URL:
-                    result = await db.get_fallback_risk(make)
-                    if result:
-                        response["risk"] = {
-                            "Failure_Risk": result.get("Failure_Risk"),
-                            "Total_Tests": result.get("Total_Tests"),
-                            "level": result.get("level", "make"),
-                            "note": f"Risk based on {make} average (model not available from DVLA)"
-                        }
-
-                # Try SQLite
-                elif os.path.exists(DB_FILE):
-                    conn = get_sqlite_connection()
-                    if conn:
-                        try:
-                            # Get make-level average
-                            cursor = conn.execute(
-                                """SELECT AVG(Failure_Risk) as avg_risk, SUM(Total_Tests) as total_tests
-                                   FROM risks WHERE model_id LIKE ?""",
-                                (f"{make}%",)
-                            )
-                            row = cursor.fetchone()
-                            if row and row[0] is not None:
-                                response["risk"] = {
-                                    "Failure_Risk": round(float(row[0]), 4),
-                                    "Total_Tests": int(row[1]) if row[1] else 0,
-                                    "level": "make",
-                                    "note": f"Risk based on {make} average (model not available from DVLA)"
-                                }
-                        finally:
-                            conn.close()
-
-            except Exception as e:
-                logger.warning(f"Could not calculate risk for {registration}: {e}")
-                response["risk_error"] = "Could not calculate risk assessment"
-
-        return response
-
     except DVLAValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e.message))
+        raise HTTPException(status_code=422, detail=str(e))
     except DVLANotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e.message))
+        raise HTTPException(status_code=404, detail=str(e))
     except DVLARateLimitError as e:
-        raise HTTPException(status_code=503, detail="DVLA service temporarily unavailable (rate limit)")
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
     except DVLAError as e:
-        raise HTTPException(status_code=502, detail=f"DVLA service error: {e.message}")
+        logger.error(f"DVLA API error: {e}")
+        raise HTTPException(status_code=502, detail="Error connecting to DVLA service")
 
 
 # Mount static files at /static (only if the folder exists)
@@ -1035,5 +767,5 @@ else:
             "status": "ok",
             "message": "AutoSafe API",
             "database": db_status,
-            "endpoints": ["/api/makes", "/api/models", "/api/risk", "/api/vehicle"]
+            "endpoints": ["/api/makes", "/api/models", "/api/risk"]
         }
