@@ -429,6 +429,133 @@ async def get_risk(
         return default_response
 
 
+@app.get("/api/risk/v55")
+@limiter.limit("20/minute")
+async def get_risk_v55(
+    request: Request,
+    registration: str = Query(..., min_length=2, max_length=8, description="Vehicle registration mark (e.g., AB12CDE)"),
+    postcode: str = Query("", max_length=10, description="UK postcode for regional factors (optional)")
+):
+    """
+    V55 model prediction using real-time DVSA MOT history.
+
+    Returns calibrated failure probability and component-level risks.
+    Falls back to lookup table if DVSA data unavailable.
+    """
+    # Check if model is loaded
+    if not model_v55.is_model_loaded():
+        raise HTTPException(
+            status_code=503,
+            detail="Prediction model not available"
+        )
+
+    # Get DVSA client
+    dvsa_client = get_dvsa_client()
+
+    # Validate and normalize VRM
+    try:
+        vrm = dvsa_client.normalize_vrm(registration)
+    except VRMValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not dvsa_client.is_configured:
+        logger.warning("DVSA not configured, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note="DVSA integration not configured"
+        )
+
+    # Fetch MOT history from DVSA
+    try:
+        history = await dvsa_client.fetch_vehicle_history(vrm)
+        logger.info(f"Fetched DVSA history for {vrm}: {history.make} {history.model}")
+
+    except VehicleNotFoundError:
+        logger.info(f"Vehicle {vrm} not found in DVSA, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note="Vehicle not found in DVSA database"
+        )
+
+    except DVSAAPIError as e:
+        logger.warning(f"DVSA API error for {vrm}: {e}, falling back to lookup")
+        return await _fallback_prediction(
+            registration=vrm,
+            make="",
+            model="",
+            year=None,
+            postcode=postcode,
+            note=f"DVSA API unavailable: {str(e)}"
+        )
+
+    # Engineer features from MOT history
+    try:
+        features = engineer_features(history, postcode)
+        logger.info(f"Engineered {len(features)} features for {vrm}")
+    except Exception as e:
+        logger.error(f"Feature engineering failed for {vrm}: {e}")
+        # Fall back to lookup with vehicle info from DVSA
+        year = history.manufacture_date.year if history.manufacture_date else None
+        return await _fallback_prediction(
+            registration=vrm,
+            make=history.make,
+            model=history.model,
+            year=year,
+            postcode=postcode,
+            note=f"Feature engineering error: {str(e)}"
+        )
+
+    # Get V55 model prediction
+    try:
+        prediction = model_v55.predict_risk(features)
+    except Exception as e:
+        logger.error(f"V55 prediction failed for {vrm}: {e}")
+        year = history.manufacture_date.year if history.manufacture_date else None
+        return await _fallback_prediction(
+            registration=vrm,
+            make=history.make,
+            model=history.model,
+            year=year,
+            postcode=postcode,
+            note=f"Model prediction error: {str(e)}"
+        )
+
+    # Extract vehicle info
+    year = history.manufacture_date.year if history.manufacture_date else None
+    last_test = history.mot_tests[0] if history.mot_tests else None
+
+    # Calculate repair cost estimate
+    repair_cost = _estimate_repair_cost(
+        prediction['failure_risk'],
+        prediction['risk_components']
+    )
+
+    return {
+        "registration": vrm,
+        "vehicle": {
+            "make": history.make,
+            "model": history.model,
+            "year": year,
+            "fuel_type": history.fuel_type,
+        },
+        "mileage": last_test.odometer_value if last_test else None,
+        "last_mot_date": last_test.test_date.isoformat() if last_test else None,
+        "last_mot_result": last_test.test_result if last_test else None,
+        "failure_risk": prediction['failure_risk'],
+        "confidence_level": prediction['confidence_level'],
+        "risk_components": prediction['risk_components'],
+        "repair_cost_estimate": repair_cost,
+        "model_version": "v55",
+    }
+
+
 async def _fallback_prediction(
     registration: str,
     make: str,
@@ -439,12 +566,32 @@ async def _fallback_prediction(
 ) -> Dict:
     """
     Fallback prediction using SQLite lookup when DVSA data unavailable.
+    Returns population average if vehicle data insufficient.
     """
+    # If no vehicle data, return population average
     if not make or not model:
-        raise HTTPException(
-            status_code=404,
-            detail="Insufficient vehicle data for fallback prediction"
-        )
+        return {
+            "registration": registration,
+            "vehicle": None,
+            "year": year,
+            "mileage": None,
+            "last_mot_date": None,
+            "last_mot_result": None,
+            "failure_risk": 0.28,  # UK population average
+            "confidence_level": "Low",
+            "risk_components": {
+                "brakes": 0.05,
+                "suspension": 0.04,
+                "tyres": 0.03,
+                "steering": 0.02,
+                "visibility": 0.02,
+                "lamps": 0.03,
+                "body": 0.02,
+            },
+            "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+            "model_version": "lookup",
+            "note": note or "Vehicle not found - using UK population average",
+        }
 
     model_id = f"{make.upper()} {model.upper()}"
 
@@ -472,44 +619,49 @@ async def _fallback_prediction(
 
             return {
                 "registration": registration,
-                "vehicle": model_id,
-                "year": year,
+                "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
                 "mileage": None,
                 "last_mot_date": None,
+                "last_mot_result": None,
                 "failure_risk": result.get('Failure_Risk', 0.28),
                 "confidence_level": "Medium",
-                "risk_brakes": result.get('Risk_Brakes', 0.05),
-                "risk_suspension": result.get('Risk_Suspension', 0.04),
-                "risk_tyres": result.get('Risk_Tyres', 0.03),
-                "risk_steering": result.get('Risk_Steering', 0.02),
-                "risk_visibility": result.get('Risk_Visibility', 0.02),
-                "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
-                "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                "risk_components": {
+                    "brakes": result.get('Risk_Brakes', 0.05),
+                    "suspension": result.get('Risk_Suspension', 0.04),
+                    "tyres": result.get('Risk_Tyres', 0.03),
+                    "steering": result.get('Risk_Steering', 0.02),
+                    "visibility": result.get('Risk_Visibility', 0.02),
+                    "lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+                    "body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                },
                 "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
-                "prediction_source": "Lookup (no MOT history)",
+                "model_version": "lookup",
                 "note": note,
             }
 
         conn.close()
 
-    # Default fallback
+    # Default fallback - population average
     return {
         "registration": registration,
-        "vehicle": model_id,
-        "year": year,
+        "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
         "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
         "failure_risk": 0.28,  # UK average
         "confidence_level": "Low",
-        "risk_brakes": 0.05,
-        "risk_suspension": 0.04,
-        "risk_tyres": 0.03,
-        "risk_steering": 0.02,
-        "risk_visibility": 0.02,
-        "risk_lamps": 0.03,
-        "risk_body": 0.02,
+        "risk_components": {
+            "brakes": 0.05,
+            "suspension": 0.04,
+            "tyres": 0.03,
+            "steering": 0.02,
+            "visibility": 0.02,
+            "lamps": 0.03,
+            "body": 0.02,
+        },
         "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
-        "prediction_source": "Lookup (limited data)",
-        "note": note or "Limited prediction - using population averages",
+        "model_version": "lookup",
+        "note": note or "Limited data - using population averages",
     }
 
 
