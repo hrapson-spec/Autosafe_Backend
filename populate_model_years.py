@@ -107,15 +107,62 @@ def populate_model_years():
     return True
 
 
-def check_model_year(model_id: str, year: int) -> dict:
+def check_model_year(model_id: str, year: int, db_path: str = None) -> dict:
     """
-    Check if a model+year combination is valid.
-    
-    TEMPORARY FIX: Always return valid. 
-    The original implementation relied on a local SQLite database which does not exist
-    in the production environment (PostgreSQL). This caused Internal Server Errors.
-    We are bypassing this check to restore service availability.
+    Check if a model+year combination is valid by querying the model_years table.
+
+    Args:
+        model_id: Vehicle model identifier (e.g., "FORD FIESTA")
+        year: Registration year
+        db_path: Path to SQLite database (defaults to DB_FILE)
+
+    Returns:
+        dict with 'valid' (bool) and 'message' (str or None)
     """
+    from datetime import datetime
+
+    if db_path is None:
+        db_path = DB_FILE
+
+    current_year = datetime.now().year
+
+    # Basic sanity checks
+    if year < 1980:
+        return {
+            'valid': False,
+            'message': f"Year {year} is too old. Please enter a year from 1980 onwards."
+        }
+
+    if year > current_year + 1:
+        return {
+            'valid': False,
+            'message': f"Year {year} is in the future. Please enter a valid year."
+        }
+
+    # Query model_years table for production range
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT first_year, last_year FROM model_years WHERE model_id = ?",
+                (model_id,)
+            )
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                first_year, last_year = row
+                if year < first_year or year > last_year:
+                    return {
+                        'valid': False,
+                        'message': f"{model_id} was produced from {first_year} to {last_year}. Year {year} is outside this range."
+                    }
+        except sqlite3.Error:
+            # Database error - allow the request through
+            pass
+
+    # Model not in database or no database - allow the request
     return {'valid': True, 'message': None}
 
 

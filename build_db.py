@@ -15,44 +15,60 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# Column Type Specification
+# =============================================================================
+# The CSV has a fixed column order from calculate_risk.py:
+# Columns 0-2: TEXT (model_id, make, age_band, mileage_band)
+# Columns 3-4: INTEGER (Total_Tests, Total_Failures)
+# Columns 5+: REAL (Failure_Risk, Risk_Brakes, Risk_Suspension, etc.)
+# =============================================================================
+TEXT_COLUMNS = 3      # First N columns are TEXT
+INTEGER_COLUMNS = 2   # Next N columns are INTEGER (after TEXT)
+# Remaining columns are REAL
+
 DB_FILE = 'autosafe.db'
 DATA_FILE = 'prod_data_clean.csv.gz'
 TABLE_NAME = 'risks'
 
 
-def build_database():
-    """Build SQLite database from compressed CSV."""
+def build_database() -> bool:
+    """Build SQLite database from compressed CSV.
+
+    Returns:
+        True if database built successfully, False on error.
+    """
     start = time.time()
     logger.info(f"Building {DB_FILE} from {DATA_FILE}...")
-    
+
     if not os.path.exists(DATA_FILE):
         logger.error(f"Data file {DATA_FILE} not found!")
         return False
-    
+
     # Create database connection
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    
+
     # Drop existing table if exists
     cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
-    
+
     # Read and parse gzipped CSV
     with gzip.open(DATA_FILE, 'rt', encoding='utf-8') as f:
         reader = csv.reader(f)
         headers = next(reader)
-        
+
         # Clean headers for SQLite column names
         clean_headers = []
         for h in headers:
             clean = h.strip().replace(' ', '_').replace('-', '_')
             clean_headers.append(clean)
-        
-        # Create table - first 3 columns are TEXT, next 2 INTEGER, rest REAL
+
+        # Determine column types based on position (see constants at top of file)
         col_defs = []
         for i, col in enumerate(clean_headers):
-            if i < 3:
+            if i < TEXT_COLUMNS:
                 col_defs.append(f'"{col}" TEXT')
-            elif i < 5:
+            elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
                 col_defs.append(f'"{col}" INTEGER')
             else:
                 col_defs.append(f'"{col}" REAL')
@@ -68,13 +84,13 @@ def build_database():
         insert_sql = f"INSERT INTO {TABLE_NAME} VALUES ({placeholders})"
         
         for row in reader:
-            # Clean and convert row data
+            # Convert row values based on column type
             processed = []
             for i, val in enumerate(row):
                 val = val.strip()
-                if i < 3:
+                if i < TEXT_COLUMNS:
                     processed.append(val)
-                elif i < 5:
+                elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
                     processed.append(int(float(val)) if val else 0)
                 else:
                     processed.append(float(val) if val else 0.0)
@@ -99,16 +115,28 @@ def build_database():
     
     conn.commit()
     conn.close()
-    
+
     elapsed = time.time() - start
     size_mb = os.path.getsize(DB_FILE) / (1024 * 1024)
     logger.info(f"Database built: {total_rows} rows, {size_mb:.1f}MB, {elapsed:.2f}s")
-    
+
+    # Populate model_years table for production range validation
+    try:
+        from populate_model_years import populate_model_years
+        logger.info("Populating model_years table...")
+        populate_model_years()
+    except Exception as e:
+        logger.warning(f"Could not populate model_years: {e}")
+
     return True
 
 
-def ensure_database():
-    """Ensure database exists, building it if necessary."""
+def ensure_database() -> bool:
+    """Ensure database exists, building it if necessary.
+
+    Returns:
+        True if database is ready, False on error.
+    """
     if os.path.exists(DB_FILE):
         # Verify it's valid
         try:
@@ -120,10 +148,14 @@ def ensure_database():
             if count > 0:
                 logger.info(f"Database exists with {count} rows")
                 return True
-        except Exception as e:
+        except (sqlite3.Error, sqlite3.DatabaseError) as e:
             logger.warning(f"Database exists but invalid: {e}")
-            os.remove(DB_FILE)
-    
+            try:
+                os.remove(DB_FILE)
+            except OSError as remove_error:
+                logger.error(f"Error removing corrupt database: {remove_error}")
+                return False
+
     # Build the database
     return build_database()
 
