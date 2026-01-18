@@ -1,62 +1,12 @@
 const API_BASE = '/api';
 
-const makeSelect = document.getElementById('make');
-const modelSelect = document.getElementById('model');
-const yearInput = document.getElementById('year');
+const registrationInput = document.getElementById('registration');
+const postcodeInput = document.getElementById('postcode');
 const form = document.getElementById('riskForm');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
 const resultsPanel = document.getElementById('resultsPanel');
-
-// Load makes on page load
-async function loadMakes() {
-    try {
-        const res = await fetch(`${API_BASE}/makes`);
-        if (!res.ok) throw new Error('Failed to load makes');
-        const makes = await res.json();
-
-        makeSelect.innerHTML = '<option value="">Select make...</option>';
-        makes.forEach(make => {
-            const option = document.createElement('option');
-            option.value = make;
-            option.textContent = make;
-            makeSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error('Error loading makes:', err);
-        showError('Failed to load vehicle makes');
-    }
-}
-
-// Load models when make is selected
-makeSelect.addEventListener('change', async () => {
-    const make = makeSelect.value;
-    modelSelect.innerHTML = '<option value="">Select model...</option>';
-
-    if (!make) {
-        modelSelect.disabled = true;
-        return;
-    }
-
-    try {
-        modelSelect.disabled = true;
-        const res = await fetch(`${API_BASE}/models?make=${encodeURIComponent(make)}`);
-        if (!res.ok) throw new Error('Failed to load models');
-        const models = await res.json();
-
-        models.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model;
-            option.textContent = model;
-            modelSelect.appendChild(option);
-        });
-        modelSelect.disabled = false;
-    } catch (err) {
-        console.error('Error loading models:', err);
-        showError('Failed to load models for ' + make);
-    }
-});
 
 function showError(message) {
     let banner = document.getElementById('errorBanner');
@@ -64,7 +14,7 @@ function showError(message) {
         banner = document.createElement('div');
         banner.id = 'errorBanner';
         banner.className = 'error-banner hidden';
-        document.querySelector('.container').prepend(banner);
+        document.querySelector('.search-card').prepend(banner);
     }
 
     banner.textContent = message;
@@ -81,29 +31,30 @@ form.addEventListener('submit', async (e) => {
 
     // UI Loading State
     btnText.textContent = 'Analyzing...';
-    btnText.classList.remove('hidden');
     loader.classList.remove('hidden');
     analyzeBtn.disabled = true;
-    resultsPanel.classList.add('hidden');
+    if (resultsPanel) resultsPanel.classList.add('hidden');
 
     // Hide any previous errors
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
 
-    const make = makeSelect.value;
-    const model = modelSelect.value;
-    const year = yearInput.value;
+    const registration = registrationInput.value.replace(/\s/g, '').toUpperCase();
+    const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
 
     try {
-        const url = `${API_BASE}/risk?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${encodeURIComponent(year)}`;
+        const url = `${API_BASE}/risk/v55?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}`;
         const res = await fetch(url);
 
         if (!res.ok) {
             const errData = await res.json();
             if (res.status === 422 && errData.detail) {
-                const msg = errData.detail[0].msg;
-                const loc = errData.detail[0].loc[1];
-                throw new Error(`${loc}: ${msg}`);
+                if (Array.isArray(errData.detail)) {
+                    const msg = errData.detail[0].msg;
+                    const loc = errData.detail[0].loc[1];
+                    throw new Error(`${loc}: ${msg}`);
+                }
+                throw new Error(errData.detail);
             }
             throw new Error(errData.detail || 'Failed to analyze risk');
         }
@@ -113,26 +64,45 @@ form.addEventListener('submit', async (e) => {
     } catch (err) {
         showError(err.message);
     } finally {
-        btnText.textContent = 'Check MOT Risk';
+        btnText.textContent = 'Check This Car';
         loader.classList.add('hidden');
         analyzeBtn.disabled = false;
     }
 });
 
 function displayResults(data) {
+    if (!resultsPanel) {
+        // Results panel doesn't exist on this page - redirect or create it
+        console.log('Results:', data);
+        return;
+    }
+
     resultsPanel.classList.remove('hidden');
 
     // Update Header
     const vehicleTag = document.getElementById('vehicleTag');
     const vehicleDetails = document.getElementById('vehicleDetails');
 
-    vehicleTag.textContent = data.vehicle + (data.year ? ` (${data.year})` : '');
-    vehicleDetails.textContent = '';
+    if (vehicleTag) {
+        if (data.vehicle) {
+            vehicleTag.textContent = `${data.vehicle.make} ${data.vehicle.model}` +
+                (data.vehicle.year ? ` (${data.vehicle.year})` : '');
+        } else {
+            vehicleTag.textContent = data.registration || 'Vehicle';
+        }
+    }
+    if (vehicleDetails) {
+        vehicleDetails.textContent = data.registration || '';
+    }
 
     // Update stats
-    document.getElementById('lastMOTDate').textContent = data.last_mot_date || '-';
-    document.getElementById('lastMOTResult').textContent = data.last_mot_result || '-';
-    document.getElementById('mileage').textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
+    const lastMOTDate = document.getElementById('lastMOTDate');
+    const lastMOTResult = document.getElementById('lastMOTResult');
+    const mileage = document.getElementById('mileage');
+
+    if (lastMOTDate) lastMOTDate.textContent = data.last_mot_date || '-';
+    if (lastMOTResult) lastMOTResult.textContent = data.last_mot_result || '-';
+    if (mileage) mileage.textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
 
     // Update Main Risk
     const risk = data.failure_risk;
@@ -141,64 +111,87 @@ function displayResults(data) {
     const riskValueEl = document.getElementById('riskValue');
     const riskText = document.getElementById('riskText');
 
-    riskValueEl.textContent = riskPercent;
+    if (riskValueEl) {
+        riskValueEl.textContent = riskPercent;
 
-    // Reset classes
-    riskValueEl.className = 'risk-percentage';
-    riskText.className = 'risk-label';
+        // Reset classes
+        riskValueEl.className = 'risk-percentage';
 
-    if (risk < 0.20) {
-        riskValueEl.classList.add('text-low');
-        riskText.textContent = "Low Risk";
-        riskText.classList.add('text-low');
-    } else if (risk < 0.40) {
-        riskValueEl.classList.add('text-med');
-        riskText.textContent = "Moderate Risk";
-        riskText.classList.add('text-med');
-    } else {
-        riskValueEl.classList.add('text-high');
-        riskText.textContent = "High Risk";
-        riskText.classList.add('text-high');
+        if (risk < 0.20) {
+            riskValueEl.classList.add('text-low');
+        } else if (risk < 0.40) {
+            riskValueEl.classList.add('text-med');
+        } else {
+            riskValueEl.classList.add('text-high');
+        }
+    }
+
+    if (riskText) {
+        riskText.className = 'risk-label';
+
+        if (risk < 0.20) {
+            riskText.textContent = "Low Risk";
+            riskText.classList.add('text-low');
+        } else if (risk < 0.40) {
+            riskText.textContent = "Moderate Risk";
+            riskText.classList.add('text-med');
+        } else {
+            riskText.textContent = "High Risk";
+            riskText.classList.add('text-high');
+        }
     }
 
     // Update confidence badge
     const confidenceBadge = document.getElementById('confidenceBadge');
-    confidenceBadge.textContent = data.confidence_level + ' Confidence';
-    confidenceBadge.className = 'confidence-badge';
-    if (data.confidence_level === 'High') {
-        confidenceBadge.classList.add('confidence-high');
-    } else if (data.confidence_level === 'Medium') {
-        confidenceBadge.classList.add('confidence-med');
-    } else {
-        confidenceBadge.classList.add('confidence-low');
+    if (confidenceBadge) {
+        confidenceBadge.textContent = data.confidence_level + ' Confidence';
+        confidenceBadge.className = 'confidence-badge';
+        if (data.confidence_level === 'High') {
+            confidenceBadge.classList.add('confidence-high');
+        } else if (data.confidence_level === 'Medium') {
+            confidenceBadge.classList.add('confidence-med');
+        } else {
+            confidenceBadge.classList.add('confidence-low');
+        }
     }
 
     // Update repair cost
-    if (data.repair_cost_estimate) {
+    const repairCostValue = document.getElementById('repairCostValue');
+    const repairCostRange = document.getElementById('repairCostRange');
+
+    if (data.repair_cost_estimate && repairCostValue) {
         const repairCost = data.repair_cost_estimate;
-        document.getElementById('repairCostValue').textContent = repairCost.expected;
-        document.getElementById('repairCostRange').textContent =
-            `Range: £${repairCost.range_low} - £${repairCost.range_high}`;
+        const expected = typeof repairCost.expected === 'string'
+            ? repairCost.expected
+            : `£${repairCost.expected}`;
+        repairCostValue.textContent = expected;
+        if (repairCostRange) {
+            repairCostRange.textContent =
+                `Range: £${repairCost.range_low} - £${repairCost.range_high}`;
+        }
     }
 
-    // Update Components
+    // Update Components (V55 uses risk_components object)
     const componentsGrid = document.getElementById('componentsGrid');
+    if (!componentsGrid) return;
+
     componentsGrid.innerHTML = '';
 
-    const riskFieldMap = {
-        'risk_brakes': 'Brakes',
-        'risk_suspension': 'Suspension',
-        'risk_tyres': 'Tyres',
-        'risk_steering': 'Steering',
-        'risk_visibility': 'Visibility',
-        'risk_lamps': 'Lights',
-        'risk_body': 'Body/Structure',
+    const riskComponents = data.risk_components || {};
+    const componentDisplayNames = {
+        'brakes': 'Brakes',
+        'suspension': 'Suspension',
+        'tyres': 'Tyres',
+        'steering': 'Steering',
+        'visibility': 'Visibility',
+        'lamps': 'Lights',
+        'body': 'Body/Structure',
     };
 
     const components = [];
-    for (const [key, name] of Object.entries(riskFieldMap)) {
-        if (data[key] !== undefined) {
-            components.push({ name, value: data[key] });
+    for (const [key, name] of Object.entries(componentDisplayNames)) {
+        if (riskComponents[key] !== undefined) {
+            components.push({ name, value: riskComponents[key] });
         }
     }
 
@@ -231,10 +224,15 @@ function displayResults(data) {
         componentsGrid.appendChild(card);
     });
 
-    // Update source note (hidden for interim solution)
+    // Update source note
     const sourceNote = document.getElementById('sourceNote');
-    sourceNote.textContent = '';
+    if (sourceNote) {
+        if (data.model_version === 'v55') {
+            sourceNote.textContent = 'Prediction based on real-time MOT history analysis';
+        } else if (data.note) {
+            sourceNote.textContent = data.note;
+        } else {
+            sourceNote.textContent = '';
+        }
+    }
 }
-
-// Initialize
-loadMakes();
