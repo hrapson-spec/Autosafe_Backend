@@ -392,9 +392,23 @@ class DVSAClient:
         else:
             vehicle_data = data
 
+        # Fix: Validate essential fields
+        make = vehicle_data.get('make')
+        model = vehicle_data.get('model')
+        if not make or not model:
+            logger.warning(f"DVSA response missing make/model for VRM, using UNKNOWN")
+            make = make or 'UNKNOWN'
+            model = model or 'UNKNOWN'
+
         # Parse MOT tests
         mot_tests = []
         for test_data in vehicle_data.get('motTests', []):
+            # Fix: Properly handle defects vs rfrAndComments
+            # If defects is explicitly None, use rfrAndComments; if defects is [] use []
+            defects = test_data.get('defects')
+            if defects is None:
+                defects = test_data.get('rfrAndComments', [])
+
             test = MOTTest(
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
@@ -402,14 +416,14 @@ class DVSAClient:
                 odometer_value=test_data.get('odometerValue'),
                 odometer_unit=test_data.get('odometerUnit', 'mi'),
                 test_number=test_data.get('motTestNumber', ''),
-                defects=test_data.get('defects', []) or test_data.get('rfrAndComments', [])
+                defects=defects or []
             )
             mot_tests.append(test)
 
         return VehicleHistory(
             registration=vrm,
-            make=vehicle_data.get('make', 'UNKNOWN'),
-            model=vehicle_data.get('model', 'UNKNOWN'),
+            make=make,
+            model=model,
             fuel_type=vehicle_data.get('fuelType'),
             colour=vehicle_data.get('primaryColour'),
             registration_date=self._parse_date(vehicle_data.get('registrationDate')),

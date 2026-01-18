@@ -128,10 +128,11 @@ def get_all_repair_estimates(risk_data: Dict, vehicle_age: int = 0, threshold: f
         List of repair estimates for components above threshold, sorted by risk
     """
     estimates = []
-    
+
     for key, value in risk_data.items():
         if key.startswith("Risk_") and not key.endswith("_CI_Lower") and not key.endswith("_CI_Upper"):
-            if value and value >= threshold:
+            # Fix: Add explicit type check to avoid comparison errors with non-numeric values
+            if isinstance(value, (int, float)) and value >= threshold:
                 component = key.replace("Risk_", "")
                 estimate = get_repair_estimate(component, vehicle_age)
                 if estimate:

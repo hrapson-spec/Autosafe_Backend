@@ -350,8 +350,10 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
     
-    # Demo mode
-    return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
+    # Demo mode - Fix: Return empty list for unknown makes instead of all mock models
+    if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]:
+        return MOCK_MODELS
+    return []  # No demo models for other makes
 
 
 @app.get("/api/risk")
@@ -362,16 +364,16 @@ async def get_risk(
     model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
     year: int = Query(..., ge=1990, description="Year of manufacture")
 ):
-    # P2-1 fix: Dynamic year validation
-    max_year = get_max_year()
-    if year > max_year:
-        raise HTTPException(status_code=422, detail=f"Year must be <= {max_year}")
     """
     Calculate MOT failure risk using lookup table.
 
     Interim solution using pre-computed population averages by make/model/age.
     Returns confidence level based on sample size in the lookup data.
     """
+    # P2-1 fix: Dynamic year validation
+    max_year = get_max_year()
+    if year > max_year:
+        raise HTTPException(status_code=422, detail=f"Year must be <= {max_year}")
     # Normalize inputs
     make_upper = make.strip().upper()
     model_upper = model.strip().upper()
@@ -486,8 +488,9 @@ async def get_risk(
             "risk_tyres": result.get('Risk_Tyres', 0.03),
             "risk_steering": result.get('Risk_Steering', 0.02),
             "risk_visibility": result.get('Risk_Visibility', 0.02),
-            "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
-            "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+            # Fix: Use correct column names (with "And", without "Exhaust")
+            "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
+            "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
             "repair_cost_estimate": repair_cost_formatted,
         }
 

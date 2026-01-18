@@ -202,7 +202,9 @@ class DVLAClient:
 
         make, model, engine, fuel = demo_makes[make_idx]
         colour = demo_colours[colour_idx]
-        year = 2024 - year_offset
+        # Fix: Use current year instead of hardcoded 2024
+        from datetime import datetime as dt
+        year = dt.now().year - year_offset
 
         return {
             "registrationNumber": registration,

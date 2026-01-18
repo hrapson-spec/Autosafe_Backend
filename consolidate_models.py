@@ -72,8 +72,10 @@ def normalize_make(raw_make: str) -> str:
         return make
     
     # Try partial matches for compound makes (e.g., "LAND" -> "LAND ROVER")
+    # Fix: Cache split result to avoid duplicate work
     for major in MAJOR_MAKES:
-        if make.startswith(major.split()[0]) and major.split()[0] == make:
+        first_part = major.split()[0]
+        if make.startswith(first_part) and first_part == make:
             return major
     
     # Return None for unknown makes - we only want curated makes
@@ -90,9 +92,10 @@ def extract_base_model(model_id: str, make: str) -> str:
         model = model[len(make):].strip()
     
     # Skip entries that start with special chars
+    # Fix: Use clean ASCII characters only
     if not model:
         return None
-    if model[0] in './­-()':
+    if model[0] in './-()':
         return None
     
     # Apply cleaning patterns
@@ -140,8 +143,8 @@ def extract_base_model(model_id: str, make: str) -> str:
     
     return first_word
 
-def get_canonical_models_for_make(make: str) -> dict:
-    """Get mapping of raw models to canonical models for a given make."""
+def get_canonical_models_for_make(make: str) -> list:
+    """Get list of canonical models for a given make."""
     # This would be populated from database analysis
     # Key popular models by make
     KNOWN_MODELS = {
