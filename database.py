@@ -149,10 +149,11 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
     async with pool.acquire() as conn:
         # model_id is now "MAKE MODEL" (e.g., "FORD FIESTA")
         # We need to find all variants and aggregate their risk
-        
-        # Search for all variants of this base model
+
+        # P0-5 fix: Use exact match OR variant match (model_id || ' %')
+        # This prevents "FORD F" from matching "FORD FOCUS"
         rows = await conn.fetch(
-            """SELECT 
+            """SELECT
                 SUM(total_tests) as total_tests,
                 SUM(total_failures) as total_failures,
                 SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as failure_risk,
@@ -163,10 +164,10 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
                 SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) as risk_visibility,
                 SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) as risk_lamps_reflectors_and_electrical_equipment,
                 SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) as risk_body_chassis_structure
-               FROM mot_risk 
-               WHERE model_id LIKE $1 
+               FROM mot_risk
+               WHERE (model_id = $1 OR model_id LIKE $1 || ' %')
                AND age_band = $2 AND mileage_band = $3""",
-            f"{model_id}%", age_band, mileage_band
+            model_id, age_band, mileage_band
         )
         
         if rows and rows[0]['total_tests']:
@@ -188,21 +189,22 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             return result
         
         # No data for this specific band - try any band for this model
+        # P0-5 fix: Use exact or variant match
         exists = await conn.fetchrow(
-            "SELECT 1 FROM mot_risk WHERE model_id LIKE $1 LIMIT 1",
-            f"{model_id}%"
+            "SELECT 1 FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $1 || ' %') LIMIT 1",
+            model_id
         )
-        
+
         if not exists:
             return {"error": "not_found", "suggestion": None}
-        
+
         # Model exists but specific band doesn't - return overall average
         avg_rows = await conn.fetch(
-            """SELECT 
+            """SELECT
                 SUM(total_tests) as total_tests,
                 SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as avg_risk
-               FROM mot_risk WHERE model_id LIKE $1""",
-            f"{model_id}%"
+               FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $1 || ' %')""",
+            model_id
         )
         
         return {

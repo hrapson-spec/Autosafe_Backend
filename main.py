@@ -34,6 +34,7 @@ import model_v55
 
 import logging
 import sys
+import hashlib
 
 # Configure structured logging
 logging.basicConfig(
@@ -109,12 +110,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
 # CORS Middleware - Allow cross-origin requests
+# P1-2 fix: Remove allow_credentials with wildcard origin (security anti-pattern)
 from fastapi.middleware.cors import CORSMiddleware
+ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,  # Cannot use credentials with wildcard origin
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -137,9 +140,21 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+def hash_vrm(vrm: str) -> str:
+    """Hash VRM for logging to protect privacy (P1-10 fix)."""
+    return hashlib.sha256(vrm.encode()).hexdigest()[:8]
+
+
+# Dynamic year validation - current year + 1 (P2-1 fix)
+def get_max_year() -> int:
+    """Get maximum valid year (current + 1 for pre-registered vehicles)."""
+    return datetime.now().year + 1
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring."""
+    """Health check endpoint for monitoring (P3-2 fix: includes external API status)."""
+    # Database status
     db_status = "disconnected"
     if DATABASE_URL:
         try:
@@ -148,11 +163,31 @@ async def health_check():
                 db_status = "connected"
         except Exception:
             db_status = "error"
-    
+    elif os.path.exists(DB_FILE):
+        db_status = "sqlite"
+
+    # Model status
+    model_status = "loaded" if model_v55.is_model_loaded() else "not_loaded"
+
+    # DVSA client status
+    dvsa_client = get_dvsa_client()
+    dvsa_status = "configured" if dvsa_client.is_configured else "not_configured"
+
+    # DVLA client status
+    dvla_status = "configured" if DVLA_API_KEY else "demo_mode"
+
+    # Overall status
+    overall_status = "ok" if model_status == "loaded" else "degraded"
+
     return {
-        "status": "ok",
+        "status": overall_status,
         "timestamp": datetime.now().isoformat(),
-        "database": db_status
+        "components": {
+            "database": db_status,
+            "model_v55": model_status,
+            "dvsa_api": dvsa_status,
+            "dvla_api": dvla_status,
+        }
     }
 
 # SQLite fallback connection (for local development)
@@ -325,8 +360,12 @@ async def get_risk(
     request: Request,
     make: str = Query(..., min_length=1, max_length=50, description="Vehicle make (e.g., FORD)"),
     model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1990, le=2026, description="Year of manufacture")
+    year: int = Query(..., ge=1990, description="Year of manufacture")
 ):
+    # P2-1 fix: Dynamic year validation
+    max_year = get_max_year()
+    if year > max_year:
+        raise HTTPException(status_code=422, detail=f"Year must be <= {max_year}")
     """
     Calculate MOT failure risk using lookup table.
 
@@ -368,25 +407,38 @@ async def get_risk(
         return default_response
 
     try:
-        # Query for exact make/model match with age band
-        # Try with model_id pattern matching
+        # P0-5 fix: Use exact match first, then match variants with space separator
+        # This prevents "FORD F" from matching "FORD FOCUS"
+        base_model_id = f"{make_upper} {model_upper}"
+
+        # Try exact match first
         query = """
             SELECT * FROM risks
-            WHERE model_id LIKE ? AND age_band = ?
+            WHERE model_id = ? AND age_band = ?
             ORDER BY Total_Tests DESC
             LIMIT 1
         """
-        row = conn.execute(query, (f"{make_upper} {model_upper}%", age_band)).fetchone()
+        row = conn.execute(query, (base_model_id, age_band)).fetchone()
 
-        # If not found, try just the make with age band
+        # If not found, try matching model variants (e.g., "FORD FIESTA" matches "FORD FIESTA ZETEC")
         if not row:
             query = """
                 SELECT * FROM risks
-                WHERE model_id LIKE ? AND age_band = ?
+                WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
                 ORDER BY Total_Tests DESC
                 LIMIT 1
             """
-            row = conn.execute(query, (f"{make_upper}%", age_band)).fetchone()
+            row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
+
+        # If still not found, try just the make (for aggregated make-level data)
+        if not row:
+            query = """
+                SELECT * FROM risks
+                WHERE model_id = ? AND age_band = ?
+                ORDER BY Total_Tests DESC
+                LIMIT 1
+            """
+            row = conn.execute(query, (make_upper, age_band)).fetchone()
 
         if not row:
             logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
@@ -474,50 +526,62 @@ async def get_risk_v55(
         vrm = dvsa_client.normalize_vrm(registration)
     except VRMValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # P2-2 fix: Validate postcode format if provided
+    validated_postcode = ""
+    if postcode:
+        postcode_result = validate_postcode(postcode)
+        if postcode_result.get('valid'):
+            validated_postcode = postcode_result.get('normalized', postcode)
+        else:
+            # Use postcode as-is for corrosion lookup (will get default value)
+            validated_postcode = postcode.strip().upper()
+
     if not dvsa_client.is_configured:
-        logger.warning("DVSA not configured, falling back to lookup")
+        logger.warning(f"DVSA not configured for {hash_vrm(vrm)}, falling back to lookup")
         return await _fallback_prediction(
             registration=vrm,
             make="",
             model="",
             year=None,
-            postcode=postcode,
+            postcode=validated_postcode,
             note="DVSA integration not configured"
         )
 
-    # Fetch MOT history from DVSA
+    # Fetch MOT history from DVSA (P1-10 fix: use hashed VRM in logs)
+    vrm_hash = hash_vrm(vrm)
     try:
         history = await dvsa_client.fetch_vehicle_history(vrm)
-        logger.info(f"Fetched DVSA history for {vrm}: {history.make} {history.model}")
+        logger.info(f"Fetched DVSA history for {vrm_hash}: {history.make} {history.model}")
 
     except VehicleNotFoundError:
-        logger.info(f"Vehicle {vrm} not found in DVSA, falling back to lookup")
+        logger.info(f"Vehicle {vrm_hash} not found in DVSA, falling back to lookup")
         return await _fallback_prediction(
             registration=vrm,
             make="",
             model="",
             year=None,
-            postcode=postcode,
+            postcode=validated_postcode,
             note="Vehicle not found in DVSA database"
         )
 
     except DVSAAPIError as e:
-        logger.warning(f"DVSA API error for {vrm}: {e}, falling back to lookup")
+        logger.warning(f"DVSA API error for {vrm_hash}: {e}, falling back to lookup")
         return await _fallback_prediction(
             registration=vrm,
             make="",
             model="",
             year=None,
-            postcode=postcode,
+            postcode=validated_postcode,
             note=f"DVSA API unavailable: {str(e)}"
         )
 
     # Engineer features from MOT history
     try:
-        features = engineer_features(history, postcode)
-        logger.info(f"Engineered {len(features)} features for {vrm}")
+        features = engineer_features(history, validated_postcode)
+        logger.info(f"Engineered {len(features)} features for {vrm_hash}")
     except Exception as e:
-        logger.error(f"Feature engineering failed for {vrm}: {e}")
+        logger.error(f"Feature engineering failed for {vrm_hash}: {e}")
         # Fall back to lookup with vehicle info from DVSA
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
@@ -525,7 +589,7 @@ async def get_risk_v55(
             make=history.make,
             model=history.model,
             year=year,
-            postcode=postcode,
+            postcode=validated_postcode,
             note=f"Feature engineering error: {str(e)}"
         )
 
@@ -533,14 +597,14 @@ async def get_risk_v55(
     try:
         prediction = model_v55.predict_risk(features)
     except Exception as e:
-        logger.error(f"V55 prediction failed for {vrm}: {e}")
+        logger.error(f"V55 prediction failed for {vrm_hash}: {e}")
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
             registration=vrm,
             make=history.make,
             model=history.model,
             year=year,
-            postcode=postcode,
+            postcode=validated_postcode,
             note=f"Model prediction error: {str(e)}"
         )
 
@@ -612,51 +676,60 @@ async def _fallback_prediction(
 
     model_id = f"{make.upper()} {model.upper()}"
 
-    # Calculate age band if year available
+    # Calculate age band if year available (P1-3 fix: use get_age_band for consistency)
     if year:
         age = datetime.now().year - year
         age_band = get_age_band(age)
     else:
-        age_band = "6-10"  # Default to middle band
+        # Default to middle of typical age range (7 years old)
+        age_band = get_age_band(7)
 
-    mileage_band = "30k-60k"  # Default
+    # P0-5 fix: Use exact match or variant match pattern instead of broad LIKE
+    # Try SQLite fallback with proper connection handling (P2-4 fix)
+    conn = None
+    try:
+        conn = get_sqlite_connection()
+        if conn:
+            base_model_id = f"{make.upper()} {model.upper()}"
+            # Try exact match first, then variants
+            query = """
+                SELECT * FROM risks
+                WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
+                ORDER BY Total_Tests DESC
+                LIMIT 1
+            """
+            row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
 
-    # Try SQLite fallback
-    conn = get_sqlite_connection()
-    if conn:
-        query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? LIMIT 1"
-        row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
+            if row:
+                result = dict(row)
+                result = add_confidence_intervals(result)
+                result = add_repair_cost_estimate(result)
 
-        if row:
-            result = dict(row)
+                return {
+                    "registration": registration,
+                    "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
+                    "mileage": None,
+                    "last_mot_date": None,
+                    "last_mot_result": None,
+                    "failure_risk": result.get('Failure_Risk', 0.28),
+                    "confidence_level": "Medium",
+                    "risk_components": {
+                        "brakes": result.get('Risk_Brakes', 0.05),
+                        "suspension": result.get('Risk_Suspension', 0.04),
+                        "tyres": result.get('Risk_Tyres', 0.03),
+                        "steering": result.get('Risk_Steering', 0.02),
+                        "visibility": result.get('Risk_Visibility', 0.02),
+                        "lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
+                        "body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                    },
+                    "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
+                    "model_version": "lookup",
+                    "note": note,
+                }
+    finally:
+        # P2-4 fix: Always close connection in finally block
+        if conn:
             conn.close()
-
-            result = add_confidence_intervals(result)
-            result = add_repair_cost_estimate(result)
-
-            return {
-                "registration": registration,
-                "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
-                "mileage": None,
-                "last_mot_date": None,
-                "last_mot_result": None,
-                "failure_risk": result.get('Failure_Risk', 0.28),
-                "confidence_level": "Medium",
-                "risk_components": {
-                    "brakes": result.get('Risk_Brakes', 0.05),
-                    "suspension": result.get('Risk_Suspension', 0.04),
-                    "tyres": result.get('Risk_Tyres', 0.03),
-                    "steering": result.get('Risk_Steering', 0.02),
-                    "visibility": result.get('Risk_Visibility', 0.02),
-                    "lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
-                    "body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
-                },
-                "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
-                "model_version": "lookup",
-                "note": note,
-            }
-
-        conn.close()
 
     # Default fallback - population average
     return {
@@ -701,12 +774,20 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
         for comp, cost in component_costs.items()
     )
 
-    # Scale by overall failure probability
-    expected = expected * (failure_risk / 0.28)  # Normalize to average fail rate
+    # P1-11 fix: Clamp the scaling factor to avoid extreme values
+    # Scale by overall failure probability relative to average
+    avg_fail_rate = 0.28
+    if failure_risk > 0:
+        # Clamp scaling factor between 0.5x and 3x
+        scale_factor = max(0.5, min(3.0, failure_risk / avg_fail_rate))
+        expected = expected * scale_factor
+
+    # Ensure minimum reasonable cost estimate
+    expected = max(expected, 100)
 
     return {
         "expected": int(round(expected, -1)),  # Round to nearest 10
-        "range_low": int(round(expected * 0.5, -1)),
+        "range_low": int(round(max(expected * 0.5, 50), -1)),
         "range_high": int(round(expected * 2, -1)),
     }
 
@@ -716,7 +797,9 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
 # =============================================================================
 
 @app.get("/api/vehicle")
+@limiter.limit("10/minute")  # P1-1 fix: Add rate limiting to prevent enumeration
 async def get_vehicle(
+    request: Request,
     registration: str = Query(..., min_length=2, max_length=8, description="UK vehicle registration number")
 ):
     """Look up vehicle details by registration number.

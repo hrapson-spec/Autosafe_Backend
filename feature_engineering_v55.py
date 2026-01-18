@@ -524,16 +524,32 @@ def engineer_features(
     return features
 
 
-def features_to_array(features: Dict[str, Any]) -> List[Any]:
+def features_to_array(features: Dict[str, Any], validate: bool = True) -> List[Any]:
     """
     Convert features dict to array in exact order expected by model.
 
     Args:
         features: Dict mapping feature names to values
+        validate: If True, raise error for missing features (P0-4 fix)
 
     Returns:
         List of feature values in model's expected order
+
+    Raises:
+        ValueError: If validate=True and required features are missing
     """
+    if validate:
+        missing = [name for name in FEATURE_NAMES if name not in features]
+        if missing:
+            raise ValueError(
+                f"Missing {len(missing)} required features: {missing[:5]}"
+                + (f"... and {len(missing)-5} more" if len(missing) > 5 else "")
+            )
+
+    # Validate expected feature count matches model expectations
+    if len(FEATURE_NAMES) != 104:
+        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 104")
+
     return [features.get(name, 0) for name in FEATURE_NAMES]
 
 

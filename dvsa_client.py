@@ -300,56 +300,87 @@ class DVSAClient:
         # Normalize VRM
         vrm = self.normalize_vrm(registration)
 
+        # P1-10 fix: Hash VRM for logging
+        import hashlib
+        vrm_hash = hashlib.sha256(vrm.encode()).hexdigest()[:8]
+
         # Check cache first
         if vrm in self._cache:
-            logger.info(f"Cache hit for {vrm}")
+            logger.info(f"Cache hit for {vrm_hash}")
             return self._cache[vrm]
 
-        # Call DVSA API
-        logger.info(f"Fetching MOT history for {vrm} from DVSA API")
+        # P2-6 fix: Add retry logic for transient failures
+        max_retries = 3
+        last_error = None
 
-        try:
-            # Get OAuth access token
-            access_token = await self._get_access_token()
+        for attempt in range(max_retries):
+            try:
+                # Call DVSA API
+                if attempt == 0:
+                    logger.info(f"Fetching MOT history for {vrm_hash} from DVSA API")
+                else:
+                    logger.info(f"Retry {attempt}/{max_retries} for {vrm_hash}")
 
-            # Build headers - OAuth bearer token required, API key optional
-            headers = {"Authorization": f"Bearer {access_token}"}
-            if self.api_key:
-                headers["X-API-Key"] = self.api_key
+                # Get OAuth access token
+                access_token = await self._get_access_token()
 
-            response = await self._client.get(
-                f"{self.BASE_URL}/trade/vehicles/mot-tests",
-                params={"registration": vrm},
-                headers=headers
-            )
+                # Build headers - OAuth bearer token required, API key optional
+                headers = {"Authorization": f"Bearer {access_token}"}
+                if self.api_key:
+                    headers["X-API-Key"] = self.api_key
 
-            if response.status_code == 404:
-                raise VehicleNotFoundError(f"Vehicle {vrm} not found in DVSA database")
+                response = await self._client.get(
+                    f"{self.BASE_URL}/trade/vehicles/mot-tests",
+                    params={"registration": vrm},
+                    headers=headers
+                )
 
-            if response.status_code == 403:
-                raise DVSAAPIError("DVSA API key invalid or expired")
+                if response.status_code == 404:
+                    raise VehicleNotFoundError(f"Vehicle not found in DVSA database")
 
-            if response.status_code == 429:
-                raise DVSAAPIError("DVSA API rate limit exceeded")
+                if response.status_code == 403:
+                    raise DVSAAPIError("DVSA API key invalid or expired")
 
-            if response.status_code != 200:
-                raise DVSAAPIError(f"DVSA API error: {response.status_code}")
+                if response.status_code == 429:
+                    # Rate limit - retry after delay
+                    if attempt < max_retries - 1:
+                        import asyncio
+                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                        continue
+                    raise DVSAAPIError("DVSA API rate limit exceeded")
 
-            data = response.json()
+                if response.status_code != 200:
+                    raise DVSAAPIError(f"DVSA API error: {response.status_code}")
 
-            # Parse response
-            history = self._parse_response(vrm, data)
+                data = response.json()
 
-            # Cache result
-            self._cache[vrm] = history
-            logger.info(f"Cached MOT history for {vrm} ({len(history.mot_tests)} tests)")
+                # Parse response
+                history = self._parse_response(vrm, data)
 
-            return history
+                # P1-5 fix: Validate response before caching
+                if history and history.registration:
+                    self._cache[vrm] = history
+                    logger.info(f"Cached MOT history for {vrm_hash} ({len(history.mot_tests)} tests)")
+                else:
+                    logger.warning(f"Invalid response for {vrm_hash}, not caching")
 
-        except httpx.TimeoutException:
-            raise DVSAAPIError("DVSA API request timed out")
-        except httpx.RequestError as e:
-            raise DVSAAPIError(f"DVSA API connection error: {str(e)}")
+                return history
+
+            except httpx.TimeoutException:
+                last_error = DVSAAPIError("DVSA API request timed out")
+                if attempt < max_retries - 1:
+                    import asyncio
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+            except httpx.RequestError as e:
+                last_error = DVSAAPIError(f"DVSA API connection error: {str(e)}")
+                if attempt < max_retries - 1:
+                    import asyncio
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+
+        # All retries exhausted
+        raise last_error or DVSAAPIError("DVSA API request failed after retries")
 
     def _parse_response(self, vrm: str, data: Dict[str, Any]) -> VehicleHistory:
         """Parse DVSA API response into VehicleHistory object."""
