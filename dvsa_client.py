@@ -113,8 +113,8 @@ class DVSAClient:
     # DVSA API endpoint - try legacy beta API
     BASE_URL = "https://beta.check-mot.service.gov.uk"
 
-    # Cache TTL: 24 hours
-    CACHE_TTL_SECONDS = 24 * 60 * 60
+    # Cache TTL: 4 hours (reduced from 24h to ensure recent MOT results are reflected)
+    CACHE_TTL_SECONDS = 4 * 60 * 60
 
     # VRM validation patterns
     # Basic rules: alphanumeric, 2-8 characters

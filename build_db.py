@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Column Type Specification
 # =============================================================================
 # The CSV has a fixed column order from calculate_risk.py:
-# Columns 0-2: TEXT (model_id, make, age_band, mileage_band)
+# Columns 0-2: TEXT (model_id, age_band, mileage_band)
 # Columns 3-4: INTEGER (Total_Tests, Total_Failures)
 # Columns 5+: REAL (Failure_Risk, Risk_Brakes, Risk_Suspension, etc.)
 # =============================================================================
