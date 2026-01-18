@@ -4,96 +4,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoSafe</title>
+    <meta name="description" content="AutoSafe - Predict your car's MOT failure risk using AI-powered analysis.">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>AutoSafe - Predict Your MOT Risk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <main class="container">
-        <header>
-            <h1>AutoSafe</h1>
-            <p class="subtitle">Predict your vehicle's MOT failure risk using AI.</p>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image">
+            </div>
+            <h1 class="headline">Fix it before they find it.</h1>
+            <p class="tagline">Predict your next MOT result and avoid costly surprises.</p>
         </header>
 
-        <div class="card search-panel">
-            <form id="riskForm">
-                <div class="form-group">
-                    <label for="make">Make</label>
-                    <div class="select-wrapper">
-                        <select id="make" required>
-                            <option value="">Select make...</option>
-                        </select>
+        <!-- Search Panel -->
+        <main class="main-content">
+            <section class="search-card" id="searchPanel">
+                <form id="riskForm">
+                    <div class="form-group">
+                        <label for="registration">Car Registration</label>
+                        <input type="text" id="registration" placeholder="e.g. AB12 CDE" required
+                            style="text-transform: uppercase;">
                     </div>
-                    <span class="hint">Select your vehicle manufacturer</span>
-                </div>
 
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <div class="select-wrapper">
-                        <select id="model" required disabled>
-                            <option value="">Select model...</option>
-                        </select>
+                    <div class="form-group">
+                        <label for="postcode">Postcode</label>
+                        <input type="text" id="postcode" placeholder="e.g. SW1A 1AA" required
+                            style="text-transform: uppercase;">
                     </div>
-                    <span class="hint">Select your vehicle model</span>
-                </div>
 
-                <div class="form-group">
-                    <label for="year">Year</label>
-                    <input type="number" id="year" placeholder="e.g. 2018"
-                           min="1990" max="2026" required>
-                    <span class="hint">Year of manufacture</span>
-                </div>
+                    <button type="submit" id="analyzeBtn" class="primary-btn">
+                        <span class="btn-text">Check This Car</span>
+                        <div class="loader hidden"></div>
+                    </button>
+                </form>
+            </section>
+        </main>
 
-                <button type="submit" id="analyzeBtn">
-                    <span class="btn-text">Check MOT Risk</span>
-                    <div class="loader hidden"></div>
-                </button>
-            </form>
-        </div>
-
-        <div id="resultsPanel" class="card results-panel hidden">
-            <div class="risk-hero">
-                <div class="vehicle-tag" id="vehicleTag">FORD FIESTA (2018)</div>
-                <div class="vehicle-details" id="vehicleDetails"></div>
-                <div class="risk-percentage" id="riskValue">0%</div>
-                <div class="risk-label" id="riskText">Failure Probability</div>
-                <div class="confidence-badge" id="confidenceBadge">High Confidence</div>
-                <p class="risk-explanation">AI-predicted probability of MOT failure based on vehicle history.</p>
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Contains public sector information licensed under the <a
+                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+                    target="_blank">Open Government Licence v3.0</a></p>
+            <p>Data from UK DVSA • Not official government advice or endorsement.</p>
+            <div class="footer-links">
+                <a href="#">Terms</a> • <a href="#">Privacy</a> • <a href="#">Send Feedback</a>
             </div>
-
-            <div class="stats-row">
-                <div class="stat-item">
-                    <span class="stat-val" id="lastMOTDate">-</span>
-                    <span class="stat-lbl">Last MOT</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-val" id="lastMOTResult">-</span>
-                    <span class="stat-lbl">Result</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-val" id="mileage">-</span>
-                    <span class="stat-lbl">Mileage</span>
-                </div>
-            </div>
-
-            <div class="repair-cost-section" id="repairCostSection">
-                <h3>Estimated Repair Cost (if fail)</h3>
-                <div class="cost-display">
-                    <span class="cost-value" id="repairCostValue">-</span>
-                    <span class="cost-range" id="repairCostRange"></span>
-                </div>
-            </div>
-
-            <div class="components-section">
-                <h3 class="components-title">Component Risk Breakdown</h3>
-                <div class="components-grid" id="componentsGrid">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
-
-            <div class="source-note" id="sourceNote"></div>
-        </div>
-    </main>
+        </footer>
+    </div>
 
     <script src="/static/script.js"></script>
 </body>
