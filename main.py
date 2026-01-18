@@ -73,15 +73,17 @@ async def lifespan(app: FastAPI):
     build_db.ensure_database()
 
     # After building, check if we should use SQLite or PostgreSQL for fallback
-    global DATABASE_URL
+    global _use_sqlite_fallback
     if os.path.exists(DB_FILE):
         logger.info(f"Fallback database ready: {DB_FILE}")
-        DATABASE_URL = None
+        _use_sqlite_fallback = True
     elif DATABASE_URL:
         logger.info("Initializing PostgreSQL connection pool for fallback...")
+        _use_sqlite_fallback = False
         await db.get_pool()
     else:
         logger.warning("No fallback database available")
+        _use_sqlite_fallback = False
 
     # Initialize DVSA client (for MOT history)
     dvsa_client = get_dvsa_client()
@@ -122,6 +124,8 @@ app.add_middleware(
 # OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
 DB_FILE = 'autosafe.db'
 DATABASE_URL = os.environ.get("DATABASE_URL")
+# Flag to track which database to use (set during startup)
+_use_sqlite_fallback = False
 
 # Minimum total tests required for a make/model to appear in UI dropdowns
 # This filters out typos, garbage entries, and extremely rare vehicles
@@ -237,38 +241,39 @@ def add_repair_cost_estimate(result: dict) -> dict:
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
     global _cache
-    
+
     # Check cache first
     if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
         logger.info("Returning cached makes list")
         return _cache["makes"]["data"]
-    
-    # Try PostgreSQL first
-    if DATABASE_URL:
+
+    # Try SQLite first if it's available (preferred - built fresh on startup)
+    if _use_sqlite_fallback:
+        conn = get_sqlite_connection()
+        if conn:
+            # Only return makes with sufficient test volume
+            query = """
+                SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
+                       SUM(Total_Tests) as test_count
+                FROM risks
+                GROUP BY make
+                HAVING SUM(Total_Tests) >= ?
+            """
+            rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
+            conn.close()
+            makes = sorted(set(row['make'] for row in rows))
+            _cache["makes"] = {"data": makes, "time": time.time()}
+            logger.info(f"Cached {len(makes)} makes from SQLite")
+            return makes
+
+    # Try PostgreSQL if SQLite not available
+    if DATABASE_URL and not _use_sqlite_fallback:
         result = await db.get_makes()
         if result is not None:
             _cache["makes"] = {"data": result, "time": time.time()}
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
-    
-    # Fallback to SQLite
-    conn = get_sqlite_connection()
-    if conn:
-        # Only return makes with sufficient test volume
-        query = """
-            SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
-                   SUM(Total_Tests) as test_count
-            FROM risks
-            GROUP BY make
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
-        conn.close()
-        makes = sorted(set(row['make'] for row in rows))
-        _cache["makes"] = {"data": makes, "time": time.time()}
-        logger.info(f"Cached {len(makes)} makes from SQLite")
-        return makes
-    
+
     # Demo mode
     return sorted(MOCK_MAKES)
 
@@ -279,58 +284,59 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     """Return a list of models for a given make (cached for 1 hour)."""
     global _cache
     cache_key = make.upper()
-    
+
     # Check cache first
     if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
         logger.info(f"Returning cached models for {cache_key}")
         return _cache["models"][cache_key]["data"]
-    
-    # Try PostgreSQL first
-    if DATABASE_URL:
+
+    # Try SQLite first if available (preferred - built fresh on startup)
+    if _use_sqlite_fallback:
+        conn = get_sqlite_connection()
+        if conn:
+            from consolidate_models import get_canonical_models_for_make
+
+            # Only return models with sufficient test volume
+            query = """
+                SELECT model_id, SUM(Total_Tests) as test_count
+                FROM risks
+                WHERE model_id LIKE ?
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= ?
+            """
+            rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
+            conn.close()
+
+            # Extract base models from found entries
+            found_models = {}
+            for row in rows:
+                base_model = extract_base_model(row['model_id'], make)
+                if base_model and len(base_model) > 1:
+                    if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                        found_models[base_model] = row['test_count']
+
+            # Get curated list of known models for this make
+            known_models = get_canonical_models_for_make(make)
+
+            if known_models:
+                # Only return models from curated list that exist in data
+                result = sorted([m for m in known_models if m in found_models])
+            else:
+                # For non-curated makes, return alphabetic models only (capped)
+                result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
+
+            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
+            return result
+
+    # Try PostgreSQL if SQLite not available
+    if DATABASE_URL and not _use_sqlite_fallback:
         result = await db.get_models(make)
         if result is not None:
             _cache["models"][cache_key] = {"data": result, "time": time.time()}
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
-    
-    # Fallback to SQLite
-    conn = get_sqlite_connection()
-    if conn:
-        from consolidate_models import get_canonical_models_for_make
-        
-        # Only return models with sufficient test volume
-        query = """
-            SELECT model_id, SUM(Total_Tests) as test_count
-            FROM risks 
-            WHERE model_id LIKE ?
-            GROUP BY model_id
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
-        conn.close()
-        
-        # Extract base models from found entries
-        found_models = {}
-        for row in rows:
-            base_model = extract_base_model(row['model_id'], make)
-            if base_model and len(base_model) > 1:
-                if base_model not in found_models or row['test_count'] > found_models[base_model]:
-                    found_models[base_model] = row['test_count']
-        
-        # Get curated list of known models for this make
-        known_models = get_canonical_models_for_make(make)
-        
-        if known_models:
-            # Only return models from curated list that exist in data
-            result = sorted([m for m in known_models if m in found_models])
-        else:
-            # For non-curated makes, return alphabetic models only (capped)
-            result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
-        
-        _cache["models"][cache_key] = {"data": result, "time": time.time()}
-        logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
-        return result
-    
+
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
 
@@ -375,6 +381,8 @@ async def get_risk(
         "risk_lamps": 0.03,
         "risk_body": 0.02,
         "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
+        "match_type": "population_average",
+        "data_warning": "No specific data available for this vehicle. Using UK population averages.",
     }
 
     # Try SQLite lookup
@@ -386,6 +394,7 @@ async def get_risk(
     try:
         # Query for exact make/model match with age band
         # Try with model_id pattern matching
+        match_type = "exact"
         query = """
             SELECT * FROM risks
             WHERE model_id LIKE ? AND age_band = ?
@@ -394,8 +403,9 @@ async def get_risk(
         """
         row = conn.execute(query, (f"{make_upper} {model_upper}%", age_band)).fetchone()
 
-        # If not found, try just the make with age band
+        # If not found, try just the make with age band (but flag as approximate)
         if not row:
+            match_type = "make_only"
             query = """
                 SELECT * FROM risks
                 WHERE model_id LIKE ? AND age_band = ?
@@ -437,7 +447,8 @@ async def get_risk(
         else:
             repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
 
-        return {
+        # Build response with match type indication
+        response = {
             "vehicle": model_id,
             "year": year,
             "mileage": None,
@@ -453,7 +464,17 @@ async def get_risk(
             "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
             "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
             "repair_cost_estimate": repair_cost_formatted,
+            "match_type": match_type,
         }
+
+        # Add warning if using approximate data
+        if match_type == "make_only":
+            matched_model = result.get('model_id', 'unknown')
+            response["data_warning"] = f"Exact model not found. Using approximate data from {matched_model}."
+            response["confidence_level"] = "Low"  # Downgrade confidence for approximate matches
+            logger.warning(f"Using make-only fallback for {model_id}: matched {matched_model}")
+
+        return response
 
     except Exception as e:
         logger.error(f"Database error during lookup: {e}")
@@ -584,8 +605,10 @@ async def get_risk_v55(
         "failure_risk": prediction['failure_risk'],
         "confidence_level": prediction['confidence_level'],
         "risk_components": prediction['risk_components'],
+        "component_disclaimer": prediction.get('component_disclaimer'),
         "repair_cost_estimate": repair_cost,
         "model_version": "v55",
+        "match_type": "exact",
     }
 
 
@@ -623,6 +646,8 @@ async def _fallback_prediction(
             },
             "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
             "model_version": "lookup",
+            "match_type": "population_average",
+            "data_warning": "No vehicle data available. Using UK population averages.",
             "note": note or "Vehicle not found - using UK population average",
         }
 
@@ -641,11 +666,13 @@ async def _fallback_prediction(
     conn = get_sqlite_connection()
     if conn:
         # Search for specific make+model combination first
+        match_type = "exact"
         query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? ORDER BY Total_Tests DESC LIMIT 1"
         row = conn.execute(query, (f"{make.upper()} {model.upper()}%", age_band)).fetchone()
 
         # If not found, fall back to make-only search
         if not row:
+            match_type = "make_only"
             row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
 
         if row:
@@ -655,14 +682,14 @@ async def _fallback_prediction(
             result = add_confidence_intervals(result)
             result = add_repair_cost_estimate(result)
 
-            return {
+            response = {
                 "registration": registration,
                 "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
                 "mileage": None,
                 "last_mot_date": None,
                 "last_mot_result": None,
                 "failure_risk": result.get('Failure_Risk', 0.28),
-                "confidence_level": "Medium",
+                "confidence_level": "Medium" if match_type == "exact" else "Low",
                 "risk_components": {
                     "brakes": result.get('Risk_Brakes', 0.05),
                     "suspension": result.get('Risk_Suspension', 0.04),
@@ -674,8 +701,17 @@ async def _fallback_prediction(
                 },
                 "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
                 "model_version": "lookup",
+                "match_type": match_type,
                 "note": note,
             }
+
+            # Add warning if using approximate data
+            if match_type == "make_only":
+                matched_model = result.get('model_id', 'unknown')
+                response["data_warning"] = f"Exact model not found. Using approximate data from {matched_model}."
+                logger.warning(f"Fallback using make-only match for {model_id}: matched {matched_model}")
+
+            return response
 
         conn.close()
 
@@ -699,6 +735,8 @@ async def _fallback_prediction(
         },
         "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
         "model_version": "lookup",
+        "match_type": "population_average",
+        "data_warning": "No specific data available for this vehicle. Using UK population averages.",
         "note": note or "Limited data - using population averages",
     }
 

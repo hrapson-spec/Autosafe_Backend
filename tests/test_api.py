@@ -47,136 +47,79 @@ class TestAPI(unittest.TestCase):
 
     def test_get_risk_missing_year(self):
         """Test that /api/risk requires year parameter."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&mileage=50000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA")
         self.assertEqual(response.status_code, 422)
 
-    def test_get_risk_missing_mileage(self):
-        """Test that /api/risk requires mileage parameter."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+    def test_get_risk_missing_model(self):
+        """Test that /api/risk requires model parameter."""
+        response = client.get("/api/risk?make=FORD&year=2018")
         self.assertEqual(response.status_code, 422)
 
     def test_get_risk_valid(self):
         """Test successful risk calculation with valid parameters."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000")
-        # Should be either 200 (success) or 404 (model not found)
-        self.assertIn(response.status_code, [200, 404])
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+        # Should return 200 (success with data or population average)
+        self.assertEqual(response.status_code, 200)
 
-        if response.status_code == 200:
-            data = response.json()
-            # Verify required fields exist
-            self.assertIn("Failure_Risk", data)
-            # Use Model_Id (API format) or model_id
-            self.assertTrue("Model_Id" in data or "model_id" in data)
+        data = response.json()
+        # Verify required fields exist (lowercase as per actual API)
+        self.assertIn("failure_risk", data)
+        self.assertIn("vehicle", data)
+        self.assertIn("confidence_level", data)
+        self.assertIn("match_type", data)
 
-            # Verify Failure_Risk is a valid probability
-            failure_risk = data.get("Failure_Risk")
-            if failure_risk is not None:
-                self.assertGreaterEqual(failure_risk, 0.0)
-                self.assertLessEqual(failure_risk, 1.0)
+        # Verify failure_risk is a valid probability
+        failure_risk = data.get("failure_risk")
+        self.assertIsNotNone(failure_risk)
+        self.assertGreaterEqual(failure_risk, 0.0)
+        self.assertLessEqual(failure_risk, 1.0)
 
     def test_get_risk_response_structure(self):
         """Test that risk response contains expected fields when successful."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+        self.assertEqual(response.status_code, 200)
 
-        if response.status_code == 200:
-            data = response.json()
-
-            # Check for standard response fields
-            expected_fields = ["Failure_Risk"]
-            for field in expected_fields:
-                self.assertIn(field, data, f"Missing field: {field}")
-
-            # If confidence intervals are present, verify they're valid
-            if "Failure_Risk_CI_Lower" in data and "Failure_Risk_CI_Upper" in data:
-                lower = data["Failure_Risk_CI_Lower"]
-                upper = data["Failure_Risk_CI_Upper"]
-                risk = data["Failure_Risk"]
-
-                self.assertLessEqual(lower, risk, "CI lower bound should be <= risk")
-                self.assertGreaterEqual(upper, risk, "CI upper bound should be >= risk")
-                self.assertGreaterEqual(lower, 0.0, "CI lower should be >= 0")
-                self.assertLessEqual(upper, 1.0, "CI upper should be <= 1")
-
-    def test_get_risk_with_history_params(self):
-        """Test risk calculation with history parameters."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=PASS&days_since_prev=365"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-        if response.status_code == 200:
-            data = response.json()
-            # If history adjustment was applied, check for related fields
-            if "History_Adjustment" in data:
-                history = data["History_Adjustment"]
-                self.assertIn("prev_outcome", history)
-                self.assertIn("gap_band", history)
-
-    def test_get_risk_with_prev_outcome_fail(self):
-        """Test risk calculation with previous FAIL outcome."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=FAIL&days_since_prev=180"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-    def test_get_risk_with_component_history(self):
-        """Test risk calculation with component failure history."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_brake_failure=1&prev_suspension_failure=0"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-        if response.status_code == 200:
-            data = response.json()
-            # Component adjustment may or may not be applied depending on weights file
-            self.assertIn("Failure_Risk", data)
-
-    def test_get_risk_invalid_prev_outcome(self):
-        """Test that invalid prev_outcome values are rejected."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=INVALID"
-        )
-        self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn("detail", data)
 
-    def test_get_risk_discontinued_model(self):
-        """Test that discontinued model+year combinations return 422 error."""
-        # Toyota Avensis was discontinued ~2018, so 2022 should fail
-        response = client.get("/api/risk?make=TOYOTA&model=AVENSIS&year=2022&mileage=30000")
-        # Should get 422 Unprocessable Entity for invalid year (consistent with other validation errors)
-        self.assertEqual(response.status_code, 422)
+        # Check for standard response fields (lowercase as per actual API)
+        expected_fields = ["failure_risk", "vehicle", "year", "confidence_level", "match_type"]
+        for field in expected_fields:
+            self.assertIn(field, data, f"Missing field: {field}")
+
+        # Check component risk fields
+        component_fields = ["risk_brakes", "risk_suspension", "risk_tyres", "risk_steering"]
+        for field in component_fields:
+            self.assertIn(field, data, f"Missing component field: {field}")
+
+    def test_get_risk_unknown_model(self):
+        """Test risk calculation for unknown model returns population average."""
+        response = client.get("/api/risk?make=FORD&model=UNKNOWNMODEL&year=2018")
+        self.assertEqual(response.status_code, 200)
+
         data = response.json()
-        self.assertIn("detail", data)
-        # Detail should mention the year or that it's not valid
-        detail = data["detail"]
-        # Handle both string and list formats
-        if isinstance(detail, list):
-            detail = str(detail)
-        self.assertTrue("2022" in detail or "not valid" in detail.lower() or "discontinued" in detail.lower())
+        # Should return data with appropriate match_type
+        self.assertIn("match_type", data)
+        # Unknown model should fall back to make_only or population_average
+        self.assertIn(data["match_type"], ["make_only", "population_average"])
+
+    def test_get_risk_data_warning_on_fallback(self):
+        """Test that data_warning is present when using fallback data."""
+        response = client.get("/api/risk?make=UNKNOWNMAKE&model=UNKNOWNMODEL&year=2018")
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        # Should have data_warning when using population average
+        if data.get("match_type") == "population_average":
+            self.assertIn("data_warning", data)
 
     def test_get_risk_invalid_year_too_old(self):
         """Test that years before 1990 are rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=1950&mileage=50000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=1950")
         self.assertEqual(response.status_code, 422)
 
     def test_get_risk_invalid_year_future(self):
         """Test that years too far in the future are rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2050&mileage=50000")
-        self.assertEqual(response.status_code, 422)
-
-    def test_get_risk_negative_mileage(self):
-        """Test that negative mileage is rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=-1000")
-        self.assertEqual(response.status_code, 422)
-
-    def test_get_risk_excessive_mileage(self):
-        """Test that excessive mileage (>999999) is rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=1500000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2050")
         self.assertEqual(response.status_code, 422)
 
     def test_health_endpoint(self):
