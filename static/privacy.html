@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - AutoSafe</title>
+    <title>Privacy Notice - AutoSafe</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .legal-content {
@@ -14,82 +14,271 @@
         }
 
         .legal-content h1 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .legal-content .last-updated {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
         }
 
         .legal-content h2 {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .legal-content h3 {
+            font-size: 1rem;
             margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
         }
 
         .legal-content p,
         .legal-content li {
             font-size: 0.9rem;
-            line-height: 1.6;
+            line-height: 1.7;
             color: #6b7280;
+        }
+
+        .legal-content ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .legal-content li {
+            margin-bottom: 0.25rem;
         }
 
         .legal-content a {
             color: #1e40af;
+        }
+
+        .legal-content a:hover {
+            text-decoration: underline;
+        }
+
+        .legal-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+
+        .legal-content th {
+            text-align: left;
+            padding: 0.75rem 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            color: #111827;
+            font-weight: 500;
+        }
+
+        .legal-content td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            color: #6b7280;
+        }
+
+        .info-box {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info-box p {
+            margin: 0;
+        }
+
+        .info-box strong {
+            color: #111827;
+        }
+
+        .contact-info {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .contact-info li {
+            margin-bottom: 0.25rem;
         }
     </style>
 </head>
 
 <body>
     <div class="legal-content">
-        <h1>Privacy Policy</h1>
-        <p><strong>Last updated:</strong> December 2024</p>
+        <h1>Privacy Notice</h1>
+        <p class="last-updated">Last updated: 18 January 2026</p>
 
-        <h2>1. Overview</h2>
-        <p>AutoSafe is committed to protecting your privacy. This policy explains what data we collect and how we use
-            it.</p>
-
-        <h2>2. Data We Collect</h2>
-        <p><strong>We collect minimal data:</strong></p>
-        <ul>
-            <li><strong>Search queries:</strong> Vehicle make, model, year, and mileage you enter (not stored
-                permanently)</li>
-            <li><strong>Basic analytics:</strong> Page views and general usage patterns (no personal identification)
-            </li>
-            <li><strong>Technical data:</strong> IP address and browser type for rate limiting and security</li>
+        <h2>Who we are</h2>
+        <p>This website is operated by Henri Rapson trading as AutoSafe.</p>
+        <ul class="contact-info">
+            <li><strong>Contact:</strong> <a href="mailto:privacy@autosafe.co.uk">privacy@autosafe.co.uk</a></li>
         </ul>
 
-        <h2>3. Data We Do NOT Collect</h2>
+        <h2>What this notice covers</h2>
+        <p>This notice explains how we collect and use your personal data when you use the AutoSafe website to check your vehicle's MOT risk.</p>
+
+        <h2>What data we collect</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Source</th>
+                    <th>Stored?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Vehicle registration number (VRN)</td>
+                    <td>You enter it</td>
+                    <td>No - used only to generate your report</td>
+                </tr>
+                <tr>
+                    <td>Postcode</td>
+                    <td>You enter it</td>
+                    <td>No - used only to generate your report</td>
+                </tr>
+                <tr>
+                    <td>Vehicle details (make, model, MOT history)</td>
+                    <td>DVSA public records</td>
+                    <td>No - retrieved and displayed only</td>
+                </tr>
+                <tr>
+                    <td>IP address and access logs</td>
+                    <td>Automatic</td>
+                    <td>Yes - for 30 days</td>
+                </tr>
+                <tr>
+                    <td>Aggregated usage statistics</td>
+                    <td>Automatic</td>
+                    <td>Yes - but not personally identifiable</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            <p><strong>Important:</strong> We do not store your VRN or postcode after generating your report. This data is processed in real-time and then discarded.</p>
+        </div>
+
+        <h2>Why we use your data</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Purpose</th>
+                    <th>Lawful basis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Generate your MOT risk report</td>
+                    <td>Legitimate interests - you request this service</td>
+                </tr>
+                <tr>
+                    <td>Security and fraud prevention</td>
+                    <td>Legitimate interests - protecting our service</td>
+                </tr>
+                <tr>
+                    <td>Understanding how our site is used</td>
+                    <td>Legitimate interests - improving our service (aggregated data only)</td>
+                </tr>
+            </tbody>
+        </table>
+        <h3>About legitimate interests</h3>
+        <p>We rely on legitimate interests where we have a genuine business reason to process your data, and this does not unfairly impact your rights. You can object to this processing - see "Your rights" below.</p>
+
+        <h2>Who we share your data with</h2>
+        <p>We do not sell your data or share it with third parties for their own purposes.</p>
+        <p>We use the following service providers (processors) who process data on our behalf:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Purpose</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Railway</td>
+                    <td>Website hosting</td>
+                    <td>UK</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>These providers only process data according to our instructions and are bound by data protection agreements.</p>
+
+        <h2>International transfers</h2>
+        <p>We do not transfer your personal data outside the UK or EU.</p>
+
+        <h2>How long we keep your data</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Retention</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>VRN and postcode</td>
+                    <td>Not stored</td>
+                </tr>
+                <tr>
+                    <td>Server logs (including IP address)</td>
+                    <td>30 days</td>
+                </tr>
+                <tr>
+                    <td>Analytics data</td>
+                    <td>Aggregated only - no personal data retained</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Automated decision-making</h2>
+        <p>Our service uses an automated system to predict the likelihood of your vehicle passing or failing its next MOT. This prediction is based on publicly available MOT history data.</p>
+        <div class="info-box">
+            <p><strong>Important:</strong></p>
+            <ul>
+                <li>These predictions are for information only</li>
+                <li>They do not guarantee any particular MOT outcome</li>
+                <li>They have no legal effect on you</li>
+                <li>Many factors affect MOT results that we cannot assess</li>
+                <li>You are free to ignore our predictions entirely</li>
+            </ul>
+        </div>
+
+        <h2>Your rights</h2>
+        <p>Under UK data protection law, you have the right to:</p>
         <ul>
-            <li>No user accounts or registration</li>
-            <li>No names, email addresses, or personal information</li>
-            <li>No vehicle registration numbers</li>
-            <li>No cookies for tracking (only essential technical cookies)</li>
+            <li><strong>Access</strong> your personal data</li>
+            <li><strong>Rectify</strong> inaccurate data</li>
+            <li><strong>Erase</strong> your data (right to be forgotten)</li>
+            <li><strong>Restrict</strong> processing</li>
+            <li><strong>Data portability</strong> (receive your data in a portable format)</li>
+            <li><strong>Object</strong> to processing based on legitimate interests</li>
+        </ul>
+        <p>To exercise any of these rights, email us at <a href="mailto:privacy@autosafe.co.uk">privacy@autosafe.co.uk</a>.</p>
+        <p>We will respond within one calendar month.</p>
+        <div class="info-box">
+            <p><strong>Note:</strong> Because we don't store your VRN or postcode, we may have very limited data about you (only server logs, if within 30 days). If you haven't contacted us directly, we likely hold no data that identifies you personally.</p>
+        </div>
+
+        <h2>Cookies</h2>
+        <p>We do not use marketing or advertising cookies. Any cookies used are strictly necessary for the operation of the service.</p>
+
+        <h2>Changes to this notice</h2>
+        <p>We may update this notice from time to time. The date at the top shows when it was last updated.</p>
+
+        <h2>Complaints</h2>
+        <p>If you are unhappy with how we have handled your data, you have the right to complain to the Information Commissioner's Office (ICO):</p>
+        <ul class="contact-info">
+            <li><strong>Website:</strong> <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer">ico.org.uk</a></li>
+            <li><strong>Phone:</strong> 0303 123 1113</li>
         </ul>
 
-        <h2>4. How We Use Data</h2>
-        <p>Data is used solely to:</p>
-        <ul>
-            <li>Provide risk estimates for the vehicles you search</li>
-            <li>Prevent abuse through rate limiting</li>
-            <li>Improve the service based on aggregate usage patterns</li>
-        </ul>
-
-        <h2>5. Data Sharing</h2>
-        <p>We do not sell, trade, or share your data with third parties, except:</p>
-        <ul>
-            <li>Our hosting provider (Railway) processes requests as part of service delivery</li>
-            <li>If required by law</li>
-        </ul>
-
-        <h2>6. Data Retention</h2>
-        <p>Search queries are processed in real-time and not stored. Server logs are retained for up to 30 days for
-            security purposes.</p>
-
-        <h2>7. Your Rights</h2>
-        <p>Under UK GDPR, you have the right to access, correct, or delete your data. Since we collect minimal data
-            without personal identifiers, there is typically no personal data to access.</p>
-
-        <h2>8. Contact</h2>
-        <p>For privacy inquiries, please use the feedback form on our main page.</p>
-
-        <p style="margin-top: 2rem;"><a href="/">← Back to AutoSafe</a></p>
+        <p style="margin-top: 2rem;"><a href="/">&larr; Back to AutoSafe</a></p>
     </div>
 </body>
 
