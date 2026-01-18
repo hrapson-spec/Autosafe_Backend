@@ -174,7 +174,8 @@ def calculate_expected_repair_cost(risk_data: Dict) -> Optional[Dict]:
     if p_fail <= 0:
         return None
     
-    # Component name mapping from API to cost table
+    # Component name mapping from API/database to cost table
+    # Note: CSV column names use "Risk_Lamps_Reflectors_And_Electrical_Equipment" and "Risk_Body_Chassis_Structure"
     COMPONENT_MAP = {
         "Risk_Brakes": "Brakes",
         "Risk_Suspension": "Suspension",
@@ -183,6 +184,9 @@ def calculate_expected_repair_cost(risk_data: Dict) -> Optional[Dict]:
         "Risk_Visibility": "Visibility",
         "Risk_Lamps_Reflectors_And_Electrical_Equipment": "Lamps_Reflectors_And_Electrical_Equipment",
         "Risk_Body_Chassis_Structure": "Body_Chassis_Structure",
+        # Also handle lowercase variants from PostgreSQL (via normalize_columns)
+        "Risk_Lamps_Reflectors_Electrical_Equipment": "Lamps_Reflectors_And_Electrical_Equipment",
+        "Risk_Body_Chassis_Structure_Exhaust": "Body_Chassis_Structure",
     }
     
     # Calculate E[cost per MOT] = Σ risk_i × cost_mid_i

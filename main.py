@@ -141,18 +141,34 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def health_check():
     """Health check endpoint for monitoring."""
     db_status = "disconnected"
-    if DATABASE_URL:
+    db_type = "none"
+
+    # Check SQLite first (preferred local fallback)
+    if os.path.exists(DB_FILE):
+        try:
+            conn = get_sqlite_connection()
+            if conn:
+                conn.close()
+                db_status = "connected"
+                db_type = "sqlite"
+        except Exception:
+            db_status = "error"
+
+    # Check PostgreSQL if SQLite not available or if we have DATABASE_URL
+    if db_status == "disconnected" and DATABASE_URL:
         try:
             pool = await db.get_pool()
             if pool:
                 db_status = "connected"
+                db_type = "postgresql"
         except Exception:
             db_status = "error"
-    
+
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "database": db_status
+        "database": db_status,
+        "database_type": db_type
     }
 
 # SQLite fallback connection (for local development)
@@ -434,8 +450,8 @@ async def get_risk(
             "risk_tyres": result.get('Risk_Tyres', 0.03),
             "risk_steering": result.get('Risk_Steering', 0.02),
             "risk_visibility": result.get('Risk_Visibility', 0.02),
-            "risk_lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
-            "risk_body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+            "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
+            "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
             "repair_cost_estimate": repair_cost_formatted,
         }
 
@@ -624,8 +640,13 @@ async def _fallback_prediction(
     # Try SQLite fallback
     conn = get_sqlite_connection()
     if conn:
-        query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? LIMIT 1"
-        row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
+        # Search for specific make+model combination first
+        query = "SELECT * FROM risks WHERE model_id LIKE ? AND age_band = ? ORDER BY Total_Tests DESC LIMIT 1"
+        row = conn.execute(query, (f"{make.upper()} {model.upper()}%", age_band)).fetchone()
+
+        # If not found, fall back to make-only search
+        if not row:
+            row = conn.execute(query, (f"{make.upper()}%", age_band)).fetchone()
 
         if row:
             result = dict(row)
@@ -648,8 +669,8 @@ async def _fallback_prediction(
                     "tyres": result.get('Risk_Tyres', 0.03),
                     "steering": result.get('Risk_Steering', 0.02),
                     "visibility": result.get('Risk_Visibility', 0.02),
-                    "lamps": result.get('Risk_Lamps_Reflectors_Electrical_Equipment', 0.03),
-                    "body": result.get('Risk_Body_Chassis_Structure_Exhaust', 0.02),
+                    "lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
+                    "body": result.get('Risk_Body_Chassis_Structure', 0.02),
                 },
                 "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
                 "model_version": "lookup",

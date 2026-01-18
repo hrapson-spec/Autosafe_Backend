@@ -120,7 +120,9 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     if _calibrator is not None:
         try:
             # Platt calibrator expects log-odds transformed input
-            log_odds = np.log(raw_prob / (1 - raw_prob + 1e-10))
+            # Clamp raw_prob to avoid log(0) or division by zero
+            clamped_prob = np.clip(raw_prob, 1e-10, 1 - 1e-10)
+            log_odds = np.log(clamped_prob / (1 - clamped_prob))
             calibrated_prob = _calibrator.predict_proba([[log_odds]])[0][1]
         except Exception as e:
             logger.warning(f"Calibration failed, using raw probability: {e}")
