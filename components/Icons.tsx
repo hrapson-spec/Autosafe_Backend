@@ -2,6 +2,7 @@ import React from 'react';
 import {
   ShieldCheck,
   AlertTriangle,
+  AlertCircle,
   Wrench,
   Gauge,
   CheckCircle2,
@@ -23,6 +24,7 @@ import {
 export {
   ShieldCheck,
   AlertTriangle,
+  AlertCircle,
   Wrench,
   Gauge,
   CheckCircle2,

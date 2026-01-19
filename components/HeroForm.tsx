@@ -1,84 +1,99 @@
 import React, { useState } from 'react';
 import { RegistrationQuery } from '../types';
-import { Loader2 } from './Icons';
+import { Input, Button } from './ui';
 
 interface HeroFormProps {
   onSubmit: (data: RegistrationQuery) => void;
   isLoading: boolean;
 }
 
+// UK registration plate pattern: AA00 AAA or AA00AAA
+const UK_REG_PATTERN = /^[A-Z]{2}[0-9]{2}\s?[A-Z]{3}$/i;
+
+// UK postcode pattern
+const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
+
+const validateRegistration = (value: string): string | undefined => {
+  if (!value) return 'Registration is required';
+  if (value.length < 2) return 'Registration is too short';
+  if (!UK_REG_PATTERN.test(value.replace(/\s/g, ''))) {
+    return 'Enter a valid UK registration (e.g. AB12 CDE)';
+  }
+  return undefined;
+};
+
+const validatePostcode = (value: string): string | undefined => {
+  if (!value) return 'Postcode is required';
+  if (value.length < 3) return 'Postcode is too short';
+  if (!UK_POSTCODE_PATTERN.test(value.replace(/\s/g, ''))) {
+    return 'Enter a valid UK postcode (e.g. SW1A 1AA)';
+  }
+  return undefined;
+};
+
 const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading }) => {
   const [registration, setRegistration] = useState('');
   const [postcode, setPostcode] = useState('');
+  const [touched, setTouched] = useState({ registration: false, postcode: false });
+
+  const registrationError = touched.registration ? validateRegistration(registration) : undefined;
+  const postcodeError = touched.postcode ? validatePostcode(postcode) : undefined;
+
+  const isFormValid =
+    !validateRegistration(registration) &&
+    !validatePostcode(postcode) &&
+    !isLoading;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (registration && postcode) {
-      onSubmit({
-        registration,
-        postcode
-      });
+    setTouched({ registration: true, postcode: true });
+
+    if (isFormValid) {
+      onSubmit({ registration, postcode });
     }
   };
 
-  const isFormValid = registration.length >= 2 && postcode.length >= 3 && !isLoading;
-
-  const inputClassName = "w-full px-4 py-3.5 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-all text-slate-900 placeholder-slate-400";
-  const labelClassName = "block text-sm text-slate-500 mb-1.5 ml-1";
-
   return (
     <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm p-8 md:p-10">
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <Input
+          id="registration"
+          label="Registration Number"
+          placeholder="e.g. AB12 CDE"
+          value={registration}
+          onChange={setRegistration}
+          onBlur={() => setTouched(t => ({ ...t, registration: true }))}
+          error={registrationError}
+          success={touched.registration && !registrationError}
+          maxLength={8}
+          uppercase
+          required
+        />
 
-        {/* Registration Input */}
-        <div>
-          <label className={labelClassName}>
-            Registration Number
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="e.g. AB12 CDE"
-              value={registration}
-              onChange={(e) => setRegistration(e.target.value.toUpperCase())}
-              className={`${inputClassName} uppercase font-medium tracking-wide`}
-              maxLength={8}
-            />
-            {/* Optional UK plate badge styling cue */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <div className="bg-yellow-400 w-4 h-4 rounded-sm opacity-20"></div>
-            </div>
-          </div>
-        </div>
+        <Input
+          id="postcode"
+          label="Post Code"
+          placeholder="e.g. SW1A 1AA"
+          value={postcode}
+          onChange={setPostcode}
+          onBlur={() => setTouched(t => ({ ...t, postcode: true }))}
+          error={postcodeError}
+          success={touched.postcode && !postcodeError}
+          uppercase
+          required
+        />
 
-        {/* Post Code Input */}
-        <div>
-          <label className={labelClassName}>
-            Post Code
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. SW1A 1AA"
-            value={postcode}
-            onChange={(e) => setPostcode(e.target.value.toUpperCase())}
-            className={inputClassName}
-          />
-        </div>
-
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
           disabled={!isFormValid}
-          className="w-full py-4 mt-4 bg-slate-900 text-white rounded-full font-semibold tracking-wide shadow-lg shadow-slate-900/10 hover:bg-black hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 uppercase text-sm"
+          className="mt-4"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Searching...
-            </>
-          ) : (
-            "Check This Car"
-          )}
-        </button>
+          Check This Car
+        </Button>
       </form>
     </div>
   );

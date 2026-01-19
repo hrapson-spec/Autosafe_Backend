@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CarSelection, CarReport, Fault, GarageLeadSubmission } from '../types';
+import { CarSelection, CarReport, GarageLeadSubmission } from '../types';
 import { submitGarageLead } from '../services/autosafeApi';
-import { X, MapPin, Mail, Car, AlertTriangle, Loader2, Heart } from './Icons';
+import { X, MapPin, Mail, Car, AlertTriangle, Heart } from './Icons';
+import { Input, Button } from './ui';
 
 interface GarageFinderModalProps {
   isOpen: boolean;
@@ -11,6 +12,28 @@ interface GarageFinderModalProps {
   report: CarReport;
   initialPostcode?: string;
 }
+
+// UK postcode pattern
+const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
+
+const validateEmail = (value: string): string | undefined => {
+  if (!value) return 'Email is required';
+  if (!value.includes('@')) return 'Enter a valid email address';
+  const [local, domain] = value.split('@');
+  if (!local || !domain || !domain.includes('.')) {
+    return 'Enter a valid email address';
+  }
+  return undefined;
+};
+
+const validatePostcode = (value: string): string | undefined => {
+  if (!value) return 'Postcode is required';
+  if (value.length < 3) return 'Postcode is too short';
+  if (!UK_POSTCODE_PATTERN.test(value.replace(/\s/g, ''))) {
+    return 'Enter a valid UK postcode';
+  }
+  return undefined;
+};
 
 const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   isOpen,
@@ -24,6 +47,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   const [postcode, setPostcode] = useState(initialPostcode);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState({ email: false, postcode: false });
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill postcode when modal opens
@@ -70,17 +94,18 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
 
   const hasRisks = topRisks.length > 0;
 
-  // Basic email validation
-  const isValidEmail = (email: string): boolean => {
-    if (!email || !email.includes('@')) return false;
-    const [local, domain] = email.split('@');
-    return Boolean(local && domain && domain.includes('.'));
-  };
+  const emailError = touched.email ? validateEmail(email) : undefined;
+  const postcodeError = touched.postcode ? validatePostcode(postcode) : undefined;
 
-  const isFormValid = isValidEmail(email) && postcode.length >= 3 && !isSubmitting;
+  const isFormValid =
+    !validateEmail(email) &&
+    !validatePostcode(postcode) &&
+    !isSubmitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTouched({ email: true, postcode: true });
+
     if (!isFormValid) return;
 
     setIsSubmitting(true);
@@ -123,23 +148,23 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
 
   if (!isOpen) return null;
 
-  const inputClassName = "w-full px-4 py-3.5 bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-all text-slate-900 placeholder-slate-400";
-  const labelClassName = "block text-sm text-slate-500 mb-1.5 ml-1";
-
   return (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header with close button */}
         <div className="flex justify-end p-4 pb-0">
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-            aria-label="Close"
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            aria-label="Close modal"
           >
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
 
@@ -150,7 +175,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               <Car className="w-5 h-5 text-slate-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Your vehicle</p>
+              <p className="text-sm text-slate-600">Your vehicle</p>
               <p className="font-semibold text-slate-900">
                 {selection.year} {selection.make} {selection.model}
               </p>
@@ -160,13 +185,13 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
           {/* Risk Summary */}
           {hasRisks ? (
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-500 mb-2">Areas of concern</p>
+              <p className="text-sm text-slate-600 mb-2">Areas of concern</p>
               <div className="space-y-2">
                 {topRisks.map((fault, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <AlertTriangle className={`w-4 h-4 ${
                       fault.riskLevel === 'High' ? 'text-red-500' : 'text-yellow-500'
-                    }`} />
+                    }`} aria-hidden="true" />
                     <span className="text-sm text-slate-700">{fault.component}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       fault.riskLevel === 'High'
@@ -182,7 +207,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
           ) : (
             <div className="bg-green-50 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-green-600" />
+                <Heart className="w-4 h-4 text-green-600" aria-hidden="true" />
                 <p className="text-sm text-green-700 font-medium">Your car looks healthy!</p>
               </div>
               <p className="text-xs text-green-600 mt-1">
@@ -195,68 +220,62 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
           <div className="border-t border-slate-100 my-6" />
 
           {/* Form Section */}
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
+          <h2 id="modal-title" className="text-xl font-semibold text-slate-900 mb-2">
             Get matched with a garage
           </h2>
-          <p className="text-slate-500 text-sm mb-6">
+          <p className="text-slate-600 text-sm mb-6">
             Enter your details and we'll find the right mechanic for your car.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Postcode */}
-            <div>
-              <label className={labelClassName}>
-                <MapPin className="w-3.5 h-3.5 inline mr-1" />
-                Postcode
-              </label>
-              <input
-                type="text"
-                value={postcode}
-                onChange={(e) => setPostcode(e.target.value.toUpperCase())}
-                placeholder="e.g. SW1A 1AA"
-                className={inputClassName}
-                maxLength={10}
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <Input
+              id="garage-postcode"
+              label="Postcode"
+              placeholder="e.g. SW1A 1AA"
+              value={postcode}
+              onChange={setPostcode}
+              onBlur={() => setTouched(t => ({ ...t, postcode: true }))}
+              error={postcodeError}
+              success={touched.postcode && !postcodeError}
+              maxLength={10}
+              uppercase
+              required
+              icon={<MapPin className="w-3.5 h-3.5 text-slate-500" />}
+            />
 
-            {/* Email */}
-            <div>
-              <label className={labelClassName}>
-                <Mail className="w-3.5 h-3.5 inline mr-1" />
-                Email
-              </label>
-              <input
-                ref={emailInputRef}
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className={inputClassName}
-              />
-            </div>
+            <Input
+              ref={emailInputRef}
+              id="garage-email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={setEmail}
+              onBlur={() => setTouched(t => ({ ...t, email: true }))}
+              error={emailError}
+              success={touched.email && !emailError}
+              required
+              icon={<Mail className="w-3.5 h-3.5 text-slate-500" />}
+            />
 
-            {/* Error Message */}
+            {/* API Error Message */}
             {error && (
-              <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm" role="alert">
                 {error}
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={isSubmitting}
               disabled={!isFormValid}
-              className="w-full py-4 mt-2 bg-slate-900 text-white rounded-full font-semibold tracking-wide shadow-lg shadow-slate-900/10 hover:bg-black hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="mt-2"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Find Garages Near Me'
-              )}
-            </button>
+              Find Garages Near Me
+            </Button>
           </form>
         </div>
       </div>

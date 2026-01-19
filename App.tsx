@@ -6,7 +6,7 @@ import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { CarSelection, CarReport, RegistrationQuery } from './types';
 import { getReportBySelection } from './services/autosafeApi';
-import { ShieldCheck, BrainCircuit, Database, Route } from './components/Icons';
+import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
 import { Logo } from './components/Logo';
 
 const App: React.FC = () => {
@@ -47,21 +47,26 @@ const App: React.FC = () => {
   const HomePage = () => (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       {/* Navbar - Elegant, Classy, Prominent Logo */}
-      <nav className="w-full bg-transparent pt-12 pb-8 z-50">
+      <nav className="w-full bg-transparent pt-12 pb-8 z-50" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
-          <div className="flex items-center gap-4 cursor-pointer group" onClick={handleReset}>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-4 group bg-transparent border-none cursor-pointer focus:ring-2 focus:ring-slate-900 focus:ring-offset-4 rounded-lg"
+            aria-label="AutoSafe - Return to home"
+          >
             <div className="relative">
-                <Logo className="text-slate-900 w-10 h-10 transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute -inset-2 bg-slate-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+              <Logo className="text-slate-900 w-10 h-10 transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute -inset-2 bg-slate-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" aria-hidden="true" />
             </div>
             <span className="font-serif font-bold text-4xl tracking-tight text-slate-900 leading-none">
               AutoSafe
             </span>
-          </div>
+          </button>
         </div>
       </nav>
 
-      <main className="flex-grow flex flex-col">
+      <main id="main-content" className="flex-grow flex flex-col">
         {report && selection ? (
           <ReportDashboard report={report} selection={selection} postcode={postcode} onReset={handleReset} />
         ) : (
@@ -129,8 +134,11 @@ const App: React.FC = () => {
             </div>
 
             {error && (
-              <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-red-600 px-6 py-3 rounded-full shadow-lg border border-red-100 flex items-center gap-2 animate-bounce z-50">
-                <ShieldCheck className="w-5 h-5" />
+              <div
+                className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-red-600 px-6 py-3 rounded-full shadow-lg border border-red-100 flex items-center gap-2 z-50"
+                role="alert"
+              >
+                <AlertCircle className="w-5 h-5" aria-hidden="true" />
                 {error}
               </div>
             )}
@@ -142,10 +150,10 @@ const App: React.FC = () => {
                   <br/>
                   Data from UK DVSA • Not official government advice.
                </div>
-               <div className="flex justify-center gap-8 text-xs text-slate-500 font-semibold tracking-widest uppercase">
-                  <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
-                  <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy</Link>
-                  <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors">Feedback</a>
+               <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
+                  <Link to="/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
+                  <Link to="/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
+                  <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
                </div>
             </div>
 
