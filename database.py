@@ -214,3 +214,151 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             "Failure_Risk": float(avg_rows[0]['avg_risk']) if avg_rows[0]['avg_risk'] else 0.0
         }
 
+
+# ============================================================================
+# Lead Management Functions
+# ============================================================================
+
+async def save_lead(lead_data: Dict) -> Optional[str]:
+    """
+    Save a lead to the database.
+
+    Args:
+        lead_data: Dict containing:
+            - email: str
+            - postcode: str
+            - lead_type: str (e.g., 'garage')
+            - vehicle: dict with make, model, year, mileage
+            - risk_data: dict with failure_risk, reliability_score, top_risks
+
+    Returns:
+        Lead ID (UUID string) on success, None on failure
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for saving lead")
+        return None
+
+    try:
+        import json
+
+        vehicle = lead_data.get('vehicle', {})
+        risk_data = lead_data.get('risk_data', {})
+        top_risks = risk_data.get('top_risks', [])
+
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO leads (
+                    email, postcode, name, phone, lead_type,
+                    vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
+                    failure_risk, reliability_score, top_risks
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+                RETURNING id""",
+                lead_data.get('email'),
+                lead_data.get('postcode'),
+                lead_data.get('name'),
+                lead_data.get('phone'),
+                lead_data.get('lead_type', 'garage'),
+                vehicle.get('make'),
+                vehicle.get('model'),
+                vehicle.get('year'),
+                vehicle.get('mileage'),
+                risk_data.get('failure_risk'),
+                risk_data.get('reliability_score'),
+                json.dumps(top_risks) if top_risks else '[]'
+            )
+
+            lead_id = str(result['id'])
+            logger.info(f"Lead saved: {lead_data.get('postcode')} - {vehicle.get('make')} {vehicle.get('model')}")
+            return lead_id
+
+    except Exception as e:
+        logger.error(f"Failed to save lead: {e}")
+        return None
+
+
+async def get_leads(
+    limit: int = 50,
+    offset: int = 0,
+    since: Optional[str] = None
+) -> Optional[List[Dict]]:
+    """
+    Get leads from the database (for admin access).
+
+    Args:
+        limit: Max number of leads to return
+        offset: Number of leads to skip
+        since: ISO date string to filter leads created after
+
+    Returns:
+        List of lead dicts, or None on failure
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for getting leads")
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            if since:
+                rows = await conn.fetch(
+                    """SELECT id, email, postcode, lead_type,
+                              vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
+                              failure_risk, reliability_score, top_risks,
+                              created_at, contacted_at, notes
+                       FROM leads
+                       WHERE created_at >= $1::timestamp
+                       ORDER BY created_at DESC
+                       LIMIT $2 OFFSET $3""",
+                    since, limit, offset
+                )
+            else:
+                rows = await conn.fetch(
+                    """SELECT id, email, postcode, lead_type,
+                              vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
+                              failure_risk, reliability_score, top_risks,
+                              created_at, contacted_at, notes
+                       FROM leads
+                       ORDER BY created_at DESC
+                       LIMIT $1 OFFSET $2""",
+                    limit, offset
+                )
+
+            leads = []
+            for row in rows:
+                lead = dict(row)
+                # Convert UUID and datetime to strings
+                lead['id'] = str(lead['id'])
+                if lead['created_at']:
+                    lead['created_at'] = lead['created_at'].isoformat()
+                if lead['contacted_at']:
+                    lead['contacted_at'] = lead['contacted_at'].isoformat()
+                leads.append(lead)
+
+            return leads
+
+    except Exception as e:
+        logger.error(f"Failed to get leads: {e}")
+        return None
+
+
+async def count_leads(since: Optional[str] = None) -> int:
+    """Count total leads, optionally since a date."""
+    pool = await get_pool()
+    if not pool:
+        return 0
+
+    try:
+        async with pool.acquire() as conn:
+            if since:
+                result = await conn.fetchrow(
+                    "SELECT COUNT(*) as count FROM leads WHERE created_at >= $1::timestamp",
+                    since
+                )
+            else:
+                result = await conn.fetchrow("SELECT COUNT(*) as count FROM leads")
+            return result['count']
+    except Exception as e:
+        logger.error(f"Failed to count leads: {e}")
+        return 0
+

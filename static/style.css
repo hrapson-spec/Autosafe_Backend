@@ -509,3 +509,65 @@ input:focus:not(:focus-visible) {
     margin-bottom: var(--space-md);
     text-align: center;
 }
+
+/* ===== Lead Capture Section ===== */
+.lead-capture {
+    background: var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin: var(--space-lg) 0;
+    text-align: center;
+}
+
+.lead-capture h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+.lead-capture > p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-lg);
+}
+
+.lead-capture .form-group {
+    margin-bottom: var(--space-md);
+    text-align: left;
+}
+
+.lead-capture label {
+    font-size: 0.75rem;
+}
+
+.lead-capture input {
+    background: var(--card-bg);
+}
+
+.lead-btn {
+    margin-top: var(--space-md);
+}
+
+/* Lead Success Message */
+.lead-success {
+    background: var(--success-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin: var(--space-lg) 0;
+    text-align: center;
+}
+
+.lead-success h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--success-green);
+    margin-bottom: var(--space-sm);
+}
+
+.lead-success p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}

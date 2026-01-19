@@ -722,6 +722,8 @@ class RiskData(BaseModel):
 class LeadSubmission(BaseModel):
     email: str
     postcode: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
     lead_type: str = "garage"
     vehicle: Optional[VehicleInfo] = None
     risk_data: Optional[RiskData] = None
@@ -757,6 +759,8 @@ async def submit_lead(request: Request, lead: LeadSubmission):
     lead_data = {
         "email": lead.email,
         "postcode": lead.postcode,
+        "name": lead.name,
+        "phone": lead.phone,
         "lead_type": lead.lead_type,
         "vehicle": lead.vehicle.model_dump() if lead.vehicle else {},
         "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}

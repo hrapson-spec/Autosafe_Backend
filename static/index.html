@@ -85,6 +85,36 @@
                     <span class="repair-range" id="repairCostRange"></span>
                 </div>
 
+                <!-- Lead Capture Section -->
+                <div class="lead-capture" id="leadCapture">
+                    <h3>Want help fixing these issues or booking your MOT?</h3>
+                    <p>Enter your details and we'll connect you with trusted local garages.</p>
+                    <form id="leadForm">
+                        <div class="form-group">
+                            <label for="leadName">Name</label>
+                            <input type="text" id="leadName" placeholder="Your name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="leadEmail">Email</label>
+                            <input type="email" id="leadEmail" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="leadPhone">Phone (optional)</label>
+                            <input type="tel" id="leadPhone" placeholder="07xxx xxxxxx">
+                        </div>
+                        <button type="submit" class="primary-btn lead-btn">
+                            <span class="btn-text">Find a Garage</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Lead Success Message (hidden by default) -->
+                <div class="lead-success hidden" id="leadSuccess">
+                    <h3>Thanks! We'll be in touch soon.</h3>
+                    <p>A local garage will contact you shortly.</p>
+                </div>
+
                 <div class="components-section">
                     <h3>Risk by Component</h3>
                     <div class="components-grid" id="componentsGrid"></div>

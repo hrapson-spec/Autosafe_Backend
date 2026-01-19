@@ -8,6 +8,14 @@ const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
 const resultsPanel = document.getElementById('resultsPanel');
 
+// Lead form elements
+const leadForm = document.getElementById('leadForm');
+const leadCapture = document.getElementById('leadCapture');
+const leadSuccess = document.getElementById('leadSuccess');
+
+// Store current results for lead submission
+let currentResultsData = null;
+
 function showError(message) {
     let banner = document.getElementById('errorBanner');
     if (!banner) {
@@ -34,6 +42,11 @@ form.addEventListener('submit', async (e) => {
     loader.classList.remove('hidden');
     analyzeBtn.disabled = true;
     if (resultsPanel) resultsPanel.classList.add('hidden');
+
+    // Reset lead form state for new search
+    if (leadCapture) leadCapture.classList.remove('hidden');
+    if (leadSuccess) leadSuccess.classList.add('hidden');
+    if (leadForm) leadForm.reset();
 
     // Hide any previous errors
     const banner = document.getElementById('errorBanner');
@@ -76,6 +89,9 @@ function displayResults(data) {
         console.log('Results:', data);
         return;
     }
+
+    // Store for lead form submission
+    currentResultsData = data;
 
     resultsPanel.classList.remove('hidden');
 
@@ -236,4 +252,72 @@ function displayResults(data) {
             sourceNote.textContent = '';
         }
     }
+}
+
+// Lead Form Submission
+if (leadForm) {
+    leadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = leadForm.querySelector('button[type="submit"]');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const loader = submitBtn.querySelector('.loader');
+
+        // Loading state
+        btnText.textContent = 'Submitting...';
+        loader.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        const name = document.getElementById('leadName').value.trim();
+        const email = document.getElementById('leadEmail').value.trim();
+        const phone = document.getElementById('leadPhone').value.trim();
+        const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
+
+        try {
+            // Get top risk components as list
+            const topRisks = [];
+            if (currentResultsData?.risk_components) {
+                const comps = Object.entries(currentResultsData.risk_components)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(([name]) => name);
+                topRisks.push(...comps);
+            }
+
+            const payload = {
+                name: name,
+                email: email,
+                phone: phone || null,
+                postcode: postcode,
+                lead_type: 'garage',
+                vehicle: currentResultsData?.vehicle || null,
+                risk_data: currentResultsData ? {
+                    failure_risk: currentResultsData.failure_risk,
+                    top_risks: topRisks
+                } : null
+            };
+
+            const res = await fetch(`${API_BASE}/leads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.detail || 'Failed to submit. Please try again.');
+            }
+
+            // Success - show thank you message
+            leadCapture.classList.add('hidden');
+            leadSuccess.classList.remove('hidden');
+
+        } catch (err) {
+            showError(err.message);
+        } finally {
+            btnText.textContent = 'Find a Garage';
+            loader.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    });
 }
