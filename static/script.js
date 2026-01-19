@@ -124,17 +124,7 @@ function displayResults(data) {
 
     if (riskValueEl) {
         riskValueEl.textContent = riskPercent;
-
-        // Reset classes
         riskValueEl.className = 'risk-percentage';
-
-        if (risk < 0.20) {
-            riskValueEl.classList.add('text-low');
-        } else if (risk < 0.40) {
-            riskValueEl.classList.add('text-med');
-        } else {
-            riskValueEl.classList.add('text-high');
-        }
     }
 
     if (riskText) {
