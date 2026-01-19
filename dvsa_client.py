@@ -110,8 +110,8 @@ class DVSAClient:
         DVSA_SCOPE: OAuth scope (usually https://tapi.dvsa.gov.uk/.default)
     """
 
-    # DVSA API endpoint - try legacy beta API
-    BASE_URL = "https://beta.check-mot.service.gov.uk"
+    # DVSA MOT History API (OAuth 2.0 authenticated) - new API as of Sept 2025
+    BASE_URL = "https://history.mot.api.gov.uk"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -318,8 +318,7 @@ class DVSAClient:
                 headers["X-API-Key"] = self.api_key
 
             response = await self._client.get(
-                f"{self.BASE_URL}/trade/vehicles/mot-tests",
-                params={"registration": vrm},
+                f"{self.BASE_URL}/v1/trade/vehicles/registration/{vrm}",
                 headers=headers
             )
 
@@ -364,11 +363,15 @@ class DVSAClient:
         # Parse MOT tests
         mot_tests = []
         for test_data in vehicle_data.get('motTests', []):
+            # Parse odometer value - new API returns as string
+            odometer_raw = test_data.get('odometerValue')
+            odometer_value = int(odometer_raw) if odometer_raw else None
+
             test = MOTTest(
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
                 expiry_date=self._parse_date(test_data.get('expiryDate')),
-                odometer_value=test_data.get('odometerValue'),
+                odometer_value=odometer_value,
                 odometer_unit=test_data.get('odometerUnit', 'mi'),
                 test_number=test_data.get('motTestNumber', ''),
                 defects=test_data.get('defects', []) or test_data.get('rfrAndComments', [])

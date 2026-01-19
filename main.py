@@ -5,16 +5,17 @@ AutoSafe API - MOT Risk Prediction (V55)
 Uses V55 CatBoost model with DVSA MOT History API for real-time predictions.
 Falls back to SQLite lookup for vehicles without DVSA history.
 """
+# Load environment variables FIRST (before other imports read them)
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from datetime import datetime
 import os
 import time
-
-# DVLA client for vehicle registration lookup
-from dvla_client import DVLAClient, DVLAError, DVLANotFoundError, DVLARateLimitError, DVLAValidationError
 
 # Import database module for fallback
 import database as db
@@ -49,12 +50,6 @@ _cache = {
     "models": {}  # Keyed by make
 }
 CACHE_TTL = 3600  # 1 hour cache TTL
-
-# DVLA API configuration
-DVLA_API_KEY = os.environ.get("DVLA_API_KEY")
-DVLA_USE_TEST_ENV = os.environ.get("DVLA_USE_TEST_ENV", "false").lower() == "true"
-_dvla_client: Optional[DVLAClient] = None
-
 from contextlib import asynccontextmanager
 
 
@@ -83,20 +78,12 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("No fallback database available")
 
-    # Initialize DVSA client (for MOT history)
+    # Initialize DVSA client
     dvsa_client = get_dvsa_client()
     if dvsa_client.is_configured:
         logger.info("DVSA client initialized with OAuth credentials")
     else:
         logger.warning("DVSA OAuth credentials not configured - V55 predictions will fail")
-
-    # Initialize DVLA client (for vehicle registration lookup)
-    global _dvla_client
-    _dvla_client = DVLAClient(api_key=DVLA_API_KEY, use_test_env=DVLA_USE_TEST_ENV)
-    if DVLA_API_KEY:
-        logger.info(f"DVLA client initialized (test_env={DVLA_USE_TEST_ENV})")
-    else:
-        logger.info("DVLA client initialized in DEMO MODE (no API key)")
 
     yield  # Application runs here
 
@@ -711,45 +698,136 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
     }
 
 
-# =============================================================================
-# Vehicle Registration Lookup (DVLA)
-# =============================================================================
+# ============================================================================
+# Lead Capture Endpoints
+# ============================================================================
 
-@app.get("/api/vehicle")
-async def get_vehicle(
-    registration: str = Query(..., min_length=2, max_length=8, description="UK vehicle registration number")
-):
-    """Look up vehicle details by registration number.
+from pydantic import BaseModel, EmailStr, field_validator
+import re
 
-    Returns vehicle information from DVLA including make, colour, year,
-    fuel type, and tax/MOT status.
 
-    In demo mode (no DVLA_API_KEY), returns mock data for testing.
+class VehicleInfo(BaseModel):
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    mileage: Optional[int] = None
+
+
+class RiskData(BaseModel):
+    failure_risk: Optional[float] = None
+    reliability_score: Optional[int] = None
+    top_risks: Optional[List[str]] = None
+
+
+class LeadSubmission(BaseModel):
+    email: str
+    postcode: str
+    lead_type: str = "garage"
+    vehicle: Optional[VehicleInfo] = None
+    risk_data: Optional[RiskData] = None
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        # Basic email validation: must contain @ with something before and after
+        if not v or '@' not in v:
+            raise ValueError('Invalid email format')
+        local, domain = v.rsplit('@', 1)
+        if not local or not domain or '.' not in domain:
+            raise ValueError('Invalid email format')
+        return v.lower().strip()
+
+    @field_validator('postcode')
+    @classmethod
+    def validate_postcode(cls, v):
+        if not v or len(v.strip()) < 3:
+            raise ValueError('Postcode must be at least 3 characters')
+        return v.upper().strip()
+
+
+@app.post("/api/leads", status_code=201)
+@limiter.limit("10/minute")
+async def submit_lead(request: Request, lead: LeadSubmission):
     """
-    global _dvla_client
+    Submit a lead for garage matching.
 
-    # Initialize client on-demand if not already done (for testing)
-    if _dvla_client is None:
-        _dvla_client = DVLAClient(api_key=DVLA_API_KEY, use_test_env=DVLA_USE_TEST_ENV)
+    Rate limited to 10 requests per minute per IP.
+    """
+    # Convert Pydantic models to dicts
+    lead_data = {
+        "email": lead.email,
+        "postcode": lead.postcode,
+        "lead_type": lead.lead_type,
+        "vehicle": lead.vehicle.model_dump() if lead.vehicle else {},
+        "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
+    }
 
-    try:
-        dvla_data = await _dvla_client.get_vehicle(registration)
+    # Save to database
+    lead_id = await db.save_lead(lead_data)
 
-        return {
-            "registration": registration.upper().replace(" ", ""),
-            "dvla": dvla_data,
-            "demo": dvla_data.get("_demo", False)
-        }
+    if not lead_id:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save lead. Please try again."
+        )
 
-    except DVLAValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    except DVLANotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except DVLARateLimitError as e:
-        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
-    except DVLAError as e:
-        logger.error(f"DVLA API error: {e}")
-        raise HTTPException(status_code=502, detail="Error connecting to DVLA service")
+    return {
+        "success": True,
+        "lead_id": lead_id,
+        "message": "Thanks! We'll be in touch soon."
+    }
+
+
+# Admin API key for accessing leads
+ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
+
+
+@app.get("/api/leads")
+@limiter.limit("30/minute")
+async def get_leads(
+    request: Request,
+    limit: int = Query(50, ge=1, le=500, description="Max leads to return"),
+    offset: int = Query(0, ge=0, description="Number of leads to skip"),
+    since: Optional[str] = Query(None, description="ISO date string to filter leads after")
+):
+    """
+    Get leads (admin only).
+
+    Requires X-API-Key header matching ADMIN_API_KEY environment variable.
+    """
+    # Check API key
+    api_key = request.headers.get("X-API-Key")
+
+    if not ADMIN_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin access not configured"
+        )
+
+    if not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key"
+        )
+
+    # Get leads from database
+    leads = await db.get_leads(limit=limit, offset=offset, since=since)
+
+    if leads is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve leads"
+        )
+
+    total = await db.count_leads(since=since)
+
+    return {
+        "leads": leads,
+        "count": len(leads),
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    }
 
 
 # Mount static files at /static (only if the folder exists)
