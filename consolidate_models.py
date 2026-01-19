@@ -2,8 +2,8 @@
 Make/Model Consolidation Script
 Creates canonical mappings for makes and models to simplify user selection.
 """
-import os
 import re
+from typing import List, Optional
 
 # Canonical Make Mappings - normalize variations to standard names
 CANONICAL_MAKES = {
@@ -56,8 +56,8 @@ MODEL_PATTERNS = [
     (r'\s+(HATCHBACK|SALOON|ESTATE|COUPE|CONVERTIBLE|SUV|MPV|VAN)\s*$', ''),
 ]
 
-def normalize_make(raw_make: str) -> str:
-    """Convert raw make to canonical form. Returns None for non-major makes."""
+def normalize_make(raw_make: str) -> Optional[str]:
+    """Convert raw make to canonical form. Returns None for non-major/garbage makes."""
     if not raw_make:
         return None
     
@@ -79,7 +79,7 @@ def normalize_make(raw_make: str) -> str:
     # Return None for unknown makes - we only want curated makes
     return None
 
-def extract_base_model(model_id: str, make: str) -> str:
+def extract_base_model(model_id: str, make: str) -> Optional[str]:
     """Extract base model name from full model_id."""
     if not model_id or not make:
         return None
@@ -140,7 +140,7 @@ def extract_base_model(model_id: str, make: str) -> str:
     
     return first_word
 
-def get_canonical_models_for_make(make: str) -> dict:
+def get_canonical_models_for_make(make: str) -> List[str]:
     """Get mapping of raw models to canonical models for a given make."""
     # This would be populated from database analysis
     # Key popular models by make

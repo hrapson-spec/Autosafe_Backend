@@ -15,22 +15,41 @@ Usage:
     prediction = predict_risk(features)
 """
 
-import pickle
+import hashlib
+import hmac
 import logging
+import pickle
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from catboost import CatBoostClassifier
 
 from feature_engineering_v55 import (
+    FEATURE_NAMES,
     features_to_array,
-    get_feature_names,
     get_categorical_indices,
-    FEATURE_NAMES
+    get_feature_names,
 )
 
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+# Population average failure rate for component risk scaling
+POPULATION_AVERAGE_FAILURE_RATE = 0.28
+
+# Expected number of features from the trained model
+EXPECTED_FEATURE_COUNT = 104
+
+# Numerical stability epsilon for log-odds calculation
+EPSILON = 1e-10
+
+# Component risk bounds
+MIN_COMPONENT_RISK = 0.01
+MAX_COMPONENT_RISK = 0.50
 
 # Model artifacts directory
 MODEL_DIR = Path(__file__).parent / "catboost_production_v55"
@@ -64,22 +83,40 @@ def load_model() -> bool:
         logger.info(f"Loaded CatBoost model from {model_path}")
         logger.info(f"Model has {len(_model.feature_names_)} features")
 
-        # Load Platt calibrator
+        # Load Platt calibrator with validation
         calibrator_path = MODEL_DIR / "platt_calibrator.pkl"
         if calibrator_path.exists():
-            with open(calibrator_path, 'rb') as f:
-                _calibrator = pickle.load(f)
-            logger.info("Loaded Platt calibrator")
+            try:
+                with open(calibrator_path, 'rb') as f:
+                    _calibrator = pickle.load(f)
+                # Validate calibrator has expected interface
+                if not hasattr(_calibrator, 'predict_proba'):
+                    logger.error("Loaded calibrator missing predict_proba method")
+                    _calibrator = None
+                else:
+                    logger.info("Loaded Platt calibrator")
+            except (pickle.UnpicklingError, AttributeError, EOFError) as e:
+                logger.error(f"Failed to load calibrator (corrupted pickle?): {e}")
+                _calibrator = None
         else:
             logger.warning("Platt calibrator not found - using raw probabilities")
             _calibrator = None
 
-        # Load cohort stats (for reference)
+        # Load cohort stats (for reference) with validation
         cohort_path = MODEL_DIR / "cohort_stats.pkl"
         if cohort_path.exists():
-            with open(cohort_path, 'rb') as f:
-                _cohort_stats = pickle.load(f)
-            logger.info("Loaded cohort statistics")
+            try:
+                with open(cohort_path, 'rb') as f:
+                    _cohort_stats = pickle.load(f)
+                # Validate cohort stats is a dict
+                if not isinstance(_cohort_stats, dict):
+                    logger.warning("Cohort stats is not a dictionary, ignoring")
+                    _cohort_stats = None
+                else:
+                    logger.info("Loaded cohort statistics")
+            except (pickle.UnpicklingError, AttributeError, EOFError) as e:
+                logger.warning(f"Failed to load cohort stats: {e}")
+                _cohort_stats = None
 
         return True
 
@@ -113,8 +150,23 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     # Convert features to array
     feature_array = features_to_array(features)
 
+    # Validate feature array shape
+    expected_features = len(_model.feature_names_)
+    if len(feature_array) != expected_features:
+        logger.error(
+            f"Feature array length mismatch: got {len(feature_array)}, "
+            f"expected {expected_features}"
+        )
+        raise ValueError(
+            f"Feature array has {len(feature_array)} features, "
+            f"model expects {expected_features}"
+        )
+
     # Get raw prediction
     raw_prob = _model.predict_proba([feature_array])[0][1]  # Probability of class 1 (failure)
+
+    # Clamp raw probability to valid range
+    raw_prob = float(np.clip(raw_prob, 0.0, 1.0))
 
     # Apply Platt calibration if available
     if _calibrator is not None:
@@ -122,9 +174,9 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
             # Platt calibrator expects log-odds transformed input
             # Add epsilon to both numerator and denominator for numerical stability
             # This prevents log(0) when raw_prob approaches 0 or 1
-            eps = 1e-10
-            log_odds = np.log((raw_prob + eps) / (1 - raw_prob + eps))
+            log_odds = np.log((raw_prob + EPSILON) / (1 - raw_prob + EPSILON))
             calibrated_prob = _calibrator.predict_proba([[log_odds]])[0][1]
+            calibrated_prob = float(np.clip(calibrated_prob, 0.0, 1.0))
         except Exception as e:
             logger.warning(f"Calibration failed, using raw probability: {e}")
             calibrated_prob = raw_prob
@@ -233,12 +285,14 @@ def _estimate_component_risks(
         if features.get(failure_key, 0) == 1:
             multiplier += 1.0
 
-        # Scale by overall risk
-        risk_ratio = overall_risk / 0.28  # 0.28 is average fail rate
+        # Scale by overall risk relative to population average
+        risk_ratio = overall_risk / POPULATION_AVERAGE_FAILURE_RATE
         adjusted_risk = base_risk * multiplier * risk_ratio
 
-        # Clamp to reasonable range
-        component_risks[component] = round(min(max(adjusted_risk, 0.01), 0.5), 4)
+        # Clamp to reasonable range using constants
+        component_risks[component] = round(
+            min(max(adjusted_risk, MIN_COMPONENT_RISK), MAX_COMPONENT_RISK), 4
+        )
 
     return component_risks
 

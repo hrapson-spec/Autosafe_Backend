@@ -2,18 +2,24 @@
 AutoSafe Database Module - PostgreSQL Connection
 Uses DATABASE_URL environment variable from Railway.
 """
+import asyncio
+import logging
 import os
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Check if we have a database URL
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# PostgreSQL connection pool (lazy initialization)
+# PostgreSQL connection pool (lazy initialization with lock for thread safety)
 _pool = None
+_pool_lock = asyncio.Lock()
 
-import logging
-
-logger = logging.getLogger(__name__)
+# Pool configuration constants
+POOL_MIN_SIZE = 5
+POOL_MAX_SIZE = 20
+POOL_COMMAND_TIMEOUT = 30  # seconds
 
 # Minimum total tests required for a make/model to appear in UI dropdowns
 # This filters out typos, garbage entries, and extremely rare vehicles
@@ -21,18 +27,40 @@ logger = logging.getLogger(__name__)
 MIN_TESTS_FOR_UI = 100
 
 async def get_pool():
-    """Get or create the connection pool."""
+    """Get or create the connection pool with thread-safe initialization."""
     global _pool
-    if _pool is None and DATABASE_URL:
+
+    # Quick check without lock (common case)
+    if _pool is not None:
+        return _pool
+
+    if not DATABASE_URL:
+        return None
+
+    # Use lock to prevent race condition during pool creation
+    async with _pool_lock:
+        # Double-check after acquiring lock
+        if _pool is not None:
+            return _pool
+
         import asyncpg
         try:
             # Railway uses postgres:// but asyncpg needs postgresql://
             db_url = DATABASE_URL.replace("postgres://", "postgresql://")
-            _pool = await asyncpg.create_pool(db_url, min_size=5, max_size=20)
+            _pool = await asyncpg.create_pool(
+                db_url,
+                min_size=POOL_MIN_SIZE,
+                max_size=POOL_MAX_SIZE,
+                command_timeout=POOL_COMMAND_TIMEOUT
+            )
             logger.info("Database connection pool created")
+        except asyncpg.PostgresError as e:
+            logger.error(f"PostgreSQL error creating pool: {e}")
+            return None
         except Exception as e:
             logger.error(f"Failed to create database connection pool: {e}")
             return None
+
     return _pool
 
 async def close_pool():
@@ -286,13 +314,17 @@ async def get_leads(
     Get leads from the database (for admin access).
 
     Args:
-        limit: Max number of leads to return
-        offset: Number of leads to skip
+        limit: Max number of leads to return (1-1000)
+        offset: Number of leads to skip (>=0)
         since: ISO date string to filter leads created after
 
     Returns:
         List of lead dicts, or None on failure
     """
+    # Validate and clamp inputs to prevent abuse
+    limit = max(1, min(limit, 1000))  # 1-1000
+    offset = max(0, offset)
+
     pool = await get_pool()
     if not pool:
         logger.error("No database pool available for getting leads")

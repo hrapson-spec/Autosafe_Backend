@@ -168,9 +168,10 @@ class DVSAClient:
         # 24-hour cache (max 10000 entries)
         self._cache: TTLCache = TTLCache(maxsize=10000, ttl=self.CACHE_TTL_SECONDS)
 
-        # HTTP client with timeout
+        # HTTP client with timeout and connection limits
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(30.0, connect=10.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
         )
 
     async def _get_access_token(self) -> str:

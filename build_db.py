@@ -47,90 +47,115 @@ def build_database() -> bool:
         logger.error(f"Data file {DATA_FILE} not found!")
         return False
 
-    # Create database connection
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
+    conn = None
+    total_rows = 0
 
-    # Drop existing table if exists
-    cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
+    try:
+        # Create database connection
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-    # Read and parse gzipped CSV
-    with gzip.open(DATA_FILE, 'rt', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        headers = next(reader)
+        # Drop existing table if exists
+        cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
 
-        # Clean headers for SQLite column names
-        clean_headers = []
-        for h in headers:
-            clean = h.strip().replace(' ', '_').replace('-', '_')
-            clean_headers.append(clean)
+        # Read and parse gzipped CSV
+        with gzip.open(DATA_FILE, 'rt', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            headers = next(reader)
 
-        # Determine column types based on position (see constants at top of file)
-        col_defs = []
-        for i, col in enumerate(clean_headers):
-            if i < TEXT_COLUMNS:
-                col_defs.append(f'"{col}" TEXT')
-            elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
-                col_defs.append(f'"{col}" INTEGER')
-            else:
-                col_defs.append(f'"{col}" REAL')
+            # Clean headers for SQLite column names
+            clean_headers = []
+            for h in headers:
+                clean = h.strip().replace(' ', '_').replace('-', '_')
+                clean_headers.append(clean)
 
-        create_sql = f"CREATE TABLE {TABLE_NAME} ({', '.join(col_defs)})"
-        cursor.execute(create_sql)
-
-        # Insert data in batches
-        batch = []
-        batch_size = 5000
-        total_rows = 0
-        placeholders = ','.join(['?' for _ in clean_headers])
-        insert_sql = f"INSERT INTO {TABLE_NAME} VALUES ({placeholders})"
-
-        for row in reader:
-            # Convert row values based on column type
-            processed = []
-            for i, val in enumerate(row):
-                val = val.strip()
+            # Determine column types based on position (see constants at top of file)
+            col_defs = []
+            for i, col in enumerate(clean_headers):
                 if i < TEXT_COLUMNS:
-                    processed.append(val)
+                    col_defs.append(f'"{col}" TEXT')
                 elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
-                    processed.append(int(float(val)) if val else 0)
+                    col_defs.append(f'"{col}" INTEGER')
                 else:
-                    processed.append(float(val) if val else 0.0)
-            batch.append(processed)
+                    col_defs.append(f'"{col}" REAL')
 
-            if len(batch) >= batch_size:
+            create_sql = f"CREATE TABLE {TABLE_NAME} ({', '.join(col_defs)})"
+            cursor.execute(create_sql)
+
+            # Insert data in batches
+            batch = []
+            batch_size = 5000
+            placeholders = ','.join(['?' for _ in clean_headers])
+            insert_sql = f"INSERT INTO {TABLE_NAME} VALUES ({placeholders})"
+
+            for row in reader:
+                # Convert row values based on column type
+                processed = []
+                for i, val in enumerate(row):
+                    val = val.strip()
+                    if i < TEXT_COLUMNS:
+                        processed.append(val)
+                    elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
+                        try:
+                            processed.append(int(float(val)) if val else 0)
+                        except ValueError:
+                            processed.append(0)
+                    else:
+                        try:
+                            processed.append(float(val) if val else 0.0)
+                        except ValueError:
+                            processed.append(0.0)
+                batch.append(processed)
+
+                if len(batch) >= batch_size:
+                    cursor.executemany(insert_sql, batch)
+                    total_rows += len(batch)
+                    batch = []
+
+            # Insert remaining rows
+            if batch:
                 cursor.executemany(insert_sql, batch)
                 total_rows += len(batch)
-                batch = []
 
-        # Insert remaining rows
-        if batch:
-            cursor.executemany(insert_sql, batch)
-            total_rows += len(batch)
+        # Create indexes for fast queries (IF NOT EXISTS to handle race conditions)
+        logger.info("Creating indexes...")
+        cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_id ON {TABLE_NAME} (model_id)')
+        cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_age_band ON {TABLE_NAME} (age_band)')
+        cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_mileage_band ON {TABLE_NAME} (mileage_band)')
+        cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_age_mileage ON {TABLE_NAME} (model_id, age_band, mileage_band)')
 
-    # Create indexes for fast queries (IF NOT EXISTS to handle race conditions)
-    logger.info("Creating indexes...")
-    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_id ON {TABLE_NAME} (model_id)')
-    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_age_band ON {TABLE_NAME} (age_band)')
-    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_mileage_band ON {TABLE_NAME} (mileage_band)')
-    cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_model_age_mileage ON {TABLE_NAME} (model_id, age_band, mileage_band)')
+        conn.commit()
 
-    conn.commit()
-    conn.close()
+        elapsed = time.time() - start
+        size_mb = os.path.getsize(DB_FILE) / (1024 * 1024)
+        logger.info(f"Database built: {total_rows} rows, {size_mb:.1f}MB, {elapsed:.2f}s")
 
-    elapsed = time.time() - start
-    size_mb = os.path.getsize(DB_FILE) / (1024 * 1024)
-    logger.info(f"Database built: {total_rows} rows, {size_mb:.1f}MB, {elapsed:.2f}s")
+        # Populate model_years table for production range validation
+        try:
+            from populate_model_years import populate_model_years
+            logger.info("Populating model_years table...")
+            populate_model_years()
+        except Exception as e:
+            logger.warning(f"Could not populate model_years: {e}")
 
-    # Populate model_years table for production range validation
-    try:
-        from populate_model_years import populate_model_years
-        logger.info("Populating model_years table...")
-        populate_model_years()
-    except Exception as e:
-        logger.warning(f"Could not populate model_years: {e}")
+        return True
 
-    return True
+    except (sqlite3.Error, gzip.BadGzipFile, csv.Error) as e:
+        logger.error(f"Database build failed: {e}")
+        # Rollback on error
+        if conn:
+            try:
+                conn.rollback()
+            except sqlite3.Error:
+                pass
+        return False
+
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
 
 
 def ensure_database() -> bool:
@@ -183,8 +208,8 @@ def ensure_database() -> bool:
                 logger.warning(f"Database still invalid after wait: {e}")
                 try:
                     os.remove(DB_FILE)
-                except:
-                    pass
+                except OSError as rm_err:
+                    logger.error(f"Failed to remove invalid database: {rm_err}")
 
         # Build the database
         return build_database()

@@ -243,8 +243,8 @@ class DVLAClient:
         if response.status_code == 200:
             try:
                 return response.json()
-            except Exception:
-                raise DVLAError("Invalid JSON response from DVLA", status_code=502)
+            except (ValueError, KeyError) as e:
+                raise DVLAError(f"Invalid JSON response from DVLA: {e}", status_code=502)
 
         if response.status_code == 404:
             raise DVLANotFoundError(
@@ -268,9 +268,9 @@ class DVLAClient:
         error_msg = f"DVLA API error: {response.status_code}"
         try:
             error_data = response.json()
-            if "message" in error_data:
+            if isinstance(error_data, dict) and "message" in error_data:
                 error_msg = f"DVLA API error: {error_data['message']}"
-        except Exception:
-            pass
+        except (ValueError, KeyError):
+            pass  # Use default error message if JSON parsing fails
 
         raise DVLAError(error_msg, status_code=response.status_code)

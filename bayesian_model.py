@@ -42,32 +42,64 @@ def check_pymc_available():
 def prepare_hierarchical_data(data_path: str) -> dict:
     """
     Prepare data for hierarchical Bayesian model.
-    
+
     Args:
         data_path: Path to FINAL_MOT_REPORT.csv or similar aggregated data
-    
+
     Returns:
         Dictionary with prepared data for PyMC model
+
+    Raises:
+        FileNotFoundError: If data_path doesn't exist
+        ValueError: If required columns are missing or data is invalid
     """
-    df = pd.read_csv(data_path)
-    
-    # Extract make from model_id
-    df['make'] = df['model_id'].str.split().str[0]
-    
+    from pathlib import Path
+
+    # Validate file exists
+    path = Path(data_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Data file not found: {data_path}")
+
+    try:
+        df = pd.read_csv(data_path)
+    except Exception as e:
+        raise ValueError(f"Failed to read CSV file: {e}") from e
+
+    # Validate required columns
+    required_columns = ['model_id', 'Total_Failures', 'Total_Tests']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    # Validate data integrity
+    if df.empty:
+        raise ValueError("Data file is empty")
+
+    if df['model_id'].isna().any():
+        logger.warning("Found null model_id values, dropping them")
+        df = df.dropna(subset=['model_id'])
+
+    # Extract make from model_id with null handling
+    df['make'] = df['model_id'].astype(str).str.split().str[0]
+
     # Create indices for hierarchical structure
     unique_makes = df['make'].unique()
     unique_models = df['model_id'].unique()
-    
+
     make_idx = pd.Categorical(df['make'], categories=unique_makes).codes
     model_idx = pd.Categorical(df['model_id'], categories=unique_models).codes
-    
+
     # Map models to their make
     model_to_make = df.groupby('model_id')['make'].first()
     model_make_idx = pd.Categorical(
-        model_to_make.loc[unique_models], 
+        model_to_make.loc[unique_models],
         categories=unique_makes
     ).codes
-    
+
+    # Validate array alignment
+    if len(make_idx) != len(df) or len(model_idx) != len(df):
+        raise ValueError("Index arrays are misaligned with data")
+
     return {
         'n_obs': len(df),
         'n_makes': len(unique_makes),

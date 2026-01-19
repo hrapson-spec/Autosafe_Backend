@@ -14,15 +14,50 @@ This module transforms raw DVSA data into the exact feature vector
 expected by the trained CatBoost model.
 """
 
+import logging
 import math
 import re
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from dvsa_client import VehicleHistory, MOTTest
+from dvsa_client import MOTTest, VehicleHistory
 from regional_defaults import get_corrosion_index, get_station_strictness_bias
+
+logger = logging.getLogger(__name__)
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+# Gap band thresholds (days since last test)
+GAP_EARLY_THRESHOLD = 300
+GAP_ON_TIME_THRESHOLD = 365
+GAP_SLIGHTLY_LATE_THRESHOLD = 400
+GAP_LATE_THRESHOLD = 500
+
+# Usage band thresholds (annual mileage)
+USAGE_LOW_THRESHOLD = 5000
+USAGE_AVERAGE_THRESHOLD = 10000
+USAGE_HIGH_THRESHOLD = 15000
+
+# Default values
+DEFAULT_ANNUALIZED_MILEAGE = 10000
+DEFAULT_MILES_SINCE_ADVISORY = 5000
+DEFAULT_TESTS_SINCE_THRESHOLD = 999
+DEFAULT_VEHICLE_AGE_YEARS = 5
+DEFAULT_BASE_FAIL_RATE = 0.28
+
+# Mileage conversion factor (km to miles)
+KM_TO_MILES = 0.621371
+
+# Days in a year
+DAYS_PER_YEAR = 365
+
+# Minimum mileage difference to calculate annualized (prevents unrealistic values)
+MIN_MILEAGE_DIFF_FOR_ANNUALIZATION = 100
+MIN_DAYS_DIFF_FOR_ANNUALIZATION = 30
 
 
 # Feature names in exact order expected by model
@@ -107,13 +142,13 @@ def extract_text_signals(defect_text: str) -> Dict[str, bool]:
 
 def get_gap_band(days: int) -> str:
     """Convert days since last test to gap band."""
-    if days < 300:
+    if days < GAP_EARLY_THRESHOLD:
         return 'early'
-    elif days < 365:
+    elif days < GAP_ON_TIME_THRESHOLD:
         return 'on_time'
-    elif days < 400:
+    elif days < GAP_SLIGHTLY_LATE_THRESHOLD:
         return 'slightly_late'
-    elif days < 500:
+    elif days < GAP_LATE_THRESHOLD:
         return 'late'
     else:
         return 'very_late'
@@ -121,11 +156,11 @@ def get_gap_band(days: int) -> str:
 
 def get_usage_band(annualized_mileage: float) -> str:
     """Convert annualized mileage to usage band."""
-    if annualized_mileage < 5000:
+    if annualized_mileage < USAGE_LOW_THRESHOLD:
         return 'low'
-    elif annualized_mileage < 10000:
+    elif annualized_mileage < USAGE_AVERAGE_THRESHOLD:
         return 'average'
-    elif annualized_mileage < 15000:
+    elif annualized_mileage < USAGE_HIGH_THRESHOLD:
         return 'high'
     else:
         return 'very_high'
@@ -201,7 +236,8 @@ def engineer_features(
     if latest_test and latest_test.odometer_value:
         mileage = latest_test.odometer_value
         if latest_test.odometer_unit == 'km':
-            mileage = int(mileage * 0.621371)
+            # Use round() instead of int() to avoid truncation bias
+            mileage = round(mileage * KM_TO_MILES)
         features['test_mileage'] = mileage
         features['has_prev_mileage'] = 1
         features['mileage_plausible_flag'] = 1
@@ -436,15 +472,20 @@ def engineer_features(
     if len(tests) >= 2 and features['has_prev_mileage']:
         mileage_diff = (tests[0].odometer_value or 0) - (tests[1].odometer_value or 0)
         days_diff = (tests[0].test_date - tests[1].test_date).days
-        if days_diff > 0 and mileage_diff > 0:
-            annualized = (mileage_diff / days_diff) * 365
+        # Require minimum thresholds to avoid unrealistic annualized values
+        # (e.g., 10 miles in 1 day = 3650 miles/year is plausible but noisy)
+        if (days_diff >= MIN_DAYS_DIFF_FOR_ANNUALIZATION and
+            mileage_diff >= MIN_MILEAGE_DIFF_FOR_ANNUALIZATION):
+            annualized = (mileage_diff / days_diff) * DAYS_PER_YEAR
+            # Clamp to reasonable range (max 100k miles/year)
+            annualized = min(annualized, 100000)
             features['annualized_mileage_v2'] = annualized
             features['usage_band_hybrid'] = get_usage_band(annualized)
         else:
-            features['annualized_mileage_v2'] = 10000  # Default
+            features['annualized_mileage_v2'] = DEFAULT_ANNUALIZED_MILEAGE
             features['usage_band_hybrid'] = 'average'
     else:
-        features['annualized_mileage_v2'] = 10000  # Default
+        features['annualized_mileage_v2'] = DEFAULT_ANNUALIZED_MILEAGE
         features['usage_band_hybrid'] = 'average'
 
     # Days late (after expiry)

@@ -1,11 +1,31 @@
+/**
+ * AutoSafe Frontend Script
+ * Handles risk assessment form submission and results display
+ */
+'use strict';
+
 const API_BASE = '/api';
 
+// Risk thresholds for display categorization
+const RISK_THRESHOLDS = {
+    LOW: 0.20,
+    MODERATE: 0.40
+};
+
+const COMPONENT_RISK_THRESHOLDS = {
+    LOW: 0.05,
+    HIGH: 0.10
+};
+
+const ERROR_DISPLAY_DURATION_MS = 5000;
+
+// DOM Elements (with null checks on usage)
 const registrationInput = document.getElementById('registration');
 const postcodeInput = document.getElementById('postcode');
 const form = document.getElementById('riskForm');
 const analyzeBtn = document.getElementById('analyzeBtn');
-const loader = analyzeBtn.querySelector('.loader');
-const btnText = analyzeBtn.querySelector('.btn-text');
+const loader = analyzeBtn ? analyzeBtn.querySelector('.loader') : null;
+const btnText = analyzeBtn ? analyzeBtn.querySelector('.btn-text') : null;
 const resultsPanel = document.getElementById('resultsPanel');
 
 // Lead form elements
@@ -25,12 +45,13 @@ function showError(message) {
         document.querySelector('.search-card').prepend(banner);
     }
 
+    // Use textContent to prevent XSS
     banner.textContent = message;
     banner.classList.remove('hidden');
 
     setTimeout(() => {
         banner.classList.add('hidden');
-    }, 5000);
+    }, ERROR_DISPLAY_DURATION_MS);
 }
 
 // Handle Form Submit
@@ -146,10 +167,10 @@ function displayResults(data) {
     if (riskText) {
         riskText.className = 'risk-label';
 
-        if (risk < 0.20) {
+        if (risk < RISK_THRESHOLDS.LOW) {
             riskText.textContent = "Low Risk";
             riskText.classList.add('text-low');
-        } else if (risk < 0.40) {
+        } else if (risk < RISK_THRESHOLDS.MODERATE) {
             riskText.textContent = "Moderate Risk";
             riskText.classList.add('text-med');
         } else {
@@ -219,9 +240,9 @@ function displayResults(data) {
         const compPercent = (comp.value * 100).toFixed(1) + '%';
 
         let textClass = 'text-low';
-        if (comp.value > 0.10) {
+        if (comp.value > COMPONENT_RISK_THRESHOLDS.HIGH) {
             textClass = 'text-high';
-        } else if (comp.value > 0.05) {
+        } else if (comp.value > COMPONENT_RISK_THRESHOLDS.LOW) {
             textClass = 'text-med';
         }
 
@@ -260,13 +281,13 @@ if (leadForm) {
         e.preventDefault();
 
         const submitBtn = leadForm.querySelector('button[type="submit"]');
-        const btnText = submitBtn.querySelector('.btn-text');
-        const loader = submitBtn.querySelector('.loader');
+        const leadBtnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
+        const leadLoader = submitBtn ? submitBtn.querySelector('.loader') : null;
 
         // Loading state
-        btnText.textContent = 'Submitting...';
-        loader.classList.remove('hidden');
-        submitBtn.disabled = true;
+        if (leadBtnText) leadBtnText.textContent = 'Submitting...';
+        if (leadLoader) leadLoader.classList.remove('hidden');
+        if (submitBtn) submitBtn.disabled = true;
 
         const name = document.getElementById('leadName').value.trim();
         const email = document.getElementById('leadEmail').value.trim();
@@ -315,9 +336,9 @@ if (leadForm) {
         } catch (err) {
             showError(err.message);
         } finally {
-            btnText.textContent = 'Find a Garage';
-            loader.classList.add('hidden');
-            submitBtn.disabled = false;
+            if (leadBtnText) leadBtnText.textContent = 'Find a Garage';
+            if (leadLoader) leadLoader.classList.add('hidden');
+            if (submitBtn) submitBtn.disabled = false;
         }
     });
 }

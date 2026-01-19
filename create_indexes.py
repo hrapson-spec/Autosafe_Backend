@@ -38,7 +38,7 @@ def create_sqlite_indexes():
     
     conn.commit()
     conn.close()
-    print("✓ SQLite indexes created successfully")
+    print("SQLite indexes created successfully")
     return True
 
 
@@ -84,7 +84,7 @@ async def create_postgres_indexes():
             print(f"    Note: text_pattern_ops index not created: {e}")
         
         await conn.close()
-        print("✓ PostgreSQL indexes created successfully")
+        print("PostgreSQL indexes created successfully")
         return True
         
     except Exception as e:

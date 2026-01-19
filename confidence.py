@@ -3,9 +3,10 @@ Confidence interval utilities for risk estimation.
 Implements Wilson score interval for binomial proportions.
 """
 import math
+from typing import Tuple
 
 
-def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tuple:
+def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> Tuple[float, float]:
     """
     Calculate Wilson score interval for binomial proportion.
 
@@ -28,6 +29,10 @@ def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tup
         return 0.0, 1.0
     if successes > total:
         successes = total  # Cap at total to avoid nonsensical results
+
+    # Validate confidence is in valid range (0, 1)
+    if not (0.0 < confidence < 1.0):
+        confidence = 0.95  # Default to 95% CI for invalid values
 
     # Z-score lookup for common confidence levels
     # Using tolerance-based comparison to avoid floating point issues
