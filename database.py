@@ -5,8 +5,12 @@ Uses DATABASE_URL environment variable from Railway.
 import os
 from typing import List, Dict, Optional
 
-# Check if we have a database URL
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# Check if we have a database URL (support multiple variable name formats)
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL") or
+    os.environ.get("AutoSafe DB1") or
+    os.environ.get("AutoSafe_DB1")
+)
 
 # PostgreSQL connection pool (lazy initialization)
 _pool = None

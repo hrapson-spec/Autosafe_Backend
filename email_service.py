@@ -9,8 +9,18 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "leads@autosafe.co.uk")
+# Support multiple variable name formats
+RESEND_API_KEY = (
+    os.environ.get("RESEND_API_KEY") or
+    os.environ.get("Resend API Key") or
+    os.environ.get("Resend_API_Key")
+)
+EMAIL_FROM = (
+    os.environ.get("EMAIL_FROM") or
+    os.environ.get("Email From") or
+    os.environ.get("Email_From") or
+    "onboarding@resend.dev"
+)
 RESEND_API_URL = "https://api.resend.com/emails"
 
 
