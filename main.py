@@ -25,6 +25,9 @@ from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
 
+# Lead distribution
+from lead_distributor import distribute_lead
+
 # V55 imports
 from dvsa_client import (
     DVSAClient, get_dvsa_client, close_dvsa_client,
@@ -775,10 +778,15 @@ async def submit_lead(request: Request, lead: LeadSubmission):
             detail="Failed to save lead. Please try again."
         )
 
+    # Distribute lead to matching garages (async, don't block response)
+    distribution_result = await distribute_lead(lead_id)
+    logger.info(f"Lead distribution: {distribution_result}")
+
     return {
         "success": True,
         "lead_id": lead_id,
-        "message": "Thanks! We'll be in touch soon."
+        "message": "Thanks! We'll be in touch soon.",
+        "garages_notified": distribution_result.get("emails_sent", 0)
     }
 
 
@@ -831,6 +839,199 @@ async def get_leads(
         "total": total,
         "limit": limit,
         "offset": offset
+    }
+
+
+# ============================================================================
+# Garage Admin Endpoints
+# ============================================================================
+
+class GarageSubmission(BaseModel):
+    """Pydantic model for garage submission."""
+    name: str
+    email: str
+    postcode: str
+    contact_name: Optional[str] = None
+    phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    status: Optional[str] = "active"
+    tier: Optional[str] = "free"
+    source: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.post("/api/admin/garages", status_code=201)
+async def create_garage(request: Request, garage: GarageSubmission):
+    """
+    Create a new garage (admin only).
+
+    Requires X-API-Key header matching ADMIN_API_KEY.
+    """
+    api_key = request.headers.get("X-API-Key")
+    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # If no coordinates provided, geocode the postcode
+    lat = garage.latitude
+    lng = garage.longitude
+    if lat is None or lng is None:
+        from postcode_service import get_postcode_coordinates
+        coords = await get_postcode_coordinates(garage.postcode)
+        if coords:
+            lat, lng = coords
+
+    garage_data = {
+        "name": garage.name,
+        "email": garage.email,
+        "postcode": garage.postcode.upper(),
+        "contact_name": garage.contact_name,
+        "phone": garage.phone,
+        "latitude": lat,
+        "longitude": lng,
+        "status": garage.status,
+        "tier": garage.tier,
+        "source": garage.source,
+        "notes": garage.notes,
+    }
+
+    garage_id = await db.save_garage(garage_data)
+
+    if not garage_id:
+        raise HTTPException(status_code=500, detail="Failed to save garage")
+
+    return {
+        "success": True,
+        "garage_id": garage_id,
+        "coordinates_set": lat is not None
+    }
+
+
+@app.get("/api/admin/garages")
+async def list_garages(
+    request: Request,
+    status: Optional[str] = Query(None, description="Filter by status")
+):
+    """
+    List all garages (admin only).
+
+    Requires X-API-Key header matching ADMIN_API_KEY.
+    """
+    api_key = request.headers.get("X-API-Key")
+    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    garages = await db.get_all_garages(status=status)
+
+    return {
+        "garages": garages,
+        "count": len(garages)
+    }
+
+
+@app.get("/api/admin/garages/{garage_id}")
+async def get_garage(request: Request, garage_id: str):
+    """
+    Get a single garage by ID (admin only).
+    """
+    api_key = request.headers.get("X-API-Key")
+    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    garage = await db.get_garage_by_id(garage_id)
+
+    if not garage:
+        raise HTTPException(status_code=404, detail="Garage not found")
+
+    return garage
+
+
+@app.patch("/api/admin/garages/{garage_id}")
+async def update_garage(request: Request, garage_id: str):
+    """
+    Update a garage (admin only).
+    """
+    api_key = request.headers.get("X-API-Key")
+    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    body = await request.json()
+
+    success = await db.update_garage(garage_id, body)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update garage")
+
+    return {"success": True}
+
+
+# ============================================================================
+# Outcome Tracking Endpoints
+# ============================================================================
+
+@app.get("/api/garage/outcome/{assignment_id}")
+async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
+    """
+    Handle outcome reporting from email links.
+
+    If result is provided, record the outcome and return confirmation.
+    Otherwise, return info about the assignment.
+    """
+    assignment = await db.get_lead_assignment_by_id(assignment_id)
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    # If result provided via query param, record it
+    if result in ['won', 'lost', 'no_response']:
+        success = await db.update_lead_assignment_outcome(assignment_id, result)
+        if success:
+            return {
+                "success": True,
+                "message": "Thanks for letting us know!",
+                "outcome": result,
+                "vehicle": f"{assignment['vehicle_year']} {assignment['vehicle_make']} {assignment['vehicle_model']}"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to record outcome")
+
+    # Return assignment info
+    return {
+        "assignment_id": assignment_id,
+        "garage_name": assignment['garage_name'],
+        "vehicle": f"{assignment['vehicle_year']} {assignment['vehicle_make']} {assignment['vehicle_model']}",
+        "outcome": assignment.get('outcome'),
+        "outcome_reported_at": assignment.get('outcome_reported_at')
+    }
+
+
+@app.post("/api/garage/outcome/{assignment_id}")
+async def report_outcome(assignment_id: str, request: Request):
+    """
+    Report outcome for a lead assignment.
+
+    Body should contain: {"outcome": "won" | "lost" | "no_response"}
+    """
+    assignment = await db.get_lead_assignment_by_id(assignment_id)
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    body = await request.json()
+    outcome = body.get('outcome')
+
+    if outcome not in ['won', 'lost', 'no_response']:
+        raise HTTPException(status_code=400, detail="Invalid outcome. Must be: won, lost, or no_response")
+
+    success = await db.update_lead_assignment_outcome(assignment_id, outcome)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to record outcome")
+
+    return {
+        "success": True,
+        "message": "Outcome recorded. Thanks!",
+        "outcome": outcome
     }
 
 

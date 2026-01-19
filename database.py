@@ -362,3 +362,357 @@ async def count_leads(since: Optional[str] = None) -> int:
         logger.error(f"Failed to count leads: {e}")
         return 0
 
+
+# ============================================================================
+# Garage Management Functions
+# ============================================================================
+
+async def save_garage(garage_data: Dict) -> Optional[str]:
+    """
+    Save a garage to the database.
+
+    Args:
+        garage_data: Dict containing name, email, postcode, etc.
+
+    Returns:
+        Garage ID (UUID string) on success, None on failure
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for saving garage")
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO garages (
+                    name, contact_name, email, phone, postcode,
+                    latitude, longitude, status, tier, source, notes
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                RETURNING id""",
+                garage_data.get('name'),
+                garage_data.get('contact_name'),
+                garage_data.get('email'),
+                garage_data.get('phone'),
+                garage_data.get('postcode'),
+                garage_data.get('latitude'),
+                garage_data.get('longitude'),
+                garage_data.get('status', 'active'),
+                garage_data.get('tier', 'free'),
+                garage_data.get('source'),
+                garage_data.get('notes')
+            )
+
+            garage_id = str(result['id'])
+            logger.info(f"Garage saved: {garage_data.get('name')} ({garage_data.get('postcode')})")
+            return garage_id
+
+    except Exception as e:
+        logger.error(f"Failed to save garage: {e}")
+        return None
+
+
+async def get_garage_by_id(garage_id: str) -> Optional[Dict]:
+    """Get a garage by ID."""
+    pool = await get_pool()
+    if not pool:
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """SELECT id, name, contact_name, email, phone, postcode,
+                          latitude, longitude, status, tier,
+                          leads_received, leads_converted, source, notes, created_at
+                   FROM garages WHERE id = $1""",
+                garage_id
+            )
+
+            if row:
+                garage = dict(row)
+                garage['id'] = str(garage['id'])
+                if garage['created_at']:
+                    garage['created_at'] = garage['created_at'].isoformat()
+                return garage
+            return None
+
+    except Exception as e:
+        logger.error(f"Failed to get garage: {e}")
+        return None
+
+
+async def get_all_garages(status: Optional[str] = None) -> List[Dict]:
+    """Get all garages, optionally filtered by status."""
+    pool = await get_pool()
+    if not pool:
+        return []
+
+    try:
+        async with pool.acquire() as conn:
+            if status:
+                rows = await conn.fetch(
+                    """SELECT id, name, contact_name, email, phone, postcode,
+                              latitude, longitude, status, tier,
+                              leads_received, leads_converted, source, created_at
+                       FROM garages WHERE status = $1
+                       ORDER BY created_at DESC""",
+                    status
+                )
+            else:
+                rows = await conn.fetch(
+                    """SELECT id, name, contact_name, email, phone, postcode,
+                              latitude, longitude, status, tier,
+                              leads_received, leads_converted, source, created_at
+                       FROM garages ORDER BY created_at DESC"""
+                )
+
+            garages = []
+            for row in rows:
+                garage = dict(row)
+                garage['id'] = str(garage['id'])
+                if garage['created_at']:
+                    garage['created_at'] = garage['created_at'].isoformat()
+                garages.append(garage)
+
+            return garages
+
+    except Exception as e:
+        logger.error(f"Failed to get garages: {e}")
+        return []
+
+
+async def get_garages_with_coordinates() -> List[Dict]:
+    """Get all active garages that have coordinates set (for matching)."""
+    pool = await get_pool()
+    if not pool:
+        return []
+
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """SELECT id, name, email, postcode, latitude, longitude, tier
+                   FROM garages
+                   WHERE status = 'active'
+                     AND latitude IS NOT NULL
+                     AND longitude IS NOT NULL
+                   ORDER BY tier DESC"""
+            )
+
+            garages = []
+            for row in rows:
+                garages.append({
+                    'id': str(row['id']),
+                    'name': row['name'],
+                    'email': row['email'],
+                    'postcode': row['postcode'],
+                    'latitude': float(row['latitude']),
+                    'longitude': float(row['longitude']),
+                    'tier': row['tier']
+                })
+
+            return garages
+
+    except Exception as e:
+        logger.error(f"Failed to get garages with coordinates: {e}")
+        return []
+
+
+async def update_garage(garage_id: str, updates: Dict) -> bool:
+    """Update a garage's fields."""
+    pool = await get_pool()
+    if not pool:
+        return False
+
+    # Build dynamic update query
+    allowed_fields = ['name', 'contact_name', 'email', 'phone', 'postcode',
+                      'latitude', 'longitude', 'status', 'tier', 'notes']
+
+    set_clauses = []
+    values = []
+    param_num = 1
+
+    for field in allowed_fields:
+        if field in updates:
+            set_clauses.append(f"{field} = ${param_num}")
+            values.append(updates[field])
+            param_num += 1
+
+    if not set_clauses:
+        return False
+
+    values.append(garage_id)
+
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                f"UPDATE garages SET {', '.join(set_clauses)} WHERE id = ${param_num}",
+                *values
+            )
+            return True
+
+    except Exception as e:
+        logger.error(f"Failed to update garage: {e}")
+        return False
+
+
+async def increment_garage_leads_received(garage_id: str) -> bool:
+    """Increment the leads_received counter for a garage."""
+    pool = await get_pool()
+    if not pool:
+        return False
+
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE garages SET leads_received = leads_received + 1 WHERE id = $1",
+                garage_id
+            )
+            return True
+    except Exception as e:
+        logger.error(f"Failed to increment garage leads: {e}")
+        return False
+
+
+# ============================================================================
+# Lead Assignment Functions
+# ============================================================================
+
+async def create_lead_assignment(
+    lead_id: str,
+    garage_id: str,
+    distance_miles: float
+) -> Optional[str]:
+    """Create a lead assignment record."""
+    pool = await get_pool()
+    if not pool:
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO lead_assignments (lead_id, garage_id, distance_miles, email_sent_at)
+                   VALUES ($1, $2, $3, NOW())
+                   RETURNING id""",
+                lead_id, garage_id, distance_miles
+            )
+            return str(result['id'])
+    except Exception as e:
+        logger.error(f"Failed to create lead assignment: {e}")
+        return None
+
+
+async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bool:
+    """Update the outcome of a lead assignment."""
+    pool = await get_pool()
+    if not pool:
+        return False
+
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """UPDATE lead_assignments
+                   SET outcome = $1, outcome_reported_at = NOW()
+                   WHERE id = $2""",
+                outcome, assignment_id
+            )
+
+            # If outcome is 'won', increment garage's leads_converted
+            if outcome == 'won':
+                await conn.execute(
+                    """UPDATE garages SET leads_converted = leads_converted + 1
+                       WHERE id = (SELECT garage_id FROM lead_assignments WHERE id = $1)""",
+                    assignment_id
+                )
+
+            return True
+    except Exception as e:
+        logger.error(f"Failed to update lead assignment outcome: {e}")
+        return False
+
+
+async def get_lead_by_id(lead_id: str) -> Optional[Dict]:
+    """Get a lead by ID (for distribution)."""
+    pool = await get_pool()
+    if not pool:
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """SELECT id, email, postcode, name, phone,
+                          vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
+                          failure_risk, reliability_score, top_risks,
+                          distribution_status, created_at
+                   FROM leads WHERE id = $1""",
+                lead_id
+            )
+
+            if row:
+                lead = dict(row)
+                lead['id'] = str(lead['id'])
+                if lead['created_at']:
+                    lead['created_at'] = lead['created_at'].isoformat()
+                return lead
+            return None
+
+    except Exception as e:
+        logger.error(f"Failed to get lead: {e}")
+        return None
+
+
+async def update_lead_distribution_status(lead_id: str, status: str) -> bool:
+    """Update lead distribution status."""
+    pool = await get_pool()
+    if not pool:
+        return False
+
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """UPDATE leads
+                   SET distribution_status = $1, distributed_at = NOW()
+                   WHERE id = $2""",
+                status, lead_id
+            )
+            return True
+    except Exception as e:
+        logger.error(f"Failed to update lead distribution status: {e}")
+        return False
+
+
+async def get_lead_assignment_by_id(assignment_id: str) -> Optional[Dict]:
+    """Get a lead assignment by ID (for outcome reporting)."""
+    pool = await get_pool()
+    if not pool:
+        return None
+
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """SELECT la.id, la.lead_id, la.garage_id, la.distance_miles,
+                          la.email_sent_at, la.outcome, la.outcome_reported_at,
+                          g.name as garage_name,
+                          l.vehicle_make, l.vehicle_model, l.vehicle_year
+                   FROM lead_assignments la
+                   JOIN garages g ON la.garage_id = g.id
+                   JOIN leads l ON la.lead_id = l.id
+                   WHERE la.id = $1""",
+                assignment_id
+            )
+
+            if row:
+                assignment = dict(row)
+                assignment['id'] = str(assignment['id'])
+                assignment['lead_id'] = str(assignment['lead_id'])
+                assignment['garage_id'] = str(assignment['garage_id'])
+                if assignment['email_sent_at']:
+                    assignment['email_sent_at'] = assignment['email_sent_at'].isoformat()
+                if assignment['outcome_reported_at']:
+                    assignment['outcome_reported_at'] = assignment['outcome_reported_at'].isoformat()
+                return assignment
+            return None
+
+    except Exception as e:
+        logger.error(f"Failed to get lead assignment: {e}")
+        return None
+
