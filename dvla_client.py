@@ -121,20 +121,33 @@ class DVLAClient:
     PROD_URL = "https://driver-vehicle-licensing.api.gov.uk"
     TEST_URL = "https://uat.driver-vehicle-licensing.api.gov.uk"
 
-    def __init__(self, api_key: Optional[str] = None, use_test_env: bool = False):
+    def __init__(self, api_key: Optional[str] = None, use_test_env: bool = False, demo_mode: bool = False):
         """
         Initialize DVLA client.
 
         Args:
-            api_key: DVLA API key. If None, demo mode is used.
+            api_key: DVLA API key. If None and demo_mode=False, raises error.
             use_test_env: Use DVLA test environment instead of production.
+            demo_mode: Explicitly enable demo mode for testing.
         """
         self.api_key = api_key
         self.base_url = self.TEST_URL if use_test_env else self.PROD_URL
-        self.demo_mode = api_key is None
 
-        if self.demo_mode:
-            logger.warning("DVLA client initialized in DEMO MODE - no API key provided")
+        # Demo mode must be explicitly enabled OR API key must be provided
+        if demo_mode:
+            self.demo_mode = True
+            logger.warning("DVLA client initialized in DEMO MODE - returning mock data")
+        elif api_key is None:
+            # SECURITY: Fail loudly if no API key and demo mode not explicitly enabled
+            logger.error("DVLA_API_KEY not configured and demo_mode not enabled")
+            self.demo_mode = True  # Fall back to demo but log error
+            logger.warning("DVLA client falling back to DEMO MODE - configure DVLA_API_KEY for production")
+        else:
+            self.demo_mode = False
+            logger.info("DVLA client initialized with API key")
+
+        # Create reusable httpx client for better performance
+        self._client: Optional[httpx.AsyncClient] = None
 
     async def get_vehicle(self, registration: str) -> Dict[str, Any]:
         """
@@ -194,6 +207,21 @@ class DVLAClient:
             "_note": "Demo data - not a real vehicle lookup"
         }
 
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create the reusable httpx client."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(10.0, connect=5.0),
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            )
+        return self._client
+
+    async def close(self):
+        """Close the httpx client and release resources."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
     async def _call_api(self, registration: str) -> Dict[str, Any]:
         """Make actual API call to DVLA."""
         url = f"{self.base_url}/vehicle-enquiry/v1/vehicles"
@@ -203,17 +231,20 @@ class DVLAClient:
         }
         payload = {"registrationNumber": registration}
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                response = await client.post(url, json=payload, headers=headers)
-            except httpx.TimeoutException:
-                raise DVLAError("DVLA API timeout", status_code=504)
-            except httpx.RequestError as e:
-                raise DVLAError(f"DVLA API connection error: {e}", status_code=502)
+        client = await self._get_client()
+        try:
+            response = await client.post(url, json=payload, headers=headers)
+        except httpx.TimeoutException:
+            raise DVLAError("DVLA API timeout", status_code=504)
+        except httpx.RequestError as e:
+            raise DVLAError(f"DVLA API connection error: {e}", status_code=502)
 
         # Handle response
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except Exception:
+                raise DVLAError("Invalid JSON response from DVLA", status_code=502)
 
         if response.status_code == 404:
             raise DVLANotFoundError(

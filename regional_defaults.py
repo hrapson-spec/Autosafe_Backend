@@ -147,7 +147,7 @@ CORROSION_INDEX_BY_AREA: Dict[str, float] = {
 
     # WALES (varied - coastal vs valleys)
     'NP': 0.60,   # Newport - South Wales
-    'SY': 0.55,   # Shrewsbury/Welsh border
+    # Note: 'SY' already defined above (Shrewsbury - Welsh border)
 
     # NORTHERN IRELAND
     'BT': 0.65,   # Belfast - all NI postcodes
@@ -207,7 +207,7 @@ def get_station_strictness_bias() -> float:
     return 0.0
 
 
-def validate_postcode(postcode: str) -> Dict[str, any]:
+def validate_postcode(postcode: str) -> Dict[str, str]:
     """
     Validate a UK postcode format.
 
