@@ -293,3 +293,219 @@ button:focus:not(:focus-visible),
 input:focus:not(:focus-visible) {
     outline: none;
 }
+
+/* ===== Results Card ===== */
+.results-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-card);
+    margin-bottom: var(--space-lg);
+}
+
+.results-header {
+    text-align: center;
+    margin-bottom: var(--space-lg);
+}
+
+.results-header h2 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+.reg-badge {
+    display: inline-block;
+    background: var(--border-light);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.05em;
+}
+
+/* Stats Row */
+.stats-row {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: var(--space-lg);
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-xs);
+}
+
+.stat-value {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Risk Display */
+.risk-display {
+    text-align: center;
+    padding: var(--space-lg) 0;
+}
+
+.risk-main {
+    margin-bottom: var(--space-md);
+}
+
+.risk-percentage {
+    display: block;
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: var(--space-xs);
+}
+
+.risk-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Risk Colors */
+.text-low {
+    color: var(--success-green);
+}
+
+.text-med {
+    color: var(--warning-amber);
+}
+
+.text-high {
+    color: var(--danger-red);
+}
+
+/* Confidence Badge */
+.confidence-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: var(--border-light);
+    color: var(--text-secondary);
+}
+
+.confidence-high {
+    background: var(--success-bg);
+    color: var(--success-green);
+}
+
+.confidence-med {
+    background: var(--warning-bg);
+    color: var(--warning-amber);
+}
+
+.confidence-low {
+    background: var(--danger-bg);
+    color: var(--danger-red);
+}
+
+/* Repair Cost */
+.repair-cost {
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--border-light);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.repair-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-xs);
+}
+
+.repair-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.repair-range {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* Components Section */
+.components-section {
+    margin-bottom: var(--space-md);
+}
+
+.components-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.components-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-sm);
+}
+
+.component-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--border-light);
+    border-radius: var(--radius-md);
+}
+
+.comp-name {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.comp-val {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Source Note */
+.source-note {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--space-md);
+}
+
+/* Error Banner */
+.error-banner {
+    background: var(--danger-bg);
+    color: var(--danger-red);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    margin-bottom: var(--space-md);
+    text-align: center;
+}

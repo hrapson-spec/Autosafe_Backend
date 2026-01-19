@@ -48,6 +48,50 @@
                     </button>
                 </form>
             </section>
+
+            <!-- Results Panel (hidden until search) -->
+            <section class="results-card hidden" id="resultsPanel">
+                <div class="results-header">
+                    <h2 id="vehicleTag">Vehicle</h2>
+                    <span class="reg-badge" id="vehicleDetails"></span>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat">
+                        <span class="stat-label">Last MOT</span>
+                        <span class="stat-value" id="lastMOTDate">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Result</span>
+                        <span class="stat-value" id="lastMOTResult">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Mileage</span>
+                        <span class="stat-value" id="mileage">-</span>
+                    </div>
+                </div>
+
+                <div class="risk-display">
+                    <div class="risk-main">
+                        <span class="risk-percentage" id="riskValue">-</span>
+                        <span class="risk-label" id="riskText">Failure Risk</span>
+                    </div>
+                    <span class="confidence-badge" id="confidenceBadge">-</span>
+                </div>
+
+                <div class="repair-cost">
+                    <span class="repair-label">Estimated Repair Cost</span>
+                    <span class="repair-value" id="repairCostValue">-</span>
+                    <span class="repair-range" id="repairCostRange"></span>
+                </div>
+
+                <div class="components-section">
+                    <h3>Risk by Component</h3>
+                    <div class="components-grid" id="componentsGrid"></div>
+                </div>
+
+                <p class="source-note" id="sourceNote"></p>
+            </section>
         </main>
 
         <!-- Footer -->
