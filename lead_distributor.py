@@ -89,8 +89,9 @@ async def distribute_lead(lead_id: str) -> dict:
         # Generate email content
         email_content = generate_lead_email(
             garage_name=garage.name,
+            lead_name=lead.get('name'),
             lead_email=lead.get('email', ''),
-            lead_phone=lead.get('phone', ''),
+            lead_phone=lead.get('phone'),
             lead_postcode=lead['postcode'],
             distance_miles=garage.distance_miles,
             vehicle_make=lead.get('vehicle_make', 'Unknown'),
@@ -100,6 +101,7 @@ async def distribute_lead(lead_id: str) -> dict:
             reliability_score=lead.get('reliability_score') or 0,
             top_risks=top_risks,
             assignment_id=assignment_id,
+            garages_count=len(garages),
         )
 
         # Send email
