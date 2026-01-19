@@ -100,7 +100,18 @@ function displayResults(data) {
     const lastMOTResult = document.getElementById('lastMOTResult');
     const mileage = document.getElementById('mileage');
 
-    if (lastMOTDate) lastMOTDate.textContent = data.last_mot_date || '-';
+    if (lastMOTDate) {
+        if (data.last_mot_date) {
+            const date = new Date(data.last_mot_date);
+            lastMOTDate.textContent = date.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        } else {
+            lastMOTDate.textContent = '-';
+        }
+    }
     if (lastMOTResult) lastMOTResult.textContent = data.last_mot_result || '-';
     if (mileage) mileage.textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
 
