@@ -93,7 +93,8 @@ def build_database() -> bool:
                 if i < TEXT_COLUMNS:
                     processed.append(val)
                 elif i < TEXT_COLUMNS + INTEGER_COLUMNS:
-                    processed.append(int(float(val)) if val else 0)
+                    # Fix: Use round instead of truncation for integer columns
+                    processed.append(round(float(val)) if val else 0)
                 else:
                     processed.append(float(val) if val else 0.0)
             batch.append(processed)

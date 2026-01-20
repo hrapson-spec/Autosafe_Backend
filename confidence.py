@@ -22,9 +22,12 @@ def wilson_interval(successes: int, total: int, confidence: float = 0.95) -> tup
     """
     if total == 0:
         return 0.0, 1.0
-    
-    # Z-score for confidence level
-    z = 1.96 if confidence == 0.95 else 2.576 if confidence == 0.99 else 1.645
+
+    # Z-score for confidence level (fix: explicit mapping with validation)
+    z_scores = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
+    if confidence not in z_scores:
+        raise ValueError(f"Unsupported confidence level: {confidence}. Use 0.90, 0.95, or 0.99")
+    z = z_scores[confidence]
     
     p = successes / total
     n = total
