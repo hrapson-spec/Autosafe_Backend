@@ -98,15 +98,30 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
-# CORS Middleware - Allow cross-origin requests
+# CORS Middleware - Configure cross-origin requests
+# In production, set CORS_ORIGINS env var to restrict (e.g., "https://autosafe.co.uk,https://www.autosafe.co.uk")
 from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+if CORS_ORIGINS == "*":
+    # Development: allow all origins but disable credentials to prevent CSRF
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,  # Disabled when using wildcard
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+else:
+    # Production: restrict to specific origins
+    origins = [o.strip() for o in CORS_ORIGINS.split(",")]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
 
 
 # Security Headers Middleware
@@ -127,14 +142,40 @@ async def add_security_headers(request, call_next):
 
 # Global Exception Handler - prevent stack trace leakage
 from fastapi.responses import JSONResponse
+import uuid as uuid_module
+
+def generate_correlation_id() -> str:
+    """Generate a short correlation ID for error tracking."""
+    return uuid_module.uuid4().hex[:12]
+
+def mask_email(email: str) -> str:
+    """Mask email for logging: john@example.com -> j***@example.com"""
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
+def mask_pii(text: str) -> str:
+    """Mask potential PII in text for safe logging."""
+    if not text:
+        return text
+    # Don't log anything that looks like it might contain user data
+    return "[REDACTED]"
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
-    logger.error(f"Unhandled exception on {request.url.path}: {type(exc).__name__}: {exc}")
+    correlation_id = generate_correlation_id()
+    # Log only the exception type and correlation ID - NOT the full exception or request data
+    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal error occurred. Please try again later."}
+        content={
+            "detail": "An internal error occurred. Please try again later.",
+            "error_id": correlation_id
+        }
     )
 
 # Check for PostgreSQL first, then SQLite
@@ -786,7 +827,19 @@ async def submit_lead(request: Request, lead: LeadSubmission):
     Submit a lead for garage matching.
 
     Rate limited to 10 requests per minute per IP.
+
+    IMPORTANT: This endpoint requires PostgreSQL to be available.
+    We do NOT fall back to SQLite for lead persistence to prevent data loss.
     """
+    # CRITICAL: Check PostgreSQL is available before accepting lead
+    # We must NOT silently fall back to SQLite for writes (data loss risk)
+    if not await db.is_postgres_available():
+        logger.error("Lead submission rejected: PostgreSQL unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail="Service temporarily unavailable. Please try again in a few minutes."
+        )
+
     # Convert Pydantic models to dicts
     lead_data = {
         "email": lead.email,
@@ -798,7 +851,7 @@ async def submit_lead(request: Request, lead: LeadSubmission):
         "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
     }
 
-    # Save to database
+    # Save to database (PostgreSQL only - verified above)
     lead_id = await db.save_lead(lead_data)
 
     if not lead_id:
@@ -891,6 +944,7 @@ class GarageSubmission(BaseModel):
 
 
 @app.post("/api/admin/garages", status_code=201)
+@limiter.limit("10/minute")
 async def create_garage(request: Request, garage: GarageSubmission):
     """
     Create a new garage (admin only).
@@ -937,6 +991,7 @@ async def create_garage(request: Request, garage: GarageSubmission):
 
 
 @app.get("/api/admin/garages")
+@limiter.limit("30/minute")
 async def list_garages(
     request: Request,
     status: Optional[str] = Query(None, description="Filter by status")
@@ -959,6 +1014,7 @@ async def list_garages(
 
 
 @app.get("/api/admin/garages/{garage_id}")
+@limiter.limit("30/minute")
 async def get_garage(request: Request, garage_id: str):
     """
     Get a single garage by ID (admin only).
@@ -976,6 +1032,7 @@ async def get_garage(request: Request, garage_id: str):
 
 
 @app.patch("/api/admin/garages/{garage_id}")
+@limiter.limit("10/minute")
 async def update_garage(request: Request, garage_id: str):
     """
     Update a garage (admin only).
