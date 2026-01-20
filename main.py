@@ -48,6 +48,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Kill-switch and model version configuration
+# Set PREDICTIONS_ENABLED=false to disable all V55 predictions (emergency kill-switch)
+# Set MODEL_VERSION to rollback to a different model version
+PREDICTIONS_ENABLED = os.environ.get("PREDICTIONS_ENABLED", "true").lower() == "true"
+MODEL_VERSION = os.environ.get("MODEL_VERSION", "v55")
+
 # Response caching for expensive queries
 _cache = {
     "makes": {"data": None, "time": 0},
@@ -244,6 +250,8 @@ async def health_check():
     return {
         "status": overall_status,
         "timestamp": datetime.now().isoformat(),
+        "predictions_enabled": PREDICTIONS_ENABLED,
+        "model_version": MODEL_VERSION,
         "components": {
             "database": db_status,
             "model_v55": model_status,
@@ -605,6 +613,14 @@ async def get_risk_v55(
     Returns calibrated failure probability and component-level risks.
     Falls back to lookup table if DVSA data unavailable.
     """
+    # Kill-switch check - allows emergency disabling of predictions
+    if not PREDICTIONS_ENABLED:
+        logger.warning(f"Predictions disabled via kill-switch, rejecting request")
+        raise HTTPException(
+            status_code=503,
+            detail="Predictions temporarily disabled for maintenance"
+        )
+
     # Check if model is loaded
     if not model_v55.is_model_loaded():
         raise HTTPException(

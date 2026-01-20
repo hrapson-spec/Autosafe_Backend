@@ -17,10 +17,16 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
+import asyncio
 import httpx
 from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
+
+# Configurable timeout and retry settings
+DVSA_TIMEOUT = float(os.environ.get("DVSA_TIMEOUT", "5.0"))  # Default 5 seconds
+DVSA_MAX_RETRIES = int(os.environ.get("DVSA_MAX_RETRIES", "2"))  # Default 2 retries
+DVSA_RETRY_BACKOFF = float(os.environ.get("DVSA_RETRY_BACKOFF", "1.0"))  # Base backoff in seconds
 
 
 class OAuthToken:
