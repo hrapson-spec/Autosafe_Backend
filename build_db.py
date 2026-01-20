@@ -183,8 +183,8 @@ def ensure_database() -> bool:
                 logger.warning(f"Database still invalid after wait: {e}")
                 try:
                     os.remove(DB_FILE)
-                except:
-                    pass
+                except OSError as remove_err:
+                    logger.warning(f"Could not remove invalid database file: {remove_err}")
 
         # Build the database
         return build_database()

@@ -4,6 +4,7 @@ Uses Postcodes.io (free, no API key required) to convert UK postcodes to coordin
 """
 import httpx
 import logging
+from collections import OrderedDict
 from typing import Optional, Tuple, Dict
 from math import radians, sin, cos, sqrt, atan2
 
@@ -11,8 +12,37 @@ logger = logging.getLogger(__name__)
 
 POSTCODES_IO_BASE = "https://api.postcodes.io"
 
-# In-memory cache to reduce API calls
-_postcode_cache: Dict[str, Tuple[float, float]] = {}
+# Maximum cache size to prevent unbounded memory growth
+MAX_CACHE_SIZE = 10000
+
+# In-memory LRU cache to reduce API calls
+# Using OrderedDict for LRU behavior
+_postcode_cache: OrderedDict[str, Tuple[float, float]] = OrderedDict()
+
+
+def _cache_set(postcode: str, coords: Tuple[float, float]) -> None:
+    """Add item to cache with LRU eviction."""
+    global _postcode_cache
+    # If already in cache, move to end (most recently used)
+    if postcode in _postcode_cache:
+        _postcode_cache.move_to_end(postcode)
+        _postcode_cache[postcode] = coords
+        return
+
+    # Evict oldest items if cache is full
+    while len(_postcode_cache) >= MAX_CACHE_SIZE:
+        _postcode_cache.popitem(last=False)
+
+    _postcode_cache[postcode] = coords
+
+
+def _cache_get(postcode: str) -> Optional[Tuple[float, float]]:
+    """Get item from cache, updating LRU order."""
+    global _postcode_cache
+    if postcode in _postcode_cache:
+        _postcode_cache.move_to_end(postcode)
+        return _postcode_cache[postcode]
+    return None
 
 
 async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float]]:
@@ -29,8 +59,9 @@ async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float
     postcode = postcode.strip().upper().replace(" ", "")
 
     # Check cache first
-    if postcode in _postcode_cache:
-        return _postcode_cache[postcode]
+    cached = _cache_get(postcode)
+    if cached is not None:
+        return cached
 
     try:
         async with httpx.AsyncClient() as client:
@@ -44,7 +75,7 @@ async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float
                 if data.get("status") == 200 and data.get("result"):
                     result = data["result"]
                     coords = (result["latitude"], result["longitude"])
-                    _postcode_cache[postcode] = coords
+                    _cache_set(postcode, coords)
                     logger.debug(f"Geocoded {postcode} -> {coords}")
                     return coords
 
@@ -59,7 +90,7 @@ async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float
                     if data.get("result"):
                         result = data["result"]
                         coords = (result["latitude"], result["longitude"])
-                        _postcode_cache[postcode] = coords
+                        _cache_set(postcode, coords)
                         return coords
 
     except httpx.TimeoutException:
@@ -88,8 +119,9 @@ async def bulk_lookup_postcodes(postcodes: list) -> Dict[str, Tuple[float, float
     # Add cached results
     uncached = []
     for p in postcodes:
-        if p in _postcode_cache:
-            results[p] = _postcode_cache[p]
+        cached = _cache_get(p)
+        if cached is not None:
+            results[p] = cached
         else:
             uncached.append(p)
 
@@ -112,7 +144,7 @@ async def bulk_lookup_postcodes(postcodes: list) -> Dict[str, Tuple[float, float
                         postcode = item["query"].upper().replace(" ", "")
                         result = item["result"]
                         coords = (result["latitude"], result["longitude"])
-                        _postcode_cache[postcode] = coords
+                        _cache_set(postcode, coords)
                         results[postcode] = coords
 
     except Exception as e:
@@ -147,4 +179,9 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def clear_cache():
     """Clear the postcode cache (useful for testing)."""
     global _postcode_cache
-    _postcode_cache = {}
+    _postcode_cache = OrderedDict()
+
+
+def get_cache_size() -> int:
+    """Get current cache size (useful for monitoring)."""
+    return len(_postcode_cache)

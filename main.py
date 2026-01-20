@@ -99,13 +99,24 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
 # CORS Middleware - Allow cross-origin requests
+# Configure allowed origins via CORS_ORIGINS env var (comma-separated)
+# Defaults to localhost for development; set explicitly in production
 from fastapi.middleware.cors import CORSMiddleware
+
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000")
+allowed_origins = [origin.strip() for origin in CORS_ORIGINS.split(",") if origin.strip()]
+
+# In production, also allow the Railway deployment URL if BASE_URL is set
+BASE_URL = os.environ.get("BASE_URL")
+if BASE_URL and BASE_URL not in allowed_origins:
+    allowed_origins.append(BASE_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
 )
 
 # Check for PostgreSQL first, then SQLite

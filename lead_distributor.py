@@ -140,9 +140,80 @@ async def retry_failed_distributions() -> dict:
     """
     Retry distributing leads that failed previously.
 
+    Finds leads with failed distribution status and attempts to redistribute them.
+    Should be called by a scheduled job or admin endpoint.
+
     Returns:
-        Dict with retry results
+        Dict with retry results:
+        {
+            "success": bool,
+            "leads_found": int,
+            "leads_retried": int,
+            "leads_succeeded": int,
+            "errors": list
+        }
     """
-    # This could be called by a scheduled job
-    # For now, just a placeholder
-    pass
+    result = {
+        "success": False,
+        "leads_found": 0,
+        "leads_retried": 0,
+        "leads_succeeded": 0,
+        "errors": []
+    }
+
+    # Get database pool
+    pool = await db.get_pool()
+    if not pool:
+        result["errors"].append("No database connection available")
+        return result
+
+    try:
+        # Find leads that failed distribution
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """SELECT id FROM leads
+                   WHERE distribution_status IN ('email_failed', 'no_garage_found', 'email_not_configured')
+                   AND created_at > NOW() - INTERVAL '7 days'
+                   ORDER BY created_at DESC
+                   LIMIT 50"""
+            )
+
+        result["leads_found"] = len(rows)
+
+        if not rows:
+            result["success"] = True
+            logger.info("No failed leads to retry")
+            return result
+
+        # Retry each lead
+        for row in rows:
+            lead_id = str(row['id'])
+            result["leads_retried"] += 1
+
+            try:
+                # Reset status before retry
+                await db.update_lead_distribution_status(lead_id, 'pending')
+
+                # Attempt distribution
+                dist_result = await distribute_lead(lead_id)
+
+                if dist_result.get("success"):
+                    result["leads_succeeded"] += 1
+                    logger.info(f"Retry succeeded for lead {lead_id}")
+                else:
+                    error_msg = dist_result.get("error", "Unknown error")
+                    result["errors"].append(f"Lead {lead_id}: {error_msg}")
+                    logger.warning(f"Retry failed for lead {lead_id}: {error_msg}")
+
+            except Exception as e:
+                result["errors"].append(f"Lead {lead_id}: {str(e)}")
+                logger.error(f"Exception retrying lead {lead_id}: {e}")
+
+        result["success"] = result["leads_succeeded"] > 0 or result["leads_found"] == 0
+        logger.info(f"Retry complete: {result['leads_succeeded']}/{result['leads_retried']} succeeded")
+
+    except Exception as e:
+        result["errors"].append(f"Database error: {str(e)}")
+        logger.error(f"Failed to retry distributions: {e}")
+
+    return result
