@@ -299,8 +299,8 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
             )
 
             lead_id = str(result['id'])
-            # Log lead saved without PII (no email, postcode, name, phone)
-            logger.info(f"Lead saved: id={lead_id} make={vehicle.get('make')} model={vehicle.get('model')}")
+            # Log lead saved with postcode (needed for ops) but no email/name/phone
+            logger.info(f"Lead saved: id={lead_id} postcode={lead_data.get('postcode')} make={vehicle.get('make')} model={vehicle.get('model')}")
             return lead_id
 
     except Exception as e:
