@@ -653,9 +653,91 @@ Code includes `threading.Lock` for TTLCache access. Verify in deployment:
 
 ---
 
-## 7. Appendix
+## 7. Remediation Status & Sign-Off
 
-### 7.1 Files Reviewed
+### 7.1 VULN-001 Token Security Properties (CRITICAL → MITIGATED)
+
+The email-link token implementation has the following explicit security properties:
+
+| Property | Implementation | Status |
+|----------|----------------|--------|
+| **Short-lived** | 48-hour expiry (`TOKEN_EXPIRY_SECONDS = 48 * 60 * 60`) | ✓ Implemented |
+| **Scoped** | Token contains assignment_id, verified against URL | ✓ Implemented |
+| **Unguessable** | HMAC-SHA256 signed with SECRET_KEY (32-byte signature) | ✓ Implemented |
+| **Single-use** | Outcomes cannot be overwritten once recorded | ✓ Implemented |
+| **Not logged** | Tokens not in server logs (generic errors only) | ✓ Implemented |
+| **Referrer protection** | `Referrer-Policy: no-referrer` for outcome endpoints | ✓ Implemented |
+| **Timing-safe** | `hmac.compare_digest()` for constant-time comparison | ✓ Implemented |
+| **Generic errors** | "Authentication required" for all auth failures | ✓ Implemented |
+
+**Remaining considerations:**
+- Token appears in email body (acceptable - email is the auth channel)
+- Token appears in URL query string (acceptable for email links, but users should not share URLs)
+- Browser history will contain tokens (mitigated by 48h expiry)
+
+**Verdict:** MITIGATED for intended threat model. Token provides capability-based auth for garage outcome reporting.
+
+### 7.2 VULN-005 PII Logging Compensating Controls (HIGH → ACCEPTED WITH CONTROLS)
+
+Per business requirement, customer details remain logged. Compensating controls:
+
+| Control | Implementation | Owner |
+|---------|----------------|-------|
+| **Structured JSON logging** | All logs use JSON format for parsing | ✓ Code |
+| **Log retention policy** | Must comply with GDPR 6-year limit | ⚠ Ops |
+| **Access control on logs** | Railway/log provider must restrict access | ⚠ Ops |
+| **Audit trail for log access** | Log aggregator must track who views logs | ⚠ Ops |
+| **No PII in error responses** | `sanitize_error_message()` strips paths/SQL | ✓ Code |
+| **Secure log transmission** | HTTPS to log aggregator | ⚠ Ops |
+
+**Required operational actions:**
+1. Configure Railway/log provider access controls
+2. Enable audit logging on log viewer access
+3. Set log retention to comply with GDPR (max 6 years, prefer shorter)
+4. Document lawful basis for processing in privacy policy
+
+**Verdict:** ACCEPTED RISK with documented compensating controls.
+
+### 7.3 VULN-006 Single Admin Key (HIGH → PARTIALLY MITIGATED)
+
+| Mitigation | Status | Notes |
+|------------|--------|-------|
+| Audit logging | ✓ Code | All admin actions logged with actor, timestamp, IP |
+| Rate limiting | ✓ Code | 20-30/min on admin endpoints |
+| Unique identities | ⚠ Ops | Requires SSO integration |
+| MFA | ⚠ Ops | Requires auth provider |
+| Key rotation | ⚠ Ops | Manual process currently |
+
+**Verdict:** PARTIALLY MITIGATED. Visibility improved via audit logging, but full remediation requires operational changes (SSO/MFA).
+
+### 7.4 Overall Sign-Off Status
+
+| Category | Before | After | Notes |
+|----------|--------|-------|-------|
+| IDOR (VULN-001) | Critical | **Mitigated** | Token auth with explicit properties |
+| Supply Chain (VULN-002) | Critical | **Mitigated** | Lockfile exists, CI enforcement needed |
+| Security Headers (VULN-003) | Critical | **Resolved** | CSP, HSTS, X-Frame-Options added |
+| Admin Rate Limit (VULN-004) | Critical | **Resolved** | Rate limiting on all admin endpoints |
+| PII Logging (VULN-005) | High | **Accepted** | Business requirement with controls |
+| Single Admin Key (VULN-006) | High | **Partial** | Audit logging only, needs SSO |
+| BASE_URL (VULN-007) | High | **Resolved** | Strict allowlist validation |
+| SQL Safety (VULN-008) | High | **Resolved** | Documented, static allowlist |
+
+**Items NOT addressed (out of scope for code changes):**
+- CSRF/cookie security (no cookie-based auth used)
+- SSRF (no user-controlled URL fetching)
+- File uploads (not implemented)
+- Authentication hardening (requires auth provider)
+
+**Sign-off recommendation:**
+> Suitable for **early-stage/low-traffic production** with the documented operational controls in place.
+> NOT recommended for high-value targets or regulated environments without completing Section 6 operational requirements.
+
+---
+
+## 8. Appendix
+
+### 8.1 Files Reviewed
 
 - `main.py` (1055 lines)
 - `database.py` (722 lines)
@@ -671,14 +753,14 @@ Code includes `threading.Lock` for TTLCache access. Verify in deployment:
 - `requirements.txt`
 - `.gitignore`
 
-### 7.2 Tools Used
+### 8.2 Tools Used
 
 - Manual code review
 - Grep pattern matching
 - Git history analysis
 - Dependency analysis
 
-### 7.3 References
+### 8.3 References
 
 - OWASP Top 10 2021
 - CWE/SANS Top 25

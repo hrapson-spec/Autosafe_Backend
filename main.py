@@ -211,10 +211,32 @@ async def add_security_headers(request, call_next):
 
 
 # Request ID Middleware for tracing
+import re
+_REQUEST_ID_PATTERN = re.compile(r'^[a-zA-Z0-9\-_]{1,64}$')
+
+
 @app.middleware("http")
 async def add_request_id(request, call_next):
-    """Add unique request ID for tracing."""
-    request_id = request.headers.get("X-Request-ID") or generate_request_id()
+    """
+    Add unique request ID for tracing.
+
+    Security: User-supplied X-Request-ID is sanitized to prevent:
+    - Log injection (control characters, newlines)
+    - Header injection
+    - Excessive length DoS
+
+    Only alphanumeric, dash, underscore allowed, max 64 chars.
+    Invalid IDs are replaced with generated ones.
+    """
+    user_request_id = request.headers.get("X-Request-ID")
+
+    # Sanitize user-supplied request ID
+    if user_request_id and _REQUEST_ID_PATTERN.match(user_request_id):
+        request_id = user_request_id
+    else:
+        # Invalid or missing - generate our own
+        request_id = generate_request_id()
+
     request.state.request_id = request_id
 
     response = await call_next(request)
