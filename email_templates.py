@@ -23,6 +23,7 @@ def generate_lead_email(
     reliability_score: int,
     top_risks: List[str],
     assignment_id: str,
+    outcome_token: str = "",
     risk_percentages: Optional[Dict[str, float]] = None,
     estimated_job_min: int = 150,
     estimated_job_max: int = 400,
@@ -241,19 +242,19 @@ def generate_lead_email(
                 <table cellpadding="0" cellspacing="0">
                     <tr>
                         <td style="padding-right: 8px;">
-                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=won"
+                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=won&token={outcome_token}"
                                style="display: inline-block; padding: 10px 20px; background-color: #059669; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
                                 Won Job
                             </a>
                         </td>
                         <td style="padding-right: 8px;">
-                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=lost"
+                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=lost&token={outcome_token}"
                                style="display: inline-block; padding: 10px 20px; background-color: #E5E7EB; color: #374151; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
                                 Lost
                             </a>
                         </td>
                         <td>
-                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=no_response"
+                            <a href="{BASE_URL}/api/garage/outcome/{assignment_id}?result=no_response&token={outcome_token}"
                                style="display: inline-block; padding: 10px 20px; background-color: #E5E7EB; color: #374151; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
                                 Couldn't Reach
                             </a>
@@ -340,9 +341,9 @@ Location: {lead_postcode}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REPORT OUTCOME:
-• Won Job: {BASE_URL}/api/garage/outcome/{assignment_id}?result=won
-• Lost: {BASE_URL}/api/garage/outcome/{assignment_id}?result=lost
-• Couldn't Reach: {BASE_URL}/api/garage/outcome/{assignment_id}?result=no_response
+• Won Job: {BASE_URL}/api/garage/outcome/{assignment_id}?result=won&token={outcome_token}
+• Lost: {BASE_URL}/api/garage/outcome/{assignment_id}?result=lost&token={outcome_token}
+• Couldn't Reach: {BASE_URL}/api/garage/outcome/{assignment_id}?result=no_response&token={outcome_token}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

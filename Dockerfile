@@ -9,11 +9,16 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Copy the requirements files into the container
+COPY requirements.txt requirements.lock ./
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install pinned packages from lockfile for reproducible builds
+# Falls back to requirements.txt if lock not available
+RUN if [ -f requirements.lock ]; then \
+        pip install --no-cache-dir -r requirements.lock; \
+    else \
+        pip install --no-cache-dir -r requirements.txt; \
+    fi
 
 # Copy the rest of the application code
 COPY . .

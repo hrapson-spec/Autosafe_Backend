@@ -192,7 +192,10 @@ function displayResults(data) {
     const componentsGrid = document.getElementById('componentsGrid');
     if (!componentsGrid) return;
 
-    componentsGrid.innerHTML = '';
+    // Clear existing content safely
+    while (componentsGrid.firstChild) {
+        componentsGrid.removeChild(componentsGrid.firstChild);
+    }
 
     const riskComponents = data.risk_components || {};
     const componentDisplayNames = {

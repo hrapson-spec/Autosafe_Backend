@@ -9,6 +9,7 @@ import database as db
 from lead_matcher import find_matching_garages, MatchedGarage
 from email_service import send_email, is_configured as email_configured
 from email_templates import generate_lead_email
+from security import generate_outcome_token
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,9 @@ async def distribute_lead(lead_id: str) -> dict:
             logger.error(f"Failed to create assignment for garage {garage.garage_id}")
             continue
 
+        # Generate signed token for outcome reporting
+        outcome_token = generate_outcome_token(assignment_id, garage.garage_id)
+
         # Generate email content
         email_content = generate_lead_email(
             garage_name=garage.name,
@@ -101,6 +105,7 @@ async def distribute_lead(lead_id: str) -> dict:
             reliability_score=lead.get('reliability_score') or 0,
             top_risks=top_risks,
             assignment_id=assignment_id,
+            outcome_token=outcome_token,
             garages_count=len(garages),
         )
 

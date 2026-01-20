@@ -9,13 +9,15 @@ Falls back to SQLite lookup for vehicles without DVSA history.
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Header
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
+from cachetools import TTLCache
 import os
 import time
+import uuid
 
 # Import database module for fallback
 import database as db
@@ -27,6 +29,13 @@ from regional_defaults import validate_postcode, get_corrosion_index
 
 # Lead distribution
 from lead_distributor import distribute_lead
+
+# Security utilities
+from security import (
+    generate_outcome_token, verify_outcome_token,
+    generate_request_id, audit_log, get_actor_from_api_key,
+    validate_base_url, sanitize_error_message
+)
 
 # V55 imports
 from dvsa_client import (
@@ -47,12 +56,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Response caching for expensive queries
-_cache = {
-    "makes": {"data": None, "time": 0},
-    "models": {}  # Keyed by make
-}
+# Response caching for expensive queries (bounded to prevent memory exhaustion)
 CACHE_TTL = 3600  # 1 hour cache TTL
+MAX_CACHE_ENTRIES = 500  # Maximum cached entries
+_makes_cache: TTLCache = TTLCache(maxsize=1, ttl=CACHE_TTL)
+_models_cache: TTLCache = TTLCache(maxsize=MAX_CACHE_ENTRIES, ttl=CACHE_TTL)
 from contextlib import asynccontextmanager
 
 
@@ -102,12 +110,13 @@ app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifes
 # Configure allowed origins via CORS_ORIGINS env var (comma-separated)
 # Defaults to localhost for development; set explicitly in production
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000")
 allowed_origins = [origin.strip() for origin in CORS_ORIGINS.split(",") if origin.strip()]
 
-# In production, also allow the Railway deployment URL if BASE_URL is set
-BASE_URL = os.environ.get("BASE_URL")
+# Validate and set BASE_URL for email links
+BASE_URL = validate_base_url(os.environ.get("BASE_URL")) or "https://autosafe.co.uk"
 if BASE_URL and BASE_URL not in allowed_origins:
     allowed_origins.append(BASE_URL)
 
@@ -116,8 +125,58 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization", "X-Request-ID"],
 )
+
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+
+    # Prevent MIME sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    # Clickjacking protection
+    response.headers["X-Frame-Options"] = "DENY"
+
+    # XSS protection (legacy browsers)
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # HTTPS enforcement (Railway handles TLS, but we set HSTS for clients)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    # Content Security Policy
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self'"
+    )
+
+    # Referrer policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Permissions policy (disable unnecessary browser features)
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+    return response
+
+
+# Request ID Middleware for tracing
+@app.middleware("http")
+async def add_request_id(request, call_next):
+    """Add unique request ID for tracing."""
+    request_id = request.headers.get("X-Request-ID") or generate_request_id()
+    request.state.request_id = request_id
+
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+
+    return response
 
 # Check for PostgreSQL first, then SQLite
 # OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
@@ -221,21 +280,19 @@ def add_repair_cost_estimate(result: dict) -> dict:
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
-    global _cache
-    
-    # Check cache first
-    if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
+    # Check bounded TTL cache first
+    if "makes" in _makes_cache:
         logger.info("Returning cached makes list")
-        return _cache["makes"]["data"]
-    
+        return _makes_cache["makes"]
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
-            _cache["makes"] = {"data": result, "time": time.time()}
+            _makes_cache["makes"] = result
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
-    
+
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
@@ -250,10 +307,10 @@ async def get_makes(request: Request):
         rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
         conn.close()
         makes = sorted(set(row['make'] for row in rows))
-        _cache["makes"] = {"data": makes, "time": time.time()}
+        _makes_cache["makes"] = makes
         logger.info(f"Cached {len(makes)} makes from SQLite")
         return makes
-    
+
     # Demo mode
     return sorted(MOCK_MAKES)
 
@@ -262,19 +319,18 @@ async def get_makes(request: Request):
 @limiter.limit("100/minute")
 async def get_models(request: Request, make: str = Query(..., description="Vehicle Make (e.g., FORD)")):
     """Return a list of models for a given make (cached for 1 hour)."""
-    global _cache
     cache_key = make.upper()
-    
-    # Check cache first
-    if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
+
+    # Check bounded TTL cache first
+    if cache_key in _models_cache:
         logger.info(f"Returning cached models for {cache_key}")
-        return _cache["models"][cache_key]["data"]
-    
+        return _models_cache[cache_key]
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            _models_cache[cache_key] = result
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
     
@@ -312,10 +368,10 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             # For non-curated makes, return alphabetic models only (capped)
             result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
         
-        _cache["models"][cache_key] = {"data": result, "time": time.time()}
+        _models_cache[cache_key] = result
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
-    
+
     # Demo mode
     return [m for m in MOCK_MODELS if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]] or MOCK_MODELS
 
@@ -751,6 +807,8 @@ class LeadSubmission(BaseModel):
         local, domain = v.rsplit('@', 1)
         if not local or not domain or '.' not in domain:
             raise ValueError('Invalid email format')
+        if len(v) > 254:  # RFC 5321 limit
+            raise ValueError('Email address too long')
         return v.lower().strip()
 
     @field_validator('postcode')
@@ -758,7 +816,35 @@ class LeadSubmission(BaseModel):
     def validate_postcode(cls, v):
         if not v or len(v.strip()) < 3:
             raise ValueError('Postcode must be at least 3 characters')
+        if len(v.strip()) > 10:
+            raise ValueError('Postcode too long')
         return v.upper().strip()
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None:
+            v = v.strip()
+            if len(v) > 100:
+                raise ValueError('Name must be 100 characters or less')
+            if len(v) < 1:
+                return None
+        return v
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v):
+        if v is not None:
+            # Remove common formatting characters
+            v = re.sub(r'[\s\-\(\)\.]', '', v.strip())
+            if len(v) > 20:
+                raise ValueError('Phone number too long')
+            if len(v) < 7:
+                raise ValueError('Phone number too short')
+            # Must be mostly digits (allow + at start)
+            if not re.match(r'^\+?[\d]+$', v):
+                raise ValueError('Invalid phone number format')
+        return v
 
 
 @app.post("/api/leads", status_code=201)
@@ -809,8 +895,8 @@ ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
 @limiter.limit("30/minute")
 async def get_leads(
     request: Request,
-    limit: int = Query(50, ge=1, le=500, description="Max leads to return"),
-    offset: int = Query(0, ge=0, description="Number of leads to skip"),
+    limit: int = Query(50, ge=1, le=100, description="Max leads to return (max 100)"),
+    offset: int = Query(0, ge=0, le=10000, description="Number of leads to skip (max 10000)"),
     since: Optional[str] = Query(None, description="ISO date string to filter leads after")
 ):
     """
@@ -832,6 +918,16 @@ async def get_leads(
             status_code=401,
             detail="Invalid or missing API key"
         )
+
+    # Audit log the access
+    audit_log.log(
+        action="read",
+        actor=get_actor_from_api_key(api_key),
+        resource_type="leads",
+        details={"limit": limit, "offset": offset},
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
 
     # Get leads from database
     leads = await db.get_leads(limit=limit, offset=offset, since=since)
@@ -873,6 +969,7 @@ class GarageSubmission(BaseModel):
 
 
 @app.post("/api/admin/garages", status_code=201)
+@limiter.limit("20/minute")
 async def create_garage(request: Request, garage: GarageSubmission):
     """
     Create a new garage (admin only).
@@ -882,6 +979,16 @@ async def create_garage(request: Request, garage: GarageSubmission):
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # Audit log
+    audit_log.log(
+        action="create",
+        actor=get_actor_from_api_key(api_key),
+        resource_type="garage",
+        details={"name": garage.name, "postcode": garage.postcode},
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
 
     # If no coordinates provided, geocode the postcode
     lat = garage.latitude
@@ -919,6 +1026,7 @@ async def create_garage(request: Request, garage: GarageSubmission):
 
 
 @app.get("/api/admin/garages")
+@limiter.limit("30/minute")
 async def list_garages(
     request: Request,
     status: Optional[str] = Query(None, description="Filter by status")
@@ -932,6 +1040,15 @@ async def list_garages(
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
+    audit_log.log(
+        action="list",
+        actor=get_actor_from_api_key(api_key),
+        resource_type="garages",
+        details={"status_filter": status},
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
+
     garages = await db.get_all_garages(status=status)
 
     return {
@@ -941,6 +1058,7 @@ async def list_garages(
 
 
 @app.get("/api/admin/garages/{garage_id}")
+@limiter.limit("60/minute")
 async def get_garage(request: Request, garage_id: str):
     """
     Get a single garage by ID (admin only).
@@ -948,6 +1066,15 @@ async def get_garage(request: Request, garage_id: str):
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    audit_log.log(
+        action="read",
+        actor=get_actor_from_api_key(api_key),
+        resource_type="garage",
+        resource_id=garage_id,
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
 
     garage = await db.get_garage_by_id(garage_id)
 
@@ -958,6 +1085,7 @@ async def get_garage(request: Request, garage_id: str):
 
 
 @app.patch("/api/admin/garages/{garage_id}")
+@limiter.limit("20/minute")
 async def update_garage(request: Request, garage_id: str):
     """
     Update a garage (admin only).
@@ -967,6 +1095,16 @@ async def update_garage(request: Request, garage_id: str):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     body = await request.json()
+
+    audit_log.log(
+        action="update",
+        actor=get_actor_from_api_key(api_key),
+        resource_type="garage",
+        resource_id=garage_id,
+        details={"fields_updated": list(body.keys())},
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
 
     success = await db.update_garage(garage_id, body)
 
@@ -981,13 +1119,35 @@ async def update_garage(request: Request, garage_id: str):
 # ============================================================================
 
 @app.get("/api/garage/outcome/{assignment_id}")
-async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
+@limiter.limit("30/minute")
+async def get_outcome_page(
+    request: Request,
+    assignment_id: str,
+    result: Optional[str] = None,
+    token: Optional[str] = Query(None, description="Signed verification token")
+):
     """
     Handle outcome reporting from email links.
 
+    Requires a valid signed token for authentication (included in email links).
     If result is provided, record the outcome and return confirmation.
     Otherwise, return info about the assignment.
     """
+    # Verify token if provided (required for recording outcomes)
+    if result and not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Token required for recording outcomes"
+        )
+
+    if token:
+        token_result = verify_outcome_token(token, assignment_id)
+        if not token_result["valid"]:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Invalid token: {token_result['error']}"
+            )
+
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
@@ -1017,19 +1177,36 @@ async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
 
 
 @app.post("/api/garage/outcome/{assignment_id}")
+@limiter.limit("30/minute")
 async def report_outcome(assignment_id: str, request: Request):
     """
     Report outcome for a lead assignment.
 
-    Body should contain: {"outcome": "won" | "lost" | "no_response"}
+    Body should contain: {"outcome": "won" | "lost" | "no_response", "token": "signed_token"}
+    Token is required for authentication (included in email links).
     """
+    body = await request.json()
+    outcome = body.get('outcome')
+    token = body.get('token')
+
+    # Verify token (required)
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Token required for recording outcomes"
+        )
+
+    token_result = verify_outcome_token(token, assignment_id)
+    if not token_result["valid"]:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid token: {token_result['error']}"
+        )
+
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-
-    body = await request.json()
-    outcome = body.get('outcome')
 
     if outcome not in ['won', 'lost', 'no_response']:
         raise HTTPException(status_code=400, detail="Invalid outcome. Must be: won, lost, or no_response")
@@ -1038,6 +1215,16 @@ async def report_outcome(assignment_id: str, request: Request):
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to record outcome")
+
+    audit_log.log(
+        action="outcome_reported",
+        actor=f"garage:{assignment.get('garage_id', 'unknown')}",
+        resource_type="lead_assignment",
+        resource_id=assignment_id,
+        details={"outcome": outcome},
+        request_id=getattr(request.state, 'request_id', None),
+        ip_address=request.client.host if request.client else None
+    )
 
     return {
         "success": True,
