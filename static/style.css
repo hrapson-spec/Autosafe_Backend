@@ -571,3 +571,90 @@ input:focus:not(:focus-visible) {
     font-size: 0.85rem;
     color: var(--text-secondary);
 }
+
+/* ===== Features Section ===== */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.features-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+    max-width: 1000px;
+    margin: 60px auto 0;
+    padding: 0 20px;
+}
+
+.feature-card {
+    background: var(--card-bg);
+    flex: 1 1 280px;
+    max-width: 320px;
+    padding: 32px 24px;
+    border-radius: var(--radius-xl);
+    text-align: center;
+    box-shadow: var(--shadow-card);
+    transition: transform var(--transition-smooth);
+}
+
+@media (hover: hover) {
+    .feature-card:hover {
+        transform: translateY(-2px);
+    }
+}
+
+.features-section .icon-wrapper {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    opacity: 0.9;
+}
+
+.feature-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.feature-card p {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Features - Tablet: 2-column layout */
+@media (max-width: 900px) {
+    .feature-card {
+        flex: 1 1 calc(50% - 12px);
+        max-width: none;
+    }
+}
+
+/* Features - Mobile: single column */
+@media (max-width: 600px) {
+    .features-section {
+        margin-top: 40px;
+    }
+
+    .feature-card {
+        flex: 1 1 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .feature-card {
+        transition: none;
+    }
+}
