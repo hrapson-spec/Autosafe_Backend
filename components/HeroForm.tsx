@@ -1,0 +1,102 @@
+import React, { useState } from 'react';
+import { RegistrationQuery } from '../types';
+import { Input, Button } from './ui';
+
+interface HeroFormProps {
+  onSubmit: (data: RegistrationQuery) => void;
+  isLoading: boolean;
+}
+
+// UK registration plate pattern: AA00 AAA or AA00AAA
+const UK_REG_PATTERN = /^[A-Z]{2}[0-9]{2}\s?[A-Z]{3}$/i;
+
+// UK postcode pattern
+const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
+
+const validateRegistration = (value: string): string | undefined => {
+  if (!value) return 'Registration is required';
+  if (value.length < 2) return 'Registration is too short';
+  if (!UK_REG_PATTERN.test(value.replace(/\s/g, ''))) {
+    return 'Enter a valid UK registration (e.g. AB12 CDE)';
+  }
+  return undefined;
+};
+
+const validatePostcode = (value: string): string | undefined => {
+  if (!value) return 'Postcode is required';
+  if (value.length < 3) return 'Postcode is too short';
+  if (!UK_POSTCODE_PATTERN.test(value.replace(/\s/g, ''))) {
+    return 'Enter a valid UK postcode (e.g. SW1A 1AA)';
+  }
+  return undefined;
+};
+
+const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading }) => {
+  const [registration, setRegistration] = useState('');
+  const [postcode, setPostcode] = useState('');
+  const [touched, setTouched] = useState({ registration: false, postcode: false });
+
+  const registrationError = touched.registration ? validateRegistration(registration) : undefined;
+  const postcodeError = touched.postcode ? validatePostcode(postcode) : undefined;
+
+  const isFormValid =
+    !validateRegistration(registration) &&
+    !validatePostcode(postcode) &&
+    !isLoading;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched({ registration: true, postcode: true });
+
+    if (isFormValid) {
+      onSubmit({ registration, postcode });
+    }
+  };
+
+  return (
+    <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm p-8 md:p-10">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <Input
+          id="registration"
+          label="Registration Number"
+          placeholder="e.g. AB12 CDE"
+          value={registration}
+          onChange={setRegistration}
+          onBlur={() => setTouched(t => ({ ...t, registration: true }))}
+          error={registrationError}
+          success={touched.registration && !registrationError}
+          maxLength={8}
+          uppercase
+          required
+        />
+
+        <Input
+          id="postcode"
+          label="Post Code"
+          placeholder="e.g. SW1A 1AA"
+          value={postcode}
+          onChange={setPostcode}
+          onBlur={() => setTouched(t => ({ ...t, postcode: true }))}
+          error={postcodeError}
+          success={touched.postcode && !postcodeError}
+          uppercase
+          required
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
+          disabled={!isFormValid}
+          className="mt-4"
+        >
+          Check This Car
+        </Button>
+      </form>
+    </div>
+  );
+};
+
+export default HeroForm;
