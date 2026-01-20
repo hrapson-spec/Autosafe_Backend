@@ -1065,14 +1065,97 @@ Referrer-Policy: no-referrer
 | HTTPS enforcement: redirect proof | ✓ Complete | Section 9.5 |
 | BASE_URL: hostname allowlist | ✓ Complete | `security.py:180-187` |
 | Logging/PII: operational statement | ✓ Complete | Section 9.7 |
+| Proxy header trust | ⚠ Ops Required | Section 9.9 |
 
-**Sign-Off Recommendation:**
+---
 
-> **CONDITIONALLY APPROVED** for early-stage production deployment.
+### 9.9 Pre-Launch Verification Criteria
+
+#### 9.9.1 Admin Network Gate Verification
+
+**Pass criteria:**
+- From a public network, requests to `/api/admin/*` return **connection refused / no route / edge 404**
+- Responses must NOT be 401/403 (these prove endpoint exists and expose attack surface)
+
+**Verification steps:**
+```bash
+# From public network (not VPN), all should fail to connect:
+curl -v https://api.autosafe.co.uk/api/admin/garages
+curl -v https://api.autosafe.co.uk/api/admin/leads
+curl -v https://api.autosafe.co.uk/api/admin/assignments
+
+# Expected: connection refused, timeout, or edge 404
+# NOT acceptable: 401 Unauthorized, 403 Forbidden
+```
+
+**Alternate route checks:**
+- [ ] Different Host headers cannot bypass gate
+- [ ] Direct service URL (e.g., `*.railway.app`) does not expose admin endpoints
+- [ ] Staging/preview domains have same protection or are not publicly routable
+
+---
+
+#### 9.9.2 Log Retention Verification
+
+**Pass criteria:**
+- Retention set to 30-90 days in aggregator settings (screenshot or config export required)
+- Applies to **all log streams** containing PII fields (customer name, email, phone, postcode)
+- Deletion is **enforced** (not merely hidden from UI)
+- Archive tiers (if any) are also subject to retention policy
+
+**Evidence required:**
+- [ ] Screenshot/export of retention configuration
+- [ ] Confirmation retention applies to: application logs, access logs, error logs
+- [ ] Confirmation of deletion enforcement (not soft-delete/archive bypass)
+
+---
+
+#### 9.9.3 Log Access Auditing
+
+**Definition of "audited":**
+- Record of **who** viewed/searched logs
+- Record of **when** access occurred
+- Record of **scope** (project/environment/query)
+
+**If aggregator cannot provide per-user audit:**
+- [ ] Document limitation explicitly
+- [ ] Restrict access to minimal set of named operators
+- [ ] If shared operational account required (not ideal): document who has credentials, rotate quarterly
+
+---
+
+#### 9.9.4 Proxy Header Trust Verification
+
+**Risk:** Application trusts `X-Forwarded-Proto` header. If attacker can send requests directly to the app (bypassing Railway proxy), they could spoof this header.
+
+**Pass criteria:**
+- Direct requests to application (not through proxy) cannot reach it, OR
+- Application only binds to internal network interface
+
+**Verification:**
+```bash
+# Direct request to Railway internal URL should not be publicly accessible
+# If it is accessible, verify header spoofing has no security impact:
+curl -H "X-Forwarded-Proto: http" https://internal-service-url.railway.internal/api/makes
+# Should either: fail to connect, or Railway should strip/override the header
+```
+
+**Railway-specific:** Railway's proxy architecture should prevent direct access to application containers. Verify this is the case for your deployment configuration.
+
+---
+
+### 9.10 Sign-Off Recommendation
+
+> **CONDITIONALLY APPROVED** for low-traffic production deployment.
 >
-> **Conditions:**
-> 1. Implement network gate (VPN/IP allowlist) for admin endpoints before go-live
-> 2. Configure log retention in Railway/aggregator per Section 9.7
-> 3. Verify Railway TLS certificate is valid for custom domain
+> **Pre-launch conditions (must be verified with evidence):**
+> 1. Admin network gate live and verified per Section 9.9.1
+> 2. Log retention configured and verified per Section 9.9.2
+> 3. Log access auditing defined per Section 9.9.3
+> 4. Proxy header trust verified per Section 9.9.4
+>
+> **Accepted risks (explicitly managed):**
+> - CSP `unsafe-inline` for Swagger UI (compensated, expires Q3 2026)
+> - Token replay within 48h window (mitigated by outcome immutability)
 >
 > **Deadline for full SSO/MFA:** Q2 2026
