@@ -175,21 +175,50 @@ class DVLAClient:
             result["_demo"] = True
             return result
 
-        # For unknown registrations in demo mode, generate plausible data
-        # based on the registration pattern
+        # P1-7 fix: Generate varied demo data based on registration hash
+        # This provides different mock vehicles for different registrations
         logger.info(f"Demo mode: generating mock data for {registration}")
+
+        # Use registration as seed for deterministic but varied output
+        import hashlib
+        reg_hash = int(hashlib.md5(registration.encode()).hexdigest(), 16)
+
+        # Vary the make/model based on hash
+        demo_makes = [
+            ("FORD", "FIESTA", 1200, "PETROL"),
+            ("VAUXHALL", "CORSA", 1400, "PETROL"),
+            ("VOLKSWAGEN", "GOLF", 1600, "DIESEL"),
+            ("BMW", "3 SERIES", 2000, "DIESEL"),
+            ("TOYOTA", "YARIS", 1300, "PETROL"),
+            ("HONDA", "CIVIC", 1500, "PETROL"),
+            ("NISSAN", "QASHQAI", 1600, "DIESEL"),
+            ("AUDI", "A3", 1400, "PETROL"),
+        ]
+        demo_colours = ["BLACK", "SILVER", "WHITE", "BLUE", "GREY", "RED"]
+
+        make_idx = reg_hash % len(demo_makes)
+        colour_idx = (reg_hash >> 8) % len(demo_colours)
+        year_offset = (reg_hash >> 16) % 10  # 0-9 years ago
+
+        make, model, engine, fuel = demo_makes[make_idx]
+        colour = demo_colours[colour_idx]
+        # Fix: Use current year instead of hardcoded 2024
+        from datetime import datetime as dt
+        year = dt.now().year - year_offset
+
         return {
             "registrationNumber": registration,
-            "make": "FORD",
-            "colour": "GREY",
-            "yearOfManufacture": 2017,
-            "fuelType": "PETROL",
-            "engineCapacity": 1200,
+            "make": make,
+            "model": model,
+            "colour": colour,
+            "yearOfManufacture": year,
+            "fuelType": fuel,
+            "engineCapacity": engine,
             "taxStatus": "Taxed",
             "taxDueDate": "2025-06-01",
             "motStatus": "Valid",
             "motExpiryDate": "2025-05-15",
-            "co2Emissions": 110,
+            "co2Emissions": 100 + (reg_hash % 80),
             "_demo": True,
             "_note": "Demo data - not a real vehicle lookup"
         }

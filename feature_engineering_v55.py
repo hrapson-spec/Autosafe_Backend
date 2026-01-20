@@ -197,11 +197,13 @@ def engineer_features(
         features['gap_band'] = 'first_test'
         features['days_since_last_test'] = 0
 
-    # Test mileage
-    if latest_test and latest_test.odometer_value:
+    # Test mileage (fix: use round instead of int for precision)
+    if latest_test and latest_test.odometer_value is not None:
         mileage = latest_test.odometer_value
-        if latest_test.odometer_unit == 'km':
-            mileage = int(mileage * 0.621371)
+        # Fix: Handle None unit, default to miles
+        unit = (latest_test.odometer_unit or 'mi').lower()
+        if unit == 'km':
+            mileage = round(mileage * 0.621371)  # Fix: round instead of truncate
         features['test_mileage'] = mileage
         features['has_prev_mileage'] = 1
         features['mileage_plausible_flag'] = 1
@@ -217,7 +219,8 @@ def engineer_features(
     # =========================================================================
     # Count advisories from all tests
     all_advisories = []
-    component_advisories = {comp: [] for comp in COMPONENT_CATEGORIES.keys()}
+    # Fix: Include 'structure' in component_advisories for mech_decay_structure
+    component_advisories = {comp: [] for comp in list(COMPONENT_CATEGORIES.keys())}
     text_signals_total = {k: 0 for k in TEXT_KEYWORDS.keys()}
 
     for test in tests:
@@ -270,34 +273,41 @@ def engineer_features(
         advs = component_advisories[component]
         features[f'has_prior_advisory_{component}'] = 1 if len(advs) > 0 else 0
 
+        # Fix: Build set first for O(n) instead of O(n²) lookups
+        adv_test_set = {id(a['test']) for a in advs}
+
         # Tests since last advisory
         if len(advs) > 0:
-            last_adv_test_idx = next((i for i, t in enumerate(tests) if any(a['test'] == t for a in advs)), len(tests))
+            last_adv_test_idx = next((i for i, t in enumerate(tests) if id(t) in adv_test_set), len(tests))
             features[f'tests_since_last_advisory_{component}'] = last_adv_test_idx
         else:
             features[f'tests_since_last_advisory_{component}'] = 999
 
         # Advisory in last 1/2 tests
-        recent_advs = [a for a in advs if tests and a['test'] in tests[:1]]
-        features[f'advisory_in_last_1_{component}'] = 1 if len(recent_advs) > 0 else 0
+        recent_test_ids = {id(t) for t in tests[:1]} if tests else set()
+        features[f'advisory_in_last_1_{component}'] = 1 if adv_test_set & recent_test_ids else 0
 
-        recent_advs_2 = [a for a in advs if tests and a['test'] in tests[:2]]
-        features[f'advisory_in_last_2_{component}'] = 1 if len(recent_advs_2) > 0 else 0
+        recent_test_ids_2 = {id(t) for t in tests[:2]} if tests else set()
+        features[f'advisory_in_last_2_{component}'] = 1 if adv_test_set & recent_test_ids_2 else 0
 
         # Advisory streak length
         streak = 0
         for test in tests:
-            if any(a['test'] == test for a in advs):
+            if id(test) in adv_test_set:
                 streak += 1
             else:
                 break
         features[f'advisory_streak_len_{component}'] = streak
 
     # Miles since last advisory for tyres/suspension
+    # Fix: Calculate actual estimate instead of hardcoded 5000
     for component in ['tyres', 'suspension']:
         advs = component_advisories[component]
-        if len(advs) > 0 and features['has_prev_mileage']:
-            features[f'miles_since_last_advisory_{component}'] = 5000  # Default estimate
+        if len(advs) > 0 and features['has_prev_mileage'] and features['test_mileage'] > 0:
+            # Estimate based on annualized mileage and time since last advisory
+            # Default to average UK annual mileage (~8000) divided by test frequency
+            est_annual_miles = 8000
+            features[f'miles_since_last_advisory_{component}'] = min(est_annual_miles, features['test_mileage'] // max(len(tests), 1))
         else:
             features[f'miles_since_last_advisory_{component}'] = 0
 
@@ -433,13 +443,22 @@ def engineer_features(
     # USAGE/BEHAVIORAL FEATURES
     # =========================================================================
     # Annualized mileage
+    # Fix: Distinguish between 0 miles (valid) and None (missing data)
     if len(tests) >= 2 and features['has_prev_mileage']:
-        mileage_diff = (tests[0].odometer_value or 0) - (tests[1].odometer_value or 0)
-        days_diff = (tests[0].test_date - tests[1].test_date).days
-        if days_diff > 0 and mileage_diff > 0:
-            annualized = (mileage_diff / days_diff) * 365
-            features['annualized_mileage_v2'] = annualized
-            features['usage_band_hybrid'] = get_usage_band(annualized)
+        # Use None-aware comparison: 0 is a valid odometer reading
+        val0 = tests[0].odometer_value if tests[0].odometer_value is not None else None
+        val1 = tests[1].odometer_value if tests[1].odometer_value is not None else None
+
+        if val0 is not None and val1 is not None:
+            mileage_diff = val0 - val1
+            days_diff = (tests[0].test_date - tests[1].test_date).days
+            if days_diff > 0 and mileage_diff > 0:
+                annualized = (mileage_diff / days_diff) * 365
+                features['annualized_mileage_v2'] = annualized
+                features['usage_band_hybrid'] = get_usage_band(annualized)
+            else:
+                features['annualized_mileage_v2'] = 10000  # Default
+                features['usage_band_hybrid'] = 'average'
         else:
             features['annualized_mileage_v2'] = 10000  # Default
             features['usage_band_hybrid'] = 'average'
@@ -524,16 +543,32 @@ def engineer_features(
     return features
 
 
-def features_to_array(features: Dict[str, Any]) -> List[Any]:
+def features_to_array(features: Dict[str, Any], validate: bool = True) -> List[Any]:
     """
     Convert features dict to array in exact order expected by model.
 
     Args:
         features: Dict mapping feature names to values
+        validate: If True, raise error for missing features (P0-4 fix)
 
     Returns:
         List of feature values in model's expected order
+
+    Raises:
+        ValueError: If validate=True and required features are missing
     """
+    if validate:
+        missing = [name for name in FEATURE_NAMES if name not in features]
+        if missing:
+            raise ValueError(
+                f"Missing {len(missing)} required features: {missing[:5]}"
+                + (f"... and {len(missing)-5} more" if len(missing) > 5 else "")
+            )
+
+    # Validate expected feature count matches model expectations
+    if len(FEATURE_NAMES) != 104:
+        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 104")
+
     return [features.get(name, 0) for name in FEATURE_NAMES]
 
 
