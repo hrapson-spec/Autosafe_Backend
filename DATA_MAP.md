@@ -1,8 +1,12 @@
 # AutoSafe Backend - Complete Data Map
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Last Updated:** 2026-01-20
 **Classification:** Internal / Compliance Documentation
+
+> **Version 2.0 Changes:** Added comprehensive security controls including admin IP allowlist,
+> audit logging, PII redaction, automated data retention, CORS restrictions, and email data minimization.
+> See Section 10.2 for full security implementation status.
 
 ---
 
@@ -636,16 +640,16 @@ When support receives data subject requests:
 |-------------|--------|-------|
 | Lawful basis identified | Partial | Consent for leads, legitimate interest for predictions |
 | Privacy policy | Yes | `static/privacy.html` |
-| Data minimization | Yes | Only collect necessary data |
-| Storage limitation | No | No automated deletion |
-| Right to access | Manual | Admin can export |
-| Right to erasure | Manual | Admin can delete |
+| Data minimization | **Yes** | Emails use portal links instead of embedding PII |
+| Storage limitation | **Yes** | Automated retention via `data_retention.py` (90 days default) |
+| Right to access | Manual | Admin can export via API |
+| Right to erasure | **Yes** | Automated via `/api/admin/retention/delete-subject` endpoint |
 | Right to portability | No | Not implemented |
-| Data protection by design | Partial | Rate limiting, security headers |
+| Data protection by design | **Yes** | PII redaction, IP allowlist, audit logging, secure emails |
 | Records of processing | This document | Maintain updated |
 | DPA with processors | Required | Resend, Railway |
 
-### 10.2 Security Measures
+### 10.2 Security Measures (IMPLEMENTED)
 
 | Measure | Implemented | Notes |
 |---------|-------------|-------|
@@ -657,19 +661,33 @@ When support receives data subject requests:
 | XSS prevention | Yes | CSP header |
 | Credential protection | Yes | Environment variables |
 | API key authentication | Yes | Admin endpoints |
+| **Admin IP allowlist** | **Yes** | `ADMIN_ALLOWED_IPS` env var, Railway internal network support |
+| **API key rotation support** | **Yes** | Primary + secondary key via `security.py` |
+| **Admin audit logging** | **Yes** | All admin actions logged with IP, key hash, resource |
+| **PII redaction in logs** | **Yes** | Auto-redact VRM, email, postcode, phone via `PIIRedactingFormatter` |
+| **CORS explicit origins** | **Yes** | No wildcards, configured via `CORS_ORIGINS` |
+| **SQLite fallback disabled in prod** | **Yes** | Auto-disabled when `RAILWAY_ENVIRONMENT=production` |
+| **Email data minimization** | **Yes** | Portal links instead of embedding customer data |
+| **Automated data retention** | **Yes** | Configurable via `RETENTION_*_DAYS` env vars |
+| **DVSA cache TTL enforcement** | **Yes** | 24-hour TTL, cleared on shutdown |
 
-### 10.3 Recommended Improvements
+### 10.3 Remaining Improvements
 
 | Priority | Improvement | Effort |
 |----------|-------------|--------|
-| High | Implement data subject deletion endpoint | Medium |
-| High | Add audit logging for admin actions | Low |
-| High | Configure staging environment with anonymized data | Medium |
+| Medium | Configure staging environment with anonymized data | Medium |
 | Medium | Implement data export for portability | Medium |
 | Medium | Add automated backup verification | Low |
 | Medium | Implement consent management | Medium |
-| Low | Add data retention automation | High |
-| Low | Implement access logging | Medium |
+| Low | Add real-time alerting for security events | Medium |
+
+### 10.4 Security Files Reference
+
+| File | Purpose |
+|------|---------|
+| `security.py` | Admin auth, IP allowlist, audit logging, PII redaction, CORS config |
+| `data_retention.py` | Automated deletion, GDPR erasure, retention management |
+| `email_templates_secure.py` | Minimal-data email templates with portal links |
 
 ### 10.4 Third-Party Data Processor Summary
 
@@ -788,10 +806,37 @@ CREATE INDEX idx_mileage ON mot_risk(mileage_band);
 
 ## Appendix B: Environment Variables Reference
 
+### Core Configuration
+
 | Variable | Purpose | Contains PII | Required |
 |----------|---------|--------------|----------|
 | `DATABASE_URL` | PostgreSQL connection | No (credentials) | Production |
-| `ADMIN_API_KEY` | Admin authentication | No | Production |
+| `PORT` | Server port | No | Optional |
+
+### Security Configuration (CRITICAL FOR PRODUCTION)
+
+| Variable | Purpose | Contains PII | Required |
+|----------|---------|--------------|----------|
+| `ADMIN_API_KEY` | Primary admin authentication (min 32 chars) | No | Production |
+| `ADMIN_API_KEY_SECONDARY` | Secondary key for rotation | No | Optional |
+| `ADMIN_ALLOWED_IPS` | Comma-separated IP allowlist | No | Production |
+| `ADMIN_ALLOW_ALL_IPS` | Disable IP check (DEV ONLY) | No | Never in prod |
+| `CORS_ORIGINS` | Allowed CORS origins (no wildcards) | No | Production |
+| `ENABLE_SQLITE_FALLBACK` | Enable SQLite fallback (DEV ONLY) | No | Never in prod |
+
+### Data Retention Configuration
+
+| Variable | Purpose | Default | Required |
+|----------|---------|---------|----------|
+| `RETENTION_LEADS_DAYS` | Days to retain leads | 90 | Optional |
+| `RETENTION_ASSIGNMENTS_DAYS` | Days to retain assignments | 90 | Optional |
+| `RETENTION_AUDIT_DAYS` | Days to retain audit logs | 365 | Optional |
+| `RETENTION_INACTIVE_GARAGES_DAYS` | Days to retain inactive garages | 365 | Optional |
+
+### External Services
+
+| Variable | Purpose | Contains PII | Required |
+|----------|---------|--------------|----------|
 | `DVSA_CLIENT_ID` | DVSA OAuth | No | Production |
 | `DVSA_CLIENT_SECRET` | DVSA OAuth | No | Production |
 | `DVSA_TOKEN_URL` | DVSA OAuth endpoint | No | Production |

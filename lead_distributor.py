@@ -1,14 +1,26 @@
 """
 Lead Distribution Orchestrator for AutoSafe.
 Coordinates matching leads to garages and sending email notifications.
+
+PRIVACY: Uses minimal email templates that link to portal instead of
+embedding customer contact details in email body.
 """
+import os
 import logging
 from typing import Optional, List
 
 import database as db
 from lead_matcher import find_matching_garages, MatchedGarage
 from email_service import send_email, is_configured as email_configured
-from email_templates import generate_lead_email
+
+# Use secure (minimal data) email templates in production
+USE_SECURE_EMAILS = os.environ.get("RAILWAY_ENVIRONMENT") == "production" or \
+                    os.environ.get("USE_SECURE_EMAILS", "true").lower() == "true"
+
+if USE_SECURE_EMAILS:
+    from email_templates_secure import generate_lead_email_minimal as generate_lead_email
+else:
+    from email_templates import generate_lead_email
 
 logger = logging.getLogger(__name__)
 
@@ -87,22 +99,38 @@ async def distribute_lead(lead_id: str) -> dict:
             continue
 
         # Generate email content
-        email_content = generate_lead_email(
-            garage_name=garage.name,
-            lead_name=lead.get('name'),
-            lead_email=lead.get('email', ''),
-            lead_phone=lead.get('phone'),
-            lead_postcode=lead['postcode'],
-            distance_miles=garage.distance_miles,
-            vehicle_make=lead.get('vehicle_make', 'Unknown'),
-            vehicle_model=lead.get('vehicle_model', 'Unknown'),
-            vehicle_year=lead.get('vehicle_year') or 0,
-            failure_risk=lead.get('failure_risk') or 0,
-            reliability_score=lead.get('reliability_score') or 0,
-            top_risks=top_risks,
-            assignment_id=assignment_id,
-            garages_count=len(garages),
-        )
+        # PRIVACY: If using secure emails, we don't include customer contact info
+        # The garage accesses contact details via the secure portal link
+        if USE_SECURE_EMAILS:
+            email_content = generate_lead_email(
+                garage_name=garage.name,
+                distance_miles=garage.distance_miles,
+                vehicle_make=lead.get('vehicle_make', 'Unknown'),
+                vehicle_model=lead.get('vehicle_model', 'Unknown'),
+                vehicle_year=lead.get('vehicle_year') or 0,
+                failure_risk=lead.get('failure_risk') or 0,
+                top_risks=top_risks,
+                assignment_id=assignment_id,
+                garages_count=len(garages),
+            )
+        else:
+            # Legacy: Full contact info in email (development only)
+            email_content = generate_lead_email(
+                garage_name=garage.name,
+                lead_name=lead.get('name'),
+                lead_email=lead.get('email', ''),
+                lead_phone=lead.get('phone'),
+                lead_postcode=lead['postcode'],
+                distance_miles=garage.distance_miles,
+                vehicle_make=lead.get('vehicle_make', 'Unknown'),
+                vehicle_model=lead.get('vehicle_model', 'Unknown'),
+                vehicle_year=lead.get('vehicle_year') or 0,
+                failure_risk=lead.get('failure_risk') or 0,
+                reliability_score=lead.get('reliability_score') or 0,
+                top_risks=top_risks,
+                assignment_id=assignment_id,
+                garages_count=len(garages),
+            )
 
         # Send email
         sent = await send_email(

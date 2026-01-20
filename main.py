@@ -39,13 +39,17 @@ import model_v55
 import logging
 import sys
 
-# Configure structured logging
+# Configure structured logging with PII redaction
 logging.basicConfig(
     level=logging.INFO,
     format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}',
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
+
+# Apply PII-safe logging formatter
+from security import configure_safe_logging, require_admin_auth, audit_logger, is_production
+configure_safe_logging()
 
 # Response caching for expensive queries
 _cache = {
@@ -59,6 +63,12 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - startup and shutdown."""
+    # Validate production security configuration
+    from security import require_production_config
+    security_issues = require_production_config()
+    if security_issues and is_production():
+        logger.error(f"CRITICAL: Production security issues detected: {security_issues}")
+
     # Startup: Load V55 model
     logger.info("Loading V55 CatBoost model...")
     if model_v55.load_model():
@@ -66,20 +76,28 @@ async def lifespan(app: FastAPI):
     else:
         logger.error("Failed to load V55 model - predictions will fail")
 
-    # Build SQLite from compressed data for fallback
-    import build_db
-    build_db.ensure_database()
-
-    # After building, check if we should use SQLite or PostgreSQL for fallback
-    global DATABASE_URL
-    if os.path.exists(DB_FILE):
-        logger.info(f"Fallback database ready: {DB_FILE}")
-        DATABASE_URL = None
-    elif DATABASE_URL:
-        logger.info("Initializing PostgreSQL connection pool for fallback...")
-        await db.get_pool()
+    # SQLite fallback: DISABLED in production for compliance
+    # In production, use PostgreSQL only to ensure consistent retention controls
+    global DATABASE_URL, SQLITE_FALLBACK_ENABLED
+    if is_production():
+        logger.info("SQLite fallback DISABLED in production (compliance requirement)")
+        SQLITE_FALLBACK_ENABLED = False
+        if DATABASE_URL:
+            logger.info("Initializing PostgreSQL connection pool...")
+            await db.get_pool()
+        else:
+            logger.error("CRITICAL: No DATABASE_URL in production - database unavailable")
     else:
-        logger.warning("No fallback database available")
+        # Development: allow SQLite fallback
+        SQLITE_FALLBACK_ENABLED = os.environ.get("ENABLE_SQLITE_FALLBACK", "true").lower() == "true"
+        if SQLITE_FALLBACK_ENABLED:
+            import build_db
+            build_db.ensure_database()
+            if os.path.exists(DB_FILE):
+                logger.info(f"Development SQLite fallback ready: {DB_FILE}")
+        if DATABASE_URL:
+            logger.info("Initializing PostgreSQL connection pool for fallback...")
+            await db.get_pool()
 
     # Initialize DVSA client
     dvsa_client = get_dvsa_client()
@@ -90,23 +108,31 @@ async def lifespan(app: FastAPI):
 
     yield  # Application runs here
 
-    # Shutdown
+    # Shutdown: Clear caches to prevent data leakage
     logger.info("Shutting down...")
+    from data_retention import clear_dvsa_cache
+    clear_dvsa_cache()
     await close_dvsa_client()
     await db.close_pool()
 
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
-# CORS Middleware - Allow cross-origin requests
+# CORS Middleware - Explicit origins only (NO wildcards in production)
 from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from security import get_allowed_origins
+
+CORS_ORIGINS = get_allowed_origins()
+if CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "X-API-Key", "Authorization"],
+    )
+else:
+    logger.warning("CORS disabled - no origins configured")
 
 
 # Security Headers Middleware
@@ -125,17 +151,23 @@ async def add_security_headers(request, call_next):
     return response
 
 
-# Global Exception Handler - prevent stack trace leakage
-from fastapi.responses import JSONResponse
+# Global Exception Handler - prevent stack trace leakage AND PII exposure
+from fastapi.responses import JSONResponse, HTMLResponse
+from security import redact_pii
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
-    logger.error(f"Unhandled exception on {request.url.path}: {type(exc).__name__}: {exc}")
+    # Redact any PII that might be in the exception message
+    safe_message = redact_pii(str(exc))
+    logger.error(f"Unhandled exception on {request.url.path}: {type(exc).__name__}: {safe_message}")
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal error occurred. Please try again later."}
     )
+
+# SQLite fallback control flag
+SQLITE_FALLBACK_ENABLED = False
 
 # Check for PostgreSQL first, then SQLite
 # OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
@@ -174,11 +206,14 @@ async def health_check():
         "database": db_status
     }
 
-# SQLite fallback connection (for local development)
+# SQLite fallback connection (DEVELOPMENT ONLY - disabled in production)
 import sqlite3
 
 def get_sqlite_connection():
-    """Get SQLite connection if available."""
+    """Get SQLite connection if available and enabled."""
+    # SECURITY: SQLite fallback is disabled in production
+    if not SQLITE_FALLBACK_ENABLED:
+        return None
     if not os.path.exists(DB_FILE):
         return None
     try:
@@ -819,7 +854,7 @@ async def submit_lead(request: Request, lead: LeadSubmission):
     }
 
 
-# Admin API key for accessing leads
+# Admin API key for accessing leads (legacy reference - use security module instead)
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
 
 
@@ -834,22 +869,19 @@ async def get_leads(
     """
     Get leads (admin only).
 
-    Requires X-API-Key header matching ADMIN_API_KEY environment variable.
+    SECURITY: Protected by IP allowlist + API key.
+    All access is audit logged.
     """
-    # Check API key
-    api_key = request.headers.get("X-API-Key")
+    # SECURITY: Check IP allowlist AND API key
+    require_admin_auth(request)
 
-    if not ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=503,
-            detail="Admin access not configured"
-        )
-
-    if not api_key or api_key != ADMIN_API_KEY:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing API key"
-        )
+    # AUDIT: Log this admin access
+    audit_logger.log_admin_access(
+        request=request,
+        action="list",
+        resource="leads",
+        details={"limit": limit, "offset": offset, "since": since}
+    )
 
     # Get leads from database
     leads = await db.get_leads(limit=limit, offset=offset, since=since)
@@ -895,11 +927,9 @@ async def create_garage(request: Request, garage: GarageSubmission):
     """
     Create a new garage (admin only).
 
-    Requires X-API-Key header matching ADMIN_API_KEY.
+    SECURITY: Protected by IP allowlist + API key.
     """
-    api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    require_admin_auth(request)
 
     # If no coordinates provided, geocode the postcode
     lat = garage.latitude
@@ -929,6 +959,15 @@ async def create_garage(request: Request, garage: GarageSubmission):
     if not garage_id:
         raise HTTPException(status_code=500, detail="Failed to save garage")
 
+    # AUDIT: Log garage creation
+    audit_logger.log_admin_access(
+        request=request,
+        action="create",
+        resource="garages",
+        resource_id=garage_id,
+        details={"name": garage.name, "postcode": garage.postcode}
+    )
+
     return {
         "success": True,
         "garage_id": garage_id,
@@ -944,11 +983,16 @@ async def list_garages(
     """
     List all garages (admin only).
 
-    Requires X-API-Key header matching ADMIN_API_KEY.
+    SECURITY: Protected by IP allowlist + API key.
     """
-    api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="list",
+        resource="garages",
+        details={"status_filter": status}
+    )
 
     garages = await db.get_all_garages(status=status)
 
@@ -962,10 +1006,17 @@ async def list_garages(
 async def get_garage(request: Request, garage_id: str):
     """
     Get a single garage by ID (admin only).
+
+    SECURITY: Protected by IP allowlist + API key.
     """
-    api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="read",
+        resource="garages",
+        resource_id=garage_id
+    )
 
     garage = await db.get_garage_by_id(garage_id)
 
@@ -979,12 +1030,21 @@ async def get_garage(request: Request, garage_id: str):
 async def update_garage(request: Request, garage_id: str):
     """
     Update a garage (admin only).
+
+    SECURITY: Protected by IP allowlist + API key.
     """
-    api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    require_admin_auth(request)
 
     body = await request.json()
+
+    # AUDIT: Log the update attempt (redact PII in details)
+    audit_logger.log_admin_access(
+        request=request,
+        action="update",
+        resource="garages",
+        resource_id=garage_id,
+        details={"fields_updated": list(body.keys())}
+    )
 
     success = await db.update_garage(garage_id, body)
 
@@ -1062,6 +1122,134 @@ async def report_outcome(assignment_id: str, request: Request):
         "message": "Outcome recorded. Thanks!",
         "outcome": outcome
     }
+
+
+# ============================================================================
+# Secure Portal Endpoint (for email links - minimizes data in emails)
+# ============================================================================
+
+@app.get("/portal/lead/{assignment_id}")
+async def view_lead_portal(assignment_id: str):
+    """
+    Secure portal for garages to view full lead details.
+
+    This endpoint is linked from lead notification emails.
+    It displays full customer contact info only when accessed directly
+    (not embedded in email body for privacy).
+    """
+    assignment = await db.get_lead_assignment_by_id(assignment_id)
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # Get full lead details
+    lead = await db.get_lead_by_id(str(assignment['lead_id']))
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead details not found")
+
+    # Generate the portal HTML page
+    from email_templates_secure import generate_portal_page_html
+
+    # Parse top_risks if it's a string
+    top_risks = lead.get('top_risks') or []
+    if isinstance(top_risks, str):
+        import json
+        top_risks = json.loads(top_risks)
+
+    html_content = generate_portal_page_html(
+        lead_name=lead.get('name'),
+        lead_email=lead.get('email', ''),
+        lead_phone=lead.get('phone'),
+        lead_postcode=lead.get('postcode', ''),
+        vehicle_make=lead.get('vehicle_make', 'Unknown'),
+        vehicle_model=lead.get('vehicle_model', 'Unknown'),
+        vehicle_year=lead.get('vehicle_year') or 0,
+        failure_risk=lead.get('failure_risk') or 0,
+        reliability_score=lead.get('reliability_score') or 0,
+        top_risks=top_risks,
+        assignment_id=assignment_id,
+    )
+
+    return HTMLResponse(content=html_content)
+
+
+# ============================================================================
+# Data Retention Admin Endpoints
+# ============================================================================
+
+@app.get("/api/admin/retention/status")
+async def get_retention_status(request: Request):
+    """
+    Get current data retention status and statistics (admin only).
+
+    Returns:
+    - Configured retention periods
+    - Current data counts
+    - Data expiring soon
+    """
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="read",
+        resource="retention_status"
+    )
+
+    from data_retention import get_retention_status
+    return await get_retention_status()
+
+
+@app.post("/api/admin/retention/cleanup")
+async def run_retention_cleanup_endpoint(
+    request: Request,
+    dry_run: bool = Query(True, description="If true, only report what would be deleted")
+):
+    """
+    Run data retention cleanup (admin only).
+
+    This deletes expired leads, orphaned assignments, and inactive garages
+    according to configured retention periods.
+
+    Set dry_run=false to actually delete data.
+    """
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="cleanup",
+        resource="retention",
+        details={"dry_run": dry_run}
+    )
+
+    from data_retention import run_retention_cleanup
+    return await run_retention_cleanup(dry_run=dry_run)
+
+
+@app.post("/api/admin/retention/delete-subject")
+async def delete_data_subject_endpoint(
+    request: Request,
+    email: str = Query(..., description="Email address of the data subject"),
+    dry_run: bool = Query(True, description="If true, only report what would be deleted")
+):
+    """
+    Delete all data for a specific data subject (admin only).
+
+    This implements GDPR Article 17 - Right to Erasure.
+    Deletes all leads and assignments for the given email address.
+
+    Set dry_run=false to actually delete data.
+    """
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="delete_subject",
+        resource="data_subject",
+        details={"dry_run": dry_run}  # Email is auto-redacted by audit logger
+    )
+
+    from data_retention import delete_data_subject
+    return await delete_data_subject(email=email, dry_run=dry_run)
 
 
 # Mount static files at /static (only if the folder exists)
