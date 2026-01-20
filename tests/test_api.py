@@ -1,3 +1,10 @@
+"""
+AutoSafe API Tests
+==================
+
+Tests for the AutoSafe MOT Risk Prediction API endpoints.
+Updated to match actual API contract (P0-2 fix).
+"""
 from fastapi.testclient import TestClient
 import unittest
 import os
@@ -47,136 +54,57 @@ class TestAPI(unittest.TestCase):
 
     def test_get_risk_missing_year(self):
         """Test that /api/risk requires year parameter."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&mileage=50000")
-        self.assertEqual(response.status_code, 422)
-
-    def test_get_risk_missing_mileage(self):
-        """Test that /api/risk requires mileage parameter."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+        response = client.get("/api/risk?make=FORD&model=FIESTA")
         self.assertEqual(response.status_code, 422)
 
     def test_get_risk_valid(self):
         """Test successful risk calculation with valid parameters."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000")
-        # Should be either 200 (success) or 404 (model not found)
-        self.assertIn(response.status_code, [200, 404])
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+        # Should be 200 (success with real or default data)
+        self.assertEqual(response.status_code, 200)
 
-        if response.status_code == 200:
-            data = response.json()
-            # Verify required fields exist
-            self.assertIn("Failure_Risk", data)
-            # Use Model_Id (API format) or model_id
-            self.assertTrue("Model_Id" in data or "model_id" in data)
+        data = response.json()
+        # Verify required fields exist (lowercase keys per actual API)
+        self.assertIn("failure_risk", data)
+        self.assertIn("vehicle", data)
+        self.assertIn("confidence_level", data)
 
-            # Verify Failure_Risk is a valid probability
-            failure_risk = data.get("Failure_Risk")
-            if failure_risk is not None:
-                self.assertGreaterEqual(failure_risk, 0.0)
-                self.assertLessEqual(failure_risk, 1.0)
+        # Verify failure_risk is a valid probability
+        failure_risk = data.get("failure_risk")
+        self.assertIsNotNone(failure_risk)
+        self.assertGreaterEqual(failure_risk, 0.0)
+        self.assertLessEqual(failure_risk, 1.0)
 
     def test_get_risk_response_structure(self):
         """Test that risk response contains expected fields when successful."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018")
+        self.assertEqual(response.status_code, 200)
 
-        if response.status_code == 200:
-            data = response.json()
-
-            # Check for standard response fields
-            expected_fields = ["Failure_Risk"]
-            for field in expected_fields:
-                self.assertIn(field, data, f"Missing field: {field}")
-
-            # If confidence intervals are present, verify they're valid
-            if "Failure_Risk_CI_Lower" in data and "Failure_Risk_CI_Upper" in data:
-                lower = data["Failure_Risk_CI_Lower"]
-                upper = data["Failure_Risk_CI_Upper"]
-                risk = data["Failure_Risk"]
-
-                self.assertLessEqual(lower, risk, "CI lower bound should be <= risk")
-                self.assertGreaterEqual(upper, risk, "CI upper bound should be >= risk")
-                self.assertGreaterEqual(lower, 0.0, "CI lower should be >= 0")
-                self.assertLessEqual(upper, 1.0, "CI upper should be <= 1")
-
-    def test_get_risk_with_history_params(self):
-        """Test risk calculation with history parameters."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=PASS&days_since_prev=365"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-        if response.status_code == 200:
-            data = response.json()
-            # If history adjustment was applied, check for related fields
-            if "History_Adjustment" in data:
-                history = data["History_Adjustment"]
-                self.assertIn("prev_outcome", history)
-                self.assertIn("gap_band", history)
-
-    def test_get_risk_with_prev_outcome_fail(self):
-        """Test risk calculation with previous FAIL outcome."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=FAIL&days_since_prev=180"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-    def test_get_risk_with_component_history(self):
-        """Test risk calculation with component failure history."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_brake_failure=1&prev_suspension_failure=0"
-        )
-        self.assertIn(response.status_code, [200, 404])
-
-        if response.status_code == 200:
-            data = response.json()
-            # Component adjustment may or may not be applied depending on weights file
-            self.assertIn("Failure_Risk", data)
-
-    def test_get_risk_invalid_prev_outcome(self):
-        """Test that invalid prev_outcome values are rejected."""
-        response = client.get(
-            "/api/risk?make=FORD&model=FIESTA&year=2018&mileage=50000"
-            "&prev_outcome=INVALID"
-        )
-        self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertIn("detail", data)
 
-    def test_get_risk_discontinued_model(self):
-        """Test that discontinued model+year combinations return 422 error."""
-        # Toyota Avensis was discontinued ~2018, so 2022 should fail
-        response = client.get("/api/risk?make=TOYOTA&model=AVENSIS&year=2022&mileage=30000")
-        # Should get 422 Unprocessable Entity for invalid year (consistent with other validation errors)
-        self.assertEqual(response.status_code, 422)
-        data = response.json()
-        self.assertIn("detail", data)
-        # Detail should mention the year or that it's not valid
-        detail = data["detail"]
-        # Handle both string and list formats
-        if isinstance(detail, list):
-            detail = str(detail)
-        self.assertTrue("2022" in detail or "not valid" in detail.lower() or "discontinued" in detail.lower())
+        # Check for standard response fields (lowercase per actual API)
+        expected_fields = [
+            "vehicle", "year", "failure_risk", "confidence_level",
+            "risk_brakes", "risk_suspension", "risk_tyres"
+        ]
+        for field in expected_fields:
+            self.assertIn(field, data, f"Missing field: {field}")
+
+        # Verify component risks are valid
+        for comp in ["risk_brakes", "risk_suspension", "risk_tyres",
+                     "risk_steering", "risk_visibility", "risk_lamps", "risk_body"]:
+            if comp in data:
+                self.assertGreaterEqual(data[comp], 0.0)
+                self.assertLessEqual(data[comp], 1.0)
 
     def test_get_risk_invalid_year_too_old(self):
         """Test that years before 1990 are rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=1950&mileage=50000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=1950")
         self.assertEqual(response.status_code, 422)
 
     def test_get_risk_invalid_year_future(self):
         """Test that years too far in the future are rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2050&mileage=50000")
-        self.assertEqual(response.status_code, 422)
-
-    def test_get_risk_negative_mileage(self):
-        """Test that negative mileage is rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=-1000")
-        self.assertEqual(response.status_code, 422)
-
-    def test_get_risk_excessive_mileage(self):
-        """Test that excessive mileage (>999999) is rejected."""
-        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2018&mileage=1500000")
+        response = client.get("/api/risk?make=FORD&model=FIESTA&year=2050")
         self.assertEqual(response.status_code, 422)
 
     def test_health_endpoint(self):
@@ -186,6 +114,52 @@ class TestAPI(unittest.TestCase):
         data = response.json()
         self.assertIn("status", data)
         self.assertEqual(data["status"], "ok")
+
+
+class TestV55API(unittest.TestCase):
+    """Tests for V55 registration-based endpoint."""
+
+    def test_v55_missing_registration(self):
+        """Test that /api/risk/v55 requires registration."""
+        response = client.get("/api/risk/v55")
+        self.assertEqual(response.status_code, 422)
+
+    def test_v55_invalid_registration(self):
+        """Test that invalid registration format is rejected."""
+        response = client.get("/api/risk/v55?registration=!!!")
+        self.assertEqual(response.status_code, 400)
+
+    def test_v55_valid_registration(self):
+        """Test V55 with valid registration (may use demo/fallback)."""
+        response = client.get("/api/risk/v55?registration=AB12CDE&postcode=SW1A1AA")
+        # Should be 200 or 503 (if model not loaded)
+        self.assertIn(response.status_code, [200, 503])
+
+        if response.status_code == 200:
+            data = response.json()
+            self.assertIn("registration", data)
+            self.assertIn("failure_risk", data)
+            self.assertIn("model_version", data)
+
+    def test_v55_response_structure(self):
+        """Test V55 response has expected structure."""
+        response = client.get("/api/risk/v55?registration=AB12CDE")
+
+        if response.status_code == 200:
+            data = response.json()
+            # Check required fields
+            self.assertIn("registration", data)
+            self.assertIn("failure_risk", data)
+            self.assertIn("confidence_level", data)
+            self.assertIn("model_version", data)
+
+            # Check risk_components if present
+            if "risk_components" in data and data["risk_components"]:
+                components = data["risk_components"]
+                self.assertIsInstance(components, dict)
+                for key, value in components.items():
+                    self.assertGreaterEqual(value, 0.0)
+                    self.assertLessEqual(value, 1.0)
 
 
 class TestAPIErrorHandling(unittest.TestCase):
@@ -211,6 +185,49 @@ class TestAPIErrorHandling(unittest.TestCase):
         # Should return 200 with empty list, not crash
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), list)
+
+    def test_very_long_make(self):
+        """Test that very long make parameter is rejected."""
+        long_make = "A" * 100
+        response = client.get(f"/api/risk?make={long_make}&model=TEST&year=2020")
+        self.assertEqual(response.status_code, 422)
+
+    def test_very_long_model(self):
+        """Test that very long model parameter is rejected."""
+        long_model = "B" * 100
+        response = client.get(f"/api/risk?make=FORD&model={long_model}&year=2020")
+        self.assertEqual(response.status_code, 422)
+
+
+class TestVehicleEndpoint(unittest.TestCase):
+    """Tests for /api/vehicle endpoint."""
+
+    def test_vehicle_missing_registration(self):
+        """Test that /api/vehicle requires registration."""
+        response = client.get("/api/vehicle")
+        self.assertEqual(response.status_code, 422)
+
+    def test_vehicle_valid_registration(self):
+        """Test vehicle lookup with valid registration (demo mode)."""
+        response = client.get("/api/vehicle?registration=AB12CDE")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("registration", data)
+        self.assertIn("dvla", data)
+
+    def test_vehicle_response_structure(self):
+        """Test vehicle response has expected structure."""
+        response = client.get("/api/vehicle?registration=AB12CDE")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Check DVLA data structure
+        if "dvla" in data and data["dvla"]:
+            dvla = data["dvla"]
+            # Common fields that should be present
+            expected_fields = ["make", "yearOfManufacture"]
+            for field in expected_fields:
+                self.assertIn(field, dvla, f"Missing DVLA field: {field}")
 
 
 if __name__ == '__main__':

@@ -1,12 +1,20 @@
+/**
+ * AutoSafe Frontend - V55 Registration-Based Risk Prediction
+ * Uses /api/risk/v55 endpoint with registration and postcode
+ */
+
 const API_BASE = '/api';
 
+// DOM Elements
+const form = document.getElementById('riskForm');
 const registrationInput = document.getElementById('registration');
 const postcodeInput = document.getElementById('postcode');
-const form = document.getElementById('riskForm');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
-const resultsPanel = document.getElementById('resultsPanel');
+
+// Results panel
+let resultsPanel = document.getElementById('resultsPanel');
 
 // Lead form elements
 const leadForm = document.getElementById('leadForm');
@@ -16,6 +24,37 @@ const leadSuccess = document.getElementById('leadSuccess');
 // Store current results for lead submission
 let currentResultsData = null;
 
+/**
+ * Initialize the page
+ */
+function init() {
+    // Add input formatting
+    if (registrationInput) {
+        registrationInput.addEventListener('input', formatRegistration);
+    }
+    if (postcodeInput) {
+        postcodeInput.addEventListener('input', formatPostcode);
+    }
+}
+
+/**
+ * Format registration input (uppercase, remove invalid chars)
+ */
+function formatRegistration(e) {
+    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9\s]/g, '');
+    e.target.value = value;
+}
+
+/**
+ * Format postcode input (uppercase)
+ */
+function formatPostcode(e) {
+    e.target.value = e.target.value.toUpperCase();
+}
+
+/**
+ * Show error banner
+ */
 function showError(message) {
     let banner = document.getElementById('errorBanner');
     if (!banner) {
@@ -33,9 +72,25 @@ function showError(message) {
     }, 5000);
 }
 
-// Handle Form Submit
+/**
+ * Handle form submission
+ */
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const registration = registrationInput.value.replace(/\s/g, '').toUpperCase();
+    const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
+
+    // Basic validation
+    if (!registration || registration.length < 2) {
+        showError('Please enter a valid registration number');
+        return;
+    }
+
+    if (!postcode) {
+        showError('Please enter your postcode');
+        return;
+    }
 
     // UI Loading State
     btnText.textContent = 'Analyzing...';
@@ -52,9 +107,6 @@ form.addEventListener('submit', async (e) => {
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
 
-    const registration = registrationInput.value.replace(/\s/g, '').toUpperCase();
-    const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
-
     try {
         const url = `${API_BASE}/risk/v55?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}`;
         const res = await fetch(url);
@@ -62,12 +114,16 @@ form.addEventListener('submit', async (e) => {
         if (!res.ok) {
             const errData = await res.json();
             if (res.status === 422 && errData.detail) {
-                if (Array.isArray(errData.detail)) {
-                    const msg = errData.detail[0].msg;
-                    const loc = errData.detail[0].loc[1];
-                    throw new Error(`${loc}: ${msg}`);
-                }
-                throw new Error(errData.detail);
+                const detail = Array.isArray(errData.detail)
+                    ? errData.detail[0].msg
+                    : errData.detail;
+                throw new Error(detail);
+            }
+            if (res.status === 400) {
+                throw new Error(errData.detail || 'Invalid registration format');
+            }
+            if (res.status === 503) {
+                throw new Error('Service temporarily unavailable. Please try again.');
             }
             throw new Error(errData.detail || 'Failed to analyze risk');
         }
@@ -83,9 +139,12 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
+/**
+ * Display prediction results
+ */
 function displayResults(data) {
     if (!resultsPanel) {
-        // Results panel doesn't exist on this page - redirect or create it
+        // Results panel doesn't exist on this page
         console.log('Results:', data);
         return;
     }
@@ -128,7 +187,17 @@ function displayResults(data) {
             lastMOTDate.textContent = '-';
         }
     }
-    if (lastMOTResult) lastMOTResult.textContent = data.last_mot_result || '-';
+
+    if (lastMOTResult) {
+        lastMOTResult.textContent = data.last_mot_result || '-';
+        lastMOTResult.className = 'stat-value';
+        if (data.last_mot_result === 'PASSED') {
+            lastMOTResult.classList.add('text-low');
+        } else if (data.last_mot_result === 'FAILED') {
+            lastMOTResult.classList.add('text-high');
+        }
+    }
+
     if (mileage) mileage.textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
 
     // Update Main Risk
@@ -161,7 +230,7 @@ function displayResults(data) {
     // Update confidence badge
     const confidenceBadge = document.getElementById('confidenceBadge');
     if (confidenceBadge) {
-        confidenceBadge.textContent = data.confidence_level + ' Confidence';
+        confidenceBadge.textContent = (data.confidence_level || 'Unknown') + ' Confidence';
         confidenceBadge.className = 'confidence-badge';
         if (data.confidence_level === 'High') {
             confidenceBadge.classList.add('confidence-high');
@@ -186,6 +255,9 @@ function displayResults(data) {
             repairCostRange.textContent =
                 `Range: £${repairCost.range_low} - £${repairCost.range_high}`;
         }
+    } else if (repairCostValue) {
+        repairCostValue.textContent = '-';
+        if (repairCostRange) repairCostRange.textContent = '';
     }
 
     // Update Components (V55 uses risk_components object)
@@ -207,11 +279,13 @@ function displayResults(data) {
 
     const components = [];
     for (const [key, name] of Object.entries(componentDisplayNames)) {
-        if (riskComponents[key] !== undefined) {
-            components.push({ name, value: riskComponents[key] });
+        const value = riskComponents[key] ?? data[`risk_${key}`];
+        if (value !== undefined && value !== null) {
+            components.push({ name, value, key });
         }
     }
 
+    // Sort by risk value descending
     components.sort((a, b) => b.value - a.value);
 
     components.forEach(comp => {
@@ -246,6 +320,8 @@ function displayResults(data) {
     if (sourceNote) {
         if (data.model_version === 'v55') {
             sourceNote.textContent = 'Prediction based on real-time MOT history analysis';
+        } else if (data.model_version === 'lookup') {
+            sourceNote.textContent = data.note || 'Based on historical MOT data for similar vehicles.';
         } else if (data.note) {
             sourceNote.textContent = data.note;
         } else {
@@ -320,4 +396,11 @@ if (leadForm) {
             submitBtn.disabled = false;
         }
     });
+}
+
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
 }

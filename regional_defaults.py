@@ -11,7 +11,7 @@ proper corrosion index from DVSA bulk data analysis.
 """
 
 import re
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 
 # Postcode area extraction pattern
@@ -147,7 +147,7 @@ CORROSION_INDEX_BY_AREA: Dict[str, float] = {
 
     # WALES (varied - coastal vs valleys)
     'NP': 0.60,   # Newport - South Wales
-    'SY': 0.55,   # Shrewsbury/Welsh border
+    # Note: SY already defined above in MODERATE section (line 109)
 
     # NORTHERN IRELAND
     'BT': 0.65,   # Belfast - all NI postcodes
@@ -207,7 +207,7 @@ def get_station_strictness_bias() -> float:
     return 0.0
 
 
-def validate_postcode(postcode: str) -> Dict[str, any]:
+def validate_postcode(postcode: str) -> Dict[str, Any]:
     """
     Validate a UK postcode format.
 

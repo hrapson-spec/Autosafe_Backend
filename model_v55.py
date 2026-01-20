@@ -116,17 +116,32 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     # Get raw prediction
     raw_prob = _model.predict_proba([feature_array])[0][1]  # Probability of class 1 (failure)
 
+    # Clamp raw probability to avoid log(0) or log(1) issues (P0-3 fix)
+    raw_prob = float(np.clip(raw_prob, 1e-10, 1 - 1e-10))
+
     # Apply Platt calibration if available
     if _calibrator is not None:
         try:
             # Platt calibrator expects log-odds transformed input
-            log_odds = np.log(raw_prob / (1 - raw_prob + 1e-10))
-            calibrated_prob = _calibrator.predict_proba([[log_odds]])[0][1]
+            log_odds = np.log(raw_prob / (1 - raw_prob))
+            # Guard against NaN/Inf from calibrator
+            if not np.isfinite(log_odds):
+                logger.warning(f"Non-finite log-odds: {log_odds}, using raw probability")
+                calibrated_prob = raw_prob
+            else:
+                calibrated_prob = _calibrator.predict_proba([[log_odds]])[0][1]
+                # Ensure calibrated output is valid
+                if not np.isfinite(calibrated_prob):
+                    logger.warning("Non-finite calibrated prob, using raw probability")
+                    calibrated_prob = raw_prob
         except Exception as e:
             logger.warning(f"Calibration failed, using raw probability: {e}")
             calibrated_prob = raw_prob
     else:
         calibrated_prob = raw_prob
+
+    # Final safety clamp to valid probability range
+    calibrated_prob = float(np.clip(calibrated_prob, 0.0, 1.0))
 
     # Determine confidence level
     confidence = _calculate_confidence(features)
