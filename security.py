@@ -28,10 +28,19 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 # Patterns to redact from any log output
+# ORDER MATTERS: Process more specific patterns first (postcode before VRM)
 PII_PATTERNS = {
+    # UK Postcodes (full) - MUST be checked before VRM as they can overlap
+    # Format: A9 9AA, A99 9AA, AA9 9AA, AA99 9AA, A9A 9AA, AA9A 9AA
+    'postcode': re.compile(
+        r'\b([A-Z]{1,2}[0-9][0-9A-Z]?)\s?([0-9][A-Z]{2})\b',
+        re.IGNORECASE
+    ),
     # UK Vehicle Registration (various formats)
+    # Current format: AB12 CDE (2001+)
+    # Older formats: A123 BCD, ABC 123D, 1234 AB
     'registration': re.compile(
-        r'\b[A-Z]{2}[0-9]{2}\s?[A-Z]{3}\b|'  # AB12 CDE or AB12CDE
+        r'\b[A-Z]{2}[0-9]{2}\s?[A-Z]{3}\b|'  # AB12 CDE or AB12CDE (current)
         r'\b[A-Z][0-9]{1,3}\s?[A-Z]{3}\b|'   # A123 BCD
         r'\b[A-Z]{3}\s?[0-9]{1,3}[A-Z]\b|'   # ABC 123D
         r'\b[0-9]{1,4}\s?[A-Z]{1,3}\b',      # 1234 AB
@@ -41,14 +50,10 @@ PII_PATTERNS = {
     'email': re.compile(
         r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     ),
-    # UK Postcodes (full)
-    'postcode': re.compile(
-        r'\b[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}\b',
-        re.IGNORECASE
-    ),
-    # UK Phone numbers
+    # UK Phone numbers (including international format)
     'phone': re.compile(
-        r'\b(?:\+44|0044|0)\s?[0-9]{2,4}\s?[0-9]{3,4}\s?[0-9]{3,4}\b'
+        r'(?:\+44\s?|0044\s?|0)[0-9](?:\s?[0-9]){9,10}\b|'  # +44 or 0044 or 0 prefix
+        r'\b07[0-9]{3}\s?[0-9]{3}\s?[0-9]{3}\b'  # Mobile: 07xxx xxx xxx
     ),
     # API keys (common patterns)
     'api_key': re.compile(
@@ -56,6 +61,9 @@ PII_PATTERNS = {
         r'\b[A-Za-z0-9]{32,64}\b'  # Generic long tokens
     ),
 }
+
+# Order for processing (postcode before registration to avoid false matches)
+PII_PROCESS_ORDER = ['postcode', 'registration', 'email', 'phone', 'api_key']
 
 # Replacement tokens
 REDACTION_TOKENS = {
@@ -83,7 +91,10 @@ def redact_pii(text: str, preserve_partial: bool = False) -> str:
 
     result = str(text)
 
-    for pii_type, pattern in PII_PATTERNS.items():
+    # Process in specific order to handle overlapping patterns
+    for pii_type in PII_PROCESS_ORDER:
+        pattern = PII_PATTERNS[pii_type]
+
         if preserve_partial and pii_type == 'email':
             # Preserve domain for emails: user@domain.com -> [REDACTED]@domain.com
             result = re.sub(
