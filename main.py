@@ -950,10 +950,15 @@ async def create_garage(request: Request, garage: GarageSubmission):
     Create a new garage (admin only).
 
     Requires X-API-Key header matching ADMIN_API_KEY.
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
 
     # If no coordinates provided, geocode the postcode
     lat = garage.latitude
@@ -1036,10 +1041,15 @@ async def get_garage(request: Request, garage_id: str):
 async def update_garage(request: Request, garage_id: str):
     """
     Update a garage (admin only).
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
 
     body = await request.json()
 
@@ -1070,6 +1080,9 @@ async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
 
     # If result provided via query param, record it
     if result in ['won', 'lost', 'no_response']:
+        # CRITICAL: Check PostgreSQL is available before write
+        if not await db.is_postgres_available():
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
         success = await db.update_lead_assignment_outcome(assignment_id, result)
         if success:
             return {
@@ -1097,7 +1110,12 @@ async def report_outcome(assignment_id: str, request: Request):
     Report outcome for a lead assignment.
 
     Body should contain: {"outcome": "won" | "lost" | "no_response"}
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
