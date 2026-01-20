@@ -1,0 +1,3 @@
+# Generated load test results
+results_*.csv
+__pycache__/
