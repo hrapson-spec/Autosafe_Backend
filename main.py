@@ -199,20 +199,43 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring."""
-    db_status = "disconnected"
-    if DATABASE_URL:
-        try:
-            pool = await db.get_pool()
-            if pool:
-                db_status = "connected"
-        except Exception:
-            db_status = "error"
-    
+    """
+    Liveness check - is the application running?
+    Always returns 200 if the app is up.
+    Use /ready for readiness checks that verify dependencies.
+    """
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """
+    Readiness check - is the application ready to serve traffic?
+    Returns 503 if PostgreSQL is unavailable.
+
+    Use this endpoint for UptimeRobot / load balancer health checks.
+    """
+    # Check PostgreSQL connectivity
+    db_available = await db.is_postgres_available()
+
+    if not db_available:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "timestamp": datetime.now().isoformat(),
+                "database": "disconnected",
+                "message": "Database connection failed"
+            }
+        )
+
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "database": db_status
+        "database": "connected"
     }
 
 # SQLite fallback connection (for local development)
