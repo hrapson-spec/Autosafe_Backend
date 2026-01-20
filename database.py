@@ -50,6 +50,32 @@ async def close_pool():
         except Exception as e:
             logger.error(f"Error closing database pool: {e}")
 
+
+async def is_postgres_available() -> bool:
+    """
+    Check if PostgreSQL is available and accepting connections.
+
+    This is used to prevent silent fallback to SQLite for write operations
+    which could cause data loss in production.
+
+    Returns:
+        True if PostgreSQL is connected and responding, False otherwise
+    """
+    if not DATABASE_URL:
+        return False
+
+    pool = await get_pool()
+    if not pool:
+        return False
+
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("SELECT 1")
+            return True
+    except Exception as e:
+        logger.error(f"PostgreSQL health check failed: {e}")
+        return False
+
 def normalize_columns(row_dict: Dict) -> Dict:
     """Convert lowercase PostgreSQL column names back to expected format.
     
@@ -275,7 +301,8 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
             )
 
             lead_id = str(result['id'])
-            logger.info(f"Lead saved: {lead_data.get('postcode')} - {vehicle.get('make')} {vehicle.get('model')}")
+            # Log lead saved with postcode (needed for ops) but no email/name/phone
+            logger.info(f"Lead saved: id={lead_id} postcode={lead_data.get('postcode')} make={vehicle.get('make')} model={vehicle.get('model')}")
             return lead_id
 
     except Exception as e:

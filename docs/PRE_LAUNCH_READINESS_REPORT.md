@@ -3,384 +3,342 @@
 **Assessment Date:** January 2026
 **Prepared For:** AutoSafe Backend
 **Environment:** Railway (Production)
+**Revision:** 2.0 (with corrected assessments)
 
 ---
 
 ## Executive Summary
 
-This report assesses the AutoSafe Backend against a comprehensive pre-launch checklist covering core functionality, security, data integrity, monitoring, and compliance. The system is a **FastAPI-based MOT failure risk prediction engine** with ML integration.
+This report assesses the AutoSafe Backend against a comprehensive pre-launch checklist. The system is a **FastAPI-based MOT failure risk prediction engine** with ML integration, lead distribution, and garage network management.
 
-### Overall Readiness: **CONDITIONAL PASS**
+### Overall Readiness: **NO-GO for Public Launch**
+
+**Soft Launch (invited testers, no paid offer, close monitoring):** Conditional GO once release gates are met.
 
 | Category | Status | Critical Issues |
 |----------|--------|-----------------|
-| Core User Journeys | **PARTIAL** | Automated deployment tests missing |
-| Input Validation | **PASS** | Minor improvements needed |
-| Data Integrity | **PASS** | Atomic operations implemented |
-| Failure Resilience | **PASS** | Graceful fallbacks in place |
-| Performance | **NOT TESTED** | Load testing required |
-| Security | **PARTIAL** | Security headers missing |
+| Core User Journeys | **FAIL** | Lead flow untested; no integration tests |
+| Input Validation | **PARTIAL** | Idempotency missing; stack trace exposure unknown |
+| Data Integrity | **PARTIAL** | Cross-step consistency risks in lead distribution |
+| Failure Resilience | **FAIL** | SQLite fallback is a launch blocker |
+| Performance | **NOT TESTED** | No baseline; cannot distinguish normal from degraded |
+| Security | **PARTIAL** | Admin not rate-limited; CORS too permissive |
 | Environment Config | **PASS** | Production-ready |
-| Monitoring | **PARTIAL** | Alerts not configured |
-| Deployment | **PARTIAL** | CI/CD pipeline missing |
-| Privacy/Compliance | **PASS** | Privacy policy complete |
+| Monitoring | **FAIL** | No alerting; "manual checks" is not adequate |
+| Deployment | **PARTIAL** | CI added but not gating deploys |
+| Privacy/Compliance | **PARTIAL** | PII in logs is HIGH priority risk |
+
+---
+
+## Release Gates (Non-Negotiable Before Any Launch)
+
+These must be completed before exposing the service to any real users:
+
+### 1. CI Gating Exists and Runs Tests on Every Change
+- [x] GitHub Actions runs pytest on PRs and main
+- [ ] Railway deploys only from green builds (or manual deploy from green main)
+
+### 2. PII Scrubbing in Logs + Exception Hygiene
+- [ ] Stop logging raw emails; mask or hash
+- [ ] Audit logs for VRM/postcode/phone/token exposure
+- [ ] Exception handler returns sanitised errors and logs correlation ID only
+- [ ] Do NOT log raw request bodies or exception payloads with user data
+
+### 3. Disable or Constrain Production "DB Fallback" Behaviour
+- [ ] If PostgreSQL is down, service should fail clearly (503) or degrade read-only
+- [ ] SQLite fallback must NOT be used for lead persistence in production
+- [ ] Silent semantic changes are unacceptable
+
+### 4. Basic Uptime Monitoring and Alerting
+- [ ] External uptime check on `/health` with email alerting
+- [ ] At least one production metric: error rate (5xx) and request latency (p95)
+
+### 5. Baseline Performance Evidence
+- [ ] Load test (k6/locust) proving service handles expected traffic ×3
+- [ ] Recorded p95 latency for critical endpoints
+
+### 6. Admin Surface Hardening
+- [ ] Rate limit admin endpoints
+- [ ] CORS does not enable credentialed cross-origin access
+- [ ] Consider rotating admin key / scoping per purpose
 
 ---
 
 ## 1. Core User Journeys
 
-### Assessment
+### Assessment: **FAIL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| End-to-end tests cover primary flows | **PARTIAL** | `tests/test_api.py` covers API endpoints but lacks E2E flows |
-| Error paths tested | **PARTIAL** | Validation errors tested, network failures not |
-| Tests run automatically on deployment | **MISSING** | No CI/CD pipeline configured |
+| End-to-end tests cover primary flows | **FAIL** | Endpoint tests only; no integration across DVSA → pipeline → model → response |
+| Error paths tested | **PARTIAL** | Validation tested; network/integration failures not |
+| Tests run automatically on deployment | **PARTIAL** | CI added but not gating Railway deploys |
 | Failed critical tests block release | **MISSING** | No automated gating |
 
-### Primary User Flows Identified
+### Critical Gap: Lead Capture Flow is Untested
 
-1. **Risk Check Flow:** User enters registration → API fetches DVSA data → ML prediction → Display results
-2. **Lead Capture Flow:** User submits contact details → Save to DB → Distribute to garages → Email sent
-3. **Admin Flow:** Authenticate → Manage garages → View leads
+The business-critical flow `submit lead → save to DB → assign garages → send emails` has **no integration test coverage**. This flow involves:
+- Database write
+- Geographic matching
+- External email service call
+- Assignment record creation
 
-### Current Test Coverage
+**Risk:** Any regression in this flow silently breaks revenue generation.
 
-```
-tests/
-├── test_api.py         - 23 tests covering API endpoints
-├── test_banding.py     - 13 tests for age/mileage bands
-├── test_confidence.py  - Confidence interval calculations
-├── test_defects.py     - Defect processing
-└── test_dvla.py        - DVLA client integration
-```
+### Primary User Flows
 
-### Gaps
+| Flow | Test Coverage | Risk |
+|------|---------------|------|
+| Risk Check (DVSA → ML → Response) | Endpoint only | **HIGH** - Integration untested |
+| Lead Capture (Save → Distribute → Email) | **NONE** | **CRITICAL** - Business flow untested |
+| Admin (Auth → CRUD) | Endpoint only | **MEDIUM** |
 
-- [ ] **No CI/CD pipeline** - Tests exist but aren't run on every deployment
-- [ ] **No E2E flow tests** - Individual endpoints tested, but not full user journeys
-- [ ] **No lead distribution tests** - Critical business flow untested
+### Required Actions
 
-### Recommendations
-
-1. **CRITICAL:** Create `.github/workflows/test.yml` for automated test runs
-2. Add end-to-end tests covering:
-   - Full risk check with DVSA integration
-   - Lead submission through to email delivery (mocked)
-3. Configure Railway to only deploy on test success
+1. **GATE:** Add integration test for lead distribution (mocked email)
+2. **GATE:** Add integration test for DVSA → feature pipeline → model flow
+3. Configure Railway to deploy only on CI success
 
 ---
 
 ## 2. Input Validation and Data Handling
 
-### Assessment
+### Assessment: **PARTIAL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| All inputs validated server-side | **PASS** | Pydantic models + custom validators |
-| Boundary conditions tested | **PARTIAL** | Some tests exist, needs expansion |
-| Duplicate submissions handled | **PASS** | UUIDs prevent exact duplicates |
-| No stack traces exposed | **PARTIAL** | Needs verification |
-| Logs don't contain PII | **PARTIAL** | Emails logged in some places |
+| All inputs validated server-side | **PASS** | Pydantic + custom validators |
+| Boundary conditions tested | **PARTIAL** | Some tests exist |
+| Duplicate submissions handled | **PARTIAL** | No idempotency key; UUID per-request doesn't prevent duplicates |
+| No stack traces exposed | **UNKNOWN** | Not verified; assume risk |
+| Logs don't contain PII | **FAIL** | Emails logged; HIGH priority breach risk |
 
-### Validation Implementation
+### Idempotency Gap
 
-**Registration/VRM:** `dvsa_client.py:214-256`
-- Alphanumeric only (hard reject)
-- Length 2-8 characters
-- Normalized (uppercase, no spaces)
+Current implementation generates a new UUID per request. This does NOT prevent duplicate submissions. A user refreshing after submit, or network retry, creates duplicate leads.
 
-**Email:** `main.py:734-743`
-- Basic format validation (@ with domain)
-- Lowercased and trimmed
+**Required:** Idempotency key (client-provided or payload hash) to deduplicate within a time window.
 
-**Postcode:** `main.py:745-750`
-- Minimum 3 characters
-- Uppercased and trimmed
+### PII in Logs - HIGH PRIORITY
 
-**Query Parameters:** `main.py:316-318`
-- Year: 1990-2026 (ge/le constraints)
-- Make/Model: min/max length
+**Current exposure points:**
+- `database.py:276-277` - Email logged on lead save
+- Exception payloads may include request data
+- VRM, postcode, phone potentially logged
 
-### Gaps
+**Risk:** PII in logs is a breach-impact multiplier. If logs are accessed (breach, insider, misconfigured access), all user data is exposed.
 
-- [ ] Logs contain email addresses (`database.py:276-277`)
-- [ ] Stack traces may leak on unhandled exceptions
-- [ ] No explicit idempotency keys for lead submissions
+### Required Actions
 
-### Recommendations
-
-1. Add global exception handler to sanitize error responses:
-   ```python
-   @app.exception_handler(Exception)
-   async def global_exception_handler(request, exc):
-       logger.error(f"Unhandled error: {exc}")
-       return JSONResponse(status_code=500, content={"detail": "Internal server error"})
-   ```
-2. Mask email in logs (show only domain)
-3. Add idempotency key support for lead submissions
+1. **GATE:** Mask emails in logs (e.g., `j***@example.com`)
+2. **GATE:** Audit all log statements for PII (VRM, postcode, phone, tokens)
+3. **GATE:** Exception handler must NOT log raw request/exception data
+4. Add idempotency key support for lead submissions
 
 ---
 
 ## 3. Data Integrity and Consistency
 
-### Assessment
+### Assessment: **PARTIAL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | Database writes are atomic | **PASS** | Single INSERT statements |
-| No partial writes on failures | **PASS** | No multi-statement transactions |
+| No partial writes on failures | **PARTIAL** | Single statements OK; cross-step consistency at risk |
 | Referential integrity enforced | **PASS** | Foreign keys in schema |
 | Persistence/retrieval accuracy verified | **PARTIAL** | Basic tests only |
-| Backups configured | **UNKNOWN** | Railway-managed PostgreSQL |
+| Backups configured | **UNKNOWN** | Railway-managed; verify schedule |
+
+### Cross-Step Consistency Risk: Lead Distribution
+
+The lead distribution flow has multiple steps without transaction/outbox:
+
+```
+1. INSERT lead → 2. Find garages → 3. INSERT assignments → 4. Send emails → 5. UPDATE lead status
+```
+
+**Failure scenarios:**
+- Lead saved but emails not sent ("saved but not sent")
+- Email sent but assignment not recorded ("sent but not saved")
+- Partial assignment creation on failure
+- Retries cause duplicate emails
+
+**Required:** Either:
+- Wrap in transaction with outbox pattern, OR
+- Design for idempotent retry with explicit state machine
 
 ### ML Model Consistency
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Feature pipelines validated | **PASS** | `feature_engineering_v55.py` documented |
-| Deterministic outputs for identical inputs | **PASS** | Cached responses |
+| Feature pipelines validated | **PASS** | Documented in `feature_engineering_v55.py` |
+| Deterministic outputs for identical inputs | **PARTIAL** | Caching hides non-determinism; not tested |
 | Missing/null features handled | **PASS** | Defaults provided |
 
-### Database Operations
+**Note:** Caching does not prove determinism. Need test asserting identical outputs with cache disabled.
 
-- **Lead saves:** Atomic single INSERT (`database.py:253-275`)
-- **Garage saves:** Atomic single INSERT (`database.py:390-416`)
-- **Lead assignments:** Single INSERT with NOW() timestamps
-- **Outcome updates:** Single UPDATE statement
+### Required Actions
 
-### Recommendations
-
-1. Verify Railway PostgreSQL backup schedule (usually daily)
-2. Add database migration scripts for future schema changes
-3. Document recovery procedure in runbook
+1. Document lead distribution failure modes
+2. Add determinism test for ML model (cache disabled)
+3. Verify Railway PostgreSQL backup schedule
 
 ---
 
 ## 4. Dependency and Failure-Mode Resilience
 
-### Assessment
+### Assessment: **FAIL** (due to SQLite fallback)
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | External service outages simulated | **NOT DONE** | No chaos testing |
 | Timeouts and retries configured | **PASS** | httpx timeouts set |
-| Graceful error responses | **PASS** | Fallbacks return default values |
+| Graceful error responses | **PARTIAL** | See SQLite issue below |
 | No cascading failures | **PASS** | Service isolation maintained |
-| Jobs/queues fail safely | **N/A** | No background queue system |
+
+### LAUNCH BLOCKER: SQLite Fallback in Production
+
+**Current behaviour:** If PostgreSQL is unavailable, the service silently falls back to SQLite for ALL operations including lead persistence.
+
+**Problems:**
+1. SQLite file is ephemeral in container - data loss on redeploy
+2. Silent semantic change - no indication to operators
+3. Leads saved to SQLite are lost when PostgreSQL recovers
+4. Inconsistent data state between databases
+
+**Required:** In production, if PostgreSQL is down:
+- Return 503 Service Unavailable for write operations
+- OR degrade to read-only mode with clear indication
+- NEVER silently persist to ephemeral SQLite
 
 ### External Dependencies
 
-| Service | Timeout | Fallback | Status |
-|---------|---------|----------|--------|
-| DVSA API | 30s | SQLite lookup | **PASS** |
-| PostgreSQL | Connection pool | SQLite | **PASS** |
-| Resend Email | 10s | Log warning, continue | **PASS** |
-| Postcodes.io | Default | Return None | **PASS** |
+| Service | Timeout | Current Fallback | Required Change |
+|---------|---------|------------------|-----------------|
+| PostgreSQL | Pool | SQLite (UNSAFE) | Fail with 503 |
+| DVSA API | 30s | SQLite lookup | OK for reads |
+| Resend Email | 10s | Log + continue | OK |
+| Postcodes.io | Default | Return None | OK |
 
-### Fallback Chain
+### Required Actions
 
-```
-DVSA API (real-time)
-    ↓ (on failure)
-SQLite Lookup (pre-computed)
-    ↓ (on failure)
-Population Averages (hardcoded)
-```
-
-### Evidence
-
-**DVSA fallback:** `main.py:483-520`
-```python
-except VehicleNotFoundError:
-    return await _fallback_prediction(...)
-except DVSAAPIError as e:
-    return await _fallback_prediction(...)
-```
-
-**Database fallback:** `main.py:75-82`
-```python
-if os.path.exists(DB_FILE):
-    DATABASE_URL = None
-elif DATABASE_URL:
-    await db.get_pool()
-```
-
-### Recommendations
-
-1. Document all failure modes in runbook
-2. Consider adding retry logic for transient DVSA errors
+1. **GATE:** Disable SQLite fallback for writes in production
+2. **GATE:** Return 503 when PostgreSQL unavailable for lead operations
+3. Add environment flag to control fallback behaviour
 
 ---
 
 ## 5. Performance and Load Sanity
 
-### Assessment
+### Assessment: **NOT TESTED** - Launch Blocker
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Load test at 3x expected traffic | **NOT DONE** | No load test results |
+| Load test at 3x expected traffic | **NOT DONE** | No baseline exists |
 | Critical endpoints meet response targets | **UNKNOWN** | No benchmarks |
 | Cold-start behaviour measured | **UNKNOWN** | Not documented |
 | No memory/connection growth | **UNKNOWN** | Not monitored |
 
+**Why this is a gate:** Without a baseline, you cannot distinguish "normal" from "degrading". You will not know if the service is struggling until users complain.
+
 ### Current Configuration
 
-- **Workers:** 4 Uvicorn workers (`Dockerfile:29`)
-- **DB Pool:** 5-20 connections (`database.py:35`)
-- **Cache:** In-memory TTL caches (1 hour for makes/models)
+- **Workers:** 4 Uvicorn workers
+- **DB Pool:** 5-20 connections
+- **Cache:** In-memory TTL (1 hour for makes/models)
 
-### Rate Limits (slowapi)
+### Required Actions
 
-| Endpoint | Limit |
-|----------|-------|
-| `/api/makes` | 100/minute |
-| `/api/models` | 100/minute |
-| `/api/risk` | 20/minute |
-| `/api/risk/v55` | 20/minute |
-| `/api/leads` | 10/minute |
-
-### Recommendations
-
-1. **CRITICAL:** Conduct load test with locust or k6
-2. Target metrics:
-   - P95 response time < 500ms for `/api/risk/v55`
-   - P95 response time < 100ms for `/api/makes`
-   - Support 100 concurrent users
-3. Add performance monitoring (e.g., Railway metrics dashboard)
+1. **GATE:** Run load test with k6/locust at 3× expected traffic
+2. **GATE:** Record p95 latency for `/api/risk/v55` and `/api/leads`
+3. Define acceptable thresholds (e.g., p95 < 500ms)
 
 ---
 
 ## 6. Security Controls
 
-### Assessment
+### Assessment: **PARTIAL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | Auth enforced on protected routes | **PASS** | Admin API key required |
-| Rate limiting applied | **PASS** | slowapi configured |
+| Rate limiting applied | **PARTIAL** | Public endpoints only; admin unprotected |
 | Secrets not exposed in frontend/logs | **PASS** | env vars, .gitignore |
-| Debug endpoints disabled | **PASS** | No debug routes found |
-| Security headers configured | **MISSING** | No CSP, HSTS, etc. |
+| Debug endpoints disabled | **PASS** | None found |
+| Security headers configured | **PARTIAL** | Added but needs review |
 
-### Authentication
+### Admin Surface Risks
 
-**Admin Endpoints:** Require `X-API-Key` header
-- `POST /api/admin/garages`
-- `GET /api/admin/garages`
-- `GET /api/leads`
-- `PATCH /api/admin/garages/{id}`
+**Current state:**
+- Single shared API key for all admin operations
+- No rate limiting on admin endpoints
+- CORS `allow_origins=["*"]` enables any site to make requests
 
-**Validation:** `main.py:871-873`
-```python
-if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
-    raise HTTPException(status_code=401, detail="Invalid or missing API key")
-```
+**Attack surface:**
+- Credential stuffing against admin endpoints (no rate limit)
+- Any malicious site can drive browser traffic to API
+- Single key compromise = full admin access
 
-### SQL Injection Prevention
+### Security Headers
 
-- Uses parameterized queries throughout (`$1`, `$2` placeholders)
-- Tested in `test_api.py:207-213`
+Current implementation includes:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Strict-Transport-Security` (HSTS)
+- `Content-Security-Policy`
+- `Referrer-Policy`
 
-### Secrets Management
+**Note:** `X-XSS-Protection` is largely obsolete; modern baseline relies on CSP.
 
-| Secret | Storage | Exposure Risk |
-|--------|---------|---------------|
-| DATABASE_URL | Railway env | **LOW** |
-| ADMIN_API_KEY | Railway env | **LOW** |
-| DVSA_CLIENT_SECRET | Railway env | **LOW** |
-| RESEND_API_KEY | Railway env | **LOW** |
+### Required Actions
 
-### Gaps
-
-- [ ] No security headers (CSP, HSTS, X-Frame-Options)
-- [ ] CORS allows all origins (`allow_origins=["*"]`)
-
-### Recommendations
-
-1. **IMPORTANT:** Add security headers middleware:
-   ```python
-   from starlette.middleware import Middleware
-   from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
-
-   # Add security headers
-   @app.middleware("http")
-   async def add_security_headers(request, call_next):
-       response = await call_next(request)
-       response.headers["X-Content-Type-Options"] = "nosniff"
-       response.headers["X-Frame-Options"] = "DENY"
-       response.headers["X-XSS-Protection"] = "1; mode=block"
-       response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-       return response
-   ```
-2. Restrict CORS to specific domains when known
-3. Add rate limiting to admin endpoints
+1. **GATE:** Add rate limiting to admin endpoints (e.g., 10/minute)
+2. **GATE:** Restrict CORS once frontend domain is known
+3. Consider scoped API keys or short-lived tokens
+4. Review CSP policy for static pages
 
 ---
 
 ## 7. Environment and Configuration
 
-### Assessment
+### Assessment: **PASS**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | Production config reviewed | **PASS** | Railway env vars |
-| Debug modes disabled | **PASS** | No DEBUG flags found |
+| Debug modes disabled | **PASS** | No DEBUG flags |
 | Test credentials removed | **PASS** | No hardcoded creds |
-| Feature flags reviewed | **N/A** | No feature flags used |
+| Feature flags reviewed | **N/A** | None used |
 | Config stored securely | **PASS** | Railway secrets |
 
 ### Environment Variables
 
-| Variable | Required | Default | Set |
-|----------|----------|---------|-----|
-| DATABASE_URL | Yes | - | Railway auto |
-| PORT | Yes | 8000 | Railway auto |
-| ADMIN_API_KEY | Yes | - | Manual |
-| DVSA_CLIENT_ID | Yes | - | Manual |
-| DVSA_CLIENT_SECRET | Yes | - | Manual |
-| DVSA_TOKEN_URL | Yes | - | Manual |
-| RESEND_API_KEY | Optional | - | Manual |
-| EMAIL_FROM | Optional | onboarding@resend.dev | Manual |
+| Variable | Required | Status |
+|----------|----------|--------|
+| DATABASE_URL | Yes | Railway auto |
+| PORT | Yes | Railway auto |
+| ADMIN_API_KEY | Yes | Manual |
+| DVSA_CLIENT_ID | Yes | Manual |
+| DVSA_CLIENT_SECRET | Yes | Manual |
+| DVSA_TOKEN_URL | Yes | Manual |
+| RESEND_API_KEY | Optional | Manual |
 
-### Configuration Files
-
-- `.env` files are gitignored (`.gitignore:13-15`)
-- No `.env.example` file found (should be created)
-
-### Recommendations
-
-1. Create `.env.example` with placeholder values
-2. Document all required environment variables in README
+`.env.example` created for documentation.
 
 ---
 
 ## 8. Monitoring, Logging, and Alerting
 
-### Assessment
+### Assessment: **FAIL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Error rates monitored | **PARTIAL** | Railway logs only |
+| Error rates monitored | **FAIL** | Railway logs only; no metrics |
 | Latency metrics captured | **MISSING** | Not implemented |
-| Job/queue failures tracked | **N/A** | No queue system |
-| Alerts configured | **MISSING** | No alerts |
+| Alerts configured | **MISSING** | No alerting |
 | Logs searchable/retained | **PASS** | Railway dashboard |
 
-### Current Logging
-
-**Format:** JSON structured (`main.py:43-47`)
-```python
-format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
-```
-
-**Key Events Logged:**
-- Model loading
-- Database connections
-- DVSA API calls
-- Lead submissions
-- Email send results
-- Errors
+**"Manual checks initially" is not an adequate mitigation** once any real users exist. You need to know the service is broken before users tell you.
 
 ### Health Endpoint
 
@@ -388,188 +346,122 @@ format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(mes
 ```json
 {
   "status": "ok",
-  "timestamp": "2026-01-20T...",
+  "timestamp": "...",
   "database": "connected|disconnected|error"
 }
 ```
 
-### Gaps
+### Required Actions
 
-- [ ] No uptime monitoring configured
-- [ ] No alerting for errors
-- [ ] No latency metrics
-- [ ] No business metrics (leads/day, predictions/day)
-
-### Recommendations
-
-1. **CRITICAL:** Set up UptimeRobot for `/health` monitoring
-2. Add email alerts for:
-   - Health check failures
-   - Error rate spikes
-   - DVSA API failures
-3. Consider adding Plausible/Umami for analytics (per `docs/MONITORING.md`)
+1. **GATE:** Set up UptimeRobot or equivalent for `/health`
+2. **GATE:** Configure email alerts for downtime
+3. **GATE:** Add error rate metric (5xx count) visibility
+4. Add p95 latency tracking for critical endpoints
 
 ---
 
 ## 9. Deployment and Rollback
 
-### Assessment
+### Assessment: **PARTIAL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| CI pipeline is deterministic | **MISSING** | No CI/CD |
+| CI pipeline is deterministic | **PASS** | GitHub Actions added |
 | Database migrations tested | **N/A** | No migrations |
 | Rollback procedure tested | **PARTIAL** | Documented, not tested |
 | Health checks gate traffic | **MISSING** | Not configured |
-| Previous version redeployable | **PASS** | Railway supports this |
+| Previous version redeployable | **PASS** | Railway supports |
 
-### Current Deployment
+### CI Pipeline
 
-- **Trigger:** GitHub push to `main`
-- **Platform:** Railway auto-deploy
-- **Container:** Python 3.9-slim, 4 workers
-- **Health:** `/health` endpoint exists
+`.github/workflows/ci.yml` includes:
+- Test execution on push/PR
+- Security check for hardcoded secrets
+- Dependency vulnerability scan
+- Docker build verification
 
-### Rollback Procedure
+**Gap:** Railway auto-deploys on push regardless of CI status.
 
-Documented in `docs/RUNBOOK.md:46-53`:
-1. Go to Railway Dashboard → Deployments
-2. Find last working deployment
-3. Click Rollback
+### Required Actions
 
-### Gaps
-
-- [ ] No CI/CD pipeline (`.github/workflows/` is empty)
-- [ ] No automated testing before deploy
-- [ ] Health check doesn't gate traffic
-
-### Recommendations
-
-1. **CRITICAL:** Create `.github/workflows/ci.yml`:
-   ```yaml
-   name: CI
-   on: [push, pull_request]
-   jobs:
-     test:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: actions/setup-python@v5
-           with:
-             python-version: '3.9'
-         - run: pip install -r requirements.txt
-         - run: python -m pytest tests/ -v
-   ```
-2. Configure Railway to require passing checks
-3. Test rollback procedure before launch
+1. **GATE:** Configure Railway to deploy only on CI success
+2. Test rollback procedure before launch
+3. Document rollback in runbook with specific steps
 
 ---
 
 ## 10. Privacy, Compliance, and User Harm Controls
 
-### Assessment
+### Assessment: **PARTIAL**
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
 | Privacy policy matches practices | **PASS** | `static/privacy.html` |
 | Data retention/deletion verified | **PARTIAL** | Retention documented |
-| Consent flows tested | **N/A** | No explicit consent needed |
-| Export/access requests supported | **PASS** | Email contact provided |
+| Consent flows tested | **N/A** | No explicit consent |
 | Outputs not misrepresented | **PASS** | Disclaimers present |
-| Disclaimers visible | **PASS** | Multiple locations |
+| Logs don't contain PII | **FAIL** | See Section 2 |
 
-### Privacy Implementation
+### Disclaimers
 
-**Data Collection (per privacy.html):**
-- VRM: Not stored (processed in real-time)
-- Postcode: Not stored
-- IP address: Retained 30 days (Railway logs)
-- Leads (email/name/phone): Stored until deletion requested
+Present in multiple locations:
+- Privacy page: "predictions are for information only"
+- Footer: "Not official government advice"
+- Terms page available
 
-**Data Sharing:**
-- Lead data shared with matched garages (by design)
-- No third-party marketing sharing
+### PII Risk (Elevated to HIGH)
 
-### User Harm Controls
+Logging PII (emails, VRMs, postcodes) creates:
+- Increased breach impact
+- Compliance exposure
+- Inconsistency with privacy policy
 
-**Disclaimers Present:**
-
-1. Privacy page (`static/privacy.html:241-249`):
-   > "These predictions are for information only"
-   > "They do not guarantee any particular MOT outcome"
-   > "They have no legal effect on you"
-
-2. Footer (`static/index.html:170`):
-   > "Data from UK DVSA • Not official government advice or endorsement"
-
-3. Terms page available at `/static/terms.html`
-
-### Automated Decision-Making
-
-ML predictions are disclosed and explicitly non-binding:
-- Confidence levels shown to users
-- "Population average" fallback clearly labelled
-- No automated actions taken on predictions
-
-### Recommendations
-
-1. Add a visible disclaimer on the results page above the risk score
-2. Document data deletion process in runbook
-3. Consider adding GDPR data export functionality
+**Required:** See Section 2 for PII scrubbing requirements.
 
 ---
 
-## Launch Readiness Declaration
+## Launch Decision Matrix
 
-### Critical Items Status
+| Launch Type | Decision | Conditions |
+|-------------|----------|------------|
+| **Public Launch** (real users, organic traffic, payments, external garages) | **NO-GO** | Until ALL release gates met |
+| **Soft Launch** (invited testers, no payments, close monitoring) | **Conditional GO** | Once release gates met |
 
-| Item | Status | Owner | Mitigation |
-|------|--------|-------|------------|
-| CI/CD Pipeline | **NOT COMPLETE** | - | Manual testing before deploy |
-| Load Testing | **NOT COMPLETE** | - | Monitor closely post-launch |
-| Security Headers | **NOT COMPLETE** | - | Accept risk for soft launch |
-| Uptime Monitoring | **NOT COMPLETE** | - | Manual checks initially |
+---
 
-### Known Issues
+## Release Gate Checklist
 
-| Issue | Severity | Mitigation |
-|-------|----------|------------|
-| No automated tests on deploy | High | Run tests manually pre-deploy |
-| Security headers missing | Medium | Add in first post-launch update |
-| Logs contain email addresses | Low | Non-critical for MVP |
-| CORS allows all origins | Low | Acceptable for public API |
+All items must be checked before any launch:
 
-### Pre-Launch Checklist
+### CI/CD
+- [x] GitHub Actions runs tests on PR/push
+- [ ] Railway deploys only from green builds
 
-- [ ] All environment variables set in Railway
-- [ ] DVSA OAuth credentials tested
-- [ ] Resend email configuration verified
-- [ ] Admin API key set and secured
-- [ ] Manual smoke test of all endpoints
-- [ ] Rollback procedure understood
-- [ ] Incident response contact identified
+### PII & Logging
+- [ ] Emails masked in all logs
+- [ ] VRM/postcode/phone audit complete
+- [ ] Exception handler logs correlation ID only, not request data
 
-### Recommended Pre-Launch Actions
+### Database Resilience
+- [ ] SQLite fallback disabled for writes in production
+- [ ] Service returns 503 when PostgreSQL unavailable for writes
 
-1. **Run full test suite manually:**
-   ```bash
-   python -m pytest tests/ -v
-   ```
+### Monitoring
+- [ ] UptimeRobot (or equivalent) monitoring `/health`
+- [ ] Email alerts configured for downtime
+- [ ] Error rate visibility exists
 
-2. **Verify health endpoint:**
-   ```bash
-   curl https://autosafebackend-production.up.railway.app/health
-   ```
+### Performance
+- [ ] Load test completed at 3× expected traffic
+- [ ] P95 latency recorded and acceptable
 
-3. **Test primary user flow:**
-   - Enter valid VRM
-   - Verify prediction displayed
-   - Submit lead form
-   - Confirm email received by test garage
+### Security
+- [ ] Admin endpoints rate limited
+- [ ] CORS restricted to known domains (or documented as acceptable risk)
 
-4. **Set up UptimeRobot** (free tier)
+---
 
-### Sign-off
+## Sign-off
 
 | Role | Name | Date | Signature |
 |------|------|------|-----------|
@@ -577,32 +469,18 @@ ML predictions are disclosed and explicitly non-binding:
 | QA/SDET | | | |
 | Product Owner | | | |
 
+**By signing, you confirm all release gates have been met or explicitly accepted as documented risk.**
+
 ---
 
-## Appendix A: Action Item Summary
+## Appendix: Risk Register
 
-### Critical (Block Launch)
-
-1. Manual test execution before any production deploy
-2. Verify all environment variables are set
-
-### High Priority (First Week Post-Launch)
-
-1. Add `.github/workflows/ci.yml` for automated testing
-2. Configure UptimeRobot monitoring
-3. Add security headers middleware
-4. Conduct basic load test
-
-### Medium Priority (First Month)
-
-1. Add E2E tests for full user journeys
-2. Set up error alerting
-3. Create `.env.example` file
-4. Add latency metrics
-
-### Low Priority (Ongoing)
-
-1. Implement log sanitization for PII
-2. Add business metrics dashboard
-3. Document data deletion process
-4. Consider GDPR export functionality
+| Risk | Severity | Likelihood | Impact | Mitigation |
+|------|----------|------------|--------|------------|
+| Lead distribution flow regression | **CRITICAL** | Medium | Revenue loss | Add integration tests |
+| PII breach via logs | **HIGH** | Low | Regulatory, reputation | Scrub PII from logs |
+| SQLite data loss | **HIGH** | Low | Data loss | Disable write fallback |
+| Service down undetected | **HIGH** | Medium | User impact | Add monitoring |
+| Duplicate lead submissions | **MEDIUM** | Medium | Bad UX, garage spam | Add idempotency |
+| Admin credential compromise | **MEDIUM** | Low | Full access | Rate limit, scope keys |
+| Performance degradation undetected | **MEDIUM** | Medium | User churn | Load test, metrics |

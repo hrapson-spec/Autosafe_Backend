@@ -99,17 +99,30 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
-# CORS Middleware - Allow cross-origin requests
-# P1-2 fix: Remove allow_credentials with wildcard origin (security anti-pattern)
+# CORS Middleware - Configure cross-origin requests
+# In production, set CORS_ORIGINS env var to restrict (e.g., "https://autosafe.co.uk,https://www.autosafe.co.uk")
 from fastapi.middleware.cors import CORSMiddleware
-ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,  # Cannot use credentials with wildcard origin
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
-)
+
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+if CORS_ORIGINS == "*":
+    # Development: allow all origins but disable credentials to prevent CSRF
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,  # Disabled when using wildcard
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+else:
+    # Production: restrict to specific origins
+    origins = [o.strip() for o in CORS_ORIGINS.split(",")]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
 
 
 # Security Headers Middleware
@@ -130,14 +143,40 @@ async def add_security_headers(request, call_next):
 
 # Global Exception Handler - prevent stack trace leakage
 from fastapi.responses import JSONResponse
+import uuid as uuid_module
+
+def generate_correlation_id() -> str:
+    """Generate a short correlation ID for error tracking."""
+    return uuid_module.uuid4().hex[:12]
+
+def mask_email(email: str) -> str:
+    """Mask email for logging: john@example.com -> j***@example.com"""
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
+def mask_pii(text: str) -> str:
+    """Mask potential PII in text for safe logging."""
+    if not text:
+        return text
+    # Don't log anything that looks like it might contain user data
+    return "[REDACTED]"
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
-    logger.error(f"Unhandled exception on {request.url.path}: {type(exc).__name__}: {exc}")
+    correlation_id = generate_correlation_id()
+    # Log only the exception type and correlation ID - NOT the full exception or request data
+    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal error occurred. Please try again later."}
+        content={
+            "detail": "An internal error occurred. Please try again later.",
+            "error_id": correlation_id
+        }
     )
 
 # Check for PostgreSQL first, then SQLite
@@ -172,7 +211,11 @@ def get_max_year() -> int:
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring (P3-2 fix: includes external API status)."""
+    """
+    Liveness check with component status.
+    Always returns 200 if the app is up (for container orchestration).
+    Use /ready for readiness checks that verify database connectivity.
+    """
     # Database status
     db_status = "disconnected"
     if DATABASE_URL:
@@ -207,6 +250,35 @@ async def health_check():
             "dvsa_api": dvsa_status,
             "dvla_api": dvla_status,
         }
+    }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """
+    Readiness check - is the application ready to serve traffic?
+    Returns 503 if PostgreSQL is unavailable.
+
+    Use this endpoint for UptimeRobot / load balancer health checks.
+    """
+    # Check PostgreSQL connectivity
+    db_available = await db.is_postgres_available()
+
+    if not db_available:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "timestamp": datetime.now().isoformat(),
+                "database": "disconnected",
+                "message": "Database connection failed"
+            }
+        )
+
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat(),
+        "database": "connected"
     }
 
 # SQLite fallback connection (for local development)
@@ -921,7 +993,19 @@ async def submit_lead(request: Request, lead: LeadSubmission):
     Submit a lead for garage matching.
 
     Rate limited to 10 requests per minute per IP.
+
+    IMPORTANT: This endpoint requires PostgreSQL to be available.
+    We do NOT fall back to SQLite for lead persistence to prevent data loss.
     """
+    # CRITICAL: Check PostgreSQL is available before accepting lead
+    # We must NOT silently fall back to SQLite for writes (data loss risk)
+    if not await db.is_postgres_available():
+        logger.error("Lead submission rejected: PostgreSQL unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail="Service temporarily unavailable. Please try again in a few minutes."
+        )
+
     # Convert Pydantic models to dicts
     lead_data = {
         "email": lead.email,
@@ -933,7 +1017,7 @@ async def submit_lead(request: Request, lead: LeadSubmission):
         "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
     }
 
-    # Save to database
+    # Save to database (PostgreSQL only - verified above)
     lead_id = await db.save_lead(lead_data)
 
     if not lead_id:
@@ -1026,15 +1110,21 @@ class GarageSubmission(BaseModel):
 
 
 @app.post("/api/admin/garages", status_code=201)
+@limiter.limit("10/minute")
 async def create_garage(request: Request, garage: GarageSubmission):
     """
     Create a new garage (admin only).
 
     Requires X-API-Key header matching ADMIN_API_KEY.
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
 
     # If no coordinates provided, geocode the postcode
     lat = garage.latitude
@@ -1072,6 +1162,7 @@ async def create_garage(request: Request, garage: GarageSubmission):
 
 
 @app.get("/api/admin/garages")
+@limiter.limit("30/minute")
 async def list_garages(
     request: Request,
     status: Optional[str] = Query(None, description="Filter by status")
@@ -1094,6 +1185,7 @@ async def list_garages(
 
 
 @app.get("/api/admin/garages/{garage_id}")
+@limiter.limit("30/minute")
 async def get_garage(request: Request, garage_id: str):
     """
     Get a single garage by ID (admin only).
@@ -1111,13 +1203,19 @@ async def get_garage(request: Request, garage_id: str):
 
 
 @app.patch("/api/admin/garages/{garage_id}")
+@limiter.limit("10/minute")
 async def update_garage(request: Request, garage_id: str):
     """
     Update a garage (admin only).
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
     if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
 
     body = await request.json()
 
@@ -1148,6 +1246,9 @@ async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
 
     # If result provided via query param, record it
     if result in ['won', 'lost', 'no_response']:
+        # CRITICAL: Check PostgreSQL is available before write
+        if not await db.is_postgres_available():
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
         success = await db.update_lead_assignment_outcome(assignment_id, result)
         if success:
             return {
@@ -1175,7 +1276,12 @@ async def report_outcome(assignment_id: str, request: Request):
     Report outcome for a lead assignment.
 
     Body should contain: {"outcome": "won" | "lost" | "no_response"}
+    Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
+    # CRITICAL: Check PostgreSQL is available before write
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
