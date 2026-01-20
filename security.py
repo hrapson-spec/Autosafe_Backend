@@ -165,25 +165,42 @@ ADMIN_ALLOW_ALL_IPS = os.environ.get("ADMIN_ALLOW_ALL_IPS", "").lower() == "true
 RAILWAY_INTERNAL_NETWORK = os.environ.get("RAILWAY_ENVIRONMENT") is not None
 
 
+# Trusted proxy detection - Railway sets specific headers
+# Only trust X-Forwarded-For when we know we're behind Railway's proxy
+BEHIND_TRUSTED_PROXY = os.environ.get("RAILWAY_ENVIRONMENT") is not None
+
+
 def get_client_ip(request: Request) -> str:
     """
     Get the real client IP, accounting for proxies.
 
+    SECURITY: Only trusts X-Forwarded-For when RAILWAY_ENVIRONMENT is set,
+    indicating we're behind Railway's trusted proxy. This prevents IP spoofing
+    via forged headers when accessed directly.
+
     Checks X-Forwarded-For header (standard for proxied requests)
     and falls back to direct connection IP.
     """
-    # Check for forwarded header (Railway/proxy)
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        # Take the first IP (client's original IP)
-        return forwarded.split(",")[0].strip()
+    # Only trust forwarding headers when behind Railway's proxy
+    if BEHIND_TRUSTED_PROXY:
+        # Check for forwarded header (Railway/proxy)
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            # Take the first IP (client's original IP in the chain)
+            # Railway adds the real client IP as the first entry
+            client_ip = forwarded.split(",")[0].strip()
+            # Log the full chain for audit purposes (will be redacted if contains PII)
+            if "," in forwarded:
+                logger.debug(f"X-Forwarded-For chain: {forwarded}, using: {client_ip}")
+            return client_ip
 
-    # Check for X-Real-IP (nginx style)
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip.strip()
+        # Check for X-Real-IP (nginx style)
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip.strip()
 
-    # Fall back to direct connection
+    # Fall back to direct connection IP
+    # This is used when not behind a proxy OR as fallback
     if request.client:
         return request.client.host
 

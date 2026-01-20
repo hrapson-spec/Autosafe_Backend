@@ -127,7 +127,7 @@ if CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=CORS_ORIGINS,
-        allow_credentials=True,
+        allow_credentials=False,  # We use API keys, not cookies - no need for credentials
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "X-API-Key", "Authorization"],
     )
@@ -1129,23 +1129,49 @@ async def report_outcome(assignment_id: str, request: Request):
 # ============================================================================
 
 @app.get("/portal/lead/{assignment_id}")
-async def view_lead_portal(assignment_id: str):
+@limiter.limit("30/minute")  # Rate limit to prevent enumeration attacks
+async def view_lead_portal(request: Request, assignment_id: str):
     """
     Secure portal for garages to view full lead details.
+
+    SECURITY:
+    - Rate limited to 30/minute to prevent enumeration
+    - Assignment IDs are UUIDs (128-bit, non-guessable)
+    - All access is logged with IP for audit trail
+    - Returns generic 404 for invalid IDs (no info leakage)
 
     This endpoint is linked from lead notification emails.
     It displays full customer contact info only when accessed directly
     (not embedded in email body for privacy).
     """
+    from security import get_client_ip
+
+    # Validate UUID format to prevent injection
+    import uuid
+    try:
+        uuid.UUID(assignment_id)
+    except ValueError:
+        # Log suspicious access attempt
+        logger.warning(f"Portal access with invalid ID format from IP: {get_client_ip(request)}")
+        raise HTTPException(status_code=404, detail="Lead not found")
+
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
+        # Log failed access attempt (potential enumeration)
+        logger.info(f"Portal access for unknown assignment from IP: {get_client_ip(request)}")
         raise HTTPException(status_code=404, detail="Lead not found")
 
     # Get full lead details
     lead = await db.get_lead_by_id(str(assignment['lead_id']))
     if not lead:
         raise HTTPException(status_code=404, detail="Lead details not found")
+
+    # AUDIT: Log successful portal access (garage viewing lead)
+    # This creates an audit trail of who viewed what customer data
+    logger.info(f"Portal access: assignment={assignment_id[:8]}..., "
+                f"garage={assignment.get('garage_id', 'unknown')[:8]}..., "
+                f"IP={get_client_ip(request)}")
 
     # Generate the portal HTML page
     from email_templates_secure import generate_portal_page_html
@@ -1225,11 +1251,16 @@ async def run_retention_cleanup_endpoint(
     return await run_retention_cleanup(dry_run=dry_run)
 
 
+class DataSubjectDeletionRequest(BaseModel):
+    """Request body for data subject deletion - uses POST body to avoid logging email in URLs."""
+    email: str
+    dry_run: bool = True
+
+
 @app.post("/api/admin/retention/delete-subject")
 async def delete_data_subject_endpoint(
     request: Request,
-    email: str = Query(..., description="Email address of the data subject"),
-    dry_run: bool = Query(True, description="If true, only report what would be deleted")
+    body: DataSubjectDeletionRequest
 ):
     """
     Delete all data for a specific data subject (admin only).
@@ -1237,7 +1268,14 @@ async def delete_data_subject_endpoint(
     This implements GDPR Article 17 - Right to Erasure.
     Deletes all leads and assignments for the given email address.
 
-    Set dry_run=false to actually delete data.
+    SECURITY: Email is passed in POST body (not query params) to prevent
+    logging in access logs, proxy logs, or browser history.
+
+    Request body:
+    {
+        "email": "user@example.com",
+        "dry_run": true  // Set to false to actually delete
+    }
     """
     require_admin_auth(request)
 
@@ -1245,11 +1283,11 @@ async def delete_data_subject_endpoint(
         request=request,
         action="delete_subject",
         resource="data_subject",
-        details={"dry_run": dry_run}  # Email is auto-redacted by audit logger
+        details={"dry_run": body.dry_run}  # Email deliberately NOT logged
     )
 
     from data_retention import delete_data_subject
-    return await delete_data_subject(email=email, dry_run=dry_run)
+    return await delete_data_subject(email=body.email, dry_run=body.dry_run)
 
 
 # Mount static files at /static (only if the folder exists)
