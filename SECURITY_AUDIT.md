@@ -567,9 +567,95 @@ No explicit HTTPS redirect in application code.
 
 ---
 
-## 6. Appendix
+## 6. Operational Security Requirements
 
-### A. Files Reviewed
+The following items require **operational/infrastructure changes** beyond code fixes:
+
+### 6.1 Admin Identity & Authentication (VULN-006 Full Remediation)
+
+The code fix (AuditLogger) provides visibility but doesn't fully address the "single admin key" risk.
+
+**Required operational changes:**
+
+| Requirement | Priority | Implementation |
+|-------------|----------|----------------|
+| Unique admin identities | Critical | SSO integration (Auth0, Okta, etc.) |
+| MFA enforcement | High | Require TOTP/WebAuthn for admin access |
+| Short-lived sessions | High | JWT with 15-minute expiry + refresh tokens |
+| Key rotation | Medium | Automated quarterly rotation, revocation support |
+| Least privilege roles | Medium | RBAC: `admin:read`, `admin:write`, `admin:super` |
+| Emergency access procedure | Low | Break-glass accounts with separate audit |
+
+### 6.2 CI/CD Security (VULN-002 Enforcement)
+
+The `requirements.lock` file exists but requires CI enforcement:
+
+```yaml
+# Example GitHub Actions enforcement
+- name: Verify lockfile is used
+  run: |
+    if [ ! -f requirements.lock ]; then
+      echo "ERROR: requirements.lock missing"
+      exit 1
+    fi
+    pip install --require-hashes -r requirements.lock
+
+- name: Run pip-audit
+  run: pip-audit --strict -r requirements.lock
+```
+
+**Recommended update cadence:** Weekly automated Dependabot PRs, monthly security review.
+
+### 6.3 HTTPS Infrastructure (VULN-017 Full Remediation)
+
+Code includes:
+- HSTS header (1 year, includeSubDomains)
+- HTTP→HTTPS redirect middleware (checks X-Forwarded-Proto)
+
+**Railway/infrastructure requirements:**
+
+| Requirement | Status | Action Needed |
+|-------------|--------|---------------|
+| TLS termination | ✓ Railway handles | Verify cert is valid |
+| HTTP redirect at edge | ? | Confirm Railway config redirects HTTP→HTTPS |
+| No HTTP-only endpoints | Check | Audit all subdomains |
+| HSTS preload (optional) | Not set | Consider adding if all subdomains support HTTPS |
+
+### 6.4 Input Validation Schema (VULN-010 Enhancement)
+
+Current code has Pydantic validators. Full remediation requires:
+
+1. **Request schema enforcement** at API gateway level (not just application)
+2. **Normalization rules** for international characters, Unicode normalization
+3. **Rate limiting per email/phone** to prevent enumeration
+4. **Defense-in-depth**: Output encoding verified in email templates
+
+### 6.5 Secrets Management
+
+Current: Environment variables with fallback defaults.
+
+**Recommended migration path:**
+
+```
+Phase 1: Remove all fallback defaults that could be insecure
+Phase 2: Validate required secrets at startup (fail fast)
+Phase 3: Migrate to secrets manager (Railway secrets, AWS Secrets Manager)
+Phase 4: Implement secret rotation without downtime
+```
+
+### 6.6 Cache Thread Safety Verification
+
+Code includes `threading.Lock` for TTLCache access. Verify in deployment:
+
+- **Uvicorn workers=4**: Each worker is a separate process (cache not shared)
+- **Within each worker**: Async tasks share the cache (lock protects)
+- **Monitoring**: Add cache hit/miss metrics to verify behavior
+
+---
+
+## 7. Appendix
+
+### 7.1 Files Reviewed
 
 - `main.py` (1055 lines)
 - `database.py` (722 lines)
@@ -585,14 +671,14 @@ No explicit HTTPS redirect in application code.
 - `requirements.txt`
 - `.gitignore`
 
-### B. Tools Used
+### 7.2 Tools Used
 
 - Manual code review
 - Grep pattern matching
 - Git history analysis
 - Dependency analysis
 
-### C. References
+### 7.3 References
 
 - OWASP Top 10 2021
 - CWE/SANS Top 25

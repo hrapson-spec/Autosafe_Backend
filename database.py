@@ -527,16 +527,23 @@ async def update_garage(garage_id: str, updates: Dict) -> bool:
     if not pool:
         return False
 
-    # Build dynamic update query
-    allowed_fields = ['name', 'contact_name', 'email', 'phone', 'postcode',
-                      'latitude', 'longitude', 'status', 'tier', 'notes']
+    # SECURITY: Field names are from a static allowlist (not user input).
+    # Values are parameterized. This pattern is safe but requires care:
+    # - NEVER add user-controlled strings to ALLOWED_UPDATE_FIELDS
+    # - NEVER interpolate values directly into the query
+    ALLOWED_UPDATE_FIELDS = frozenset([
+        'name', 'contact_name', 'email', 'phone', 'postcode',
+        'latitude', 'longitude', 'status', 'tier', 'notes'
+    ])
 
     set_clauses = []
     values = []
     param_num = 1
 
-    for field in allowed_fields:
+    for field in ALLOWED_UPDATE_FIELDS:
         if field in updates:
+            # Field name is from constant allowlist (safe)
+            # Value is parameterized with ${param_num} (safe)
             set_clauses.append(f"{field} = ${param_num}")
             values.append(updates[field])
             param_num += 1
@@ -548,10 +555,9 @@ async def update_garage(garage_id: str, updates: Dict) -> bool:
 
     try:
         async with pool.acquire() as conn:
-            await conn.execute(
-                f"UPDATE garages SET {', '.join(set_clauses)} WHERE id = ${param_num}",
-                *values
-            )
+            # Query uses allowlisted field names + parameterized values
+            query = f"UPDATE garages SET {', '.join(set_clauses)} WHERE id = ${param_num}"
+            await conn.execute(query, *values)
             return True
 
     except Exception as e:

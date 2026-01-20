@@ -174,31 +174,104 @@ class AuditLogger:
 audit_log = AuditLogger()
 
 
+# Allowlist of permitted BASE_URL domains
+# Only these domains can be used for email links and redirects
+# This prevents open-redirect attacks via environment variable manipulation
+ALLOWED_BASE_DOMAINS = frozenset([
+    "autosafe.co.uk",
+    "www.autosafe.co.uk",
+    "api.autosafe.co.uk",
+    # Development/staging
+    "localhost",
+    "127.0.0.1",
+])
+
+
 def validate_base_url(url: Optional[str]) -> Optional[str]:
     """
-    Validate and normalize BASE_URL.
+    Validate BASE_URL against an allowlist of permitted domains.
+
+    Security considerations:
+    - Only allowlisted domains are permitted (prevents open redirect)
+    - Rejects embedded credentials (user:pass@host)
+    - Rejects non-standard schemes
+    - Normalizes and strips dangerous characters
+    - Rejects punycode/IDN lookalikes for production domains
 
     Args:
         url: The URL to validate
 
     Returns:
-        Validated URL or None if invalid
+        Validated URL or None if invalid/not allowed
     """
     if not url:
         return None
 
-    url = url.strip().rstrip('/')
+    # Strip whitespace and control characters
+    url = url.strip()
+    # Remove any null bytes, newlines, or carriage returns (HTTP header injection)
+    url = url.replace('\x00', '').replace('\n', '').replace('\r', '')
+    url = url.rstrip('/')
 
-    # Must start with https:// in production
+    # Only allow http/https schemes
     if not url.startswith(('http://', 'https://')):
-        logger.warning(f"BASE_URL must start with http:// or https://: {url}")
+        logger.warning(f"BASE_URL rejected: invalid scheme")
         return None
 
-    # Warn if using http:// (should be https:// in production)
-    if url.startswith('http://') and 'localhost' not in url and '127.0.0.1' not in url:
-        logger.warning(f"BASE_URL should use HTTPS in production: {url}")
+    # Parse URL to extract components
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+    except Exception:
+        logger.warning(f"BASE_URL rejected: failed to parse")
+        return None
 
-    return url
+    # Reject embedded credentials (user:pass@host)
+    if parsed.username or parsed.password:
+        logger.warning(f"BASE_URL rejected: embedded credentials not allowed")
+        return None
+
+    # Reject URLs with ports (except standard 80/443 or dev ports)
+    if parsed.port and parsed.port not in (80, 443, 3000, 8000, 8080):
+        logger.warning(f"BASE_URL rejected: non-standard port {parsed.port}")
+        return None
+
+    # Extract hostname (lowercase for comparison)
+    hostname = parsed.hostname
+    if not hostname:
+        logger.warning(f"BASE_URL rejected: no hostname")
+        return None
+    hostname = hostname.lower()
+
+    # Check for punycode (IDN) - reject for production domains
+    # This prevents lookalike domain attacks (e.g., аutosafe.co.uk using Cyrillic 'а')
+    if hostname.startswith('xn--') or 'xn--' in hostname:
+        logger.warning(f"BASE_URL rejected: punycode/IDN domains not allowed")
+        return None
+
+    # Validate against allowlist
+    if hostname not in ALLOWED_BASE_DOMAINS:
+        # Also check if it's a subdomain of an allowed domain
+        is_allowed_subdomain = any(
+            hostname.endswith(f'.{domain}')
+            for domain in ALLOWED_BASE_DOMAINS
+            if domain not in ('localhost', '127.0.0.1')
+        )
+        if not is_allowed_subdomain:
+            logger.warning(f"BASE_URL rejected: domain '{hostname}' not in allowlist")
+            return None
+
+    # Warn if using http:// for non-localhost
+    if parsed.scheme == 'http' and hostname not in ('localhost', '127.0.0.1'):
+        logger.warning(f"BASE_URL uses HTTP for non-localhost domain: {hostname}")
+
+    # Reconstruct clean URL (scheme + host only, no path/query)
+    if parsed.port and parsed.port not in (80, 443):
+        clean_url = f"{parsed.scheme}://{hostname}:{parsed.port}"
+    else:
+        clean_url = f"{parsed.scheme}://{hostname}"
+
+    return clean_url
 
 
 def get_actor_from_api_key(api_key: Optional[str]) -> str:

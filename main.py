@@ -57,10 +57,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Response caching for expensive queries (bounded to prevent memory exhaustion)
+# Thread-safe: TTLCache is not thread-safe, so we use a lock for concurrent access
+import threading
 CACHE_TTL = 3600  # 1 hour cache TTL
 MAX_CACHE_ENTRIES = 500  # Maximum cached entries
 _makes_cache: TTLCache = TTLCache(maxsize=1, ttl=CACHE_TTL)
 _models_cache: TTLCache = TTLCache(maxsize=MAX_CACHE_ENTRIES, ttl=CACHE_TTL)
+_cache_lock = threading.Lock()  # Protects both caches from concurrent access
 from contextlib import asynccontextmanager
 
 
@@ -127,6 +130,43 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "X-API-Key", "Authorization", "X-Request-ID"],
 )
+
+
+# HTTPS Redirect Middleware (for production behind TLS-terminating proxy)
+from starlette.responses import RedirectResponse
+
+
+@app.middleware("http")
+async def https_redirect(request, call_next):
+    """
+    Redirect HTTP requests to HTTPS in production.
+
+    Railway (and most cloud platforms) terminate TLS at the load balancer
+    and forward requests to the app over HTTP. They set X-Forwarded-Proto
+    to indicate the original protocol used by the client.
+
+    This middleware redirects HTTP requests to HTTPS, except:
+    - Health check endpoints (for load balancer probes)
+    - Localhost/development environments
+    """
+    # Skip redirect for localhost/development
+    host = request.headers.get("host", "")
+    if host.startswith("localhost") or host.startswith("127.0.0.1"):
+        return await call_next(request)
+
+    # Skip redirect for health checks (load balancer probes use HTTP)
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    # Check X-Forwarded-Proto (set by Railway/proxy)
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
+
+    if forwarded_proto == "http":
+        # Build HTTPS URL
+        https_url = request.url.replace(scheme="https")
+        return RedirectResponse(url=str(https_url), status_code=301)
+
+    return await call_next(request)
 
 
 # Security Headers Middleware
@@ -315,16 +355,18 @@ def add_repair_cost_estimate(result: dict) -> dict:
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
-    # Check bounded TTL cache first
-    if "makes" in _makes_cache:
-        logger.info("Returning cached makes list")
-        return _makes_cache["makes"]
+    # Check bounded TTL cache first (thread-safe access)
+    with _cache_lock:
+        if "makes" in _makes_cache:
+            logger.info("Returning cached makes list")
+            return _makes_cache["makes"]
 
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
-            _makes_cache["makes"] = result
+            with _cache_lock:
+                _makes_cache["makes"] = result
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
 
@@ -342,7 +384,8 @@ async def get_makes(request: Request):
         rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
         conn.close()
         makes = sorted(set(row['make'] for row in rows))
-        _makes_cache["makes"] = makes
+        with _cache_lock:
+            _makes_cache["makes"] = makes
         logger.info(f"Cached {len(makes)} makes from SQLite")
         return makes
 
@@ -356,35 +399,37 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     """Return a list of models for a given make (cached for 1 hour)."""
     cache_key = make.upper()
 
-    # Check bounded TTL cache first
-    if cache_key in _models_cache:
-        logger.info(f"Returning cached models for {cache_key}")
-        return _models_cache[cache_key]
+    # Check bounded TTL cache first (thread-safe access)
+    with _cache_lock:
+        if cache_key in _models_cache:
+            logger.info(f"Returning cached models for {cache_key}")
+            return _models_cache[cache_key]
 
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            _models_cache[cache_key] = result
+            with _cache_lock:
+                _models_cache[cache_key] = result
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
-    
+
     # Fallback to SQLite
     conn = get_sqlite_connection()
     if conn:
         from consolidate_models import get_canonical_models_for_make
-        
+
         # Only return models with sufficient test volume
         query = """
             SELECT model_id, SUM(Total_Tests) as test_count
-            FROM risks 
+            FROM risks
             WHERE model_id LIKE ?
             GROUP BY model_id
             HAVING SUM(Total_Tests) >= ?
         """
         rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
         conn.close()
-        
+
         # Extract base models from found entries
         found_models = {}
         for row in rows:
@@ -392,18 +437,19 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             if base_model and len(base_model) > 1:
                 if base_model not in found_models or row['test_count'] > found_models[base_model]:
                     found_models[base_model] = row['test_count']
-        
+
         # Get curated list of known models for this make
         known_models = get_canonical_models_for_make(make)
-        
+
         if known_models:
             # Only return models from curated list that exist in data
             result = sorted([m for m in known_models if m in found_models])
         else:
             # For non-curated makes, return alphabetic models only (capped)
             result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
-        
-        _models_cache[cache_key] = result
+
+        with _cache_lock:
+            _models_cache[cache_key] = result
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
 
