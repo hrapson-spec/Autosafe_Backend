@@ -25,6 +25,7 @@ def generate_lead_email_minimal(
     failure_risk: float,
     top_risks: List[str],
     assignment_id: str,
+    garage_id: str = "",
     estimated_job_min: int = 150,
     estimated_job_max: int = 400,
     garages_count: int = 3,
@@ -50,6 +51,7 @@ def generate_lead_email_minimal(
         failure_risk: Overall failure risk (0-1)
         top_risks: List of top risk areas
         assignment_id: UUID for tracking and portal access
+        garage_id: UUID of the garage for unsubscribe link
         estimated_job_min: Minimum estimated job value
         estimated_job_max: Maximum estimated job value
         garages_count: Number of garages this lead was sent to
@@ -213,7 +215,7 @@ def generate_lead_email_minimal(
                 <p style="margin: 0; font-size: 12px; color: #94A3B8; text-align: center;">
                     AutoSafe | AI-Powered MOT Predictions<br>
                     <a href="{BASE_URL}/privacy" style="color: #64748B;">Privacy Policy</a> |
-                    <a href="{BASE_URL}/unsubscribe?id={assignment_id}" style="color: #64748B;">Unsubscribe</a>
+                    <a href="{BASE_URL}/api/garage/unsubscribe/{garage_id}" style="color: #64748B;">Unsubscribe</a>
                 </p>
             </td>
         </tr>
@@ -260,6 +262,7 @@ REPORT OUTCOME:
 
 AutoSafe | AI-Powered MOT Predictions
 Privacy: {BASE_URL}/privacy
+Unsubscribe: {BASE_URL}/api/garage/unsubscribe/{garage_id}
 """
 
     return {

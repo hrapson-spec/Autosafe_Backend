@@ -48,8 +48,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Apply PII-safe logging formatter
-from security import configure_safe_logging, require_admin_auth, audit_logger, is_production
+from security import configure_safe_logging, require_admin_auth, audit_logger, is_production, set_incident_callback
 configure_safe_logging()
+
+# Import get_client_ip for incident detection
+from security import get_client_ip
 
 # Response caching for expensive queries
 _cache = {
@@ -875,6 +878,9 @@ async def get_leads(
     # SECURITY: Check IP allowlist AND API key
     require_admin_auth(request)
 
+    # Track admin access for bulk detection
+    incident_detector.record_admin_access(get_client_ip(request), "leads")
+
     # AUDIT: Log this admin access
     audit_logger.log_admin_access(
         request=request,
@@ -1144,7 +1150,9 @@ async def view_lead_portal(request: Request, assignment_id: str):
     It displays full customer contact info only when accessed directly
     (not embedded in email body for privacy).
     """
-    from security import get_client_ip
+    # Track portal access for enumeration detection
+    client_ip = get_client_ip(request)
+    incident_detector.record_portal_access(client_ip)
 
     # Validate UUID format to prevent injection
     import uuid
@@ -1152,7 +1160,7 @@ async def view_lead_portal(request: Request, assignment_id: str):
         uuid.UUID(assignment_id)
     except ValueError:
         # Log suspicious access attempt
-        logger.warning(f"Portal access with invalid ID format from IP: {get_client_ip(request)}")
+        logger.warning(f"Portal access with invalid ID format from IP: {client_ip}")
         raise HTTPException(status_code=404, detail="Lead not found")
 
     assignment = await db.get_lead_assignment_by_id(assignment_id)
@@ -1288,6 +1296,246 @@ async def delete_data_subject_endpoint(
 
     from data_retention import delete_data_subject
     return await delete_data_subject(email=body.email, dry_run=body.dry_run)
+
+
+# ============================================================================
+# Data Subject Access Endpoint (GDPR Article 15)
+# ============================================================================
+
+class DataSubjectAccessRequest(BaseModel):
+    """Request body for data subject access - uses POST body to avoid logging email in URLs."""
+    email: str
+
+
+@app.post("/api/admin/retention/access-subject")
+async def access_data_subject_endpoint(
+    request: Request,
+    body: DataSubjectAccessRequest
+):
+    """
+    Export all data for a specific data subject (admin only).
+
+    This implements GDPR Article 15 - Right of Access.
+    Returns all personal data held for the given email address.
+
+    SECURITY: Email is passed in POST body (not query params).
+    """
+    require_admin_auth(request)
+
+    audit_logger.log_admin_access(
+        request=request,
+        action="access_subject",
+        resource="data_subject",
+        details={}  # Email deliberately NOT logged
+    )
+
+    # Find all data for this email
+    pool = await db.get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    result = {
+        "email": body.email,
+        "data_retrieved_at": datetime.now().isoformat(),
+        "leads": [],
+        "garage_records": [],
+        "lead_assignments": []
+    }
+
+    async with pool.acquire() as conn:
+        # Get all leads
+        leads = await conn.fetch(
+            """SELECT id, email, postcode, name, phone, lead_type,
+                      vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
+                      failure_risk, reliability_score, top_risks,
+                      created_at, distribution_status
+               FROM leads WHERE LOWER(email) = LOWER($1)""",
+            body.email
+        )
+        for lead in leads:
+            lead_dict = dict(lead)
+            lead_dict['id'] = str(lead_dict['id'])
+            if lead_dict['created_at']:
+                lead_dict['created_at'] = lead_dict['created_at'].isoformat()
+            result["leads"].append(lead_dict)
+
+        # Get any garage records (if they're a garage contact)
+        garages = await conn.fetch(
+            """SELECT id, name, contact_name, email, phone, postcode,
+                      status, tier, leads_received, leads_converted, created_at
+               FROM garages WHERE LOWER(email) = LOWER($1)""",
+            body.email
+        )
+        for garage in garages:
+            garage_dict = dict(garage)
+            garage_dict['id'] = str(garage_dict['id'])
+            if garage_dict['created_at']:
+                garage_dict['created_at'] = garage_dict['created_at'].isoformat()
+            result["garage_records"].append(garage_dict)
+
+        # Get lead assignments (where their lead was sent)
+        if result["leads"]:
+            lead_ids = [lead['id'] for lead in result["leads"]]
+            for lead_id in lead_ids:
+                assignments = await conn.fetch(
+                    """SELECT la.id, la.garage_id, la.distance_miles,
+                              la.email_sent_at, la.outcome, g.name as garage_name
+                       FROM lead_assignments la
+                       JOIN garages g ON la.garage_id = g.id
+                       WHERE la.lead_id = $1""",
+                    lead_id
+                )
+                for assignment in assignments:
+                    assign_dict = dict(assignment)
+                    assign_dict['id'] = str(assign_dict['id'])
+                    assign_dict['garage_id'] = str(assign_dict['garage_id'])
+                    assign_dict['lead_id'] = lead_id
+                    if assign_dict['email_sent_at']:
+                        assign_dict['email_sent_at'] = assign_dict['email_sent_at'].isoformat()
+                    result["lead_assignments"].append(assign_dict)
+
+    return result
+
+
+# ============================================================================
+# Garage Unsubscribe Endpoint
+# ============================================================================
+
+@app.get("/api/garage/unsubscribe/{garage_id}")
+async def unsubscribe_garage(garage_id: str, confirm: bool = False):
+    """
+    Unsubscribe a garage from receiving lead notifications.
+
+    This immediately stops all lead emails to this garage.
+    Link is included in all lead notification emails.
+    """
+    import uuid
+    try:
+        uuid.UUID(garage_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid garage ID")
+
+    garage = await db.get_garage_by_id(garage_id)
+    if not garage:
+        raise HTTPException(status_code=404, detail="Garage not found")
+
+    if not confirm:
+        # Show confirmation page
+        return HTMLResponse(content=f"""
+<!DOCTYPE html>
+<html>
+<head><title>Unsubscribe - AutoSafe</title>
+<style>
+body {{ font-family: -apple-system, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }}
+.btn {{ padding: 12px 24px; background: #DC2626; color: white; text-decoration: none; border-radius: 6px; display: inline-block; }}
+.btn-cancel {{ background: #6B7280; }}
+</style>
+</head>
+<body>
+<h1>Unsubscribe from Lead Notifications</h1>
+<p>Are you sure you want to stop receiving lead notifications for <strong>{garage['name']}</strong>?</p>
+<p>You can re-subscribe later by contacting support.</p>
+<p style="margin-top: 30px;">
+<a href="/api/garage/unsubscribe/{garage_id}?confirm=true" class="btn">Yes, Unsubscribe</a>
+<a href="/" class="btn btn-cancel" style="margin-left: 10px;">Cancel</a>
+</p>
+</body>
+</html>
+""")
+
+    # Process unsubscribe - set garage status to inactive
+    success = await db.update_garage(garage_id, {"status": "unsubscribed"})
+
+    if success:
+        logger.info(f"Garage unsubscribed: {garage_id[:8]}...")
+        return HTMLResponse(content="""
+<!DOCTYPE html>
+<html>
+<head><title>Unsubscribed - AutoSafe</title>
+<style>body { font-family: -apple-system, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }</style>
+</head>
+<body>
+<h1>Successfully Unsubscribed</h1>
+<p>You will no longer receive lead notifications from AutoSafe.</p>
+<p>If you change your mind, please contact support to re-subscribe.</p>
+</body>
+</html>
+""")
+    else:
+        raise HTTPException(status_code=500, detail="Failed to process unsubscribe")
+
+
+# ============================================================================
+# Incident Detection Logging
+# ============================================================================
+
+class IncidentDetector:
+    """
+    Detects and logs potential security incidents.
+
+    Monitors for:
+    - Unusual admin data exports
+    - Failed auth spikes
+    - Bulk access patterns
+    - Abnormal API usage
+    """
+
+    def __init__(self):
+        self.failed_auth_count = {}  # IP -> count
+        self.admin_access_count = {}  # IP -> count
+        self.portal_access_count = {}  # IP -> count
+        self.window_start = time.time()
+        self.window_seconds = 300  # 5 minute window
+
+    def _reset_if_needed(self):
+        """Reset counters if window has elapsed."""
+        if time.time() - self.window_start > self.window_seconds:
+            self.failed_auth_count = {}
+            self.admin_access_count = {}
+            self.portal_access_count = {}
+            self.window_start = time.time()
+
+    def record_failed_auth(self, ip: str):
+        """Record a failed authentication attempt."""
+        self._reset_if_needed()
+        self.failed_auth_count[ip] = self.failed_auth_count.get(ip, 0) + 1
+
+        # Alert on spike (>10 failures in 5 minutes from same IP)
+        if self.failed_auth_count[ip] == 10:
+            logger.warning(f"INCIDENT: Auth failure spike from IP {ip} ({self.failed_auth_count[ip]} failures)")
+
+    def record_admin_access(self, ip: str, resource: str):
+        """Record an admin data access."""
+        self._reset_if_needed()
+        key = f"{ip}:{resource}"
+        self.admin_access_count[key] = self.admin_access_count.get(key, 0) + 1
+
+        # Alert on bulk access (>50 accesses in 5 minutes)
+        if self.admin_access_count[key] == 50:
+            logger.warning(f"INCIDENT: Bulk admin access from IP {ip} to {resource} ({self.admin_access_count[key]} accesses)")
+
+    def record_portal_access(self, ip: str):
+        """Record a portal access."""
+        self._reset_if_needed()
+        self.portal_access_count[ip] = self.portal_access_count.get(ip, 0) + 1
+
+        # Alert on enumeration attempt (>100 portal accesses in 5 minutes)
+        if self.portal_access_count[ip] == 100:
+            logger.warning(f"INCIDENT: Possible portal enumeration from IP {ip} ({self.portal_access_count[ip]} accesses)")
+
+
+# Global incident detector
+incident_detector = IncidentDetector()
+
+
+def _incident_callback(event_type: str, ip: str):
+    """Callback for security module to report incidents."""
+    if event_type == "failed_auth":
+        incident_detector.record_failed_auth(ip)
+
+
+# Register incident callback with security module
+set_incident_callback(_incident_callback)
 
 
 # Mount static files at /static (only if the folder exists)

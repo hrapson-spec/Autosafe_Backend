@@ -347,6 +347,23 @@ class AuditLogger:
 # Global audit logger instance
 audit_logger = AuditLogger()
 
+# Incident detection callback hook (set by main.py)
+# Allows security module to report incidents without circular imports
+_incident_callback = None
+
+
+def set_incident_callback(callback):
+    """Set the incident detection callback function."""
+    global _incident_callback
+    _incident_callback = callback
+
+
+def _report_failed_auth(request: Request):
+    """Report a failed auth attempt to incident detector if configured."""
+    if _incident_callback:
+        client_ip = get_client_ip(request)
+        _incident_callback("failed_auth", client_ip)
+
 
 # =============================================================================
 # API Key Management
@@ -407,11 +424,16 @@ def require_admin_auth(request: Request):
     Raises HTTPException on failure.
     """
     # Check IP allowlist first
-    require_admin_ip(request)
+    try:
+        require_admin_ip(request)
+    except HTTPException:
+        _report_failed_auth(request)
+        raise
 
     # Then check API key
     if not api_key_manager.is_configured():
         audit_logger.log_failed_auth(request, "admin_not_configured")
+        _report_failed_auth(request)
         raise HTTPException(
             status_code=503,
             detail="Admin access not configured"
@@ -421,6 +443,7 @@ def require_admin_auth(request: Request):
 
     if not api_key_manager.validate_key(api_key or ""):
         audit_logger.log_failed_auth(request, "invalid_key")
+        _report_failed_auth(request)
         raise HTTPException(
             status_code=401,
             detail="Invalid or missing API key"

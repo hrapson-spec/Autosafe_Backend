@@ -215,6 +215,7 @@ section("6. EMAIL MINIMIZATION")
 
 from email_templates_secure import generate_lead_email_minimal
 
+test_garage_id = "660e8400-f29c-51e5-b827-557766551111"
 result = generate_lead_email_minimal(
     garage_name="Test Garage",
     distance_miles=5.0,
@@ -224,6 +225,7 @@ result = generate_lead_email_minimal(
     failure_risk=0.35,
     top_risks=["brakes", "suspension"],
     assignment_id="550e8400-e29b-41d4-a716-446655440000",
+    garage_id=test_garage_id,
 )
 
 html = result["html"]
@@ -243,6 +245,10 @@ test("Email contains vehicle info",
 test("Email does NOT contain customer_email placeholder",
      "customer_email" not in html.lower() and "${email}" not in html.lower(),
      "Should not have email placeholders")
+
+test("Email contains garage unsubscribe link",
+     f"/api/garage/unsubscribe/{test_garage_id}" in html,
+     "Unsubscribe link should use garage ID")
 
 # =============================================================================
 # 7. UUID Validation Tests
