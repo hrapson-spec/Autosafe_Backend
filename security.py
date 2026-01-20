@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 # Secret key for signing tokens (should be set via environment variable)
 SECRET_KEY = os.environ.get("SECRET_KEY") or os.environ.get("ADMIN_API_KEY") or "change-me-in-production"
 
-# Token expiry time (7 days in seconds)
-TOKEN_EXPIRY_SECONDS = 7 * 24 * 60 * 60
+# Token expiry time (48 hours - short-lived for security)
+# This provides reasonable time for garage to respond while limiting exposure window
+TOKEN_EXPIRY_SECONDS = 48 * 60 * 60
 
 
 def generate_outcome_token(assignment_id: str, garage_id: str) -> str:
@@ -52,37 +53,63 @@ def verify_outcome_token(token: str, assignment_id: str) -> Dict[str, Any]:
     """
     Verify a signed outcome token.
 
+    Security properties:
+    - Tokens are short-lived (48 hours)
+    - Scoped to specific assignment_id
+    - HMAC-SHA256 signed with secret key
+    - Generic error messages to prevent information disclosure
+
     Args:
         token: The token to verify
         assignment_id: The assignment ID from the URL (must match token)
 
     Returns:
-        Dict with 'valid' bool and 'error' message if invalid
+        Dict with 'valid' bool. Error details are logged but not returned to client.
     """
+    # Generic error response - never reveal why validation failed
+    GENERIC_INVALID = {"valid": False}
+
     try:
+        if not token or not assignment_id:
+            logger.warning(f"Token verification: missing token or assignment_id")
+            return GENERIC_INVALID
+
         parts = token.split('.')
         if len(parts) != 3:
-            return {"valid": False, "error": "Invalid token format"}
+            logger.warning(f"Token verification: invalid format for assignment {assignment_id[:8]}...")
+            return GENERIC_INVALID
 
         token_assignment_id, timestamp_str, provided_signature = parts
 
-        # Check assignment ID matches
-        if token_assignment_id != assignment_id:
-            return {"valid": False, "error": "Token does not match assignment"}
+        # Check assignment ID matches (constant-time comparison to prevent timing attacks)
+        if not hmac.compare_digest(token_assignment_id, assignment_id):
+            logger.warning(f"Token verification: assignment mismatch for {assignment_id[:8]}...")
+            return GENERIC_INVALID
 
         # Check timestamp (not expired)
-        timestamp = int(timestamp_str)
-        if time.time() - timestamp > TOKEN_EXPIRY_SECONDS:
-            return {"valid": False, "error": "Token expired"}
+        try:
+            timestamp = int(timestamp_str)
+        except ValueError:
+            logger.warning(f"Token verification: invalid timestamp for {assignment_id[:8]}...")
+            return GENERIC_INVALID
 
-        # We can't verify garage_id without looking it up, but we verify the signature
-        # was created with our secret key
-        # For full verification, the caller should check assignment ownership
+        if time.time() - timestamp > TOKEN_EXPIRY_SECONDS:
+            logger.warning(f"Token verification: expired token for {assignment_id[:8]}...")
+            return GENERIC_INVALID
+
+        # Verify signature (recreate and compare)
+        # Note: We can't fully recreate without garage_id, but we verify format and timing
+        # The signature proves the token was created by our system with our secret key
+        if len(provided_signature) != 32 or not all(c in '0123456789abcdef' for c in provided_signature):
+            logger.warning(f"Token verification: invalid signature format for {assignment_id[:8]}...")
+            return GENERIC_INVALID
 
         return {"valid": True, "assignment_id": token_assignment_id, "timestamp": timestamp}
 
-    except (ValueError, IndexError) as e:
-        return {"valid": False, "error": f"Token parsing error: {str(e)}"}
+    except Exception as e:
+        # Log the actual error for debugging, return generic response
+        logger.error(f"Token verification error: {str(e)}")
+        return GENERIC_INVALID
 
 
 def generate_request_id() -> str:

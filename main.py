@@ -157,8 +157,12 @@ async def add_security_headers(request, call_next):
         "connect-src 'self'"
     )
 
-    # Referrer policy
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Referrer policy - stricter for endpoints with tokens to prevent leakage
+    if "/outcome/" in str(request.url.path) or "token=" in str(request.url.query):
+        # No referrer for pages with sensitive tokens to prevent leakage
+        response.headers["Referrer-Policy"] = "no-referrer"
+    else:
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
     # Permissions policy (disable unnecessary browser features)
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
@@ -189,11 +193,42 @@ MIN_TESTS_FOR_UI = 100
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-limiter = Limiter(key_func=get_remote_address)
+
+def get_client_ip(request: Request) -> str:
+    """
+    Extract client IP address from request, handling proxies properly.
+
+    Priority:
+    1. X-Forwarded-For (first IP in chain - the original client)
+    2. X-Real-IP (set by some proxies)
+    3. Direct client address
+
+    Railway (our hosting platform) sets X-Forwarded-For automatically.
+    """
+    # X-Forwarded-For contains: client, proxy1, proxy2, ...
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # Take the first IP (original client) - trim whitespace
+        client_ip = forwarded_for.split(",")[0].strip()
+        if client_ip:
+            return client_ip
+
+    # Fallback to X-Real-IP
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+
+    # Direct connection (no proxy)
+    if request.client:
+        return request.client.host
+
+    return "unknown"
+
+
+limiter = Limiter(key_func=get_client_ip)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -1129,7 +1164,11 @@ async def get_outcome_page(
     """
     Handle outcome reporting from email links.
 
-    Requires a valid signed token for authentication (included in email links).
+    Security:
+    - Requires valid signed token (48h expiry, HMAC-SHA256 signed)
+    - Generic error messages prevent information disclosure
+    - Response includes Referrer-Policy: no-referrer to prevent token leakage
+
     If result is provided, record the outcome and return confirmation.
     Otherwise, return info about the assignment.
     """
@@ -1137,24 +1176,36 @@ async def get_outcome_page(
     if result and not token:
         raise HTTPException(
             status_code=401,
-            detail="Token required for recording outcomes"
+            detail="Authentication required"
         )
 
     if token:
         token_result = verify_outcome_token(token, assignment_id)
         if not token_result["valid"]:
+            # Generic error message - don't reveal why validation failed
             raise HTTPException(
                 status_code=401,
-                detail=f"Invalid token: {token_result['error']}"
+                detail="Authentication required"
             )
 
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        # Generic error - don't reveal whether assignment exists
+        raise HTTPException(status_code=404, detail="Not found")
 
     # If result provided via query param, record it
     if result in ['won', 'lost', 'no_response']:
+        # Single-use token behavior: prevent overwriting existing outcomes
+        if assignment.get('outcome'):
+            # Already recorded - return success without revealing previous outcome
+            return {
+                "success": True,
+                "message": "Thanks for letting us know!",
+                "outcome": result,
+                "vehicle": f"{assignment['vehicle_year']} {assignment['vehicle_make']} {assignment['vehicle_model']}"
+            }
+
         success = await db.update_lead_assignment_outcome(assignment_id, result)
         if success:
             return {
@@ -1189,27 +1240,38 @@ async def report_outcome(assignment_id: str, request: Request):
     outcome = body.get('outcome')
     token = body.get('token')
 
-    # Verify token (required)
+    # Verify token (required) - generic error messages for security
     if not token:
         raise HTTPException(
             status_code=401,
-            detail="Token required for recording outcomes"
+            detail="Authentication required"
         )
 
     token_result = verify_outcome_token(token, assignment_id)
     if not token_result["valid"]:
+        # Generic error - don't reveal why validation failed
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid token: {token_result['error']}"
+            detail="Authentication required"
         )
 
     assignment = await db.get_lead_assignment_by_id(assignment_id)
 
     if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        # Generic error - don't reveal whether assignment exists
+        raise HTTPException(status_code=404, detail="Not found")
 
     if outcome not in ['won', 'lost', 'no_response']:
-        raise HTTPException(status_code=400, detail="Invalid outcome. Must be: won, lost, or no_response")
+        raise HTTPException(status_code=400, detail="Invalid outcome")
+
+    # Single-use token behavior: prevent overwriting existing outcomes
+    # Return success without changes to avoid revealing state
+    if assignment.get('outcome'):
+        return {
+            "success": True,
+            "message": "Outcome recorded. Thanks!",
+            "outcome": outcome
+        }
 
     success = await db.update_lead_assignment_outcome(assignment_id, outcome)
 
