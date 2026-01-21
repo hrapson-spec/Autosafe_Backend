@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Routes, Route as RouterRoute, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
 import ReportDashboard from './components/ReportDashboard';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
+import { MOTChecklist, CommonFailures, WhenMOTDue } from './components/guides';
 import { CarSelection, CarReport, RegistrationQuery } from './types';
 import { getReportBySelection } from './services/autosafeApi';
 import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
@@ -46,6 +48,13 @@ const App: React.FC = () => {
   // Main home page content
   const HomePage = () => (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
+      <Helmet>
+        <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
+        <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple." />
+        <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
+        <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
+        <link rel="canonical" href="https://autosafe.co.uk/" />
+      </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}
       <nav className="w-full bg-transparent pt-12 pb-8 z-50" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
@@ -168,6 +177,9 @@ const App: React.FC = () => {
       <RouterRoute path="/" element={<HomePage />} />
       <RouterRoute path="/privacy" element={<PrivacyPage />} />
       <RouterRoute path="/terms" element={<TermsPage />} />
+      <RouterRoute path="/guides/mot-checklist" element={<MOTChecklist />} />
+      <RouterRoute path="/guides/common-mot-failures" element={<CommonFailures />} />
+      <RouterRoute path="/guides/when-is-mot-due" element={<WhenMOTDue />} />
     </Routes>
   );
 };

@@ -1,11 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft } from './Icons';
 import { Logo } from './Logo';
 
 const TermsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F0F0F0] text-slate-900">
+      <Helmet>
+        <title>Terms of Use | AutoSafe</title>
+        <meta name="description" content="Terms and conditions for using AutoSafe's free MOT prediction service. Our predictions are for information only." />
+        <link rel="canonical" href="https://autosafe.co.uk/terms" />
+      </Helmet>
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
