@@ -1328,6 +1328,14 @@ if os.path.isdir("static"):
     @app.get("/")
     async def read_index():
         return FileResponse('static/index.html')
+
+    # Catch-all route for SPA client-side routing (must be after API routes)
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        # Don't serve index.html for API routes or static files
+        if path.startswith("api/") or path.startswith("static/"):
+            return {"detail": "Not Found"}
+        return FileResponse('static/index.html')
 else:
     @app.get("/")
     def read_root():
