@@ -16,6 +16,7 @@ interface InputProps {
   icon?: React.ReactNode;
   className?: string;
   inputClassName?: string;
+  'aria-label'?: string;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(({
@@ -34,6 +35,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   icon,
   className = '',
   inputClassName = '',
+  'aria-label': ariaLabel,
 }, ref) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = uppercase ? e.target.value.toUpperCase() : e.target.value;
@@ -68,6 +70,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
         onBlur={onBlur}
         maxLength={maxLength}
         required={required}
+        aria-label={ariaLabel}
         aria-invalid={error ? 'true' : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
         className={`${baseInputStyles} ${stateStyles} ${uppercase ? 'uppercase font-medium tracking-wide' : ''} ${inputClassName}`}
