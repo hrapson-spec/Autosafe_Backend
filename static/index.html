@@ -4,9 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AutoSafe - Predict your car's MOT failure risk using AI-powered analysis.">
+    <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
+    <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple.">
     <meta name="theme-color" content="#1a1a1a">
-    <title>AutoSafe - Predict Your MOT Risk</title>
+    <meta property="og:title" content="Will your car pass its MOT? Check your risk score.">
+    <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data.">
+    <meta property="og:type" content="website">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -33,6 +36,7 @@
                     <div class="form-group">
                         <label for="registration">Car Registration</label>
                         <input type="text" id="registration" placeholder="e.g. AB12 CDE" required
+                            aria-label="Vehicle registration number"
                             style="text-transform: uppercase;">
                     </div>
 
@@ -169,6 +173,11 @@
                     target="_blank">Open Government Licence v3.0</a></p>
             <p>Data from UK DVSA • Not official government advice or endorsement.</p>
             <div class="footer-links">
+                <a href="/static/guides/mot-checklist.html">MOT Checklist</a> •
+                <a href="/static/guides/common-mot-failures.html">Common Failures</a> •
+                <a href="/static/guides/when-is-mot-due.html">When Is MOT Due?</a>
+            </div>
+            <div class="footer-links" style="margin-top: 0.5rem;">
                 <a href="/static/terms.html">Terms</a> • <a href="/static/privacy.html">Privacy</a> • <a href="mailto:autosafehq@gmail.com">Send Feedback</a>
             </div>
         </footer>
