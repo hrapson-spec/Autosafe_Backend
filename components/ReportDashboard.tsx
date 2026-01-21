@@ -102,7 +102,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
         {/* MOT Prediction Card */}
         <Card>
           <Card.Header
-            icon={<ShieldCheck className="w-5 h-5 text-blue-600" />}
+            icon={<ShieldCheck className="w-5 h-5 text-blue-600" aria-hidden="true" />}
             iconBg="bg-blue-50"
             title="MOT Prediction"
           />
@@ -131,7 +131,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
         {/* Maintenance Costs Card */}
         <Card>
           <Card.Header
-            icon={<Wrench className="w-5 h-5 text-orange-600" />}
+            icon={<Wrench className="w-5 h-5 text-orange-600" aria-hidden="true" />}
             iconBg="bg-orange-50"
             title="Repair Costs"
           />
@@ -172,7 +172,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <Card.Header
-            icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+            icon={<AlertTriangle className="w-5 h-5 text-red-600" aria-hidden="true" />}
             iconBg="bg-red-50"
             title="Common Faults To Watch"
           />
