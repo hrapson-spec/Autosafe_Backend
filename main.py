@@ -146,8 +146,8 @@ async def add_security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # HSTS - enable HTTPS enforcement (1 year)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # CSP - allow self, inline, and CDNs for React SPA
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://esm.sh"
+    # CSP - allow self, inline, CDNs, and Umami analytics
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh https://umami-production-cb51.up.railway.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://esm.sh https://umami-production-cb51.up.railway.app"
     return response
 
 
