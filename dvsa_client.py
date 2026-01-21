@@ -330,10 +330,13 @@ class DVSAClient:
                 # Get OAuth access token
                 access_token = await self._get_access_token()
 
-                # Build headers - OAuth bearer token required, API key optional
+                # Build headers - OAuth bearer token required, API key required for new API
                 headers = {"Authorization": f"Bearer {access_token}"}
                 if self.api_key:
-                    headers["X-API-Key"] = self.api_key
+                    headers["x-api-key"] = self.api_key
+                    logger.info(f"API key included in request (length: {len(self.api_key)})")
+                else:
+                    logger.warning("NO API KEY SET - request will likely fail with 403")
 
                 response = await self._client.get(
                     f"{self.BASE_URL}/trade/vehicles/registration/{vrm}",
