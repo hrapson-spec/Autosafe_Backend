@@ -3,6 +3,7 @@ AutoSafe Database Module - PostgreSQL Connection
 Uses DATABASE_URL environment variable from Railway.
 """
 import os
+import re
 from typing import List, Dict, Optional
 
 # Check if we have a database URL (support multiple variable name formats)
@@ -560,12 +561,20 @@ async def update_garage(garage_id: str, updates: Dict) -> bool:
     allowed_fields = ['name', 'contact_name', 'email', 'phone', 'postcode',
                       'latitude', 'longitude', 'status', 'tier', 'notes']
 
+    # Defense-in-depth: validate field names match expected pattern (lowercase + underscore only)
+    # This prevents SQL injection even if allowed_fields is compromised in future changes
+    safe_field_pattern = re.compile(r'^[a-z_]+$')
+
     set_clauses = []
     values = []
     param_num = 1
 
     for field in allowed_fields:
         if field in updates:
+            # Extra safety check: ensure field name is safe for SQL
+            if not safe_field_pattern.match(field):
+                logger.error(f"Invalid field name rejected: {field}")
+                continue
             set_clauses.append(f"{field} = ${param_num}")
             values.append(updates[field])
             param_num += 1

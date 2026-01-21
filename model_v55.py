@@ -117,7 +117,8 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     raw_prob = _model.predict_proba([feature_array])[0][1]  # Probability of class 1 (failure)
 
     # Clamp raw probability to avoid log(0) or log(1) issues (P0-3 fix)
-    raw_prob = float(np.clip(raw_prob, 1e-10, 1 - 1e-10))
+    # Using 1e-8 instead of 1e-10 for extra safety margin in log-odds calculation
+    raw_prob = float(np.clip(raw_prob, 1e-8, 1 - 1e-8))
 
     # Apply Platt calibration if available
     if _calibrator is not None:

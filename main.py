@@ -16,6 +16,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import os
 import time
+import secrets
 
 # Import database module for fallback
 import database as db
@@ -1068,6 +1069,18 @@ async def submit_lead(request: Request, lead: LeadSubmission):
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
 
 
+def _verify_admin_api_key(api_key: Optional[str]) -> bool:
+    """
+    Verify admin API key using constant-time comparison.
+
+    Prevents timing attacks by using secrets.compare_digest() which
+    takes the same amount of time regardless of where strings differ.
+    """
+    if not ADMIN_API_KEY or not api_key:
+        return False
+    return secrets.compare_digest(api_key, ADMIN_API_KEY)
+
+
 @app.get("/api/leads")
 @limiter.limit("30/minute")
 async def get_leads(
@@ -1090,7 +1103,7 @@ async def get_leads(
             detail="Admin access not configured"
         )
 
-    if not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(
             status_code=401,
             detail="Invalid or missing API key"
@@ -1145,7 +1158,7 @@ async def create_garage(request: Request, garage: GarageSubmission):
     Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     # CRITICAL: Check PostgreSQL is available before write
@@ -1199,7 +1212,7 @@ async def list_garages(
     Requires X-API-Key header matching ADMIN_API_KEY.
     """
     api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     garages = await db.get_all_garages(status=status)
@@ -1217,7 +1230,7 @@ async def get_garage(request: Request, garage_id: str):
     Get a single garage by ID (admin only).
     """
     api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     garage = await db.get_garage_by_id(garage_id)
@@ -1236,7 +1249,7 @@ async def update_garage(request: Request, garage_id: str):
     Requires PostgreSQL to be available (no SQLite fallback for writes).
     """
     api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     # CRITICAL: Check PostgreSQL is available before write
@@ -1270,7 +1283,7 @@ async def test_dvsa_connection(
     Returns detailed diagnostic information.
     """
     api_key = request.headers.get("X-API-Key")
-    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+    if not _verify_admin_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
     dvsa_client = get_dvsa_client()
