@@ -21,8 +21,16 @@ const leadForm = document.getElementById('leadForm');
 const leadCapture = document.getElementById('leadCapture');
 const leadSuccess = document.getElementById('leadSuccess');
 
+// Service selection elements
+const serviceSelection = document.getElementById('serviceSelection');
+const serviceContinueBtn = document.getElementById('serviceContinueBtn');
+const serviceCheckboxes = document.querySelectorAll('input[name="service"]');
+
 // Store current results for lead submission
 let currentResultsData = null;
+
+// Store selected services
+let selectedServices = [];
 
 /**
  * Initialize the page
@@ -34,6 +42,71 @@ function init() {
     }
     if (postcodeInput) {
         postcodeInput.addEventListener('input', formatPostcode);
+    }
+
+    // Initialize service selection
+    initServiceSelection();
+}
+
+/**
+ * Initialize service selection handlers
+ */
+function initServiceSelection() {
+    if (!serviceCheckboxes.length || !serviceContinueBtn) return;
+
+    // Handle checkbox changes
+    serviceCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateServiceSelection);
+    });
+
+    // Handle continue button click
+    serviceContinueBtn.addEventListener('click', showContactForm);
+}
+
+/**
+ * Update service selection state
+ */
+function updateServiceSelection() {
+    selectedServices = Array.from(serviceCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+
+    // Enable/disable continue button based on selection
+    if (serviceContinueBtn) {
+        serviceContinueBtn.disabled = selectedServices.length === 0;
+    }
+}
+
+/**
+ * Show contact form after service selection
+ */
+function showContactForm() {
+    if (selectedServices.length === 0) return;
+
+    if (serviceSelection) {
+        serviceSelection.classList.add('hidden');
+    }
+    if (leadForm) {
+        leadForm.classList.remove('hidden');
+    }
+}
+
+/**
+ * Reset service selection to initial state
+ */
+function resetServiceSelection() {
+    selectedServices = [];
+    serviceCheckboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    if (serviceContinueBtn) {
+        serviceContinueBtn.disabled = true;
+    }
+    if (serviceSelection) {
+        serviceSelection.classList.remove('hidden');
+    }
+    if (leadForm) {
+        leadForm.classList.add('hidden');
     }
 }
 
@@ -102,6 +175,7 @@ form.addEventListener('submit', async (e) => {
     if (leadCapture) leadCapture.classList.remove('hidden');
     if (leadSuccess) leadSuccess.classList.add('hidden');
     if (leadForm) leadForm.reset();
+    resetServiceSelection();
 
     // Hide any previous errors
     const banner = document.getElementById('errorBanner');
@@ -366,6 +440,7 @@ if (leadForm) {
                 phone: phone || null,
                 postcode: postcode,
                 lead_type: 'garage',
+                services_requested: selectedServices.length > 0 ? selectedServices : null,
                 vehicle: currentResultsData?.vehicle || null,
                 risk_data: currentResultsData ? {
                     failure_risk: currentResultsData.failure_risk,

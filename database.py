@@ -278,14 +278,15 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
         vehicle = lead_data.get('vehicle', {})
         risk_data = lead_data.get('risk_data', {})
         top_risks = risk_data.get('top_risks', [])
+        services_requested = lead_data.get('services_requested', [])
 
         async with pool.acquire() as conn:
             result = await conn.fetchrow(
                 """INSERT INTO leads (
                     email, postcode, name, phone, lead_type,
                     vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                    failure_risk, reliability_score, top_risks
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+                    failure_risk, reliability_score, top_risks, services_requested
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb)
                 RETURNING id""",
                 lead_data.get('email'),
                 lead_data.get('postcode'),
@@ -298,7 +299,8 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                 vehicle.get('mileage'),
                 risk_data.get('failure_risk'),
                 risk_data.get('reliability_score'),
-                json.dumps(top_risks) if top_risks else '[]'
+                json.dumps(top_risks) if top_risks else '[]',
+                json.dumps(services_requested) if services_requested else '[]'
             )
 
             lead_id = str(result['id'])
@@ -338,7 +340,7 @@ async def get_leads(
                 rows = await conn.fetch(
                     """SELECT id, email, postcode, lead_type,
                               vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                              failure_risk, reliability_score, top_risks,
+                              failure_risk, reliability_score, top_risks, services_requested,
                               created_at, contacted_at, notes
                        FROM leads
                        WHERE created_at >= $1::timestamp
@@ -350,7 +352,7 @@ async def get_leads(
                 rows = await conn.fetch(
                     """SELECT id, email, postcode, lead_type,
                               vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                              failure_risk, reliability_score, top_risks,
+                              failure_risk, reliability_score, top_risks, services_requested,
                               created_at, contacted_at, notes
                        FROM leads
                        ORDER BY created_at DESC

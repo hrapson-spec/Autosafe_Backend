@@ -550,6 +550,99 @@ input:focus:not(:focus-visible) {
     margin-top: var(--space-md);
 }
 
+/* ===== Service Selection ===== */
+.service-selection {
+    margin-bottom: var(--space-md);
+}
+
+.service-prompt {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.service-options {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.service-option {
+    flex: 1;
+    cursor: pointer;
+}
+
+.service-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.service-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-lg) var(--space-md);
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-smooth);
+}
+
+.service-card:hover {
+    border-color: var(--text-muted);
+}
+
+.service-option input[type="checkbox"]:checked + .service-card {
+    border-color: var(--primary-charcoal);
+    background: rgba(55, 65, 81, 0.05);
+}
+
+.service-option input[type="checkbox"]:focus-visible + .service-card {
+    outline: 2px solid var(--primary-charcoal);
+    outline-offset: 2px;
+}
+
+.service-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--space-sm);
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.service-option input[type="checkbox"]:checked + .service-card .service-icon {
+    color: var(--primary-charcoal);
+}
+
+.service-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.service-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+#serviceContinueBtn {
+    margin-top: var(--space-sm);
+}
+
+#serviceContinueBtn:disabled {
+    background: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 /* Lead Success Message */
 .lead-success {
     background: var(--success-bg);

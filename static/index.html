@@ -109,8 +109,45 @@
                 <!-- Lead Capture Section -->
                 <div class="lead-capture" id="leadCapture">
                     <h3>Want help fixing these issues or booking your MOT?</h3>
-                    <p>Enter your details and we'll connect you with trusted local garages.</p>
-                    <form id="leadForm">
+                    <p>Select what you need and we'll connect you with trusted local garages.</p>
+
+                    <!-- Service Selection Step -->
+                    <div id="serviceSelection" class="service-selection">
+                        <p class="service-prompt">What would you like help with?</p>
+                        <div class="service-options">
+                            <label class="service-option">
+                                <input type="checkbox" name="service" value="repair" id="serviceRepair">
+                                <span class="service-card">
+                                    <span class="service-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="service-title">Repairs</span>
+                                    <span class="service-desc">Fix issues before your MOT</span>
+                                </span>
+                            </label>
+                            <label class="service-option">
+                                <input type="checkbox" name="service" value="mot" id="serviceMot">
+                                <span class="service-card">
+                                    <span class="service-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                        </svg>
+                                    </span>
+                                    <span class="service-title">Book MOT</span>
+                                    <span class="service-desc">Schedule your MOT test</span>
+                                </span>
+                            </label>
+                        </div>
+                        <button type="button" id="serviceContinueBtn" class="primary-btn" disabled>
+                            <span class="btn-text">Continue</span>
+                        </button>
+                    </div>
+
+                    <!-- Contact Form (initially hidden) -->
+                    <form id="leadForm" class="hidden">
                         <div class="form-group">
                             <label for="leadName">Name</label>
                             <input type="text" id="leadName" placeholder="Your name" required>

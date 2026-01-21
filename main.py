@@ -994,6 +994,7 @@ class LeadSubmission(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     lead_type: str = "garage"
+    services_requested: Optional[List[str]] = None
     vehicle: Optional[VehicleInfo] = None
     risk_data: Optional[RiskData] = None
 
@@ -1043,6 +1044,7 @@ async def submit_lead(request: Request, lead: LeadSubmission):
         "name": lead.name,
         "phone": lead.phone,
         "lead_type": lead.lead_type,
+        "services_requested": lead.services_requested,
         "vehicle": lead.vehicle.model_dump() if lead.vehicle else {},
         "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
     }

@@ -694,6 +694,7 @@ CREATE TABLE leads (
     name VARCHAR(255),
     phone VARCHAR(50),
     lead_type VARCHAR(50) DEFAULT 'garage',
+    services_requested JSONB DEFAULT '[]',  -- ["repair", "mot"] or subset
     vehicle_make VARCHAR(100),
     vehicle_model VARCHAR(100),
     vehicle_year INTEGER,
