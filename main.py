@@ -264,6 +264,7 @@ async def health_check():
                 "api_key": dvsa_diag["api_key_set"],
                 "token_valid": dvsa_diag["token_valid"],
                 "base_url": dvsa_diag["base_url"],
+                "env_vars_found": dvsa_diag.get("env_vars_found", []),
             },
             "dvla_api": dvla_status,
         }

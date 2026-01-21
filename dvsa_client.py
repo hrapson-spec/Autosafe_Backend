@@ -158,7 +158,21 @@ class DVSAClient:
         self.client_secret = client_secret or os.environ.get("DVSA_CLIENT_SECRET") or os.environ.get("DVSA_Client_Secret")
         self.token_url = token_url or os.environ.get("DVSA_TOKEN_URL") or os.environ.get("DVSA_Token_URL") or os.environ.get("DVSA_Token_ID")
         self.scope = scope or os.environ.get("DVSA_SCOPE") or os.environ.get("DVSA_Scope") or "https://tapi.dvsa.gov.uk/.default"
-        self.api_key = api_key or os.environ.get("DVSA_API_KEY") or os.environ.get("DVSA_Api_Key")
+
+        # API key - check multiple variations (Railway env var naming can vary)
+        self.api_key = (
+            api_key or
+            os.environ.get("DVSA_API_KEY") or
+            os.environ.get("DVSA_Api_Key") or
+            os.environ.get("DVSA_api_key") or
+            os.environ.get("DVSA_APIKey") or
+            os.environ.get("DVSA_ApiKey")
+        )
+
+        # Debug: Log all DVSA-related env vars found
+        dvsa_vars = {k: v[:8] + "..." if v and len(v) > 8 else v
+                     for k, v in os.environ.items() if k.upper().startswith("DVSA")}
+        logger.info(f"DVSA env vars found: {list(dvsa_vars.keys())}")
 
         # Check if credentials are configured (API key is REQUIRED for DVSA API)
         self.is_configured = all([self.client_id, self.client_secret, self.token_url, self.api_key])
@@ -182,6 +196,8 @@ class DVSAClient:
 
     def get_diagnostic_status(self) -> Dict[str, Any]:
         """Return detailed diagnostic info for health checks."""
+        # Find all DVSA env vars (names only, for debugging)
+        dvsa_env_vars = [k for k in os.environ.keys() if k.upper().startswith("DVSA")]
         return {
             "client_id_set": bool(self.client_id),
             "client_secret_set": bool(self.client_secret),
@@ -192,6 +208,7 @@ class DVSAClient:
             "is_configured": self.is_configured,
             "token_valid": self._token.is_valid(),
             "token_expires_in": int(self._token.expires_at - time.time()) if self._token.expires_at > 0 else None,
+            "env_vars_found": dvsa_env_vars,
         }
 
     async def _get_access_token(self) -> str:
