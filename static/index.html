@@ -1,180 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
+    <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple." />
+    <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
+    <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
+    <meta property="og:type" content="website" />
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AutoSafe - Predict your car's MOT failure risk using AI-powered analysis.">
-    <meta name="theme-color" content="#1a1a1a">
-    <title>AutoSafe - Predict Your MOT Risk</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-</head>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="logo">
-                <img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image">
-            </div>
-            <h1 class="headline">Fix it before they find it.</h1>
-            <p class="tagline">Predict your next MOT result and avoid costly surprises.</p>
-        </header>
+    <!-- Fonts with display swap for better LCP -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
 
-        <!-- Search Panel -->
-        <main class="main-content">
-            <section class="search-card" id="searchPanel">
-                <form id="riskForm">
-                    <div class="form-group">
-                        <label for="registration">Car Registration</label>
-                        <input type="text" id="registration" placeholder="e.g. AB12 CDE" required
-                            style="text-transform: uppercase;">
-                    </div>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-                    <div class="form-group">
-                        <label for="postcode">Postcode</label>
-                        <input type="text" id="postcode" placeholder="e.g. SW1A 1AA" required
-                            style="text-transform: uppercase;">
-                    </div>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+      /* Skip link for keyboard accessibility */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #1e293b;
+        color: white;
+        padding: 8px 16px;
+        z-index: 100;
+        text-decoration: none;
+        border-radius: 0 0 4px 0;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+    </style>
 
-                    <button type="submit" id="analyzeBtn" class="primary-btn">
-                        <span class="btn-text">Check This Car</span>
-                        <div class="loader hidden"></div>
-                    </button>
-                </form>
-            </section>
 
-            <!-- Results Panel (hidden until search) -->
-            <section class="results-card hidden" id="resultsPanel">
-                <div class="results-header">
-                    <h2 id="vehicleTag">Vehicle</h2>
-                    <span class="reg-badge" id="vehicleDetails"></span>
-                </div>
-
-                <div class="stats-row">
-                    <div class="stat">
-                        <span class="stat-label">Last MOT</span>
-                        <span class="stat-value" id="lastMOTDate">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Result</span>
-                        <span class="stat-value" id="lastMOTResult">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Mileage</span>
-                        <span class="stat-value" id="mileage">-</span>
-                    </div>
-                </div>
-
-                <div class="risk-display">
-                    <div class="risk-main">
-                        <span class="risk-percentage" id="riskValue">-</span>
-                        <span class="risk-label" id="riskText">Failure Risk</span>
-                    </div>
-                    <span class="confidence-badge" id="confidenceBadge">-</span>
-                </div>
-
-                <div class="repair-cost">
-                    <span class="repair-label">Estimated Repair Cost</span>
-                    <span class="repair-value" id="repairCostValue">-</span>
-                    <span class="repair-range" id="repairCostRange"></span>
-                </div>
-
-                <!-- Lead Capture Section -->
-                <div class="lead-capture" id="leadCapture">
-                    <h3>Want help fixing these issues or booking your MOT?</h3>
-                    <p>Enter your details and we'll connect you with trusted local garages.</p>
-                    <form id="leadForm">
-                        <div class="form-group">
-                            <label for="leadName">Name</label>
-                            <input type="text" id="leadName" placeholder="Your name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadEmail">Email</label>
-                            <input type="email" id="leadEmail" placeholder="your@email.com" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadPhone">Phone (optional)</label>
-                            <input type="tel" id="leadPhone" placeholder="07xxx xxxxxx">
-                        </div>
-                        <button type="submit" class="primary-btn lead-btn">
-                            <span class="btn-text">Find a Garage</span>
-                            <div class="loader hidden"></div>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Lead Success Message (hidden by default) -->
-                <div class="lead-success hidden" id="leadSuccess">
-                    <h3>Thanks! We'll be in touch soon.</h3>
-                    <p>A local garage will contact you shortly.</p>
-                </div>
-
-                <div class="components-section">
-                    <h3>Risk by Component</h3>
-                    <div class="components-grid" id="componentsGrid"></div>
-                </div>
-
-                <p class="source-note" id="sourceNote"></p>
-            </section>
-        </main>
-
-        <!-- Features Section -->
-        <section class="features-section" aria-labelledby="features-heading">
-            <h2 id="features-heading" class="visually-hidden">Key Features</h2>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="6"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                    </svg>
-                </div>
-                <h3>Unrivaled Accuracy</h3>
-                <p>Built on millions of historical data points, our world-class predictive engine spots patterns others miss.</p>
-            </article>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                    </svg>
-                </div>
-                <h3>Always Free</h3>
-                <p>Peace of mind shouldn't come with a price tag. We are committed to keeping our core tools free for every driver.</p>
-            </article>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                    </svg>
-                </div>
-                <h3>Stress-Free Solutions</h3>
-                <p>We help you navigate the whole journey. From predicting failure to booking trusted repairs, we handle it all.</p>
-            </article>
-        </section>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <p>Contains public sector information licensed under the <a
-                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-                    target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA • Not official government advice or endorsement.</p>
-            <div class="footer-links">
-                <a href="/static/terms.html">Terms</a> • <a href="/static/privacy.html">Privacy</a> • <a href="mailto:autosafehq@gmail.com">Send Feedback</a>
-            </div>
-        </footer>
-    </div>
-
-    <script src="/static/script.js"></script>
-</body>
-
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-helmet-async": "https://esm.sh/react-helmet-async@^2.0.4"
+  }
+}
+    </script>
+    <script type="module" crossorigin src="/assets/index-Ly_Rct5O.js"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <div id="root"></div>
+  </body>
 </html>
