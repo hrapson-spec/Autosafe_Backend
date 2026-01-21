@@ -160,13 +160,14 @@ class DVSAClient:
         self.scope = scope or os.environ.get("DVSA_SCOPE") or os.environ.get("DVSA_Scope") or "https://tapi.dvsa.gov.uk/.default"
         self.api_key = api_key or os.environ.get("DVSA_API_KEY") or os.environ.get("DVSA_Api_Key")
 
-        # Check if credentials are configured
-        self.is_configured = all([self.client_id, self.client_secret, self.token_url])
+        # Check if credentials are configured (API key is REQUIRED for DVSA API)
+        self.is_configured = all([self.client_id, self.client_secret, self.token_url, self.api_key])
         if not self.is_configured:
-            logger.warning("DVSA OAuth credentials not fully configured - API calls will fail")
+            logger.warning("DVSA credentials not fully configured - API calls will fail")
             logger.warning(f"  CLIENT_ID: {'set' if self.client_id else 'MISSING'}")
             logger.warning(f"  CLIENT_SECRET: {'set' if self.client_secret else 'MISSING'}")
             logger.warning(f"  TOKEN_URL: {'set' if self.token_url else 'MISSING'}")
+            logger.warning(f"  API_KEY: {'set' if self.api_key else 'MISSING'}")
 
         # OAuth token management
         self._token = OAuthToken()
@@ -178,6 +179,20 @@ class DVSAClient:
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(30.0, connect=10.0),
         )
+
+    def get_diagnostic_status(self) -> Dict[str, Any]:
+        """Return detailed diagnostic info for health checks."""
+        return {
+            "client_id_set": bool(self.client_id),
+            "client_secret_set": bool(self.client_secret),
+            "token_url_set": bool(self.token_url),
+            "api_key_set": bool(self.api_key),
+            "token_url_preview": (self.token_url[:60] + "...") if self.token_url and len(self.token_url) > 60 else self.token_url,
+            "base_url": self.BASE_URL,
+            "is_configured": self.is_configured,
+            "token_valid": self._token.is_valid(),
+            "token_expires_in": int(self._token.expires_at - time.time()) if self._token.expires_at > 0 else None,
+        }
 
     async def _get_access_token(self) -> str:
         """Get valid OAuth access token, refreshing if needed."""
@@ -338,19 +353,31 @@ class DVSAClient:
                 else:
                     logger.warning("NO API KEY SET - request will likely fail with 403")
 
-                response = await self._client.get(
-                    f"{self.BASE_URL}/trade/vehicles/registration/{vrm}",
-                    headers=headers
-                )
+                request_url = f"{self.BASE_URL}/trade/vehicles/registration/{vrm}"
+                logger.info(f"DVSA request: GET {self.BASE_URL}/trade/vehicles/registration/[REDACTED]")
+
+                response = await self._client.get(request_url, headers=headers)
+
+                logger.info(f"DVSA response: status={response.status_code} for {vrm_hash}")
 
                 if response.status_code == 404:
+                    logger.warning(f"DVSA 404: Vehicle {vrm_hash} not found")
                     raise VehicleNotFoundError(f"Vehicle not found in DVSA database")
 
                 if response.status_code == 403:
-                    raise DVSAAPIError("DVSA API key invalid or expired")
+                    # Log response body for debugging (truncated)
+                    body_preview = response.text[:200] if response.text else "(empty)"
+                    logger.error(f"DVSA 403 Forbidden: {body_preview}")
+                    raise DVSAAPIError("DVSA API access denied - check API key and OAuth token")
+
+                if response.status_code == 401:
+                    body_preview = response.text[:200] if response.text else "(empty)"
+                    logger.error(f"DVSA 401 Unauthorized: {body_preview}")
+                    raise DVSAAPIError("DVSA OAuth token invalid or expired")
 
                 if response.status_code == 429:
                     # Rate limit - retry after delay
+                    logger.warning(f"DVSA 429: Rate limited, attempt {attempt+1}/{max_retries}")
                     if attempt < max_retries - 1:
                         import asyncio
                         await asyncio.sleep(2 ** attempt)  # Exponential backoff
@@ -358,6 +385,8 @@ class DVSAClient:
                     raise DVSAAPIError("DVSA API rate limit exceeded")
 
                 if response.status_code != 200:
+                    body_preview = response.text[:200] if response.text else "(empty)"
+                    logger.error(f"DVSA {response.status_code}: {body_preview}")
                     raise DVSAAPIError(f"DVSA API error: {response.status_code}")
 
                 data = response.json()

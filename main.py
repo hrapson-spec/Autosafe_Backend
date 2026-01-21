@@ -237,9 +237,10 @@ async def health_check():
     # Model status
     model_status = "loaded" if model_v55.is_model_loaded() else "not_loaded"
 
-    # DVSA client status
+    # DVSA client status - detailed diagnostics
     dvsa_client = get_dvsa_client()
-    dvsa_status = "configured" if dvsa_client.is_configured else "not_configured"
+    dvsa_diag = dvsa_client.get_diagnostic_status()
+    dvsa_status = "fully_configured" if dvsa_diag["is_configured"] else "missing_credentials"
 
     # DVLA client status
     dvla_status = "configured" if DVLA_API_KEY else "demo_mode"
@@ -255,7 +256,15 @@ async def health_check():
         "components": {
             "database": db_status,
             "model_v55": model_status,
-            "dvsa_api": dvsa_status,
+            "dvsa_api": {
+                "status": dvsa_status,
+                "client_id": dvsa_diag["client_id_set"],
+                "client_secret": dvsa_diag["client_secret_set"],
+                "token_url": dvsa_diag["token_url_set"],
+                "api_key": dvsa_diag["api_key_set"],
+                "token_valid": dvsa_diag["token_valid"],
+                "base_url": dvsa_diag["base_url"],
+            },
             "dvla_api": dvla_status,
         }
     }
@@ -1241,6 +1250,92 @@ async def update_garage(request: Request, garage_id: str):
         raise HTTPException(status_code=500, detail="Failed to update garage")
 
     return {"success": True}
+
+
+# ============================================================================
+# DVSA Debug Endpoint
+# ============================================================================
+
+@app.get("/api/admin/dvsa-test")
+@limiter.limit("5/minute")
+async def test_dvsa_connection(
+    request: Request,
+    registration: str = Query("ZZ99ABC", description="Test registration (default: ZZ99ABC)")
+):
+    """
+    Test DVSA API connectivity (admin only).
+
+    Attempts OAuth token fetch and test lookup to diagnose issues.
+    Returns detailed diagnostic information.
+    """
+    api_key = request.headers.get("X-API-Key")
+    if not ADMIN_API_KEY or not api_key or api_key != ADMIN_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    dvsa_client = get_dvsa_client()
+    result = {
+        "timestamp": datetime.now().isoformat(),
+        "test_registration": registration,
+        "diagnostics": dvsa_client.get_diagnostic_status(),
+        "oauth_test": None,
+        "api_test": None,
+    }
+
+    # Test 1: OAuth token fetch
+    if dvsa_client.is_configured:
+        try:
+            token = await dvsa_client._get_access_token()
+            result["oauth_test"] = {
+                "success": True,
+                "token_length": len(token) if token else 0,
+                "message": "OAuth token obtained successfully"
+            }
+        except Exception as e:
+            result["oauth_test"] = {
+                "success": False,
+                "error": str(e),
+                "message": "OAuth token fetch failed"
+            }
+    else:
+        result["oauth_test"] = {
+            "success": False,
+            "error": "DVSA client not configured",
+            "message": "Missing required credentials"
+        }
+
+    # Test 2: API lookup (only if OAuth succeeded)
+    if result["oauth_test"] and result["oauth_test"]["success"]:
+        try:
+            vrm = dvsa_client.normalize_vrm(registration)
+            history = await dvsa_client.fetch_vehicle_history(vrm)
+            result["api_test"] = {
+                "success": True,
+                "vehicle_found": True,
+                "make": history.make,
+                "model": history.model,
+                "mot_tests_count": len(history.mot_tests),
+                "message": "DVSA API working correctly"
+            }
+        except VehicleNotFoundError:
+            result["api_test"] = {
+                "success": True,
+                "vehicle_found": False,
+                "message": "API responded - vehicle not found (this is OK for test VRM)"
+            }
+        except DVSAAPIError as e:
+            result["api_test"] = {
+                "success": False,
+                "error": str(e),
+                "message": "DVSA API call failed"
+            }
+        except Exception as e:
+            result["api_test"] = {
+                "success": False,
+                "error": str(e),
+                "message": "Unexpected error during API test"
+            }
+
+    return result
 
 
 # ============================================================================
