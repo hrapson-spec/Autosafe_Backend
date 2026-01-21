@@ -1321,8 +1321,11 @@ async def report_outcome(assignment_id: str, request: Request):
     }
 
 
-# Mount static files at /static (only if the folder exists)
+# Mount static files (only if the folder exists)
 if os.path.isdir("static"):
+    # Mount assets at root /assets for React build compatibility
+    if os.path.isdir("static/assets"):
+        app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     @app.get("/")
