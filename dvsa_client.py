@@ -117,7 +117,7 @@ class DVSAClient:
     """
 
     # DVSA MOT History API (OAuth 2.0 authenticated) - new API as of Sept 2025
-    BASE_URL = "https://history.mot.api.gov.uk"
+    BASE_URL = "https://history.mot.api.gov.uk/v1"
 
     # Cache TTL: 24 hours
     CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -336,8 +336,7 @@ class DVSAClient:
                     headers["X-API-Key"] = self.api_key
 
                 response = await self._client.get(
-                    f"{self.BASE_URL}/trade/vehicles/mot-tests",
-                    params={"registration": vrm},
+                    f"{self.BASE_URL}/trade/vehicles/registration/{vrm}",
                     headers=headers
                 )
 
