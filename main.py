@@ -122,6 +122,9 @@ if CORS_ORIGINS == "*":
     )
 else:
     # Production: restrict to specific origins
+    # NOTE: CSRF protection is implicit because we use X-API-Key header auth,
+    # not cookies. Browsers don't auto-send custom headers cross-origin.
+    # If cookie-based auth is ever added, explicit CSRF tokens would be required.
     origins = [o.strip() for o in CORS_ORIGINS.split(",")]
     app.add_middleware(
         CORSMiddleware,

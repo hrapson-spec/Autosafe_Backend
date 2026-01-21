@@ -3,7 +3,11 @@ Lead Distribution Orchestrator for AutoSafe.
 Coordinates matching leads to garages and sending email notifications.
 """
 import logging
+import os
 from typing import Optional, List
+
+# Maximum number of garages to notify per lead (prevents spam/quota exhaustion)
+MAX_GARAGES_PER_LEAD = int(os.environ.get("MAX_GARAGES_PER_LEAD", "5"))
 
 import database as db
 from lead_matcher import find_matching_garages, MatchedGarage
@@ -66,6 +70,11 @@ async def distribute_lead(lead_id: str) -> dict:
         logger.warning(result["error"])
         await db.update_lead_distribution_status(lead_id, 'no_garage_found')
         return result
+
+    # Limit number of garages to prevent spam/quota exhaustion
+    if len(garages) > MAX_GARAGES_PER_LEAD:
+        logger.info(f"Limiting garages from {len(garages)} to {MAX_GARAGES_PER_LEAD} for lead {lead_id}")
+        garages = garages[:MAX_GARAGES_PER_LEAD]
 
     # Extract lead data
     top_risks = lead.get('top_risks') or []

@@ -186,8 +186,8 @@ class DVSAClient:
         # OAuth token management
         self._token = OAuthToken()
 
-        # 24-hour cache (max 10000 entries)
-        self._cache: TTLCache = TTLCache(maxsize=10000, ttl=self.CACHE_TTL_SECONDS)
+        # 24-hour cache (max 5000 entries to limit memory usage ~25MB)
+        self._cache: TTLCache = TTLCache(maxsize=5000, ttl=self.CACHE_TTL_SECONDS)
 
         # HTTP client with timeout
         self._client = httpx.AsyncClient(
@@ -209,6 +209,10 @@ class DVSAClient:
             "token_valid": self._token.is_valid(),
             "token_expires_in": int(self._token.expires_at - time.time()) if self._token.expires_at > 0 else None,
             "env_vars_found": dvsa_env_vars,
+            # Cache monitoring stats
+            "cache_size": len(self._cache),
+            "cache_maxsize": self._cache.maxsize,
+            "cache_ttl_seconds": self._cache.ttl,
         }
 
     async def _get_access_token(self) -> str:
