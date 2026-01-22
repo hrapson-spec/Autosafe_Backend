@@ -5,6 +5,7 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
+  loadingText?: string;
   disabled?: boolean;
   fullWidth?: boolean;
   type?: 'button' | 'submit' | 'reset';
@@ -18,6 +19,7 @@ const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   loading = false,
+  loadingText = 'Loading...',
   disabled = false,
   fullWidth = false,
   type = 'button',
@@ -53,7 +55,7 @@ const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-          <span>Loading...</span>
+          <span>{loadingText}</span>
         </>
       ) : (
         children

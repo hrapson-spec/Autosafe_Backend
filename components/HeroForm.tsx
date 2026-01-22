@@ -7,17 +7,24 @@ interface HeroFormProps {
   isLoading: boolean;
 }
 
-// UK registration plate pattern: AA00 AAA or AA00AAA
-const UK_REG_PATTERN = /^[A-Z]{2}[0-9]{2}\s?[A-Z]{3}$/i;
+// UK registration plate patterns - supports multiple formats:
+// - Current format (2001+): AA00 AAA (e.g., AB12 CDE)
+// - Prefix format (1983-2001): A000 AAA (e.g., P123 ABC)
+// - Suffix format (1963-1983): AAA 000A (e.g., ABC 123D)
+// - Northern Ireland: AAA 0000 (e.g., ABC 1234)
+// - Personalized: Various formats with numbers and letters
+const UK_REG_PATTERN = /^[A-Z0-9]{2,7}$/i;
 
 // UK postcode pattern
 const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
 
 const validateRegistration = (value: string): string | undefined => {
   if (!value) return 'Registration is required';
-  if (value.length < 2) return 'Registration is too short';
-  if (!UK_REG_PATTERN.test(value.replace(/\s/g, ''))) {
-    return 'Enter a valid UK registration (e.g. AB12 CDE)';
+  const cleaned = value.replace(/\s/g, '');
+  if (cleaned.length < 2) return 'Registration is too short';
+  if (cleaned.length > 7) return 'Registration is too long';
+  if (!UK_REG_PATTERN.test(cleaned)) {
+    return 'Enter a valid UK registration';
   }
   return undefined;
 };
@@ -90,6 +97,7 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading }) => {
           size="lg"
           fullWidth
           loading={isLoading}
+          loadingText="Checking vehicle..."
           disabled={!isFormValid}
           className="mt-4"
         >

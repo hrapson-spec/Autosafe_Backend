@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route as RouterRoute, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
@@ -7,8 +7,8 @@ import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { MOTChecklist, CommonFailures, WhenMOTDue } from './components/guides';
 import { CarSelection, CarReport, RegistrationQuery } from './types';
-import { getReportBySelection } from './services/autosafeApi';
-import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
+import { getReportByRegistration, getReportBySelection } from './services/autosafeApi';
+import { AlertCircle, BrainCircuit, Database, Route, X } from './components/Icons';
 import { Logo } from './components/Logo';
 
 const App: React.FC = () => {
@@ -24,15 +24,25 @@ const App: React.FC = () => {
     setPostcode(data.postcode);
 
     try {
-      // DEMO MODE: Use backend demo data until DVLA API is configured
-      // This simulates a Ford Fiesta lookup for any registration
-      const result = await getReportBySelection('FORD', 'FIESTA', 2018);
+      // Try to lookup vehicle by registration first
+      const result = await getReportByRegistration(data.registration);
       setSelection(result.selection);
       setReport(result.report);
     } catch (err) {
+      // If registration lookup fails, show user-friendly error
       const message = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(message);
-      console.error('Error:', err);
+
+      // Provide helpful guidance based on error type
+      if (message.includes('not found') || message.includes('404')) {
+        setError('Vehicle not found. Please check the registration number and try again.');
+      } else if (message.includes('rate limit') || message.includes('429')) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else if (message.includes('network') || message.includes('fetch')) {
+        setError('Connection error. Please check your internet and try again.');
+      } else {
+        setError(message);
+      }
+      console.error('Vehicle lookup error:', err);
     } finally {
       setLoading(false);
     }
@@ -44,6 +54,14 @@ const App: React.FC = () => {
     setPostcode('');
     setError(null);
   };
+
+  // Auto-dismiss errors after 10 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Main home page content
   const HomePage = () => (
@@ -144,11 +162,18 @@ const App: React.FC = () => {
 
             {error && (
               <div
-                className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-red-600 px-6 py-3 rounded-full shadow-lg border border-red-100 flex items-center gap-2 z-50"
+                className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white text-red-600 pl-6 pr-3 py-3 rounded-full shadow-lg border border-red-100 flex items-center gap-3 z-50 animate-fade-in"
                 role="alert"
               >
-                <AlertCircle className="w-5 h-5" aria-hidden="true" />
-                {error}
+                <AlertCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+                <span className="text-sm">{error}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="p-1 hover:bg-red-50 rounded-full transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
               </div>
             )}
 

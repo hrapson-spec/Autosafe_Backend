@@ -60,29 +60,26 @@ export interface VehicleLookupResponse {
   tax_due_date: string;
 }
 
+// Backend API response from /api/risk endpoint (lowercase field names)
 export interface BackendRiskResponse {
-  model_id: string;
-  age_band: string;
-  mileage_band: string;
-  Total_Tests: number;
-  Total_Failures: number;
-  Failure_Risk: number;
-  Failure_Risk_CI_Lower?: number;
-  Failure_Risk_CI_Upper?: number;
-  Confidence_Level?: 'High' | 'Medium' | 'Low';
-  Risk_Brakes?: number;
-  Risk_Suspension?: number;
-  Risk_Tyres?: number;
-  Risk_Steering?: number;
-  Risk_Visibility?: number;
-  Risk_Lamps?: number;
-  Risk_Body?: number;
-  Repair_Cost_Estimate?: {
-    cost_min: number;
-    cost_mid: number;
-    cost_max: number;
-    display: string;
-    disclaimer: string;
+  vehicle: string;
+  year: number;
+  mileage: number | null;
+  last_mot_date: string | null;
+  last_mot_result: string | null;
+  failure_risk: number;
+  confidence_level: 'High' | 'Medium' | 'Low';
+  risk_brakes: number;
+  risk_suspension: number;
+  risk_tyres: number;
+  risk_steering: number;
+  risk_visibility: number;
+  risk_lamps: number;
+  risk_body: number;
+  repair_cost_estimate: {
+    expected: string;
+    range_low: number;
+    range_high: number;
   };
   note?: string;
 }

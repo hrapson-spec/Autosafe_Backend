@@ -271,6 +271,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               size="lg"
               fullWidth
               loading={isSubmitting}
+              loadingText="Finding garages..."
               disabled={!isFormValid}
               className="mt-2"
             >

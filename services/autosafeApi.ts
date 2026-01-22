@@ -26,29 +26,26 @@ export interface VehicleLookupResponse {
   tax_due_date: string;
 }
 
+// Backend API response from /api/risk endpoint (lowercase field names)
 export interface BackendRiskResponse {
-  model_id: string;
-  age_band: string;
-  mileage_band: string;
-  Total_Tests: number;
-  Total_Failures: number;
-  Failure_Risk: number;
-  Failure_Risk_CI_Lower?: number;
-  Failure_Risk_CI_Upper?: number;
-  Confidence_Level?: 'High' | 'Medium' | 'Low';
-  Risk_Brakes?: number;
-  Risk_Suspension?: number;
-  Risk_Tyres?: number;
-  Risk_Steering?: number;
-  Risk_Visibility?: number;
-  Risk_Lamps?: number;
-  Risk_Body?: number;
-  Repair_Cost_Estimate?: {
-    cost_min: number;
-    cost_mid: number;
-    cost_max: number;
-    display: string;
-    disclaimer: string;
+  vehicle: string;
+  year: number;
+  mileage: number | null;
+  last_mot_date: string | null;
+  last_mot_result: string | null;
+  failure_risk: number;
+  confidence_level: 'High' | 'Medium' | 'Low';
+  risk_brakes: number;
+  risk_suspension: number;
+  risk_tyres: number;
+  risk_steering: number;
+  risk_visibility: number;
+  risk_lamps: number;
+  risk_body: number;
+  repair_cost_estimate: {
+    expected: string;
+    range_low: number;
+    range_high: number;
   };
   note?: string;
 }
@@ -136,33 +133,34 @@ export async function getRiskAssessment(
 
 /**
  * Component risk mapping with human-readable descriptions.
+ * Keys match the lowercase field names from the backend API.
  */
 const COMPONENT_INFO: Record<string, { name: string; description: string }> = {
-  Risk_Brakes: {
+  risk_brakes: {
     name: 'Brakes',
     description: 'Brake pads, discs, and hydraulic system issues common at this age/mileage.'
   },
-  Risk_Suspension: {
+  risk_suspension: {
     name: 'Suspension',
     description: 'Shock absorbers, springs, and bushings may show wear.'
   },
-  Risk_Tyres: {
+  risk_tyres: {
     name: 'Tyres',
     description: 'Tyre wear and condition issues that may cause MOT failure.'
   },
-  Risk_Steering: {
+  risk_steering: {
     name: 'Steering',
     description: 'Steering rack, joints, and alignment problems.'
   },
-  Risk_Visibility: {
+  risk_visibility: {
     name: 'Visibility',
     description: 'Windscreen damage, wipers, and mirror issues.'
   },
-  Risk_Lamps: {
+  risk_lamps: {
     name: 'Lights & Lamps',
     description: 'Headlights, indicators, and brake lights failures.'
   },
-  Risk_Body: {
+  risk_body: {
     name: 'Body & Structure',
     description: 'Corrosion, structural damage, or body panel issues.'
   }
@@ -201,8 +199,9 @@ function generateDetailedAnalysis(data: BackendRiskResponse): string {
   const parts: string[] = [];
 
   // Overall risk context
-  const riskPercent = Math.round(data.Failure_Risk * 100);
-  parts.push(`Based on ${data.Total_Tests.toLocaleString()} similar vehicles tested, this ${data.age_band} old vehicle with ${data.mileage_band} miles has a ${riskPercent}% chance of MOT failure.`);
+  const riskPercent = Math.round(data.failure_risk * 100);
+  const vehicleName = data.vehicle || 'this vehicle';
+  parts.push(`Based on similar vehicles tested, ${vehicleName} has a ${riskPercent}% chance of MOT failure.`);
 
   // Find highest risk components
   const componentRisks: { name: string; risk: number }[] = [];
@@ -223,7 +222,7 @@ function generateDetailedAnalysis(data: BackendRiskResponse): string {
   }
 
   // Confidence note
-  if (data.Confidence_Level === 'Low') {
+  if (data.confidence_level === 'Low') {
     parts.push('Note: Limited data available for this specific configuration, so predictions have wider uncertainty.');
   }
 
@@ -235,10 +234,10 @@ function generateDetailedAnalysis(data: BackendRiskResponse): string {
  */
 export function transformToCarReport(data: BackendRiskResponse): CarReport {
   // Convert failure risk (0-1) to reliability score (0-100, inverted)
-  const reliabilityScore = Math.round((1 - data.Failure_Risk) * 100);
+  const reliabilityScore = Math.round((1 - data.failure_risk) * 100);
 
   // MOT pass prediction is inverse of failure risk
-  const motPassRatePrediction = Math.round((1 - data.Failure_Risk) * 100);
+  const motPassRatePrediction = Math.round((1 - data.failure_risk) * 100);
 
   // Build common faults array from component risks
   const commonFaults: Fault[] = [];
@@ -257,22 +256,23 @@ export function transformToCarReport(data: BackendRiskResponse): CarReport {
   const riskOrder = { High: 0, Medium: 1, Low: 2 };
   commonFaults.sort((a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel]);
 
-  // Get repair cost estimate - use cost_mid as the main estimate
-  const estimatedAnnualMaintenance = data.Repair_Cost_Estimate?.cost_mid ||
-    Math.round(data.Failure_Risk * 800 + 150); // Fallback estimate
+  // Get repair cost estimate from backend response
+  const repairCost = data.repair_cost_estimate;
+  const estimatedAnnualMaintenance = repairCost?.range_high ||
+    Math.round(data.failure_risk * 800 + 150); // Fallback estimate
 
-  // Pass through full cost data if available
-  const repairCostEstimate = data.Repair_Cost_Estimate ? {
-    cost_min: data.Repair_Cost_Estimate.cost_min,
-    cost_mid: data.Repair_Cost_Estimate.cost_mid,
-    cost_max: data.Repair_Cost_Estimate.cost_max,
-    display: data.Repair_Cost_Estimate.display,
-    disclaimer: data.Repair_Cost_Estimate.disclaimer
+  // Transform repair cost to frontend format
+  const repairCostEstimate = repairCost ? {
+    cost_min: repairCost.range_low,
+    cost_mid: Math.round((repairCost.range_low + repairCost.range_high) / 2),
+    cost_max: repairCost.range_high,
+    display: repairCost.expected,
+    disclaimer: 'Estimates based on average UK repair costs. Actual costs may vary.'
   } : undefined;
 
   return {
     reliabilityScore,
-    verdict: generateVerdict(data.Failure_Risk, data.Confidence_Level),
+    verdict: generateVerdict(data.failure_risk, data.confidence_level),
     detailedAnalysis: generateDetailedAnalysis(data),
     commonFaults,
     estimatedAnnualMaintenance,
