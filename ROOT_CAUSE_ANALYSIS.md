@@ -223,20 +223,20 @@ All predictions used 50,000 miles regardless of actual vehicle mileage.
    UX decision prioritized simplicity over accuracy, without offering an "advanced" option.
 
 ### Root Cause
-**Product decision to minimize form friction without quantifying accuracy trade-off.** The hardcoded value was a conscious choice, but the impact on prediction quality wasn't communicated.
+**Frontend was calling the wrong API endpoint.** The backend has two endpoints:
+- `/api/risk` - lookup table only, no DVSA data, accepts mileage parameter
+- `/api/risk/v55` - uses DVSA MOT history with **real odometer readings**
+
+The frontend was calling `/api/risk` with hardcoded 50,000 miles, when it should have been calling `/api/risk/v55` which fetches actual mileage from DVSA.
 
 ### Contributing Factors
-- **Data availability gap**: DVLA doesn't provide current mileage
-- **UX simplicity bias**: Fewer fields = higher conversion (assumed, not validated)
-- **No accuracy indicator**: Users don't know predictions use estimated mileage
-- **Missing user research**: No data on whether users would provide mileage if asked
+- **Two similar endpoints**: Easy to use the wrong one
+- **Lack of documentation**: No clear guidance on when to use which endpoint
+- **Demo mode masked the issue**: Original code never called either endpoint properly
 
-### Recommendations
-1. Add optional mileage field: "Know your mileage? (optional)"
-2. Show data sources: "Mileage: 50,000 mi (estimated)" vs "Mileage: 67,234 mi (from MOT)"
-3. Quantify accuracy impact: Compare predictions with estimated vs. actual mileage
-4. A/B test mileage field: Measure conversion impact
-5. Fetch from DVSA: If MOT history available, use last recorded odometer
+### Resolution (FIXED)
+Updated `getReportByRegistration()` to call `/api/risk/v55` instead of `/api/risk`.
+The V55 endpoint returns `mileage: last_test.odometer_value` from real MOT history.
 
 ---
 
