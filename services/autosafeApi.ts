@@ -50,6 +50,38 @@ export interface BackendRiskResponse {
   note?: string;
 }
 
+// Backend API response from /api/risk/v55 endpoint (uses DVSA data with real mileage)
+export interface V55RiskResponse {
+  registration: string;
+  vehicle: {
+    make: string;
+    model: string;
+    year: number | null;
+    fuel_type: string;
+  } | null;
+  mileage: number | null;
+  last_mot_date: string | null;
+  last_mot_result: string | null;
+  failure_risk: number;
+  confidence_level: 'High' | 'Medium' | 'Low';
+  risk_components: {
+    brakes: number;
+    suspension: number;
+    tyres: number;
+    steering: number;
+    visibility: number;
+    lamps: number;
+    body: number;
+  };
+  repair_cost_estimate: {
+    expected: number;
+    range_low: number;
+    range_high: number;
+  };
+  model_version: string;
+  note?: string;
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -282,32 +314,104 @@ export function transformToCarReport(data: BackendRiskResponse): CarReport {
 }
 
 /**
- * Complete flow: lookup vehicle by registration and get risk report.
+ * Get V55 risk assessment using DVSA MOT history.
+ * This endpoint fetches real mileage from MOT records.
  */
-export async function getReportByRegistration(registration: string): Promise<{
+export async function getV55RiskAssessment(
+  registration: string,
+  postcode: string = ''
+): Promise<V55RiskResponse> {
+  const cleanReg = registration.replace(/\s/g, '').toUpperCase();
+  const params = new URLSearchParams({ registration: cleanReg });
+  if (postcode) {
+    params.append('postcode', postcode.toUpperCase());
+  }
+
+  const response = await fetch(`${API_BASE}/api/risk/v55?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Transform V55 response to frontend CarReport format.
+ */
+function transformV55ToCarReport(data: V55RiskResponse): CarReport {
+  const reliabilityScore = Math.round((1 - data.failure_risk) * 100);
+  const motPassRatePrediction = Math.round((1 - data.failure_risk) * 100);
+
+  // Build common faults from risk components
+  const componentMap: Record<string, { name: string; description: string }> = {
+    brakes: { name: 'Brakes', description: 'Brake pads, discs, and hydraulic system issues.' },
+    suspension: { name: 'Suspension', description: 'Shock absorbers, springs, and bushings wear.' },
+    tyres: { name: 'Tyres', description: 'Tyre wear and condition issues.' },
+    steering: { name: 'Steering', description: 'Steering rack, joints, and alignment problems.' },
+    visibility: { name: 'Visibility', description: 'Windscreen, wipers, and mirror issues.' },
+    lamps: { name: 'Lights & Lamps', description: 'Headlights, indicators, and brake lights.' },
+    body: { name: 'Body & Structure', description: 'Corrosion and structural issues.' },
+  };
+
+  const commonFaults: Fault[] = [];
+  for (const [key, risk] of Object.entries(data.risk_components)) {
+    if (risk > 0.02) {
+      const info = componentMap[key];
+      if (info) {
+        commonFaults.push({
+          component: info.name,
+          description: info.description,
+          riskLevel: risk >= 0.15 ? 'High' : risk >= 0.08 ? 'Medium' : 'Low'
+        });
+      }
+    }
+  }
+
+  // Sort by risk level
+  const riskOrder = { High: 0, Medium: 1, Low: 2 };
+  commonFaults.sort((a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel]);
+
+  const repairCost = data.repair_cost_estimate;
+
+  return {
+    reliabilityScore,
+    verdict: generateVerdict(data.failure_risk, data.confidence_level),
+    detailedAnalysis: `Based on DVSA MOT history, this vehicle has a ${Math.round(data.failure_risk * 100)}% predicted failure risk.`,
+    commonFaults,
+    estimatedAnnualMaintenance: repairCost?.range_high || Math.round(data.failure_risk * 800 + 150),
+    repairCostEstimate: repairCost ? {
+      cost_min: repairCost.range_low,
+      cost_mid: repairCost.expected,
+      cost_max: repairCost.range_high,
+      display: `£${repairCost.expected}`,
+      disclaimer: 'Based on average UK repair costs.'
+    } : undefined,
+    motPassRatePrediction
+  };
+}
+
+/**
+ * Complete flow: lookup vehicle by registration and get risk report.
+ * Uses V55 endpoint which fetches real mileage from DVSA MOT history.
+ */
+export async function getReportByRegistration(registration: string, postcode: string = ''): Promise<{
   selection: CarSelection;
   report: CarReport;
 }> {
-  // Step 1: Lookup vehicle
-  const vehicle = await lookupVehicle(registration);
+  // Use V55 endpoint - fetches DVSA data with real mileage
+  const v55Data = await getV55RiskAssessment(registration, postcode);
 
-  // Step 2: Get risk assessment
-  const riskData = await getRiskAssessment(
-    vehicle.make,
-    vehicle.model,
-    vehicle.year,
-    50000 // Default mileage estimate
-  );
-
-  // Step 3: Transform to UI format
+  // Build selection from V55 response
   const selection: CarSelection = {
-    make: vehicle.make,
-    model: vehicle.model,
-    year: vehicle.year,
-    mileage: 50000
+    make: v55Data.vehicle?.make || 'Unknown',
+    model: v55Data.vehicle?.model || 'Unknown',
+    year: v55Data.vehicle?.year || new Date().getFullYear(),
+    mileage: v55Data.mileage || 0  // Real mileage from DVSA!
   };
 
-  const report = transformToCarReport(riskData);
+  const report = transformV55ToCarReport(v55Data);
 
   return { selection, report };
 }

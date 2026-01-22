@@ -24,8 +24,8 @@ const App: React.FC = () => {
     setPostcode(data.postcode);
 
     try {
-      // Try to lookup vehicle by registration first
-      const result = await getReportByRegistration(data.registration);
+      // Use V55 endpoint - fetches real mileage from DVSA MOT history
+      const result = await getReportByRegistration(data.registration, data.postcode);
       setSelection(result.selection);
       setReport(result.report);
     } catch (err) {
