@@ -228,6 +228,15 @@ function displayResults(data) {
 
     resultsPanel.classList.remove('hidden');
 
+    // Track conversion in Google Ads
+    if (typeof gtag === 'function') {
+        gtag('event', 'conversion', {
+            'send_to': 'AW-17896487388/VEHICLE_CHECK_LABEL',
+            'value': 1.0,
+            'currency': 'GBP'
+        });
+    }
+
     // Update Header
     const vehicleTag = document.getElementById('vehicleTag');
     const vehicleDetails = document.getElementById('vehicleDetails');
@@ -462,6 +471,15 @@ if (leadForm) {
             // Success - show thank you message
             leadCapture.classList.add('hidden');
             leadSuccess.classList.remove('hidden');
+
+            // Track lead conversion in Google Ads
+            if (typeof gtag === 'function') {
+                gtag('event', 'conversion', {
+                    'send_to': 'AW-17896487388/LEAD_SUBMIT_LABEL',
+                    'value': 5.0,
+                    'currency': 'GBP'
+                });
+            }
 
         } catch (err) {
             showError(err.message);
