@@ -7,12 +7,15 @@ import logging
 from typing import Optional, Tuple, Dict
 from math import radians, sin, cos, sqrt, atan2
 
+from cachetools import TTLCache
+
 logger = logging.getLogger(__name__)
 
 POSTCODES_IO_BASE = "https://api.postcodes.io"
 
-# In-memory cache to reduce API calls
-_postcode_cache: Dict[str, Tuple[float, float]] = {}
+# Bounded in-memory cache with TTL to prevent memory exhaustion
+# Max 10,000 entries (~400KB), 24-hour TTL
+_postcode_cache: TTLCache = TTLCache(maxsize=10000, ttl=86400)
 
 
 async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float]]:
@@ -146,5 +149,4 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 def clear_cache():
     """Clear the postcode cache (useful for testing)."""
-    global _postcode_cache
-    _postcode_cache = {}
+    _postcode_cache.clear()

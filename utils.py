@@ -1,8 +1,45 @@
 """
-Utility functions for age and mileage band calculations.
+Utility functions for age and mileage band calculations,
+and PII masking for safe logging.
 """
 from typing import Optional, Union
 import pandas as pd
+
+
+def mask_email(email: str) -> str:
+    """
+    Mask email for logging: john@example.com -> j***@example.com
+
+    Args:
+        email: Email address to mask
+
+    Returns:
+        Masked email safe for logging
+    """
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
+
+def mask_phone(phone: Optional[str]) -> str:
+    """
+    Mask phone number for logging: 07123456789 -> 07***789
+
+    Args:
+        phone: Phone number to mask
+
+    Returns:
+        Masked phone safe for logging
+    """
+    if not phone:
+        return '***'
+    phone = phone.replace(' ', '').replace('-', '')
+    if len(phone) <= 4:
+        return '***'
+    return f"{phone[:2]}***{phone[-3:]}"
 
 
 def get_age_band(age: Optional[Union[int, float]]) -> str:

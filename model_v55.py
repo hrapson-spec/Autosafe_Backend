@@ -15,6 +15,8 @@ Usage:
     prediction = predict_risk(features)
 """
 
+import hashlib
+import os
 import pickle
 import logging
 from pathlib import Path
@@ -40,12 +42,81 @@ _model: Optional[CatBoostClassifier] = None
 _calibrator: Optional[Any] = None  # Platt calibrator (sklearn LogisticRegression)
 _cohort_stats: Optional[Dict] = None
 
+# Expected checksums for model artifacts (SHA256)
+# These should be updated when model files are regenerated
+# Set SKIP_MODEL_CHECKSUM=1 to bypass verification (development only)
+MODEL_CHECKSUMS_FILE = MODEL_DIR / "checksums.sha256"
+
+
+def _compute_file_checksum(filepath: Path) -> str:
+    """Compute SHA256 checksum of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            sha256_hash.update(chunk)
+    return sha256_hash.hexdigest()
+
+
+def _load_expected_checksums() -> Dict[str, str]:
+    """Load expected checksums from checksums file."""
+    checksums = {}
+    if MODEL_CHECKSUMS_FILE.exists():
+        with open(MODEL_CHECKSUMS_FILE, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        checksum, filename = parts[0], parts[-1]
+                        checksums[filename] = checksum
+    return checksums
+
+
+def _verify_file_integrity(filepath: Path, expected_checksums: Dict[str, str]) -> bool:
+    """
+    Verify file integrity using SHA256 checksum.
+
+    Returns True if:
+    - Checksum verification is disabled via SKIP_MODEL_CHECKSUM env var
+    - No checksums file exists (allows first-time setup)
+    - File checksum matches expected value
+
+    Returns False if checksum mismatch (potential tampering).
+    """
+    # Allow bypassing for development
+    if os.environ.get("SKIP_MODEL_CHECKSUM", "").lower() in ("1", "true", "yes"):
+        logger.warning(f"Checksum verification SKIPPED for {filepath.name} (SKIP_MODEL_CHECKSUM set)")
+        return True
+
+    filename = filepath.name
+
+    # If no checksums file or no entry for this file, allow loading with warning
+    if not expected_checksums or filename not in expected_checksums:
+        logger.warning(f"No checksum available for {filename} - loading without verification")
+        return True
+
+    # Verify checksum
+    actual_checksum = _compute_file_checksum(filepath)
+    expected_checksum = expected_checksums[filename]
+
+    if actual_checksum != expected_checksum:
+        logger.error(
+            f"SECURITY: Checksum mismatch for {filename}! "
+            f"Expected: {expected_checksum[:16]}..., Got: {actual_checksum[:16]}... "
+            "File may have been tampered with. Refusing to load."
+        )
+        return False
+
+    logger.info(f"Checksum verified for {filename}")
+    return True
+
 
 def load_model() -> bool:
     """
     Load V55 model and calibrator from disk.
 
     Should be called once at application startup.
+    Verifies file integrity via SHA256 checksums before loading pickle files.
 
     Returns:
         True if loaded successfully, False otherwise
@@ -53,10 +124,19 @@ def load_model() -> bool:
     global _model, _calibrator, _cohort_stats
 
     try:
-        # Load CatBoost model
+        # Load expected checksums for integrity verification
+        expected_checksums = _load_expected_checksums()
+        if expected_checksums:
+            logger.info(f"Loaded {len(expected_checksums)} checksums for verification")
+
+        # Load CatBoost model (binary format, not pickle - lower risk)
         model_path = MODEL_DIR / "model.cbm"
         if not model_path.exists():
             logger.error(f"Model file not found: {model_path}")
+            return False
+
+        # Verify model file integrity
+        if not _verify_file_integrity(model_path, expected_checksums):
             return False
 
         _model = CatBoostClassifier()
@@ -64,22 +144,30 @@ def load_model() -> bool:
         logger.info(f"Loaded CatBoost model from {model_path}")
         logger.info(f"Model has {len(_model.feature_names_)} features")
 
-        # Load Platt calibrator
+        # Load Platt calibrator (pickle - verify integrity first)
         calibrator_path = MODEL_DIR / "platt_calibrator.pkl"
         if calibrator_path.exists():
-            with open(calibrator_path, 'rb') as f:
-                _calibrator = pickle.load(f)
-            logger.info("Loaded Platt calibrator")
+            if not _verify_file_integrity(calibrator_path, expected_checksums):
+                logger.error("Platt calibrator failed integrity check - skipping")
+                _calibrator = None
+            else:
+                with open(calibrator_path, 'rb') as f:
+                    _calibrator = pickle.load(f)
+                logger.info("Loaded Platt calibrator")
         else:
             logger.warning("Platt calibrator not found - using raw probabilities")
             _calibrator = None
 
-        # Load cohort stats (for reference)
+        # Load cohort stats (pickle - verify integrity first)
         cohort_path = MODEL_DIR / "cohort_stats.pkl"
         if cohort_path.exists():
-            with open(cohort_path, 'rb') as f:
-                _cohort_stats = pickle.load(f)
-            logger.info("Loaded cohort statistics")
+            if not _verify_file_integrity(cohort_path, expected_checksums):
+                logger.error("Cohort stats failed integrity check - skipping")
+                _cohort_stats = None
+            else:
+                with open(cohort_path, 'rb') as f:
+                    _cohort_stats = pickle.load(f)
+                logger.info("Loaded cohort statistics")
 
         return True
 

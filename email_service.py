@@ -7,6 +7,8 @@ import httpx
 import logging
 from typing import Optional
 
+from utils import mask_email
+
 logger = logging.getLogger(__name__)
 
 # Support multiple variable name formats
@@ -74,14 +76,14 @@ async def send_email(
             )
 
             if response.status_code == 200:
-                logger.info(f"Email sent to {to_email}: {subject}")
+                logger.info(f"Email sent to {mask_email(to_email)}: {subject}")
                 return True
             else:
                 logger.error(f"Email send failed: {response.status_code} - {response.text}")
                 return False
 
     except httpx.TimeoutException:
-        logger.error(f"Timeout sending email to {to_email}")
+        logger.error(f"Timeout sending email to {mask_email(to_email)}")
         return False
     except Exception as e:
         logger.error(f"Email send exception: {e}")

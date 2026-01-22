@@ -56,11 +56,13 @@ PREDICTIONS_ENABLED = os.environ.get("PREDICTIONS_ENABLED", "true").lower() == "
 MODEL_VERSION = os.environ.get("MODEL_VERSION", "v55")
 
 # Response caching for expensive queries
+# Using TTLCache for models to prevent unbounded memory growth
+from cachetools import TTLCache
+CACHE_TTL = 3600  # 1 hour cache TTL
 _cache = {
     "makes": {"data": None, "time": 0},
-    "models": {}  # Keyed by make
+    "models": TTLCache(maxsize=500, ttl=CACHE_TTL)  # Bounded cache: max 500 makes
 }
-CACHE_TTL = 3600  # 1 hour cache TTL
 from contextlib import asynccontextmanager
 
 
@@ -411,17 +413,17 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     """Return a list of models for a given make (cached for 1 hour)."""
     global _cache
     cache_key = make.upper()
-    
-    # Check cache first
-    if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
+
+    # Check cache first (TTLCache handles expiration automatically)
+    if cache_key in _cache["models"]:
         logger.info(f"Returning cached models for {cache_key}")
-        return _cache["models"][cache_key]["data"]
-    
+        return _cache["models"][cache_key]
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            _cache["models"][cache_key] = {"data": result, "time": time.time()}
+            _cache["models"][cache_key] = result
             logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
             return result
     
@@ -459,7 +461,7 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             # For non-curated makes, return alphabetic models only (capped)
             result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
         
-        _cache["models"][cache_key] = {"data": result, "time": time.time()}
+        _cache["models"][cache_key] = result
         logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
         return result
     

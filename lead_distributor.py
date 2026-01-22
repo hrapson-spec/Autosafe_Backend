@@ -13,6 +13,7 @@ import database as db
 from lead_matcher import find_matching_garages, MatchedGarage
 from email_service import send_email, is_configured as email_configured
 from email_templates import generate_lead_email
+from utils import mask_email
 
 logger = logging.getLogger(__name__)
 
@@ -129,9 +130,9 @@ async def distribute_lead(lead_id: str) -> dict:
         if sent:
             result["emails_sent"] += 1
             await db.increment_garage_leads_received(garage.garage_id)
-            logger.info(f"Lead {lead_id} sent to {garage.name} ({garage.email})")
+            logger.info(f"Lead {lead_id} sent to {garage.name} ({mask_email(garage.email)})")
         else:
-            logger.error(f"Failed to send lead {lead_id} to {garage.email}")
+            logger.error(f"Failed to send lead {lead_id} to {mask_email(garage.email)}")
 
     # Update lead status
     if result["emails_sent"] > 0:
