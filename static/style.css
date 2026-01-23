@@ -643,6 +643,29 @@ input:focus:not(:focus-visible) {
     box-shadow: none;
 }
 
+@media (max-width: 500px) {
+    .service-options {
+        flex-wrap: wrap;
+    }
+
+    .service-option {
+        flex: 1 1 calc(50% - var(--space-sm));
+        min-width: 0;
+    }
+
+    .service-card {
+        padding: var(--space-md) var(--space-sm);
+    }
+
+    .service-title {
+        font-size: 0.8rem;
+    }
+
+    .service-desc {
+        font-size: 0.7rem;
+    }
+}
+
 /* Lead Success Message */
 .lead-success {
     background: var(--success-bg);
