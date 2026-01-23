@@ -760,3 +760,74 @@ async def get_lead_assignment_by_id(assignment_id: str) -> Optional[Dict]:
         logger.error(f"Failed to get lead assignment: {e}")
         return None
 
+
+# ============================================================================
+# Risk Check Logging Functions
+# ============================================================================
+
+async def save_risk_check(risk_data: Dict) -> Optional[str]:
+    """
+    Save a risk check to the database for model training data.
+
+    Args:
+        risk_data: Dict containing:
+            - registration: str (VRM)
+            - postcode: str (optional)
+            - vehicle_make, vehicle_model, vehicle_year, vehicle_fuel_type
+            - mileage: int
+            - last_mot_date, last_mot_result
+            - failure_risk: float
+            - confidence_level: str
+            - risk_components: dict
+            - repair_cost_estimate: dict
+            - model_version: str
+            - prediction_source: str ('dvsa', 'lookup', 'fallback')
+            - is_dvsa_data: bool
+
+    Returns:
+        Risk check ID (UUID string) on success, None on failure
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for saving risk check")
+        return None
+
+    try:
+        import json
+
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO risk_checks (
+                    registration, postcode,
+                    vehicle_make, vehicle_model, vehicle_year, vehicle_fuel_type,
+                    mileage, last_mot_date, last_mot_result,
+                    failure_risk, confidence_level, risk_components, repair_cost_estimate,
+                    model_version, prediction_source, is_dvsa_data
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15, $16)
+                RETURNING id""",
+                risk_data.get('registration'),
+                risk_data.get('postcode'),
+                risk_data.get('vehicle_make'),
+                risk_data.get('vehicle_model'),
+                risk_data.get('vehicle_year'),
+                risk_data.get('vehicle_fuel_type'),
+                risk_data.get('mileage'),
+                risk_data.get('last_mot_date'),
+                risk_data.get('last_mot_result'),
+                risk_data.get('failure_risk'),
+                risk_data.get('confidence_level'),
+                json.dumps(risk_data.get('risk_components', {})),
+                json.dumps(risk_data.get('repair_cost_estimate', {})),
+                risk_data.get('model_version'),
+                risk_data.get('prediction_source'),
+                risk_data.get('is_dvsa_data', False)
+            )
+
+            risk_check_id = str(result['id'])
+            logger.info(f"Risk check logged: postcode={risk_data.get('postcode')} make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
+            return risk_check_id
+
+    except Exception as e:
+        logger.error(f"Failed to save risk check: {e}")
+        return None
+

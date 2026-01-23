@@ -742,7 +742,8 @@ async def get_risk_v55(
         prediction['risk_components']
     )
 
-    return {
+    # Build response
+    response = {
         "registration": vrm,
         "vehicle": {
             "make": history.make,
@@ -760,6 +761,31 @@ async def get_risk_v55(
         "model_version": "v55",
     }
 
+    # Log risk check for model training data (fire-and-forget, don't block response)
+    try:
+        await db.save_risk_check({
+            'registration': vrm,
+            'postcode': validated_postcode,
+            'vehicle_make': history.make,
+            'vehicle_model': history.model,
+            'vehicle_year': year,
+            'vehicle_fuel_type': history.fuel_type,
+            'mileage': last_test.odometer_value if last_test else None,
+            'last_mot_date': last_test.test_date if last_test else None,
+            'last_mot_result': last_test.test_result if last_test else None,
+            'failure_risk': prediction['failure_risk'],
+            'confidence_level': prediction['confidence_level'],
+            'risk_components': prediction['risk_components'],
+            'repair_cost_estimate': repair_cost,
+            'model_version': 'v55',
+            'prediction_source': 'dvsa',
+            'is_dvsa_data': True,
+        })
+    except Exception as e:
+        logger.warning(f"Failed to log risk check: {e}")
+
+    return response
+
 
 async def _fallback_prediction(
     registration: str,
@@ -775,7 +801,7 @@ async def _fallback_prediction(
     """
     # If no vehicle data, return population average
     if not make or not model:
-        return {
+        response = {
             "registration": registration,
             "vehicle": None,
             "year": year,
@@ -797,6 +823,25 @@ async def _fallback_prediction(
             "model_version": "lookup",
             "note": note or "Vehicle not found - using UK population average",
         }
+        # Log fallback prediction
+        try:
+            await db.save_risk_check({
+                'registration': registration,
+                'postcode': postcode,
+                'vehicle_make': None,
+                'vehicle_model': None,
+                'vehicle_year': year,
+                'failure_risk': 0.28,
+                'confidence_level': 'Low',
+                'risk_components': response['risk_components'],
+                'repair_cost_estimate': response['repair_cost_estimate'],
+                'model_version': 'lookup',
+                'prediction_source': 'fallback',
+                'is_dvsa_data': False,
+            })
+        except Exception as e:
+            logger.warning(f"Failed to log fallback risk check: {e}")
+        return response
 
     model_id = f"{make.upper()} {model.upper()}"
 
@@ -829,7 +874,7 @@ async def _fallback_prediction(
                 result = add_confidence_intervals(result)
                 result = add_repair_cost_estimate(result)
 
-                return {
+                response = {
                     "registration": registration,
                     "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
                     "mileage": None,
@@ -850,13 +895,32 @@ async def _fallback_prediction(
                     "model_version": "lookup",
                     "note": note,
                 }
+                # Log lookup prediction
+                try:
+                    await db.save_risk_check({
+                        'registration': registration,
+                        'postcode': postcode,
+                        'vehicle_make': make.upper(),
+                        'vehicle_model': model.upper(),
+                        'vehicle_year': year,
+                        'failure_risk': response['failure_risk'],
+                        'confidence_level': 'Medium',
+                        'risk_components': response['risk_components'],
+                        'repair_cost_estimate': response['repair_cost_estimate'],
+                        'model_version': 'lookup',
+                        'prediction_source': 'lookup',
+                        'is_dvsa_data': False,
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to log lookup risk check: {e}")
+                return response
     finally:
         # P2-4 fix: Always close connection in finally block
         if conn:
             conn.close()
 
     # Default fallback - population average
-    return {
+    response = {
         "registration": registration,
         "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
         "mileage": None,
@@ -877,6 +941,25 @@ async def _fallback_prediction(
         "model_version": "lookup",
         "note": note or "Limited data - using population averages",
     }
+    # Log default fallback prediction
+    try:
+        await db.save_risk_check({
+            'registration': registration,
+            'postcode': postcode,
+            'vehicle_make': make.upper() if make else None,
+            'vehicle_model': model.upper() if model else None,
+            'vehicle_year': year,
+            'failure_risk': 0.28,
+            'confidence_level': 'Low',
+            'risk_components': response['risk_components'],
+            'repair_cost_estimate': response['repair_cost_estimate'],
+            'model_version': 'lookup',
+            'prediction_source': 'fallback',
+            'is_dvsa_data': False,
+        })
+    except Exception as e:
+        logger.warning(f"Failed to log default fallback risk check: {e}")
+    return response
 
 
 def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
