@@ -18,6 +18,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Create a non-root user with an explicit UID and add permission to access the /app folder
+# This prevents potential container escapes by running the application as a restricted user
+RUN adduser -u 5678 --disabled-password --gecos "" appuser
+
+# Create the SQLite DB file and set permissions so appuser can write to it
+RUN touch /app/autosafe.db && chown appuser:appuser /app/autosafe.db
+
+# Switch to the non-root user
+USER appuser
+
 # Expose port 8000
 EXPOSE 8000
 
