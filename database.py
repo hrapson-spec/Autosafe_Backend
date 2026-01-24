@@ -6,6 +6,27 @@ import os
 import re
 from typing import List, Dict, Optional
 
+
+def _clamp_risk(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
+    """
+    Clamp a risk value to a valid probability range.
+
+    This provides defense-in-depth against corrupted data in the database.
+    Even if the data pipeline produces invalid values (e.g., >1.0), this
+    ensures the API never returns impossible probabilities.
+
+    Args:
+        value: The risk value to clamp
+        min_val: Minimum valid value (default 0.0)
+        max_val: Maximum valid value (default 1.0)
+
+    Returns:
+        Clamped value within [min_val, max_val]
+    """
+    if value is None:
+        return 0.0
+    return max(min_val, min(max_val, float(value)))
+
 # Check if we have a database URL (support multiple variable name formats)
 DATABASE_URL = (
     os.environ.get("DATABASE_URL") or
@@ -202,20 +223,22 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
         )
         
         if rows and rows[0]['total_tests']:
+            # Apply sanity check clamping to all risk values to prevent invalid data
+            # from corrupted database entries from propagating to the API
             result = {
                 "Model_Id": model_id,
                 "Age_Band": age_band,
                 "Mileage_Band": mileage_band,
                 "Total_Tests": int(rows[0]['total_tests']),
                 "Total_Failures": int(rows[0]['total_failures']) if rows[0]['total_failures'] else 0,
-                "Failure_Risk": float(rows[0]['failure_risk']) if rows[0]['failure_risk'] else 0.0,
-                "Risk_Brakes": float(rows[0]['risk_brakes']) if rows[0]['risk_brakes'] else 0.0,
-                "Risk_Suspension": float(rows[0]['risk_suspension']) if rows[0]['risk_suspension'] else 0.0,
-                "Risk_Tyres": float(rows[0]['risk_tyres']) if rows[0]['risk_tyres'] else 0.0,
-                "Risk_Steering": float(rows[0]['risk_steering']) if rows[0]['risk_steering'] else 0.0,
-                "Risk_Visibility": float(rows[0]['risk_visibility']) if rows[0]['risk_visibility'] else 0.0,
-                "Risk_Lamps_Reflectors_And_Electrical_Equipment": float(rows[0]['risk_lamps_reflectors_and_electrical_equipment']) if rows[0]['risk_lamps_reflectors_and_electrical_equipment'] else 0.0,
-                "Risk_Body_Chassis_Structure": float(rows[0]['risk_body_chassis_structure']) if rows[0]['risk_body_chassis_structure'] else 0.0,
+                "Failure_Risk": _clamp_risk(rows[0]['failure_risk']),
+                "Risk_Brakes": _clamp_risk(rows[0]['risk_brakes']),
+                "Risk_Suspension": _clamp_risk(rows[0]['risk_suspension']),
+                "Risk_Tyres": _clamp_risk(rows[0]['risk_tyres']),
+                "Risk_Steering": _clamp_risk(rows[0]['risk_steering']),
+                "Risk_Visibility": _clamp_risk(rows[0]['risk_visibility']),
+                "Risk_Lamps_Reflectors_And_Electrical_Equipment": _clamp_risk(rows[0]['risk_lamps_reflectors_and_electrical_equipment']),
+                "Risk_Body_Chassis_Structure": _clamp_risk(rows[0]['risk_body_chassis_structure']),
             }
             return result
         
@@ -244,7 +267,7 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             "Mileage_Band": mileage_band,
             "note": "Exact age/mileage match not found. Returning model average.",
             "Total_Tests": int(avg_rows[0]['total_tests']) if avg_rows[0]['total_tests'] else 0,
-            "Failure_Risk": float(avg_rows[0]['avg_risk']) if avg_rows[0]['avg_risk'] else 0.0
+            "Failure_Risk": _clamp_risk(avg_rows[0]['avg_risk'])
         }
 
 

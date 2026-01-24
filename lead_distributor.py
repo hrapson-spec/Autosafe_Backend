@@ -1,10 +1,25 @@
 """
 Lead Distribution Orchestrator for AutoSafe.
 Coordinates matching leads to garages and sending email notifications.
+
+Uses asyncio.gather for parallel email sending to improve performance.
 """
+import asyncio
 import logging
 import os
-from typing import Optional, List
+from typing import Optional, List, Tuple
+from dataclasses import dataclass
+
+
+def _mask_email(email: str) -> str:
+    """Mask email for logging to protect PII: john@example.com -> j***@example.com"""
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
 
 # Maximum number of garages to notify per lead (prevents spam/quota exhaustion)
 MAX_GARAGES_PER_LEAD = int(os.environ.get("MAX_GARAGES_PER_LEAD", "5"))
@@ -17,9 +32,44 @@ from email_templates import generate_lead_email
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class EmailTask:
+    """Represents an email task to be sent."""
+    garage: MatchedGarage
+    assignment_id: str
+    email_content: dict
+
+
+async def _send_single_email(task: EmailTask, lead_id: str) -> Tuple[bool, EmailTask]:
+    """
+    Send a single email and return the result.
+
+    Returns:
+        Tuple of (success: bool, task: EmailTask)
+    """
+    try:
+        sent = await send_email(
+            to_email=task.garage.email,
+            subject=task.email_content['subject'],
+            html_body=task.email_content['html'],
+            text_body=task.email_content['text'],
+            tags={
+                "lead_id": lead_id,
+                "garage_id": task.garage.garage_id,
+                "assignment_id": task.assignment_id,
+            }
+        )
+        return (sent, task)
+    except Exception as e:
+        logger.error(f"Exception sending email to {_mask_email(task.garage.email)}: {e}")
+        return (False, task)
+
+
 async def distribute_lead(lead_id: str) -> dict:
     """
     Distribute a lead to matching garages.
+
+    Uses asyncio.gather to send emails in parallel for improved performance.
 
     Args:
         lead_id: The lead's UUID
@@ -82,7 +132,10 @@ async def distribute_lead(lead_id: str) -> dict:
         import json
         top_risks = json.loads(top_risks)
 
-    # Send email to each matched garage
+    # Phase 1: Create all assignment records and prepare email tasks
+    # (Sequential - each needs unique assignment_id for tracking)
+    email_tasks: List[EmailTask] = []
+
     for garage in garages:
         # Create assignment record first (to get assignment_id for tracking links)
         assignment_id = await db.create_lead_assignment(
@@ -113,25 +166,50 @@ async def distribute_lead(lead_id: str) -> dict:
             garages_count=len(garages),
         )
 
-        # Send email
-        sent = await send_email(
-            to_email=garage.email,
-            subject=email_content['subject'],
-            html_body=email_content['html'],
-            text_body=email_content['text'],
-            tags={
-                "lead_id": lead_id,
-                "garage_id": garage.garage_id,
-                "assignment_id": assignment_id,
-            }
-        )
+        email_tasks.append(EmailTask(
+            garage=garage,
+            assignment_id=assignment_id,
+            email_content=email_content
+        ))
 
+    if not email_tasks:
+        result["error"] = "Failed to create any assignment records"
+        await db.update_lead_distribution_status(lead_id, 'assignment_failed')
+        return result
+
+    # Phase 2: Send all emails in parallel using asyncio.gather
+    send_coroutines = [
+        _send_single_email(task, lead_id)
+        for task in email_tasks
+    ]
+
+    # Wait for all emails to be sent (or fail)
+    send_results = await asyncio.gather(*send_coroutines, return_exceptions=True)
+
+    # Phase 3: Process results and update database
+    successful_tasks: List[EmailTask] = []
+
+    for send_result in send_results:
+        if isinstance(send_result, Exception):
+            logger.error(f"Exception in email send task: {send_result}")
+            continue
+
+        sent, task = send_result
         if sent:
-            result["emails_sent"] += 1
-            await db.increment_garage_leads_received(garage.garage_id)
-            logger.info(f"Lead {lead_id} sent to {garage.name} ({garage.email})")
+            successful_tasks.append(task)
+            logger.info(f"Lead {lead_id} sent to {task.garage.name} ({_mask_email(task.garage.email)})")
         else:
-            logger.error(f"Failed to send lead {lead_id} to {garage.email}")
+            logger.error(f"Failed to send lead {lead_id} to {_mask_email(task.garage.email)}")
+
+    # Update database for successful sends (can also be parallelized)
+    if successful_tasks:
+        increment_coroutines = [
+            db.increment_garage_leads_received(task.garage.garage_id)
+            for task in successful_tasks
+        ]
+        await asyncio.gather(*increment_coroutines, return_exceptions=True)
+
+    result["emails_sent"] = len(successful_tasks)
 
     # Update lead status
     if result["emails_sent"] > 0:
