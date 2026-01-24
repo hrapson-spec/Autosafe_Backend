@@ -28,6 +28,7 @@ from regional_defaults import validate_postcode, get_corrosion_index
 
 # Lead distribution
 from lead_distributor import distribute_lead
+from email_service import close_email_client
 
 # V55 imports
 from dvsa_client import (
@@ -105,6 +106,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down...")
     await close_dvsa_client()
+    await close_email_client()
     await db.close_pool()
 
 
@@ -200,7 +202,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # Minimum total tests required for a make/model to appear in UI dropdowns
 # This filters out typos, garbage entries, and extremely rare vehicles
-MIN_TESTS_FOR_UI = 100
+# Configurable via environment variable for tuning without redeployment
+MIN_TESTS_FOR_UI = int(os.environ.get("MIN_TESTS_FOR_UI", "100"))
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler

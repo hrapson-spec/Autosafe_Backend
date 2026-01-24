@@ -44,7 +44,8 @@ logger = logging.getLogger(__name__)
 # Minimum total tests required for a make/model to appear in UI dropdowns
 # This filters out typos, garbage entries, and extremely rare vehicles
 # while keeping all legitimate production cars (even rare ones have >100 tests)
-MIN_TESTS_FOR_UI = 100
+# Configurable via environment variable for tuning without redeployment
+MIN_TESTS_FOR_UI = int(os.environ.get("MIN_TESTS_FOR_UI", "100"))
 
 async def get_pool():
     """Get or create the connection pool."""
