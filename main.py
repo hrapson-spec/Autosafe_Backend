@@ -55,12 +55,16 @@ logger = logging.getLogger(__name__)
 PREDICTIONS_ENABLED = os.environ.get("PREDICTIONS_ENABLED", "true").lower() == "true"
 MODEL_VERSION = os.environ.get("MODEL_VERSION", "v55")
 
-# Response caching for expensive queries
-_cache = {
-    "makes": {"data": None, "time": 0},
-    "models": {}  # Keyed by make
-}
+# Response caching for expensive queries using TTLCache with bounded size
+from cachetools import TTLCache
+
+# Cache configuration
 CACHE_TTL = 3600  # 1 hour cache TTL
+CACHE_MAX_SIZE = 500  # Maximum number of entries (makes + models combined)
+
+# Bounded TTL cache - automatically evicts old entries and limits size
+# This prevents unbounded memory growth from accumulating make/model entries
+_cache = TTLCache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 from contextlib import asynccontextmanager
 
 
@@ -200,11 +204,41 @@ MIN_TESTS_FOR_UI = 100
 
 # Rate Limiting Setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
-limiter = Limiter(key_func=get_remote_address)
+
+def get_real_client_ip(request: Request) -> str:
+    """
+    Extract the real client IP address from the request.
+
+    When behind a trusted reverse proxy (Railway, Cloudflare, AWS ALB),
+    we take the FIRST IP from X-Forwarded-For, which is the original client.
+    Subsequent IPs are added by each proxy in the chain.
+
+    An attacker can add fake IPs to the END of X-Forwarded-For, but cannot
+    control the FIRST entry when behind a properly configured reverse proxy.
+
+    Falls back to direct client IP if no X-Forwarded-For header is present.
+    """
+    # Check for X-Forwarded-For header (set by reverse proxies)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # Take the first IP (leftmost) - this is the original client IP
+        # Format: "client, proxy1, proxy2, ..."
+        client_ip = forwarded_for.split(",")[0].strip()
+        # Basic validation - ensure it looks like an IP
+        if client_ip and ("." in client_ip or ":" in client_ip):
+            return client_ip
+
+    # Fallback to direct client connection
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "unknown"
+
+
+limiter = Limiter(key_func=get_real_client_ip)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -303,11 +337,94 @@ async def readiness_check():
         "database": "connected"
     }
 
-# SQLite fallback connection (for local development)
+# SQLite fallback connection pool (for local development)
 import sqlite3
+from queue import Queue, Empty
+from contextlib import contextmanager
+import threading
 
+# SQLite connection pool configuration
+SQLITE_POOL_SIZE = 5
+SQLITE_POOL_TIMEOUT = 5.0  # seconds to wait for a connection
+
+# Global connection pool
+_sqlite_pool: Optional[Queue] = None
+_sqlite_pool_lock = threading.Lock()
+
+
+def _init_sqlite_pool():
+    """Initialize the SQLite connection pool."""
+    global _sqlite_pool
+    if _sqlite_pool is not None:
+        return
+
+    with _sqlite_pool_lock:
+        if _sqlite_pool is not None:
+            return
+
+        if not os.path.exists(DB_FILE):
+            logger.warning(f"SQLite database not found: {DB_FILE}")
+            return
+
+        _sqlite_pool = Queue(maxsize=SQLITE_POOL_SIZE)
+        for _ in range(SQLITE_POOL_SIZE):
+            try:
+                conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+                conn.row_factory = sqlite3.Row
+                # Test the connection
+                conn.execute("SELECT 1 FROM risks LIMIT 1")
+                _sqlite_pool.put(conn)
+            except sqlite3.Error as e:
+                logger.error(f"Failed to create SQLite connection: {e}")
+
+        logger.info(f"SQLite connection pool initialized with {_sqlite_pool.qsize()} connections")
+
+
+@contextmanager
 def get_sqlite_connection():
-    """Get SQLite connection if available."""
+    """
+    Get a SQLite connection from the pool.
+
+    Usage:
+        with get_sqlite_connection() as conn:
+            if conn:
+                result = conn.execute("SELECT ...").fetchone()
+
+    Returns connection to pool automatically when done.
+    """
+    # Initialize pool on first use
+    if _sqlite_pool is None:
+        _init_sqlite_pool()
+
+    if _sqlite_pool is None or _sqlite_pool.qsize() == 0:
+        yield None
+        return
+
+    conn = None
+    try:
+        conn = _sqlite_pool.get(timeout=SQLITE_POOL_TIMEOUT)
+        yield conn
+    except Empty:
+        logger.warning("SQLite connection pool exhausted, timeout waiting for connection")
+        yield None
+    except Exception as e:
+        logger.error(f"Error getting SQLite connection: {e}")
+        yield None
+    finally:
+        if conn is not None:
+            try:
+                # Return connection to pool
+                _sqlite_pool.put_nowait(conn)
+            except Exception:
+                # Pool is full or connection is bad, close it
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+
+def get_sqlite_connection_direct():
+    """Get SQLite connection directly (legacy compatibility, prefer context manager)."""
     if not os.path.exists(DB_FILE):
         return None
     try:
@@ -368,39 +485,39 @@ def add_repair_cost_estimate(result: dict) -> dict:
 @limiter.limit("100/minute")
 async def get_makes(request: Request):
     """Return a list of all unique vehicle makes (cached for 1 hour)."""
-    global _cache
-    
-    # Check cache first
-    if _cache["makes"]["data"] and (time.time() - _cache["makes"]["time"]) < CACHE_TTL:
+    cache_key = "makes"
+
+    # Check cache first (TTLCache handles expiration automatically)
+    cached = _cache.get(cache_key)
+    if cached is not None:
         logger.info("Returning cached makes list")
-        return _cache["makes"]["data"]
-    
+        return cached
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
-            _cache["makes"] = {"data": result, "time": time.time()}
+            _cache[cache_key] = result
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
-    
+
     # Fallback to SQLite
-    conn = get_sqlite_connection()
-    if conn:
-        # Only return makes with sufficient test volume
-        query = """
-            SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
-                   SUM(Total_Tests) as test_count
-            FROM risks
-            GROUP BY make
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
-        conn.close()
-        makes = sorted(set(row['make'] for row in rows))
-        _cache["makes"] = {"data": makes, "time": time.time()}
-        logger.info(f"Cached {len(makes)} makes from SQLite")
-        return makes
-    
+    with get_sqlite_connection() as conn:
+        if conn:
+            # Only return makes with sufficient test volume
+            query = """
+                SELECT SUBSTR(model_id, 1, INSTR(model_id || ' ', ' ') - 1) as make,
+                       SUM(Total_Tests) as test_count
+                FROM risks
+                GROUP BY make
+                HAVING SUM(Total_Tests) >= ?
+            """
+            rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
+            makes = sorted(set(row['make'] for row in rows))
+            _cache[cache_key] = makes
+            logger.info(f"Cached {len(makes)} makes from SQLite")
+            return makes
+
     # Demo mode
     return sorted(MOCK_MAKES)
 
@@ -409,60 +526,60 @@ async def get_makes(request: Request):
 @limiter.limit("100/minute")
 async def get_models(request: Request, make: str = Query(..., description="Vehicle Make (e.g., FORD)")):
     """Return a list of models for a given make (cached for 1 hour)."""
-    global _cache
-    cache_key = make.upper()
-    
-    # Check cache first
-    if cache_key in _cache["models"] and (time.time() - _cache["models"][cache_key]["time"]) < CACHE_TTL:
-        logger.info(f"Returning cached models for {cache_key}")
-        return _cache["models"][cache_key]["data"]
-    
+    # Use prefixed cache key to differentiate from makes cache
+    cache_key = f"models:{make.upper()}"
+
+    # Check cache first (TTLCache handles expiration automatically)
+    cached = _cache.get(cache_key)
+    if cached is not None:
+        logger.info(f"Returning cached models for {make.upper()}")
+        return cached
+
     # Try PostgreSQL first
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            _cache["models"][cache_key] = {"data": result, "time": time.time()}
-            logger.info(f"Cached {len(result)} models for {cache_key} from PostgreSQL")
+            _cache[cache_key] = result
+            logger.info(f"Cached {len(result)} models for {make.upper()} from PostgreSQL")
             return result
-    
+
     # Fallback to SQLite
-    conn = get_sqlite_connection()
-    if conn:
-        from consolidate_models import get_canonical_models_for_make
-        
-        # Only return models with sufficient test volume
-        query = """
-            SELECT model_id, SUM(Total_Tests) as test_count
-            FROM risks 
-            WHERE model_id LIKE ?
-            GROUP BY model_id
-            HAVING SUM(Total_Tests) >= ?
-        """
-        rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
-        conn.close()
-        
-        # Extract base models from found entries
-        found_models = {}
-        for row in rows:
-            base_model = extract_base_model(row['model_id'], make)
-            if base_model and len(base_model) > 1:
-                if base_model not in found_models or row['test_count'] > found_models[base_model]:
-                    found_models[base_model] = row['test_count']
-        
-        # Get curated list of known models for this make
-        known_models = get_canonical_models_for_make(make)
-        
-        if known_models:
-            # Only return models from curated list that exist in data
-            result = sorted([m for m in known_models if m in found_models])
-        else:
-            # For non-curated makes, return alphabetic models only (capped)
-            result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
-        
-        _cache["models"][cache_key] = {"data": result, "time": time.time()}
-        logger.info(f"Cached {len(result)} models for {cache_key} from SQLite")
-        return result
-    
+    with get_sqlite_connection() as conn:
+        if conn:
+            from consolidate_models import get_canonical_models_for_make
+
+            # Only return models with sufficient test volume
+            query = """
+                SELECT model_id, SUM(Total_Tests) as test_count
+                FROM risks
+                WHERE model_id LIKE ?
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= ?
+            """
+            rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
+
+            # Extract base models from found entries
+            found_models = {}
+            for row in rows:
+                base_model = extract_base_model(row['model_id'], make)
+                if base_model and len(base_model) > 1:
+                    if base_model not in found_models or row['test_count'] > found_models[base_model]:
+                        found_models[base_model] = row['test_count']
+
+            # Get curated list of known models for this make
+            known_models = get_canonical_models_for_make(make)
+
+            if known_models:
+                # Only return models from curated list that exist in data
+                result = sorted([m for m in known_models if m in found_models])
+            else:
+                # For non-curated makes, return alphabetic models only (capped)
+                result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
+
+            _cache[cache_key] = result
+            logger.info(f"Cached {len(result)} models for {make.upper()} from SQLite")
+            return result
+
     # Demo mode - Fix: Return empty list for unknown makes instead of all mock models
     if make.upper() in ["FORD", "VAUXHALL", "VOLKSWAGEN"]:
         return MOCK_MODELS
@@ -516,102 +633,98 @@ async def get_risk(
     }
 
     # Try SQLite lookup
-    conn = get_sqlite_connection()
-    if not conn:
-        logger.warning("No database connection available, returning population average")
-        return default_response
+    with get_sqlite_connection() as conn:
+        if not conn:
+            logger.warning("No database connection available, returning population average")
+            return default_response
 
-    try:
-        # P0-5 fix: Use exact match first, then match variants with space separator
-        # This prevents "FORD F" from matching "FORD FOCUS"
-        base_model_id = f"{make_upper} {model_upper}"
+        try:
+            # P0-5 fix: Use exact match first, then match variants with space separator
+            # This prevents "FORD F" from matching "FORD FOCUS"
+            base_model_id = f"{make_upper} {model_upper}"
 
-        # Try exact match first
-        query = """
-            SELECT * FROM risks
-            WHERE model_id = ? AND age_band = ?
-            ORDER BY Total_Tests DESC
-            LIMIT 1
-        """
-        row = conn.execute(query, (base_model_id, age_band)).fetchone()
-
-        # If not found, try matching model variants (e.g., "FORD FIESTA" matches "FORD FIESTA ZETEC")
-        if not row:
-            query = """
-                SELECT * FROM risks
-                WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
-                ORDER BY Total_Tests DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
-
-        # If still not found, try just the make (for aggregated make-level data)
-        if not row:
+            # Try exact match first
             query = """
                 SELECT * FROM risks
                 WHERE model_id = ? AND age_band = ?
                 ORDER BY Total_Tests DESC
                 LIMIT 1
             """
-            row = conn.execute(query, (make_upper, age_band)).fetchone()
+            row = conn.execute(query, (base_model_id, age_band)).fetchone()
 
-        if not row:
-            logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
-            conn.close()
-            return default_response
+            # If not found, try matching model variants (e.g., "FORD FIESTA" matches "FORD FIESTA ZETEC")
+            if not row:
+                query = """
+                    SELECT * FROM risks
+                    WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
+                    ORDER BY Total_Tests DESC
+                    LIMIT 1
+                """
+                row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
 
-        result = dict(row)
-        conn.close()
+            # If still not found, try just the make (for aggregated make-level data)
+            if not row:
+                query = """
+                    SELECT * FROM risks
+                    WHERE model_id = ? AND age_band = ?
+                    ORDER BY Total_Tests DESC
+                    LIMIT 1
+                """
+                row = conn.execute(query, (make_upper, age_band)).fetchone()
 
-        # Calculate confidence level based on sample size
-        total_tests = result.get('Total_Tests', 0)
-        if total_tests >= 1000:
-            confidence_level = "High"
-        elif total_tests >= 100:
-            confidence_level = "Medium"
-        else:
-            confidence_level = "Low"
+            if not row:
+                logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
+                return default_response
 
-        # Add confidence intervals and repair cost estimate
-        result = add_confidence_intervals(result)
-        result = add_repair_cost_estimate(result)
+            result = dict(row)
 
-        # Format repair cost for display
-        repair_cost = result.get('Repair_Cost_Estimate', {})
-        if isinstance(repair_cost, dict):
-            expected = repair_cost.get('expected', 250)
-            repair_cost_formatted = {
-                "expected": f"£{expected}",
-                "range_low": repair_cost.get('range_low', 100),
-                "range_high": repair_cost.get('range_high', 500),
+            # Calculate confidence level based on sample size
+            total_tests = result.get('Total_Tests', 0)
+            if total_tests >= 1000:
+                confidence_level = "High"
+            elif total_tests >= 100:
+                confidence_level = "Medium"
+            else:
+                confidence_level = "Low"
+
+            # Add confidence intervals and repair cost estimate
+            result = add_confidence_intervals(result)
+            result = add_repair_cost_estimate(result)
+
+            # Format repair cost for display
+            repair_cost = result.get('Repair_Cost_Estimate', {})
+            if isinstance(repair_cost, dict):
+                expected = repair_cost.get('expected', 250)
+                repair_cost_formatted = {
+                    "expected": f"£{expected}",
+                    "range_low": repair_cost.get('range_low', 100),
+                    "range_high": repair_cost.get('range_high', 500),
+                }
+            else:
+                repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
+
+            return {
+                "vehicle": model_id,
+                "year": year,
+                "mileage": None,
+                "last_mot_date": None,
+                "last_mot_result": None,
+                "failure_risk": result.get('Failure_Risk', 0.28),
+                "confidence_level": confidence_level,
+                "risk_brakes": result.get('Risk_Brakes', 0.05),
+                "risk_suspension": result.get('Risk_Suspension', 0.04),
+                "risk_tyres": result.get('Risk_Tyres', 0.03),
+                "risk_steering": result.get('Risk_Steering', 0.02),
+                "risk_visibility": result.get('Risk_Visibility', 0.02),
+                # Fix: Use correct column names (with "And", without "Exhaust")
+                "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
+                "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
+                "repair_cost_estimate": repair_cost_formatted,
             }
-        else:
-            repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
 
-        return {
-            "vehicle": model_id,
-            "year": year,
-            "mileage": None,
-            "last_mot_date": None,
-            "last_mot_result": None,
-            "failure_risk": result.get('Failure_Risk', 0.28),
-            "confidence_level": confidence_level,
-            "risk_brakes": result.get('Risk_Brakes', 0.05),
-            "risk_suspension": result.get('Risk_Suspension', 0.04),
-            "risk_tyres": result.get('Risk_Tyres', 0.03),
-            "risk_steering": result.get('Risk_Steering', 0.02),
-            "risk_visibility": result.get('Risk_Visibility', 0.02),
-            # Fix: Use correct column names (with "And", without "Exhaust")
-            "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-            "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
-            "repair_cost_estimate": repair_cost_formatted,
-        }
-
-    except Exception as e:
-        logger.error(f"Database error during lookup: {e}")
-        if conn:
-            conn.close()
-        return default_response
+        except Exception as e:
+            logger.error(f"Database error during lookup: {e}")
+            return default_response
 
 
 @app.get("/api/risk/v55")
@@ -855,9 +968,7 @@ async def _fallback_prediction(
 
     # P0-5 fix: Use exact match or variant match pattern instead of broad LIKE
     # Try SQLite fallback with proper connection handling (P2-4 fix)
-    conn = None
-    try:
-        conn = get_sqlite_connection()
+    with get_sqlite_connection() as conn:
         if conn:
             base_model_id = f"{make.upper()} {model.upper()}"
             # Try exact match first, then variants
@@ -914,10 +1025,6 @@ async def _fallback_prediction(
                 except Exception as e:
                     logger.warning(f"Failed to log lookup risk check: {e}")
                 return response
-    finally:
-        # P2-4 fix: Always close connection in finally block
-        if conn:
-            conn.close()
 
     # Default fallback - population average
     response = {
@@ -1064,11 +1171,56 @@ class VehicleInfo(BaseModel):
     year: Optional[int] = None
     mileage: Optional[int] = None
 
+    @field_validator('mileage')
+    @classmethod
+    def validate_mileage(cls, v):
+        """Validate mileage is within reasonable bounds (0 to 1,000,000 miles)."""
+        if v is None:
+            return v
+        if v < 0:
+            raise ValueError('Mileage cannot be negative')
+        if v > 1_000_000:
+            raise ValueError('Mileage cannot exceed 1,000,000 miles')
+        return v
+
+    @field_validator('year')
+    @classmethod
+    def validate_year(cls, v):
+        """Validate year is within reasonable bounds."""
+        if v is None:
+            return v
+        current_year = datetime.now().year
+        if v < 1900:
+            raise ValueError('Year cannot be before 1900')
+        if v > current_year + 1:
+            raise ValueError(f'Year cannot be greater than {current_year + 1}')
+        return v
+
 
 class RiskData(BaseModel):
     failure_risk: Optional[float] = None
     reliability_score: Optional[int] = None
     top_risks: Optional[List[str]] = None
+
+    @field_validator('failure_risk')
+    @classmethod
+    def validate_failure_risk(cls, v):
+        """Validate failure_risk is a valid probability (0 to 1)."""
+        if v is None:
+            return v
+        if v < 0.0 or v > 1.0:
+            raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+    @field_validator('reliability_score')
+    @classmethod
+    def validate_reliability_score(cls, v):
+        """Validate reliability_score is between 0 and 100."""
+        if v is None:
+            return v
+        if v < 0 or v > 100:
+            raise ValueError('reliability_score must be between 0 and 100')
+        return v
 
 
 class LeadSubmission(BaseModel):
@@ -1080,6 +1232,34 @@ class LeadSubmission(BaseModel):
     services_requested: Optional[List[str]] = None
     vehicle: Optional[VehicleInfo] = None
     risk_data: Optional[RiskData] = None
+
+    @field_validator('name')
+    @classmethod
+    def sanitize_name(cls, v):
+        """Sanitize name field to prevent XSS (defense-in-depth with Jinja2 escaping)."""
+        if v is None:
+            return v
+        # Remove HTML tags and script content
+        import re
+        # Remove script tags and their content
+        v = re.sub(r'<script[^>]*>.*?</script>', '', v, flags=re.IGNORECASE | re.DOTALL)
+        # Remove all HTML tags
+        v = re.sub(r'<[^>]+>', '', v)
+        # Limit length to prevent abuse
+        v = v.strip()[:100]
+        return v if v else None
+
+    @field_validator('phone')
+    @classmethod
+    def sanitize_phone(cls, v):
+        """Sanitize phone field - keep only digits, spaces, and common phone chars."""
+        if v is None:
+            return v
+        import re
+        # Keep only digits, spaces, +, -, (, )
+        v = re.sub(r'[^\d\s+\-()]', '', v)
+        v = v.strip()[:20]  # Limit length
+        return v if v else None
 
     @field_validator('email')
     @classmethod

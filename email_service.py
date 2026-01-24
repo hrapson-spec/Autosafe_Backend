@@ -9,6 +9,16 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
+def _mask_email(email: str) -> str:
+    """Mask email for logging to protect PII: john@example.com -> j***@example.com"""
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
+
 # Support multiple variable name formats
 RESEND_API_KEY = (
     os.environ.get("RESEND_API_KEY") or
@@ -74,14 +84,14 @@ async def send_email(
             )
 
             if response.status_code == 200:
-                logger.info(f"Email sent to {to_email}: {subject}")
+                logger.info(f"Email sent to {_mask_email(to_email)}: {subject}")
                 return True
             else:
                 logger.error(f"Email send failed: {response.status_code} - {response.text}")
                 return False
 
     except httpx.TimeoutException:
-        logger.error(f"Timeout sending email to {to_email}")
+        logger.error(f"Timeout sending email to {_mask_email(to_email)}")
         return False
     except Exception as e:
         logger.error(f"Email send exception: {e}")
