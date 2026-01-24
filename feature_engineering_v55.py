@@ -15,6 +15,7 @@ expected by the trained CatBoost model.
 """
 
 import math
+import os
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
@@ -484,7 +485,8 @@ def engineer_features(
     # HIERARCHICAL/EB FEATURES (defaults)
     # =========================================================================
     # These would normally come from pre-computed population statistics
-    base_rate = 0.28  # UK average MOT fail rate
+    # UK average MOT fail rate - configurable via environment variable
+    base_rate = float(os.environ.get("BASE_FAIL_RATE", "0.28"))
 
     features['make_fail_rate_smoothed'] = base_rate
     features['segment_fail_rate_smoothed'] = base_rate
