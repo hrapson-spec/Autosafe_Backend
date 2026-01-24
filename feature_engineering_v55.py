@@ -2,8 +2,11 @@
 Feature Engineering for V55 CatBoost Model
 ==========================================
 
-Extracts and engineers 104 features from DVSA MOT history data
+Extracts and engineers 107 features from DVSA MOT history data
 for the V55 CatBoost production model.
+
+V55+neglect: Added 3 neglect_score features (brakes, tyres, suspension)
+from V33 with optimized weights for +2.21pp AUC lift.
 
 Features are derived from:
 1. DVSA API response (test history, advisories, failures)
@@ -51,6 +54,7 @@ FEATURE_NAMES = [
     'failure_streak_len_tyres', 'tests_since_last_failure_tyres',
     'has_prior_failure_suspension', 'has_ever_failed_suspension',
     'failure_streak_len_suspension', 'tests_since_last_failure_suspension',
+    'neglect_score_brakes', 'neglect_score_tyres', 'neglect_score_suspension',
     'station_strictness_bias', 'annualized_mileage_v2', 'mileage_anomaly_flag',
     'has_prev_mileage', 'mileage_plausible_flag', 'local_corrosion_index',
     'local_corrosion_delta', 'high_risk_model_flag', 'suspension_risk_profile',
@@ -132,18 +136,41 @@ def get_usage_band(annualized_mileage: float) -> str:
         return 'very_high'
 
 
+def get_age_band(vehicle_age: int) -> str:
+    """Convert vehicle age to age band for cohort lookups."""
+    if vehicle_age <= 3:
+        return '0-3'
+    elif vehicle_age <= 5:
+        return '3-5'
+    elif vehicle_age <= 10:
+        return '6-10'
+    elif vehicle_age <= 15:
+        return '11-15'
+    else:
+        return '15+'
+
+
 def engineer_features(
     history: VehicleHistory,
     postcode: str,
-    prediction_date: Optional[datetime] = None
+    prediction_date: Optional[datetime] = None,
+    cohort_stats: Optional[Dict[str, Any]] = None,
+    model_hierarchical: Optional[Any] = None,
+    model_age_hierarchical: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Engineer all 104 features from DVSA vehicle history.
+    Engineer all 107 features from DVSA vehicle history.
 
     Args:
         history: VehicleHistory from DVSA API
         postcode: UK postcode for corrosion index
         prediction_date: Date for prediction (defaults to now)
+        cohort_stats: Optional cohort statistics for survivorship adjustments
+            Expected keys: 'cohort_mileage', 'cohort_advisory', 'global_mileage_avg', 'global_advisory_avg'
+        model_hierarchical: Optional ModelHierarchicalFeatures for EB priors
+            Expected attributes: 'model_rates', 'make_rates', 'global_fail_rate'
+        model_age_hierarchical: Optional dict for model-age EB rates (13.4% importance)
+            Expected keys: 'model_age_rates', 'make_age_rates', 'global_fail_rate'
 
     Returns:
         Dict mapping feature names to values
@@ -377,6 +404,32 @@ def engineer_features(
             features[f'tests_since_last_failure_{component}'] = 999
 
     # =========================================================================
+    # NEGLECT SCORES (V33+ optimized weights)
+    # =========================================================================
+    # Weights learned via logistic regression on DEV set, validated on OOT
+    # Result: +2.21pp AUC improvement over hand-picked weights
+    NEGLECT_WEIGHTS = {
+        'brakes': {'adv': 0.19, 'fail': 0.55, 'tsf': -0.02},
+        'tyres': {'adv': 0.20, 'fail': 0.35, 'tsf': -0.03},
+        'suspension': {'adv': 0.36, 'fail': 0.53, 'tsf': 0.06},
+    }
+
+    for component in ['brakes', 'tyres', 'suspension']:
+        w = NEGLECT_WEIGHTS[component]
+        adv_streak = features.get(f'advisory_streak_len_{component}', 0)
+        fail_streak = features.get(f'failure_streak_len_{component}', 0)
+        tests_since_repair = features.get(f'tests_since_last_failure_{component}', 0)
+        # Cap tests_since_repair at reasonable value (999 = never failed)
+        if tests_since_repair == 999:
+            tests_since_repair = 0  # No prior failure means no repair signal
+
+        features[f'neglect_score_{component}'] = (
+            (adv_streak * w['adv']) +
+            (fail_streak * w['fail']) +
+            (tests_since_repair * w['tsf'])
+        )
+
+    # =========================================================================
     # TEXT MINING FEATURES (V52)
     # =========================================================================
     for signal_type in ['corrosion', 'wear', 'leak', 'damage']:
@@ -417,7 +470,23 @@ def engineer_features(
     decay_values = [features['mech_decay_brake'], features['mech_decay_suspension'],
                     features['mech_decay_structure'], features['mech_decay_steering']]
     features['mech_decay_index'] = max(decay_values)
-    features['mech_decay_index_normalized'] = features['mech_decay_index']
+
+    # Age-normalized decay: divide by mean decay for vehicle's age band
+    # This identifies young vehicles with unusually high decay (survivor anomaly A)
+    # and genuine survivors with lower-than-expected decay (survivor adjustment B)
+    if cohort_stats and 'age_decay_means' in cohort_stats:
+        vehicle_age = 5  # Default
+        if history.manufacture_date:
+            vehicle_age = int((prediction_date - history.manufacture_date).days / 365)
+        age_mean = cohort_stats['age_decay_means'].get(vehicle_age, None)
+        if age_mean is not None and age_mean > 0:
+            features['mech_decay_index_normalized'] = features['mech_decay_index'] / age_mean
+        else:
+            # Fallback to raw index if age mean not found
+            features['mech_decay_index_normalized'] = features['mech_decay_index']
+    else:
+        # No cohort stats - use raw index
+        features['mech_decay_index_normalized'] = features['mech_decay_index']
 
     # Mechanical risk driver
     if features['mech_decay_index'] == 0:
@@ -475,25 +544,138 @@ def engineer_features(
         features['days_late'] = 0
 
     # =========================================================================
-    # COHORT/COMPARATIVE FEATURES (defaults)
+    # COHORT/COMPARATIVE FEATURES
     # =========================================================================
-    features['mileage_cohort_ratio'] = 1.0  # Neutral
-    features['advisory_cohort_delta'] = 0.0  # Neutral
-    features['days_since_pass_ratio'] = 1.0  # Neutral
+    # Compute vehicle age for cohort lookups
+    vehicle_age_for_cohort = 5  # Default estimate
+    if history.manufacture_date:
+        vehicle_age_for_cohort = int((prediction_date - history.manufacture_date).days / 365)
+
+    # Try to look up cohort stats if provided
+    if cohort_stats:
+        model_id = f"{history.make} {history.model}" if history.model else history.make
+        age_band = get_age_band(vehicle_age_for_cohort)
+        cohort_key = (model_id, age_band)
+
+        # Mileage cohort ratio
+        cohort_mileage = cohort_stats.get('cohort_mileage', {})
+        if cohort_key in cohort_mileage and cohort_mileage[cohort_key] > 0:
+            features['mileage_cohort_ratio'] = features['test_mileage'] / cohort_mileage[cohort_key]
+        else:
+            # Fallback to global average
+            global_avg = cohort_stats.get('global_mileage_avg', features['test_mileage'])
+            if global_avg > 0:
+                features['mileage_cohort_ratio'] = features['test_mileage'] / global_avg
+            else:
+                features['mileage_cohort_ratio'] = 1.0
+
+        # Advisory cohort delta
+        cohort_advisory = cohort_stats.get('cohort_advisory', {})
+        if cohort_key in cohort_advisory:
+            features['advisory_cohort_delta'] = features['prev_count_advisory'] - cohort_advisory[cohort_key]
+        else:
+            # Fallback to global average
+            global_adv_avg = cohort_stats.get('global_advisory_avg', features['prev_count_advisory'])
+            features['advisory_cohort_delta'] = features['prev_count_advisory'] - global_adv_avg
+    else:
+        # No cohort stats available - use neutral defaults
+        features['mileage_cohort_ratio'] = 1.0
+        features['advisory_cohort_delta'] = 0.0
+
+    features['days_since_pass_ratio'] = 1.0  # Neutral (not in cohort_stats)
 
     # =========================================================================
-    # HIERARCHICAL/EB FEATURES (defaults)
+    # HIERARCHICAL/EB FEATURES
     # =========================================================================
     # These would normally come from pre-computed population statistics
     # UK average MOT fail rate - configurable via environment variable
     base_rate = float(os.environ.get("BASE_FAIL_RATE", "0.28"))
 
-    features['make_fail_rate_smoothed'] = base_rate
-    features['segment_fail_rate_smoothed'] = base_rate
-    features['model_fail_rate_smoothed'] = base_rate
-    features['model_age_fail_rate_eb'] = base_rate
-    features['make_age_fail_rate_eb'] = base_rate
-    features['eb_unified_prior'] = base_rate
+    # Try to look up EB priors from model_hierarchical if provided
+    if model_hierarchical:
+        model_id = f"{history.make} {history.model}" if history.model else history.make
+        age_band = get_age_band(vehicle_age_for_cohort)
+
+        # Model-level fail rate
+        model_rates = getattr(model_hierarchical, 'model_rates', {})
+        if isinstance(model_rates, dict) and model_id in model_rates:
+            features['model_fail_rate_smoothed'] = model_rates[model_id]
+        else:
+            features['model_fail_rate_smoothed'] = base_rate
+
+        # Make-level fail rate
+        make_rates = getattr(model_hierarchical, 'make_rates', {})
+        if isinstance(make_rates, dict) and history.make in make_rates:
+            features['make_fail_rate_smoothed'] = make_rates[history.make]
+        else:
+            features['make_fail_rate_smoothed'] = base_rate
+
+        # Model-age EB rate (3-level hierarchy: global -> make+age -> model+age)
+        # Use separate model_age_hierarchical dict if provided (13.4% importance feature!)
+        if model_age_hierarchical:
+            model_age_rates = model_age_hierarchical.get('model_age_rates', {})
+            make_age_rates = model_age_hierarchical.get('make_age_rates', {})
+            global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
+        else:
+            # Fallback to model_hierarchical attributes (likely empty)
+            model_age_rates = getattr(model_hierarchical, 'model_age_rates', {})
+            make_age_rates = getattr(model_hierarchical, 'make_age_rates', {})
+            global_age_rate = getattr(model_hierarchical, 'global_fail_rate', base_rate)
+
+        model_age_key = (model_id, age_band)
+        make_age_key = (history.make, age_band)
+
+        if isinstance(model_age_rates, dict) and model_age_key in model_age_rates:
+            features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
+        elif isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
+            features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
+        else:
+            features['model_age_fail_rate_eb'] = global_age_rate
+
+        # Make-age EB rate
+        if isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
+            features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
+        else:
+            features['make_age_fail_rate_eb'] = global_age_rate
+
+        # Unified EB prior (use model-age as primary)
+        features['eb_unified_prior'] = features['model_age_fail_rate_eb']
+    else:
+        # No model_hierarchical - use base rate defaults for model/make rates
+        features['make_fail_rate_smoothed'] = base_rate
+        features['model_fail_rate_smoothed'] = base_rate
+
+        # But still try model_age_hierarchical for model-age rates (13.4% importance!)
+        if model_age_hierarchical:
+            model_id = f"{history.make} {history.model}" if history.model else history.make
+            age_band = get_age_band(vehicle_age_for_cohort)
+
+            model_age_rates = model_age_hierarchical.get('model_age_rates', {})
+            make_age_rates = model_age_hierarchical.get('make_age_rates', {})
+            global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
+
+            model_age_key = (model_id, age_band)
+            make_age_key = (history.make, age_band)
+
+            if model_age_key in model_age_rates:
+                features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
+            elif make_age_key in make_age_rates:
+                features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
+            else:
+                features['model_age_fail_rate_eb'] = global_age_rate
+
+            if make_age_key in make_age_rates:
+                features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
+            else:
+                features['make_age_fail_rate_eb'] = global_age_rate
+
+            features['eb_unified_prior'] = features['model_age_fail_rate_eb']
+        else:
+            features['model_age_fail_rate_eb'] = base_rate
+            features['make_age_fail_rate_eb'] = base_rate
+            features['eb_unified_prior'] = base_rate
+
+    features['segment_fail_rate_smoothed'] = base_rate  # Not in hierarchical data
 
     # =========================================================================
     # DERIVED FEATURES
@@ -568,8 +750,8 @@ def features_to_array(features: Dict[str, Any], validate: bool = True) -> List[A
             )
 
     # Validate expected feature count matches model expectations
-    if len(FEATURE_NAMES) != 104:
-        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 104")
+    if len(FEATURE_NAMES) != 107:
+        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 107")
 
     return [features.get(name, 0) for name in FEATURE_NAMES]
 

@@ -5,14 +5,18 @@ V55 CatBoost Model Inference
 Loads and runs the V55 CatBoost production model with Platt calibration.
 
 Usage:
-    from model_v55 import load_model, predict_risk
+    from model_v55 import load_model, engineer_features_with_stats, predict_risk
 
-    # Load model once at startup
+    # Load model once at startup (also loads cohort stats and EB priors)
     load_model()
 
-    # Predict risk for a vehicle
-    features = engineer_features(history, postcode)
+    # Predict risk for a vehicle using full survivorship adjustments
+    features = engineer_features_with_stats(history, postcode)
     prediction = predict_risk(features)
+
+Note: engineer_features_with_stats() uses the loaded cohort stats and EB priors
+to properly calculate survivorship features like advisory_cohort_delta,
+mileage_cohort_ratio, model_age_fail_rate_eb, and mech_decay_index_normalized.
 """
 
 import pickle
@@ -27,8 +31,10 @@ from feature_engineering_v55 import (
     features_to_array,
     get_feature_names,
     get_categorical_indices,
+    engineer_features,
     FEATURE_NAMES
 )
+from dvsa_client import VehicleHistory
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +45,9 @@ MODEL_DIR = Path(__file__).parent / "catboost_production_v55"
 _model: Optional[CatBoostClassifier] = None
 _calibrator: Optional[Any] = None  # Platt calibrator (sklearn LogisticRegression)
 _cohort_stats: Optional[Dict] = None
+_model_hierarchical: Optional[Any] = None  # ModelHierarchicalFeatures for EB priors
+_segment_hierarchical: Optional[Any] = None  # Segment-level rates (make, age_band, mileage_band)
+_model_age_hierarchical: Optional[Dict] = None  # V45: Model-age EB rates (13.4% importance)
 
 
 def load_model() -> bool:
@@ -50,7 +59,7 @@ def load_model() -> bool:
     Returns:
         True if loaded successfully, False otherwise
     """
-    global _model, _calibrator, _cohort_stats
+    global _model, _calibrator, _cohort_stats, _model_hierarchical, _segment_hierarchical, _model_age_hierarchical
 
     try:
         # Load CatBoost model
@@ -74,12 +83,45 @@ def load_model() -> bool:
             logger.warning("Platt calibrator not found - using raw probabilities")
             _calibrator = None
 
-        # Load cohort stats (for reference)
+        # Load cohort stats (for survivorship adjustments)
         cohort_path = MODEL_DIR / "cohort_stats.pkl"
         if cohort_path.exists():
             with open(cohort_path, 'rb') as f:
                 _cohort_stats = pickle.load(f)
-            logger.info("Loaded cohort statistics")
+            logger.info("Loaded cohort statistics for survivorship features")
+        else:
+            logger.warning("Cohort stats not found - survivorship features will use defaults")
+            _cohort_stats = None
+
+        # Load model hierarchical features (for EB priors)
+        hierarchical_path = MODEL_DIR / "model_hierarchical_features.pkl"
+        if hierarchical_path.exists():
+            with open(hierarchical_path, 'rb') as f:
+                _model_hierarchical = pickle.load(f)
+            logger.info("Loaded model hierarchical features for EB priors")
+        else:
+            logger.warning("Model hierarchical features not found - EB priors will use defaults")
+            _model_hierarchical = None
+
+        # Load segment hierarchical features (make, age_band, mileage_band rates)
+        segment_path = MODEL_DIR / "segment_hierarchical_features.pkl"
+        if segment_path.exists():
+            with open(segment_path, 'rb') as f:
+                _segment_hierarchical = pickle.load(f)
+            logger.info("Loaded segment hierarchical features")
+        else:
+            _segment_hierarchical = None
+
+        # Load model-age hierarchical features (13.4% importance - critical for inference)
+        model_age_path = MODEL_DIR / "model_age_hierarchical.pkl"
+        if model_age_path.exists():
+            with open(model_age_path, 'rb') as f:
+                _model_age_hierarchical = pickle.load(f)
+            n_rates = len(_model_age_hierarchical.get('model_age_rates', {}))
+            logger.info(f"Loaded model-age hierarchical features ({n_rates} model-age rates)")
+        else:
+            logger.warning("Model-age hierarchical not found - model_age_fail_rate_eb will use defaults")
+            _model_age_hierarchical = None
 
         return True
 
@@ -91,6 +133,54 @@ def load_model() -> bool:
 def is_model_loaded() -> bool:
     """Check if the model is loaded."""
     return _model is not None
+
+
+def get_cohort_stats() -> Optional[Dict]:
+    """Get loaded cohort statistics (for advanced use cases)."""
+    return _cohort_stats
+
+
+def get_model_hierarchical() -> Optional[Any]:
+    """Get loaded model hierarchical features (for advanced use cases)."""
+    return _model_hierarchical
+
+
+def get_model_age_hierarchical() -> Optional[Dict]:
+    """Get loaded model-age hierarchical features (for model_age_fail_rate_eb lookups)."""
+    return _model_age_hierarchical
+
+
+def engineer_features_with_stats(
+    history: VehicleHistory,
+    postcode: str,
+    prediction_date: Optional['datetime'] = None,
+) -> Dict[str, Any]:
+    """
+    Engineer features using loaded cohort stats and EB priors.
+
+    This is the preferred way to engineer features for prediction,
+    as it uses the survivorship adjustment data loaded from model artifacts.
+
+    Args:
+        history: VehicleHistory from DVSA API
+        postcode: UK postcode for corrosion index
+        prediction_date: Date for prediction (defaults to now)
+
+    Returns:
+        Dict mapping feature names to values, with proper survivorship adjustments
+    """
+    from datetime import datetime as dt
+    if prediction_date is None:
+        prediction_date = dt.now()
+
+    return engineer_features(
+        history=history,
+        postcode=postcode,
+        prediction_date=prediction_date,
+        cohort_stats=_cohort_stats,
+        model_hierarchical=_model_hierarchical,
+        model_age_hierarchical=_model_age_hierarchical,
+    )
 
 
 def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:

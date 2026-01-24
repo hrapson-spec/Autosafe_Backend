@@ -319,8 +319,12 @@ V32_FAILURE_COLS = [
 
 V32_FEATURE_COLS = V32_ADVISORY_COLS + V32_FAILURE_COLS
 
-# V33: Neglect Scores - REMOVED in V37 Lean (0.55% total)
-V33_NEGLECT_COLS = []  # was: neglect_score_brakes/tyres/suspension
+# V33: Neglect Scores - RE-ENABLED with optimized weights (+2.21pp AUC)
+V33_NEGLECT_COLS = [
+    'neglect_score_brakes',
+    'neglect_score_tyres',
+    'neglect_score_suspension',
+]
 
 V33_FEATURE_COLS = V33_NEGLECT_COLS
 
