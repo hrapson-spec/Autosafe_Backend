@@ -2,7 +2,7 @@
 Feature Engineering for V55 CatBoost Model
 ==========================================
 
-Extracts and engineers 107 features from DVSA MOT history data
+Extracts and engineers 104 features from DVSA MOT history data
 for the V55 CatBoost production model.
 
 V55+neglect: Added 3 neglect_score features (brakes, tyres, suspension)
@@ -18,7 +18,6 @@ expected by the trained CatBoost model.
 """
 
 import math
-import os
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
@@ -54,7 +53,6 @@ FEATURE_NAMES = [
     'failure_streak_len_tyres', 'tests_since_last_failure_tyres',
     'has_prior_failure_suspension', 'has_ever_failed_suspension',
     'failure_streak_len_suspension', 'tests_since_last_failure_suspension',
-    'neglect_score_brakes', 'neglect_score_tyres', 'neglect_score_suspension',
     'station_strictness_bias', 'annualized_mileage_v2', 'mileage_anomaly_flag',
     'has_prev_mileage', 'mileage_plausible_flag', 'local_corrosion_index',
     'local_corrosion_delta', 'high_risk_model_flag', 'suspension_risk_profile',
@@ -159,7 +157,7 @@ def engineer_features(
     model_age_hierarchical: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Engineer all 107 features from DVSA vehicle history.
+    Engineer all 104 features from DVSA vehicle history.
 
     Args:
         history: VehicleHistory from DVSA API
@@ -587,9 +585,8 @@ def engineer_features(
     # =========================================================================
     # HIERARCHICAL/EB FEATURES
     # =========================================================================
-    # These would normally come from pre-computed population statistics
-    # UK average MOT fail rate - configurable via environment variable
-    base_rate = float(os.environ.get("BASE_FAIL_RATE", "0.28"))
+    # Base rate for fallbacks
+    base_rate = 0.28  # UK average MOT fail rate
 
     # Try to look up EB priors from model_hierarchical if provided
     if model_hierarchical:
@@ -750,8 +747,8 @@ def features_to_array(features: Dict[str, Any], validate: bool = True) -> List[A
             )
 
     # Validate expected feature count matches model expectations
-    if len(FEATURE_NAMES) != 107:
-        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 107")
+    if len(FEATURE_NAMES) != 104:
+        raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 104")
 
     return [features.get(name, 0) for name in FEATURE_NAMES]
 

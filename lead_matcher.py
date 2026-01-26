@@ -17,6 +17,14 @@ RADIUS_TIERS = [5, 10, 15, 25]
 # Maximum garages to send each lead to
 MAX_GARAGES_PER_LEAD = 3
 
+# Email source priority (lower = higher priority)
+# Scraped emails are more reliable than inferred
+EMAIL_SOURCE_PRIORITY = {
+    "scraped": 1,      # Highest - found on website
+    "directory": 2,    # From garage directories
+    "inferred": 3,     # Generated from domain
+}
+
 
 @dataclass
 class MatchedGarage:
@@ -27,6 +35,7 @@ class MatchedGarage:
     postcode: str
     distance_miles: float
     tier: str
+    email_source: str = "directory"  # scraped, directory, or inferred
 
 
 async def find_matching_garages(
@@ -73,17 +82,20 @@ async def find_matching_garages(
                 'email': garage['email'],
                 'postcode': garage['postcode'],
                 'distance_miles': round(distance, 1),
-                'tier': garage['tier']
+                'tier': garage['tier'],
+                'email_source': garage.get('email_source', 'directory')
             })
 
     if not matches:
         logger.info(f"No garages found within {RADIUS_TIERS[-1]} miles of {lead_postcode}")
         return []
 
-    # Sort by: paid tier first (unlimited > pro > starter > free), then by distance
+    # Sort by: paid tier first, then email quality, then distance
+    # Scraped emails are more reliable than inferred
     tier_priority = {'unlimited': 0, 'pro': 1, 'starter': 2, 'free': 3}
     matches.sort(key=lambda m: (
         tier_priority.get(m['tier'], 4),
+        EMAIL_SOURCE_PRIORITY.get(m['email_source'], 3),
         m['distance_miles']
     ))
 
@@ -95,7 +107,8 @@ async def find_matching_garages(
             email=m['email'],
             postcode=m['postcode'],
             distance_miles=m['distance_miles'],
-            tier=m['tier']
+            tier=m['tier'],
+            email_source=m['email_source']
         )
         for m in matches[:max_results]
     ]
@@ -135,8 +148,13 @@ async def find_garages_in_radius(
                 email=garage['email'],
                 postcode=garage['postcode'],
                 distance_miles=round(distance, 1),
-                tier=garage['tier']
+                tier=garage['tier'],
+                email_source=garage.get('email_source', 'directory')
             ))
 
-    matches.sort(key=lambda m: m.distance_miles)
+    # Sort by email quality then distance
+    matches.sort(key=lambda m: (
+        EMAIL_SOURCE_PRIORITY.get(m.email_source, 3),
+        m.distance_miles
+    ))
     return matches
