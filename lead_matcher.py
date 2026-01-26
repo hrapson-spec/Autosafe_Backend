@@ -3,6 +3,7 @@ Lead Matching Algorithm for AutoSafe.
 Matches leads to nearby garages based on postcode proximity.
 """
 import logging
+import os
 from typing import List, Optional
 from dataclasses import dataclass
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 RADIUS_TIERS = [5, 10, 15, 25]
 
 # Maximum garages to send each lead to
-MAX_GARAGES_PER_LEAD = 3
+MAX_GARAGES_PER_LEAD = int(os.environ.get("MAX_GARAGES_PER_LEAD", "3"))
 
 # Email source priority (lower = higher priority)
 # Scraped emails are more reliable than inferred

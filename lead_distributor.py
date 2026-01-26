@@ -22,7 +22,7 @@ def _mask_email(email: str) -> str:
 
 
 # Maximum number of garages to notify per lead (prevents spam/quota exhaustion)
-MAX_GARAGES_PER_LEAD = int(os.environ.get("MAX_GARAGES_PER_LEAD", "5"))
+MAX_GARAGES_PER_LEAD = int(os.environ.get("MAX_GARAGES_PER_LEAD", "3"))
 
 import database as db
 from lead_matcher import find_matching_garages, MatchedGarage

@@ -121,8 +121,8 @@ async def get_makes() -> List[str]:
     
     pool = await get_pool()
     if not pool:
-        return None  # Fallback to mock data
-    
+        return None  # PostgreSQL unavailable, caller handles fallback
+
     async with pool.acquire() as conn:
         # Only return makes with sufficient test volume to filter out garbage
         rows = await conn.fetch("""
@@ -152,8 +152,8 @@ async def get_models(make: str) -> List[str]:
     
     pool = await get_pool()
     if not pool:
-        return None  # Fallback to mock data
-    
+        return None  # PostgreSQL unavailable, caller handles fallback
+
     # Handle canonical make lookups (e.g., "MERCEDES-BENZ" needs to search "MERCEDES")
     search_patterns = [make.upper()]
     
