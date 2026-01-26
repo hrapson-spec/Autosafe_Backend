@@ -29,7 +29,7 @@ INTEGER_COLUMNS = 2   # Next N columns are INTEGER (after TEXT)
 # Remaining columns are REAL
 
 LOCK_FILE = '/tmp/autosafe_db_build.lock'
-DB_FILE = 'autosafe.db'
+DB_FILE = '/tmp/autosafe.db'
 DATA_FILE = 'prod_data_clean.csv.gz'
 TABLE_NAME = 'risks'
 
