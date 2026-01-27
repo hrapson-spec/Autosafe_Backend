@@ -352,7 +352,8 @@ class DVSAClient:
             return self._cache[vrm]
 
         # P2-6 fix: Add retry logic for transient failures
-        max_retries = 3
+        # Use configured max retries from environment variable
+        max_retries = DVSA_MAX_RETRIES
         last_error = None
 
         for attempt in range(max_retries):

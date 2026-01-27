@@ -58,6 +58,7 @@ MODEL_VERSION = os.environ.get("MODEL_VERSION", "v55")
 
 # Response caching for expensive queries using TTLCache with bounded size
 from cachetools import TTLCache
+import threading
 
 # Cache configuration
 CACHE_TTL = 3600  # 1 hour cache TTL
@@ -66,6 +67,19 @@ CACHE_MAX_SIZE = 500  # Maximum number of entries (makes + models combined)
 # Bounded TTL cache - automatically evicts old entries and limits size
 # This prevents unbounded memory growth from accumulating make/model entries
 _cache = TTLCache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
+_cache_lock = threading.Lock()  # Thread-safe access to cache
+
+
+def cache_get(key: str):
+    """Thread-safe cache get."""
+    with _cache_lock:
+        return _cache.get(key)
+
+
+def cache_set(key: str, value):
+    """Thread-safe cache set."""
+    with _cache_lock:
+        _cache[key] = value
 from contextlib import asynccontextmanager
 
 
@@ -170,6 +184,9 @@ def mask_email(email: str) -> str:
     if not email or '@' not in email:
         return '***'
     local, domain = email.rsplit('@', 1)
+    # Handle edge cases: empty local part, empty domain
+    if not local or not domain:
+        return '***'
     if len(local) <= 1:
         return f"*@{domain}"
     return f"{local[0]}***@{domain}"
@@ -211,6 +228,16 @@ from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
 
+def _is_valid_ip(ip_str: str) -> bool:
+    """Validate that a string is a valid IPv4 or IPv6 address."""
+    import ipaddress
+    try:
+        ipaddress.ip_address(ip_str)
+        return True
+    except ValueError:
+        return False
+
+
 def get_real_client_ip(request: Request) -> str:
     """
     Extract the real client IP address from the request.
@@ -230,8 +257,8 @@ def get_real_client_ip(request: Request) -> str:
         # Take the first IP (leftmost) - this is the original client IP
         # Format: "client, proxy1, proxy2, ..."
         client_ip = forwarded_for.split(",")[0].strip()
-        # Basic validation - ensure it looks like an IP
-        if client_ip and ("." in client_ip or ":" in client_ip):
+        # Proper IP validation using ipaddress module
+        if client_ip and _is_valid_ip(client_ip):
             return client_ip
 
     # Fallback to direct client connection
@@ -492,7 +519,7 @@ async def get_makes(request: Request):
     cache_key = "makes"
 
     # Check cache first (TTLCache handles expiration automatically)
-    cached = _cache.get(cache_key)
+    cached = cache_get(cache_key)
     if cached is not None:
         logger.info("Returning cached makes list")
         return cached
@@ -501,7 +528,7 @@ async def get_makes(request: Request):
     if DATABASE_URL:
         result = await db.get_makes()
         if result is not None:
-            _cache[cache_key] = result
+            cache_set(cache_key, result)
             logger.info(f"Cached {len(result)} makes from PostgreSQL")
             return result
 
@@ -518,7 +545,7 @@ async def get_makes(request: Request):
             """
             rows = conn.execute(query, (MIN_TESTS_FOR_UI,)).fetchall()
             makes = sorted(set(row['make'] for row in rows))
-            _cache[cache_key] = makes
+            cache_set(cache_key, makes)
             logger.info(f"Cached {len(makes)} makes from SQLite")
             return makes
 
@@ -534,7 +561,7 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     cache_key = f"models:{make.upper()}"
 
     # Check cache first (TTLCache handles expiration automatically)
-    cached = _cache.get(cache_key)
+    cached = cache_get(cache_key)
     if cached is not None:
         logger.info(f"Returning cached models for {make.upper()}")
         return cached
@@ -543,7 +570,7 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     if DATABASE_URL:
         result = await db.get_models(make)
         if result is not None:
-            _cache[cache_key] = result
+            cache_set(cache_key, result)
             logger.info(f"Cached {len(result)} models for {make.upper()} from PostgreSQL")
             return result
 
@@ -580,7 +607,7 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
                 # For non-curated makes, return alphabetic models only (capped)
                 result = sorted([m for m in found_models.keys() if len(m) >= 3 and m.isalpha()])[:30]
 
-            _cache[cache_key] = result
+            cache_set(cache_key, result)
             logger.info(f"Cached {len(result)} models for {make.upper()} from SQLite")
             return result
 
@@ -1076,6 +1103,8 @@ async def _fallback_prediction(
 
 def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
     """Estimate repair costs based on risk prediction."""
+    import math
+
     # Component repair cost ranges (mid-point estimates)
     component_costs = {
         'brakes': 200,
@@ -1088,20 +1117,24 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
     }
 
     # Expected cost = sum of (component_risk * component_cost)
+    # Filter out NaN/Infinity values from risk_components
     expected = sum(
-        risk_components.get(comp, 0) * cost
+        (risk_components.get(comp, 0) if math.isfinite(risk_components.get(comp, 0)) else 0) * cost
         for comp, cost in component_costs.items()
     )
 
     # P1-11 fix: Clamp the scaling factor to avoid extreme values
     # Scale by overall failure probability relative to average
     avg_fail_rate = 0.28
-    if failure_risk > 0:
+    # Only scale if failure_risk is a valid finite positive number
+    if math.isfinite(failure_risk) and failure_risk > 0:
         # Clamp scaling factor between 0.5x and 3x
         scale_factor = max(0.5, min(3.0, failure_risk / avg_fail_rate))
         expected = expected * scale_factor
 
-    # Ensure minimum reasonable cost estimate
+    # Ensure expected is finite and has minimum reasonable cost estimate
+    if not math.isfinite(expected):
+        expected = 100
     expected = max(expected, 100)
 
     return {
