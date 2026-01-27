@@ -358,9 +358,7 @@ _sqlite_pool_lock = threading.Lock()
 def _init_sqlite_pool():
     """Initialize the SQLite connection pool."""
     global _sqlite_pool
-    if _sqlite_pool is not None:
-        return
-
+    # Acquire lock first to prevent race condition in double-checked locking
     with _sqlite_pool_lock:
         if _sqlite_pool is not None:
             return
@@ -399,10 +397,13 @@ def get_sqlite_connection():
     if _sqlite_pool is None:
         _init_sqlite_pool()
 
-    if _sqlite_pool is None or _sqlite_pool.qsize() == 0:
+    # Check if pool initialization failed (no database file)
+    if _sqlite_pool is None:
         yield None
         return
 
+    # Don't check qsize() - it's a race condition (TOCTOU bug).
+    # Instead, rely on get() with timeout to handle empty pool.
     conn = None
     try:
         conn = _sqlite_pool.get(timeout=SQLITE_POOL_TIMEOUT)
@@ -743,6 +744,16 @@ async def get_risk_v55(
     Returns calibrated failure probability and component-level risks.
     Falls back to lookup table if DVSA data unavailable.
     """
+    # Get DVSA client (needed for VRM validation)
+    dvsa_client = get_dvsa_client()
+
+    # Validate and normalize VRM FIRST - return 400 for invalid input
+    # before checking service availability (503)
+    try:
+        vrm = dvsa_client.normalize_vrm(registration)
+    except VRMValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     # Kill-switch check - allows emergency disabling of predictions
     if not PREDICTIONS_ENABLED:
         logger.warning(f"Predictions disabled via kill-switch, rejecting request")
@@ -757,15 +768,6 @@ async def get_risk_v55(
             status_code=503,
             detail="Prediction model not available"
         )
-
-    # Get DVSA client
-    dvsa_client = get_dvsa_client()
-
-    # Validate and normalize VRM
-    try:
-        vrm = dvsa_client.normalize_vrm(registration)
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
     # P2-2 fix: Validate postcode format if provided
     validated_postcode = ""
@@ -1117,6 +1119,14 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
 DVLA_API_KEY = os.environ.get("DVLA_API_KEY") or os.environ.get("DVLA_Api_Key")
 
 
+# Demo vehicle data for when DVSA/DVLA is not configured
+DEMO_VEHICLES = {
+    "AB12CDE": {"make": "FORD", "model": "FIESTA", "yearOfManufacture": 2012, "fuelType": "PETROL", "colour": "BLUE"},
+    "CD34EFG": {"make": "VAUXHALL", "model": "CORSA", "yearOfManufacture": 2015, "fuelType": "PETROL", "colour": "RED"},
+    "EF56GHI": {"make": "BMW", "model": "3 SERIES", "yearOfManufacture": 2018, "fuelType": "DIESEL", "colour": "BLACK"},
+}
+
+
 @app.get("/api/vehicle")
 @limiter.limit("10/minute")  # P1-1 fix: Add rate limiting to prevent enumeration
 async def get_vehicle(
@@ -1127,6 +1137,7 @@ async def get_vehicle(
 
     Returns make, model, year, fuel type from DVLA/DVSA data.
     Rate limited to prevent enumeration attacks.
+    Falls back to demo data when DVSA not configured.
     """
     # Normalize registration
     dvsa_client = get_dvsa_client()
@@ -1144,19 +1155,37 @@ async def get_vehicle(
             year = history.manufacture_date.year if history.manufacture_date else None
             return {
                 "registration": vrm,
-                "make": history.make,
-                "model": history.model,
-                "year": year,
-                "fuel_type": history.fuel_type,
-                "colour": history.colour,
+                "dvla": {
+                    "make": history.make,
+                    "model": history.model,
+                    "yearOfManufacture": year,
+                    "fuelType": history.fuel_type,
+                    "colour": history.colour,
+                },
                 "source": "dvsa"
             }
         except VehicleNotFoundError:
             logger.info(f"Vehicle {vrm_hash} not found in DVSA")
         except DVSAAPIError as e:
             logger.warning(f"DVSA API error for {vrm_hash}: {e}")
+    else:
+        # Demo mode: return sample data when DVSA not configured
+        logger.info(f"DVSA not configured, returning demo data for {vrm_hash}")
+        demo_data = DEMO_VEHICLES.get(vrm, {
+            "make": "DEMO",
+            "model": "VEHICLE",
+            "yearOfManufacture": 2020,
+            "fuelType": "PETROL",
+            "colour": "SILVER"
+        })
+        return {
+            "registration": vrm,
+            "dvla": demo_data,
+            "source": "demo",
+            "demo": True
+        }
 
-    # Vehicle not found
+    # Vehicle not found in DVSA
     raise HTTPException(status_code=404, detail="Vehicle not found")
 
 

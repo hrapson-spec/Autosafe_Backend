@@ -130,7 +130,11 @@ async def distribute_lead(lead_id: str) -> dict:
     top_risks = lead.get('top_risks') or []
     if isinstance(top_risks, str):
         import json
-        top_risks = json.loads(top_risks)
+        try:
+            top_risks = json.loads(top_risks)
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse top_risks JSON for lead {lead_id}, using empty list")
+            top_risks = []
 
     # Phase 1: Create all assignment records and prepare email tasks
     # (Sequential - each needs unique assignment_id for tracking)
