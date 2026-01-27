@@ -15,8 +15,8 @@ def get_age_band(age: Optional[Union[int, float]]) -> str:
     Returns:
         Age band string (e.g., '0-3', '3-5', '6-10', '10-15', '15+', or 'Unknown')
     """
-    # Handle None and NaN
-    if age is None or (isinstance(age, float) and pd.isna(age)):
+    # Handle None, NaN, and pandas NA types
+    if age is None or pd.isna(age):
         return 'Unknown'
 
     # Handle negative ages (data error)
@@ -45,8 +45,8 @@ def get_mileage_band(miles: Optional[Union[int, float]]) -> str:
     Returns:
         Mileage band string (e.g., '0-30k', '30k-60k', etc., or 'Unknown')
     """
-    # Handle None and NaN
-    if miles is None or (isinstance(miles, float) and pd.isna(miles)):
+    # Handle None, NaN, and pandas NA types
+    if miles is None or pd.isna(miles):
         return 'Unknown'
 
     # Handle invalid values (negative or unrealistically high)
