@@ -80,44 +80,99 @@ def audit_risk_model(file_path, golden_file_path=None):
         logging.info("SKIP: No sparse data rows found to test.")
 
     # ---------------------------------------------------------
-    # 4. MONOTONICITY (Mileage Test)
+    # 4. MONOTONICITY (Component-Level Check)
     # ---------------------------------------------------------
-    logging.info("\n--- TEST 4: LOGICAL MONOTONICITY (Mileage) ---")
-    mileage_map = {'0-30k': 15000, '30k-60k': 45000, '60k-100k': 80000, '100k+': 120000, 'Unknown': -1}
-    df['Mileage_Numeric'] = df['mileage_band'].map(mileage_map)
+    logging.info("\n--- TEST 4: COMPONENT-LEVEL MONOTONICITY ---")
     
-    # Filter out unknown mileage
-    valid_mileage = df[df['Mileage_Numeric'] > 0]
-    
-    if not valid_mileage.empty and len(risk_cols) > 0:
-        # Check correlation for a sample of models
-        model_counts = valid_mileage['model_id'].value_counts()
-        sample_models = model_counts[model_counts > 3].index[:50]
+    try:
+        from monotonicity import (
+            MonotonicityConfig,
+            audit_monotonicity_per_model,
+            audit_monotonicity_global,
+            MonotonicityAuditResult
+        )
+        from datetime import datetime
         
-        pos_trends = 0
-        neg_trends = 0
-        
-        for model in sample_models:
-            model_df = valid_mileage[valid_mileage['model_id'] == model]
-            if len(model_df) > 2:
-                # Check correlation of mileage vs first risk column (usually Body or Brakes)
-                # Using the first risk column as a proxy for general wear
-                trend = model_df['Mileage_Numeric'].corr(model_df[risk_cols[0]])
-                if trend > 0.1: # Strict positive correlation
-                    pos_trends += 1
-                elif trend < -0.1:
-                    neg_trends += 1
+        if risk_cols and 'mileage_band' in df.columns and 'age_band' in df.columns:
+            # Run per-model and global audits
+            per_model_violations = audit_monotonicity_per_model(df, risk_cols, sample_models=100)
+            global_violations = audit_monotonicity_global(df, risk_cols)
+            
+            all_violations = per_model_violations + global_violations
+            hard_violations = [v for v in all_violations if v.is_hard]
+            soft_violations = [v for v in all_violations if not v.is_hard]
+            
+            logging.info(f"Checked {len(risk_cols)} component risk columns")
+            logging.info(f"Hard violations: {len(hard_violations)}")
+            logging.info(f"Soft violations (within {MonotonicityConfig.TOLERANCE_PERCENT}% tolerance): {len(soft_violations)}")
+            
+            if hard_violations:
+                logging.warning(f"FAIL: {len(hard_violations)} hard monotonicity violations detected")
+                for v in hard_violations[:5]:
+                    logging.warning(
+                        f"  {v.component}: {v.segment_key} | "
+                        f"{v.lower_band} -> {v.higher_band} | "
+                        f"{v.lower_risk:.4f} -> {v.higher_risk:.4f} "
+                        f"({v.decrease_percent:.1f}% decrease)"
+                    )
+                if len(hard_violations) > 5:
+                    logging.warning(f"  ... and {len(hard_violations) - 5} more")
                     
-        logging.info(f"Analyzed {len(sample_models)} vehicle models.")
-        logging.info(f"Models with increasing risk: {pos_trends}")
-        logging.info(f"Models with decreasing risk: {neg_trends}")
-        
-        if neg_trends > pos_trends:
-            logging.warning("FAIL: More cars show DECREASING risk as mileage goes up. Check for survivorship bias.")
+                # Save detailed report
+                result = MonotonicityAuditResult(
+                    timestamp=datetime.now().isoformat(),
+                    config={
+                        "tolerance_percent": MonotonicityConfig.TOLERANCE_PERCENT,
+                        "min_sample_for_hard_fail": MonotonicityConfig.MIN_SAMPLE_FOR_HARD_FAIL
+                    },
+                    violations=all_violations,
+                    summary={
+                        "hard_violations": len(hard_violations),
+                        "soft_violations": len(soft_violations),
+                        "passed": len(hard_violations) == 0
+                    }
+                )
+                
+                report_path = "monotonicity_audit_report.json"
+                with open(report_path, "w") as f:
+                    f.write(result.to_json())
+                logging.info(f"Full report saved to {report_path}")
+            else:
+                logging.info("PASS: No hard monotonicity violations detected")
         else:
-            logging.info("PASS: Majority of models show increasing risk with mileage.")
-    else:
-        logging.info("SKIP: Could not perform mileage monotonicity test.")
+            logging.info("SKIP: Missing required columns for monotonicity check.")
+            
+    except ImportError:
+        logging.warning("SKIP: monotonicity module not available. Using basic check.")
+        
+        # Fallback: Basic mileage correlation check
+        mileage_map = {'0-30k': 15000, '30k-60k': 45000, '60k-100k': 80000, '100k+': 120000, 'Unknown': -1}
+        df['Mileage_Numeric'] = df['mileage_band'].map(mileage_map)
+        valid_mileage = df[df['Mileage_Numeric'] > 0]
+        
+        if not valid_mileage.empty and len(risk_cols) > 0:
+            model_counts = valid_mileage['model_id'].value_counts()
+            sample_models = model_counts[model_counts > 3].index[:50]
+            
+            pos_trends = neg_trends = 0
+            for model in sample_models:
+                model_df = valid_mileage[valid_mileage['model_id'] == model]
+                if len(model_df) > 2:
+                    trend = model_df['Mileage_Numeric'].corr(model_df[risk_cols[0]])
+                    if trend > 0.1:
+                        pos_trends += 1
+                    elif trend < -0.1:
+                        neg_trends += 1
+                        
+            logging.info(f"Analyzed {len(sample_models)} vehicle models.")
+            if neg_trends > pos_trends:
+                logging.warning("FAIL: More cars show DECREASING risk as mileage goes up.")
+            else:
+                logging.info("PASS: Majority show increasing risk with mileage.")
+        else:
+            logging.info("SKIP: Could not perform mileage monotonicity test.")
+
+
 
     # ---------------------------------------------------------
     # 5. REGRESSION TEST (Golden Dataset)

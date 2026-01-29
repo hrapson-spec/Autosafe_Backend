@@ -28,8 +28,8 @@ python3 audit_risk_model.py FINAL_MOT_REPORT.csv
 
 # 5. Initialize Database
 echo ""
-echo "[5/5] Initializing Database (init_db.py)..."
-python3 init_db.py
+echo "[5/5] Initializing Database (build_db.py)..."
+python3 build_db.py
 
 echo ""
 echo "========================================"

@@ -22,7 +22,7 @@ User: postgres
 | Column | Type | Description |
 |--------|------|-------------|
 | `model_id` | VARCHAR(255) | Vehicle make + model (e.g., "FORD FIESTA") |
-| `age_band` | VARCHAR(255) | Age range (0-3, 3-6, 6-10, 10+) |
+| `age_band` | VARCHAR(255) | Age range (0-3, 3-6, 6-10, 10-15, 15+) |
 | `mileage_band` | VARCHAR(255) | Mileage range (0-30k, 30k-60k, etc.) |
 | `total_tests` | INTEGER | Number of MOT tests |
 | `total_failures` | INTEGER | Number of failures |

@@ -18,13 +18,17 @@
     --background: #e8e6e3;
     --card-bg: #ffffff;
 
-    /* Status Colors */
-    --success-green: #10b981;
-    --success-bg: #ecfdf5;
-    --warning-amber: #f59e0b;
-    --warning-bg: #fffbeb;
-    --danger-red: #ef4444;
-    --danger-bg: #fef2f2;
+    /* Status Colors - WCAG AA Compliant */
+    --success-green: #059669;
+    --success-bg: #d1fae5;
+    --warning-amber: #d97706;
+    --warning-bg: #fef3c7;
+    --danger-red: #dc2626;
+    --danger-bg: #fee2e2;
+
+    /* Moderate Risk (28-40%) - Distinct from High Risk */
+    --moderate-orange: #ea580c;
+    --moderate-bg: #ffedd5;
 
     /* Spacing */
     --space-xs: 0.25rem;
@@ -527,7 +531,7 @@ input:focus:not(:focus-visible) {
     margin-bottom: var(--space-sm);
 }
 
-.lead-capture > p {
+.lead-capture>p {
     font-size: 0.85rem;
     color: var(--text-secondary);
     margin-bottom: var(--space-lg);
@@ -596,12 +600,12 @@ input:focus:not(:focus-visible) {
     border-color: var(--text-muted);
 }
 
-.service-option input[type="checkbox"]:checked + .service-card {
+.service-option input[type="checkbox"]:checked+.service-card {
     border-color: var(--primary-charcoal);
     background: rgba(55, 65, 81, 0.05);
 }
 
-.service-option input[type="checkbox"]:focus-visible + .service-card {
+.service-option input[type="checkbox"]:focus-visible+.service-card {
     outline: 2px solid var(--primary-charcoal);
     outline-offset: 2px;
 }
@@ -617,7 +621,7 @@ input:focus:not(:focus-visible) {
     transition: color var(--transition-fast);
 }
 
-.service-option input[type="checkbox"]:checked + .service-card .service-icon {
+.service-option input[type="checkbox"]:checked+.service-card .service-icon {
     color: var(--primary-charcoal);
 }
 
