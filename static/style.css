@@ -70,6 +70,7 @@
 html {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
 }
 
 body {
@@ -454,6 +455,32 @@ input:focus:not(:focus-visible) {
     font-size: 0.75rem;
     color: var(--text-muted);
     margin-top: var(--space-xs);
+}
+
+/* Component Breakdown Link */
+.component-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color var(--transition-fast);
+}
+
+.component-link:hover {
+    color: var(--text-primary);
+}
+
+.component-link svg {
+    transition: transform var(--transition-fast);
+}
+
+.component-link:hover svg {
+    transform: translateY(2px);
 }
 
 /* Components Section */
