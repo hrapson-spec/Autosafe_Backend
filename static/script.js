@@ -12,9 +12,31 @@ const postcodeInput = document.getElementById('postcode');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const loader = analyzeBtn.querySelector('.loader');
 const btnText = analyzeBtn.querySelector('.btn-text');
+const searchPanel = document.getElementById('searchPanel');
+const appHeader = document.querySelector('.app-header');
 
 // Results panel
 let resultsPanel = document.getElementById('resultsPanel');
+const checkAnotherBtn = document.getElementById('checkAnotherBtn');
+
+// Handle "Check Another Car" button click
+if (checkAnotherBtn) {
+    checkAnotherBtn.addEventListener('click', () => {
+        // Show the search form and header
+        if (searchPanel) searchPanel.classList.remove('hidden');
+        if (appHeader) appHeader.classList.remove('hidden');
+        // Hide the results panel
+        if (resultsPanel) resultsPanel.classList.add('hidden');
+        // Clear the form
+        registrationInput.value = '';
+        postcodeInput.value = '';
+        // Clear any error banner
+        const banner = document.getElementById('errorBanner');
+        if (banner) banner.classList.add('hidden');
+        // Focus the registration input
+        registrationInput.focus();
+    });
+}
 
 // Lead form elements
 const leadForm = document.getElementById('leadForm');
@@ -134,7 +156,8 @@ function showError(message) {
         banner = document.createElement('div');
         banner.id = 'errorBanner';
         banner.className = 'error-banner hidden';
-        document.querySelector('.search-card').prepend(banner);
+        const searchCard = document.querySelector('.search-card');
+        if (searchCard) searchCard.prepend(banner);
     }
 
     banner.textContent = message;
@@ -226,6 +249,10 @@ function displayResults(data) {
     // Store for lead form submission
     currentResultsData = data;
 
+    // Hide the search form and header to make results more prominent
+    if (searchPanel) searchPanel.classList.add('hidden');
+    if (appHeader) appHeader.classList.add('hidden');
+
     resultsPanel.classList.remove('hidden');
 
     // Track conversion in Google Ads
@@ -285,29 +312,42 @@ function displayResults(data) {
 
     // Update Main Risk
     const risk = data.failure_risk;
-    const riskPercent = (risk * 100).toFixed(1) + '%';
-
     const riskValueEl = document.getElementById('riskValue');
     const riskText = document.getElementById('riskText');
 
-    if (riskValueEl) {
-        riskValueEl.textContent = riskPercent;
-        riskValueEl.className = 'risk-percentage';
-    }
+    if (risk !== undefined && risk !== null) {
+        const riskPercent = (risk * 100).toFixed(1) + '%';
 
-    if (riskText) {
-        riskText.className = 'risk-label';
+        if (riskValueEl) {
+            riskValueEl.textContent = riskPercent;
+            riskValueEl.className = 'risk-percentage';
 
-        if (risk < 0.20) {
-            riskText.textContent = "Low Risk";
-            riskText.classList.add('text-low');
-        } else if (risk < 0.40) {
-            riskText.textContent = "Moderate Risk";
-            riskText.classList.add('text-med');
-        } else {
-            riskText.textContent = "High Risk";
-            riskText.classList.add('text-high');
+            if (risk < 0.20) {
+                riskValueEl.classList.add('text-low');
+            } else if (risk < 0.40) {
+                riskValueEl.classList.add('text-med');
+            } else {
+                riskValueEl.classList.add('text-high');
+            }
         }
+
+        if (riskText) {
+            riskText.className = 'risk-label';
+
+            if (risk < 0.20) {
+                riskText.textContent = "Low Risk";
+                riskText.classList.add('text-low');
+            } else if (risk < 0.40) {
+                riskText.textContent = "Moderate Risk";
+                riskText.classList.add('text-med');
+            } else {
+                riskText.textContent = "High Risk";
+                riskText.classList.add('text-high');
+            }
+        }
+    } else {
+        if (riskValueEl) riskValueEl.textContent = '--';
+        if (riskText) riskText.textContent = 'Unknown';
     }
 
     // Update confidence badge
@@ -341,6 +381,20 @@ function displayResults(data) {
     } else if (repairCostValue) {
         repairCostValue.textContent = '-';
         if (repairCostRange) repairCostRange.textContent = '';
+    }
+
+    // Update source note
+    const sourceNote = document.getElementById('sourceNote');
+    if (sourceNote) {
+        if (data.model_version === 'v55') {
+            sourceNote.textContent = 'Prediction based on real-time MOT history analysis';
+        } else if (data.model_version === 'lookup') {
+            sourceNote.textContent = data.note || 'Based on historical MOT data for similar vehicles.';
+        } else if (data.note) {
+            sourceNote.textContent = data.note;
+        } else {
+            sourceNote.textContent = '';
+        }
     }
 
     // Update Components (V55 uses risk_components object)
@@ -397,20 +451,6 @@ function displayResults(data) {
 
         componentsGrid.appendChild(card);
     });
-
-    // Update source note
-    const sourceNote = document.getElementById('sourceNote');
-    if (sourceNote) {
-        if (data.model_version === 'v55') {
-            sourceNote.textContent = 'Prediction based on real-time MOT history analysis';
-        } else if (data.model_version === 'lookup') {
-            sourceNote.textContent = data.note || 'Based on historical MOT data for similar vehicles.';
-        } else if (data.note) {
-            sourceNote.textContent = data.note;
-        } else {
-            sourceNote.textContent = '';
-        }
-    }
 }
 
 // Lead Form Submission
