@@ -1741,11 +1741,20 @@ async def test_risk_check():
     """Test endpoint to debug risk_checks saving."""
     from datetime import date
 
+    # Return actual DATABASE_URL being used
+    db_url = db.DATABASE_URL
+    db_url_masked = db_url[:50] + "..." if db_url else "NOT SET"
+
     pool = await db.get_pool()
     if not pool:
-        return {"error": "No database pool", "DATABASE_URL_set": bool(db.DATABASE_URL)}
+        return {"error": "No database pool", "DATABASE_URL": db_url_masked}
 
     try:
+        # First, count existing records
+        async with pool.acquire() as conn:
+            count_before = await conn.fetchval("SELECT COUNT(*) FROM risk_checks")
+
+        # Insert test record
         result = await db.save_risk_check({
             'registration': 'DEBUG123',
             'postcode': 'SW1A1AA',
@@ -1764,9 +1773,21 @@ async def test_risk_check():
             'prediction_source': 'debug',
             'is_dvsa_data': False,
         })
-        return {"success": True, "risk_check_id": result}
+
+        # Count after
+        async with pool.acquire() as conn:
+            count_after = await conn.fetchval("SELECT COUNT(*) FROM risk_checks")
+
+        return {
+            "success": True,
+            "risk_check_id": result,
+            "DATABASE_URL": db_url_masked,
+            "count_before": count_before,
+            "count_after": count_after
+        }
     except Exception as e:
-        return {"error": str(e), "type": type(e).__name__}
+        import traceback
+        return {"error": str(e), "type": type(e).__name__, "traceback": traceback.format_exc()}
 
 
 # Mount static files (only if the folder exists)
