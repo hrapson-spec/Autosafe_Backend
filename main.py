@@ -1735,6 +1735,40 @@ async def report_outcome(assignment_id: str, request: Request):
     }
 
 
+# Debug endpoint for testing risk_checks save
+@app.get("/api/debug/test-risk-check")
+async def test_risk_check():
+    """Test endpoint to debug risk_checks saving."""
+    from datetime import date
+
+    pool = await db.get_pool()
+    if not pool:
+        return {"error": "No database pool", "DATABASE_URL_set": bool(db.DATABASE_URL)}
+
+    try:
+        result = await db.save_risk_check({
+            'registration': 'DEBUG123',
+            'postcode': 'SW1A1AA',
+            'vehicle_make': 'TEST',
+            'vehicle_model': 'DEBUG',
+            'vehicle_year': 2020,
+            'vehicle_fuel_type': 'Petrol',
+            'mileage': 10000,
+            'last_mot_date': date(2024, 1, 15),
+            'last_mot_result': 'PASSED',
+            'failure_risk': 0.25,
+            'confidence_level': 'High',
+            'risk_components': {'brakes': 0.05},
+            'repair_cost_estimate': {'min': 50, 'max': 200},
+            'model_version': 'v55',
+            'prediction_source': 'debug',
+            'is_dvsa_data': False,
+        })
+        return {"success": True, "risk_check_id": result}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+
+
 # Mount static files (only if the folder exists)
 if os.path.isdir("static"):
     # Mount assets at root /assets for React build compatibility
