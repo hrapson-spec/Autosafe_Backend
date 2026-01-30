@@ -83,16 +83,21 @@ async def lifespan(app: FastAPI):
     import build_db
     build_db.ensure_database()
 
-    # After building, check if we should use SQLite or PostgreSQL for fallback
+    # Initialize PostgreSQL if configured (for writes: leads, risk_checks, garages)
     global DATABASE_URL
-    if os.path.exists(DB_FILE):
-        logger.info(f"Fallback database ready: {DB_FILE}")
-        DATABASE_URL = None
-    elif DATABASE_URL:
-        logger.info("Initializing PostgreSQL connection pool for fallback...")
+    if DATABASE_URL:
+        logger.info("Initializing PostgreSQL connection pool...")
         await db.get_pool()
+        if await db.is_postgres_available():
+            logger.info("PostgreSQL connected successfully")
+        else:
+            logger.warning("PostgreSQL configured but connection failed - writes will be rejected")
+
+    # SQLite is fallback for reads only (mot_risk lookups)
+    if os.path.exists(DB_FILE):
+        logger.info(f"SQLite fallback ready for reads: {DB_FILE}")
     else:
-        logger.warning("No fallback database available")
+        logger.warning("No SQLite fallback available")
 
     # Initialize DVSA client
     dvsa_client = get_dvsa_client()
