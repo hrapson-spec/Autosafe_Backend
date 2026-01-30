@@ -10,83 +10,15 @@
 
 | Severity | Count | Description |
 |----------|-------|-------------|
-| P0 Critical | 2 | Core functionality broken |
-| P1 High | 2 | Startup failures, data type mismatches |
+| P1 High | 1 | API type mismatches |
 | P2 Medium | 4 | Memory leaks, incomplete functions, format inconsistencies |
 | P3 Low | 3 | Validation issues, minor bugs |
 
 ---
 
-## P0 - Critical Bugs
-
-### 1. App.tsx:29 - User Registration Input Completely Ignored
-
-**File:** `App.tsx`
-**Line:** 29
-
-```typescript
-const result = await getReportBySelection('FORD', 'FIESTA', 2018);
-```
-
-**Issue:** The `handleCarCheck` function ignores the `data.registration` parameter entirely. Users enter their vehicle registration, but the app always returns a Ford Fiesta 2018 report regardless of input.
-
-**Impact:** Core functionality is broken - users cannot check their actual vehicle.
-
-**Fix:** Use the actual registration data:
-```typescript
-// Should call getReportByRegistration(data.registration) instead
-// Or parse vehicle info from DVLA/DVSA and use actual make/model/year
-```
-
----
-
-### 2. feature_engineering_v55.py - Missing Features in FEATURE_NAMES
-
-**File:** `feature_engineering_v55.py`
-**Lines:** 415-428 (computation) vs 32-70 (FEATURE_NAMES list)
-
-**Issue:** The code computes `neglect_score_brakes`, `neglect_score_tyres`, and `neglect_score_suspension` features (lines 415-428), but these features are NOT included in the `FEATURE_NAMES` list.
-
-The docstring explicitly states:
-```
-V55+neglect: Added 3 neglect_score features (brakes, tyres, suspension)
-from V33 with optimized weights for +2.21pp AUC lift.
-```
-
-This suggests these features should be used, but they're not in the list.
-
-**Impact:** Features are computed but never passed to the model, potentially reducing prediction accuracy by 2.21pp AUC.
-
-**Fix:** Add to `FEATURE_NAMES`:
-```python
-'neglect_score_brakes', 'neglect_score_tyres', 'neglect_score_suspension',
-```
-
----
-
 ## P1 - High Priority Bugs
 
-### 3. main.py:87-95 - Variable Used Before Definition
-
-**File:** `main.py`
-**Lines:** 87-95 (usage) vs 200-201 (definition)
-
-```python
-# Line 87-95 in lifespan() function:
-if os.path.exists(DB_FILE):  # DB_FILE defined at line 200!
-    ...
-elif DATABASE_URL:           # DATABASE_URL defined at line 201!
-```
-
-**Issue:** `DATABASE_URL` and `DB_FILE` are referenced in the `lifespan()` function but defined 100+ lines later in the module.
-
-**Impact:** Python modules execute top-to-bottom, so globals defined later are available. However, this is fragile code that could break if imports or reordering occurs.
-
-**Fix:** Move definitions before the `lifespan()` function or use explicit imports.
-
----
-
-### 4. autosafeApi.ts - Response Type Mismatch with Backend
+### 1. autosafeApi.ts - Response Type Mismatch with Backend
 
 **File:** `services/autosafeApi.ts`
 **Lines:** 29-54
@@ -128,7 +60,7 @@ interface BackendRiskResponse {
 
 ## P2 - Medium Priority Bugs
 
-### 5. HeroForm.tsx:11 - Registration Pattern Too Restrictive
+### 2. HeroForm.tsx:11 - Registration Pattern Too Restrictive
 
 **File:** `components/HeroForm.tsx`
 **Line:** 11
@@ -151,7 +83,7 @@ const UK_REG_PATTERN = /^[A-Z0-9]{2,8}$/i;  // Allow 2-8 alphanumeric chars
 
 ---
 
-### 6. postcode_service.py:15 - Unbounded Cache Growth
+### 3. postcode_service.py:15 - Unbounded Cache Growth
 
 **File:** `postcode_service.py`
 **Line:** 15
@@ -172,7 +104,7 @@ _postcode_cache: TTLCache = TTLCache(maxsize=10000, ttl=86400)  # 1 day TTL
 
 ---
 
-### 7. lead_distributor.py:230-239 - Incomplete Function
+### 4. lead_distributor.py:230-239 - Incomplete Function
 
 **File:** `lead_distributor.py`
 **Lines:** 230-239
@@ -191,7 +123,7 @@ async def retry_failed_distributions() -> dict:
 
 ---
 
-### 8. repair_costs.py vs main.py - Inconsistent Response Formats
+### 5. repair_costs.py vs main.py - Inconsistent Response Formats
 
 **Files:** `repair_costs.py` and `main.py`
 
@@ -213,7 +145,7 @@ async def retry_failed_distributions() -> dict:
 
 ## P3 - Lower Priority Issues
 
-### 9. dvla_client.py:109 - Registration Length Validation
+### 6. dvla_client.py:109 - Registration Length Validation
 
 **File:** `dvla_client.py`
 **Line:** 109
@@ -226,7 +158,7 @@ if len(normalized) < 2 or len(normalized) > 7:  # Should be > 8
 
 ---
 
-### 10. email_service.py:121 - Only Checks Status 200
+### 7. email_service.py:121 - Only Checks Status 200
 
 **File:** `email_service.py`
 **Line:** 121
@@ -239,7 +171,7 @@ if response.status_code == 200:
 
 ---
 
-### 11. utils.py vs feature_engineering_v55.py - Duplicate Functions with Different Logic
+### 8. utils.py vs feature_engineering_v55.py - Duplicate Functions with Different Logic
 
 **Files:** `utils.py` and `feature_engineering_v55.py`
 
@@ -253,19 +185,14 @@ Both files define `get_age_band()` with different age band ranges:
 
 ## Recommendations
 
-### Immediate Actions (P0)
-1. Fix App.tsx to use actual user registration input
-2. Add neglect_score features to FEATURE_NAMES or remove dead code
-
 ### Short-term Actions (P1)
-3. Reorder variable definitions in main.py
-4. Update autosafeApi.ts interface to match backend response
+1. Update autosafeApi.ts interface to match backend response
 
 ### Medium-term Actions (P2)
-5. Expand registration pattern in HeroForm.tsx
-6. Add bounded cache for postcode lookups
-7. Implement or remove retry_failed_distributions()
-8. Standardize repair cost response format
+2. Expand registration pattern in HeroForm.tsx
+3. Add bounded cache for postcode lookups
+4. Implement or remove retry_failed_distributions()
+5. Standardize repair cost response format
 
 ### Housekeeping (P3)
-9-11. Fix validation, status codes, and consolidate duplicate functions
+6-8. Fix validation, status codes, and consolidate duplicate functions
