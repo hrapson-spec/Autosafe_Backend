@@ -1,0 +1,77 @@
+# Large data files - not needed for production
+*.parquet
+*.csv
+!prod_data_clean.csv.gz
+*.db
+*.duckdb
+*.duckdb.wal
+*.npy
+*.json
+!package.json
+*.zip
+
+# Large directories
+MOT Test Results/
+MOT Test Failures/
+test_items/
+cycle_history/
+cycle_history_dedup_dataset/
+catboost_data/
+catboost_v2/
+catboost_v3/
+catboost_aligned/
+catboost_streaming/
+catboost_info/
+validation_samples/
+stratified_samples/
+evaluation_samples/
+temporal_splits/
+imd_data/
+advisory_audit/
+make_prior_analysis/
+vauxhall_deep_dive/
+variant_experiment/
+suspension_model_v2/
+suspension_model_v4/
+suspension_submodels/
+suspension_submodels_v3/
+model_dataset_with_prev_condition.parquet/
+_archive/
+.claude/
+claude-code-academy/
+
+# Model files (except production model)
+*.cbm
+!catboost_production_v55/model.cbm
+
+# Development/training scripts
+train_*.py
+build_*.py
+validate_*.py
+analyze_*.py
+diagnose_*.py
+ablation_*.py
+evaluate_*.py
+audit_*.py
+
+# Notebooks
+*.ipynb
+
+# Apple files
+*.pages
+
+# Docs (not needed at runtime)
+*.md
+!README.md
+
+# Environment
+.venv/
+env/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+
+# Git
+.git/
