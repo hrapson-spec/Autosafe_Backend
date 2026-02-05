@@ -25,6 +25,12 @@
     <changefreq>monthly</changefreq>
   </url>
   <url>
+    <loc>https://www.autosafe.one/static/guides/mot-failure-rates-by-car.html</loc>
+    <lastmod>2026-02-05</lastmod>
+    <priority>0.8</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
     <loc>https://www.autosafe.one/static/privacy.html</loc>
     <lastmod>2026-01-18</lastmod>
     <priority>0.3</priority>
