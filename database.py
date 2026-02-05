@@ -811,13 +811,18 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
     Returns:
         Risk check ID (UUID string) on success, None on failure
     """
+    print(f"[DEBUG] save_risk_check called with registration={risk_data.get('registration')}", flush=True)
+    logger.info(f"save_risk_check called with registration={risk_data.get('registration')}")
+
     pool = await get_pool()
     if not pool:
         logger.error("No database pool available for saving risk check")
+        print("[DEBUG] No database pool available", flush=True)
         return None
 
     try:
         import json
+        print(f"[DEBUG] About to insert risk check for {risk_data.get('registration')}", flush=True)
 
         async with pool.acquire() as conn:
             result = await conn.fetchrow(
@@ -848,10 +853,12 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
             )
 
             risk_check_id = str(result['id'])
+            print(f"[DEBUG] Risk check saved successfully: id={risk_check_id}", flush=True)
             logger.info(f"Risk check logged: postcode={risk_data.get('postcode')} make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
             return risk_check_id
 
     except Exception as e:
+        print(f"[DEBUG] Failed to save risk check: {e}", flush=True)
         logger.error(f"Failed to save risk check: {e}")
         return None
 
