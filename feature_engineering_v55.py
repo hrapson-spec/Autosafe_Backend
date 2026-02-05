@@ -27,6 +27,17 @@ import numpy as np
 from dvsa_client import VehicleHistory, MOTTest
 from regional_defaults import get_corrosion_index, get_station_strictness_bias
 
+# V44: Top 20 failing models (fail rate > 28%, from training data analysis)
+# Must match HIGH_RISK_MODELS in train_catboost_production_v55.py
+HIGH_RISK_MODELS_SET = {
+    'ROVER 75', 'RENAULT LAGUNA', 'CITROEN XSARA', 'PEUGEOT 307 SW',
+    'VAUXHALL VECTRA', 'PEUGEOT 206', 'CHEVROLET MATIZ', 'PEUGEOT 307',
+    'VAUXHALL TIGRA', 'RENAULT MODUS', 'NISSAN PRIMASTAR', 'CITROEN C2',
+    'RENAULT GRAND SCENIC', 'FORD FOCUS C-MAX', 'VOLKSWAGEN BORA',
+    'JAGUAR X TYPE', 'FIAT SCUDO', 'HYUNDAI COUPE',
+    'MITSUBISHI L200 DOUBLE CAB', 'MAZDA 5',
+}
+
 
 # Feature names in exact order expected by model
 FEATURE_NAMES = [
@@ -684,14 +695,18 @@ def engineer_features(
         features['prev_adv_tyres']
     )
 
-    # Brake system stress
-    vehicle_age = 5  # Default estimate
-    if history.manufacture_date:
-        vehicle_age = (prediction_date - history.manufacture_date).days / 365
-    features['brake_system_stress'] = features['prev_adv_brakes'] + (vehicle_age * 0.1)
+    # Brake system stress — must match training formula (train_catboost_production_v55.py:556-564)
+    # Training: brakes + np.log1p(n_prior_tests) / 3.0
+    n_prior = features.get('n_prior_tests', 0)
+    age_factor = np.log1p(n_prior) / 3.0
+    features['brake_system_stress'] = features['prev_adv_brakes'] + age_factor
 
-    # Commercial wear proxy
-    features['commercial_wear_proxy'] = vehicle_age * 0.1
+    # Commercial wear proxy — must match training formula (train_catboost_production_v55.py:577-593)
+    # Training: log1p(annual_miles/10000) + days_overdue + age_factor
+    annual_miles = features.get('annualized_mileage_v2', 8000)
+    high_mileage_factor = np.log1p(annual_miles / 10000)
+    days_overdue = max(0, features.get('days_since_last_test', 365) - 365) / 365.0
+    features['commercial_wear_proxy'] = high_mileage_factor + days_overdue + age_factor
 
     # MDPS score (maintenance deferral propensity)
     features['mdps_score'] = features['days_late'] / 365 if features['days_late'] > 0 else 0
@@ -718,8 +733,9 @@ def engineer_features(
     # =========================================================================
     # MODEL-SPECIFIC FLAGS
     # =========================================================================
-    features['high_risk_model_flag'] = 0  # Default
-    features['suspension_risk_profile'] = 0.0  # Default
+    model_id = f"{history.make} {history.model}".upper().strip() if history.model else history.make.upper().strip()
+    features['high_risk_model_flag'] = 1 if model_id in HIGH_RISK_MODELS_SET else 0
+    features['suspension_risk_profile'] = 0.0  # TODO: load from model artifacts
 
     return features
 

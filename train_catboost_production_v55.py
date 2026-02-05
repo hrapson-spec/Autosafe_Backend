@@ -595,9 +595,6 @@ def add_v29_cohort_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-    return df
-
-
 # ============================================================================
 # V43: Local Corrosion Index (Geographic Environmental Risk)
 # Captures invisible salt/humidity/coastal corrosion by postcode area

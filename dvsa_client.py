@@ -463,7 +463,10 @@ class DVSAClient:
         for test_data in vehicle_data.get('motTests', []):
             # Parse odometer value - new API returns as string
             odometer_raw = test_data.get('odometerValue')
-            odometer_value = int(odometer_raw) if odometer_raw else None
+            try:
+                odometer_value = int(odometer_raw) if odometer_raw else None
+            except (ValueError, TypeError):
+                odometer_value = None
 
             # Fix: Properly handle defects vs rfrAndComments
             # If defects is explicitly None, use rfrAndComments; if defects is [] use []

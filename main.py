@@ -402,7 +402,6 @@ def get_sqlite_connection():
     if _sqlite_pool is None:
         _init_sqlite_pool()
 
-    # Check if pool initialization failed (no database file)
     if _sqlite_pool is None:
         yield None
         return
@@ -1276,12 +1275,9 @@ class LeadSubmission(BaseModel):
         """Sanitize name field to prevent XSS (defense-in-depth with Jinja2 escaping)."""
         if v is None:
             return v
-        # Remove HTML tags and script content
-        import re
-        # Remove script tags and their content
-        v = re.sub(r'<script[^>]*>.*?</script>', '', v, flags=re.IGNORECASE | re.DOTALL)
-        # Remove all HTML tags
-        v = re.sub(r'<[^>]+>', '', v)
+        # Use bleach to safely strip all HTML tags (more robust than regex)
+        import bleach
+        v = bleach.clean(v, tags=[], strip=True)
         # Limit length to prevent abuse
         v = v.strip()[:100]
         return v if v else None
@@ -1806,7 +1802,7 @@ if os.path.isdir("static"):
     async def serve_spa(path: str):
         # Don't serve index.html for API routes or static files
         if path.startswith("api/") or path.startswith("static/"):
-            return {"detail": "Not Found"}
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return FileResponse('static/index.html')
 else:
     @app.get("/")
