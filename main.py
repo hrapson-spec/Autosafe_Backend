@@ -222,7 +222,7 @@ async def global_exception_handler(request, exc):
 
 # Check for PostgreSQL first, then SQLite
 # OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
-DB_FILE = 'autosafe.db'
+DB_FILE = '/tmp/autosafe.db'
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # Minimum total tests required for a make/model to appear in UI dropdowns

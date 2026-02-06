@@ -223,7 +223,7 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             model_id, age_band, mileage_band
         )
         
-        if rows and rows[0]['total_tests']:
+        if rows and rows[0]['total_tests'] is not None:
             # Apply sanity check clamping to all risk values to prevent invalid data
             # from corrupted database entries from propagating to the API
             result = {

@@ -531,6 +531,12 @@ input:focus:not(:focus-visible) {
     font-weight: 600;
 }
 
+/* Check Another Car Button */
+.check-another-btn {
+    margin-top: var(--space-xl);
+    background: var(--primary-charcoal);
+}
+
 /* Source Note */
 .source-note {
     text-align: center;
@@ -783,11 +789,7 @@ input:focus:not(:focus-visible) {
     max-width: 1000px;
     margin: 60px auto 0;
     padding: 0 20px;
-    /* Break out of narrow container */
-    width: 100vw;
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 100%;
 }
 
 .feature-card {

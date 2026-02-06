@@ -1,3 +1,5 @@
+from typing import Optional
+
 """
 SEO Landing Pages for AutoSafe
 ===============================
@@ -216,7 +218,7 @@ def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
     return result
 
 
-def _query_model_overall(conn, make: str, model: str) -> dict | None:
+def _query_model_overall(conn, make: str, model: str) -> Optional[dict]:
     """Query overall failure rate for a model."""
     where, params = _model_where_clause(make, model)
     comp_cols = ", ".join(

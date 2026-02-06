@@ -11,6 +11,13 @@
 *.zip
 
 # Large directories
+work/
+backend/
+frontend/
+node_modules/
+features/
+Planning and Organisation/
+marketing-and-distribution/
 MOT Test Results/
 MOT Test Failures/
 test_items/
@@ -47,6 +54,7 @@ claude-code-academy/
 # Development/training scripts
 train_*.py
 build_*.py
+!build_db.py
 validate_*.py
 analyze_*.py
 diagnose_*.py
