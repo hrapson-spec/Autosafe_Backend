@@ -268,6 +268,10 @@ function displayResults(data) {
             'value': 1.0,
             'currency': 'GBP'
         });
+        gtag('event', 'generate_lead', {
+            'event_category': 'engagement',
+            'event_label': 'risk_check_success'
+        });
     }
 
     // Update Header
@@ -525,6 +529,25 @@ if (leadForm) {
                     'value': 5.0,
                     'currency': 'GBP'
                 });
+                // Track service-specific events for Google Ads
+                if (selectedServices.includes('mot')) {
+                    gtag('event', 'click_book_mot', {
+                        'event_category': 'outbound_click',
+                        'event_label': 'book_mot'
+                    });
+                }
+                if (selectedServices.includes('repair')) {
+                    gtag('event', 'click_book_repair', {
+                        'event_category': 'outbound_click',
+                        'event_label': 'book_repair'
+                    });
+                }
+                if (selectedServices.includes('reminder')) {
+                    gtag('event', 'sign_up', {
+                        'event_category': 'engagement',
+                        'event_label': 'mot_reminder'
+                    });
+                }
             }
 
         } catch (err) {
