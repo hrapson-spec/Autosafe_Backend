@@ -251,13 +251,15 @@ function displayResults(data) {
     // Store for lead form submission
     currentResultsData = data;
 
-    // Hide the search form, header, and example preview to make results more prominent
+    // Hide the search form and example preview but keep header visible for context
     if (searchPanel) searchPanel.classList.add('hidden');
-    if (appHeader) appHeader.classList.add('hidden');
     const examplePreview = document.getElementById('examplePreview');
     if (examplePreview) examplePreview.classList.add('hidden');
 
     resultsPanel.classList.remove('hidden');
+
+    // Scroll results into view on mobile
+    resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     // Track conversion in Google Ads
     if (typeof gtag === 'function') {
