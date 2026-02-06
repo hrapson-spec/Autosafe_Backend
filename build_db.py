@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # Column Type Specification
 # =============================================================================
 # The CSV has a fixed column order from calculate_risk.py:
-# Columns 0-2: TEXT (model_id, make, age_band, mileage_band)
+# Columns 0-2: TEXT (model_id, age_band, mileage_band)
 # Columns 3-4: INTEGER (Total_Tests, Total_Failures)
 # Columns 5+: REAL (Failure_Risk, Risk_Brakes, Risk_Suspension, etc.)
 # =============================================================================
@@ -184,14 +184,18 @@ def ensure_database() -> bool:
                 logger.warning(f"Database still invalid after wait: {e}")
                 try:
                     os.remove(DB_FILE)
-                except:
-                    pass
+                except OSError as e:
+                    logger.warning(f"Failed to remove invalid database file: {e}")
 
         # Build the database
         return build_database()
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()
+        try:
+            os.remove(LOCK_FILE)
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

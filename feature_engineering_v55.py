@@ -166,6 +166,7 @@ def engineer_features(
     cohort_stats: Optional[Dict[str, Any]] = None,
     model_hierarchical: Optional[Any] = None,
     model_age_hierarchical: Optional[Dict[str, Any]] = None,
+    segment_hierarchical: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Engineer all 104 features from DVSA vehicle history.
@@ -180,6 +181,8 @@ def engineer_features(
             Expected attributes: 'model_rates', 'make_rates', 'global_fail_rate'
         model_age_hierarchical: Optional dict for model-age EB rates (13.4% importance)
             Expected keys: 'model_age_rates', 'make_age_rates', 'global_fail_rate'
+        segment_hierarchical: Optional HierarchicalFeatures for segment-level rates
+            Expected attributes: 'segment_rates', 'make_rates', 'global_fail_rate'
 
     Returns:
         Dict mapping feature names to values
@@ -683,7 +686,27 @@ def engineer_features(
             features['make_age_fail_rate_eb'] = base_rate
             features['eb_unified_prior'] = base_rate
 
-    features['segment_fail_rate_smoothed'] = base_rate  # Not in hierarchical data
+    # Segment-level fail rate from segment_hierarchical (make, age_band, mileage_band)
+    if segment_hierarchical and hasattr(segment_hierarchical, 'segment_rates'):
+        age_band_seg = get_age_band(vehicle_age_for_cohort)
+        mileage = features.get('test_mileage', 0)
+        if mileage < 30000:
+            mileage_band = '0-30k'
+        elif mileage < 60000:
+            mileage_band = '30k-60k'
+        elif mileage < 100000:
+            mileage_band = '60k-100k'
+        else:
+            mileage_band = '100k+'
+        seg_key = (history.make, age_band_seg, mileage_band)
+        seg_rates = segment_hierarchical.segment_rates
+        if isinstance(seg_rates, dict) and seg_key in seg_rates:
+            features['segment_fail_rate_smoothed'] = seg_rates[seg_key]
+        else:
+            make_rates_seg = getattr(segment_hierarchical, 'make_rates', {})
+            features['segment_fail_rate_smoothed'] = make_rates_seg.get(history.make, base_rate)
+    else:
+        features['segment_fail_rate_smoothed'] = base_rate
 
     # =========================================================================
     # DERIVED FEATURES
@@ -721,12 +744,17 @@ def engineer_features(
     else:
         features['historic_negligence_ratio_smoothed'] = 0.0
 
-    if features['historic_negligence_ratio_smoothed'] < 0.2:
+    # Negligence bands must match training categories: clean/low/high/chronic/unknown
+    # Training uses cohort-relative thresholds; approximate with absolute thresholds
+    neg_ratio = features['historic_negligence_ratio_smoothed']
+    if neg_ratio == 0:
+        features['negligence_band'] = 'clean'
+    elif neg_ratio < 0.3:
         features['negligence_band'] = 'low'
-    elif features['historic_negligence_ratio_smoothed'] < 0.5:
-        features['negligence_band'] = 'medium'
-    else:
+    elif neg_ratio < 0.6:
         features['negligence_band'] = 'high'
+    else:
+        features['negligence_band'] = 'chronic'
 
     features['raw_behavioral_count'] = features['prev_count_advisory']
 

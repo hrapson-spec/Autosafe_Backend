@@ -123,6 +123,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
 if CORS_ORIGINS == "*":
+    logger.warning("CORS_ORIGINS not set - defaulting to wildcard '*'. Set CORS_ORIGINS env var in production.")
     # Development: allow all origins but disable credentials to prevent CSRF
     app.add_middleware(
         CORSMiddleware,
@@ -262,11 +263,11 @@ def get_max_year() -> int:
     return datetime.now().year + 1
 
 @app.get("/health")
-async def health_check():
+async def health_check(request: Request):
     """
     Liveness check with component status.
     Always returns 200 if the app is up (for container orchestration).
-    Use /ready for readiness checks that verify database connectivity.
+    Detailed diagnostics require X-API-Key header matching ADMIN_API_KEY.
     """
     # Database status
     db_status = "disconnected"
@@ -283,38 +284,44 @@ async def health_check():
     # Model status
     model_status = "loaded" if model_v55.is_model_loaded() else "not_loaded"
 
-    # DVSA client status - detailed diagnostics
-    dvsa_client = get_dvsa_client()
-    dvsa_diag = dvsa_client.get_diagnostic_status()
-    dvsa_status = "fully_configured" if dvsa_diag["is_configured"] else "missing_credentials"
-
-    # DVLA client status
-    dvla_status = "configured" if DVLA_API_KEY else "demo_mode"
-
     # Overall status
     overall_status = "ok" if model_status == "loaded" else "degraded"
 
-    return {
+    # Minimal response for unauthenticated requests
+    response = {
         "status": overall_status,
         "timestamp": datetime.now().isoformat(),
-        "predictions_enabled": PREDICTIONS_ENABLED,
-        "model_version": MODEL_VERSION,
-        "components": {
-            "database": db_status,
-            "model_v55": model_status,
-            "dvsa_api": {
-                "status": dvsa_status,
-                "client_id": dvsa_diag["client_id_set"],
-                "client_secret": dvsa_diag["client_secret_set"],
-                "token_url": dvsa_diag["token_url_set"],
-                "api_key": dvsa_diag["api_key_set"],
-                "token_valid": dvsa_diag["token_valid"],
-                "base_url": dvsa_diag["base_url"],
-                "env_vars_found": dvsa_diag.get("env_vars_found", []),
-            },
-            "dvla_api": dvla_status,
-        }
     }
+
+    # Detailed diagnostics only with admin API key
+    api_key = request.headers.get("X-API-Key")
+    if _verify_admin_api_key(api_key):
+        dvsa_client = get_dvsa_client()
+        dvsa_diag = dvsa_client.get_diagnostic_status()
+        dvsa_status = "fully_configured" if dvsa_diag["is_configured"] else "missing_credentials"
+        dvla_status = "configured" if DVLA_API_KEY else "demo_mode"
+
+        response.update({
+            "predictions_enabled": PREDICTIONS_ENABLED,
+            "model_version": MODEL_VERSION,
+            "components": {
+                "database": db_status,
+                "model_v55": model_status,
+                "dvsa_api": {
+                    "status": dvsa_status,
+                    "client_id": dvsa_diag["client_id_set"],
+                    "client_secret": dvsa_diag["client_secret_set"],
+                    "token_url": dvsa_diag["token_url_set"],
+                    "api_key": dvsa_diag["api_key_set"],
+                    "token_valid": dvsa_diag["token_valid"],
+                    "base_url": dvsa_diag["base_url"],
+                    "env_vars_found": dvsa_diag.get("env_vars_found", []),
+                },
+                "dvla_api": dvla_status,
+            }
+        })
+
+    return response
 
 
 @app.get("/ready")

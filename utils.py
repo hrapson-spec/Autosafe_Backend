@@ -13,7 +13,7 @@ def get_age_band(age: Optional[Union[int, float]]) -> str:
         age: Vehicle age in years (can be None, NaN, or numeric)
 
     Returns:
-        Age band string (e.g., '0-3', '3-5', '6-10', '10-15', '15+', or 'Unknown')
+        Age band string (e.g., '0-3', '3-5', '6-10', '11-15', '15+', or 'Unknown')
     """
     # Handle None, NaN, and pandas NA types
     if age is None or pd.isna(age):
@@ -30,7 +30,7 @@ def get_age_band(age: Optional[Union[int, float]]) -> str:
     elif age < 11:
         return '6-10'
     elif age < 16:
-        return '10-15'
+        return '11-15'
     else:
         return '15+'
 

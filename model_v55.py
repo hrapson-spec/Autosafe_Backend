@@ -180,6 +180,7 @@ def engineer_features_with_stats(
         cohort_stats=_cohort_stats,
         model_hierarchical=_model_hierarchical,
         model_age_hierarchical=_model_age_hierarchical,
+        segment_hierarchical=_segment_hierarchical,
     )
 
 

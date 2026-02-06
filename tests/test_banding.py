@@ -16,8 +16,8 @@ class TestBanding(unittest.TestCase):
         self.assertEqual(get_age_band(0), '0-3')
         self.assertEqual(get_age_band(2.9), '0-3')
         self.assertEqual(get_age_band(3), '3-5')
-        self.assertEqual(get_age_band(11), '10-15')
-        self.assertEqual(get_age_band(15.9), '10-15')
+        self.assertEqual(get_age_band(11), '11-15')
+        self.assertEqual(get_age_band(15.9), '11-15')
         self.assertEqual(get_age_band(16), '15+')
         self.assertEqual(get_age_band(25), '15+')
 

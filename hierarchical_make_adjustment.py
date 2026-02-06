@@ -46,11 +46,14 @@ Updated: 2026-01-05 - Added ModelHierarchicalFeatures for V6
 Updated: 2026-01-08 - Added RegimeAwareHierarchicalFeatures for V9
 """
 
+import logging
 import pandas as pd
 import numpy as np
 from typing import Dict, Tuple, Optional, Set
 import pickle
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from regime_definitions import infer_regime, infer_powertrain, REGIMES, POWERTRAINS
 
@@ -149,11 +152,11 @@ class HierarchicalFeatures:
 
         self.fitted = True
 
-        print(f"[HierarchicalFeatures] Fitted on {total_tests:,} samples")
-        print(f"  K_GLOBAL={self.K_GLOBAL}, K_SEGMENT={self.K_MAKE}")
-        print(f"  Global failure rate: {self.global_fail_rate:.4f}")
-        print(f"  Make-level rates: {len(self.make_rates)} makes")
-        print(f"  Segment-level rates: {len(self.segment_rates)} segments")
+        logger.info(f"[HierarchicalFeatures] Fitted on {total_tests:,} samples")
+        logger.info(f"  K_GLOBAL={self.K_GLOBAL}, K_SEGMENT={self.K_MAKE}")
+        logger.info(f"  Global failure rate: {self.global_fail_rate:.4f}")
+        logger.info(f"  Make-level rates: {len(self.make_rates)} makes")
+        logger.info(f"  Segment-level rates: {len(self.segment_rates)} segments")
 
         return self
 
@@ -257,7 +260,7 @@ class HierarchicalFeatures:
                 'K_GLOBAL': self.K_GLOBAL,
                 'K_MAKE': self.K_MAKE,
             }, f)
-        print(f"[HierarchicalFeatures] Saved to {path}")
+        logger.info(f"[HierarchicalFeatures] Saved to {path}")
 
     @classmethod
     def load(cls, path: Path) -> 'HierarchicalFeatures':
@@ -271,7 +274,7 @@ class HierarchicalFeatures:
         hf.segment_rates = data['segment_rates']
         hf.fitted = True
 
-        print(f"[HierarchicalFeatures] Loaded from {path}")
+        logger.info(f"[HierarchicalFeatures] Loaded from {path}")
         return hf
 
     def get_summary(self) -> dict:
@@ -437,11 +440,11 @@ class ModelHierarchicalFeatures:
 
         self.fitted = True
 
-        print(f"[ModelHierarchicalFeatures] Fitted on {total_tests:,} samples")
-        print(f"  K_GLOBAL={self.K_GLOBAL}, K_MODEL={self.K_MODEL}, MIN_COUNT={self.MIN_MODEL_COUNT}")
-        print(f"  Global failure rate: {self.global_fail_rate:.4f}")
-        print(f"  Make-level rates: {len(self.make_rates)} makes")
-        print(f"  Model-level rates: {len(self.model_rates)} models ({rare_models} rare, will fallback)")
+        logger.info(f"[ModelHierarchicalFeatures] Fitted on {total_tests:,} samples")
+        logger.info(f"  K_GLOBAL={self.K_GLOBAL}, K_MODEL={self.K_MODEL}, MIN_COUNT={self.MIN_MODEL_COUNT}")
+        logger.info(f"  Global failure rate: {self.global_fail_rate:.4f}")
+        logger.info(f"  Make-level rates: {len(self.make_rates)} makes")
+        logger.info(f"  Model-level rates: {len(self.model_rates)} models ({rare_models} rare, will fallback)")
 
         return self
 
@@ -520,7 +523,7 @@ class ModelHierarchicalFeatures:
                 'K_MODEL': self.K_MODEL,
                 'MIN_MODEL_COUNT': self.MIN_MODEL_COUNT,
             }, f)
-        print(f"[ModelHierarchicalFeatures] Saved to {path}")
+        logger.info(f"[ModelHierarchicalFeatures] Saved to {path}")
 
     @classmethod
     def load(cls, path: Path) -> 'ModelHierarchicalFeatures':
@@ -539,7 +542,7 @@ class ModelHierarchicalFeatures:
         mhf.MIN_MODEL_COUNT = data['MIN_MODEL_COUNT']
         mhf.fitted = True
 
-        print(f"[ModelHierarchicalFeatures] Loaded from {path}")
+        logger.info(f"[ModelHierarchicalFeatures] Loaded from {path}")
         return mhf
 
     def get_summary(self) -> dict:
@@ -767,29 +770,29 @@ class RegimeAwareHierarchicalFeatures:
 
         self.fitted = True
 
-        # Print diagnostic information
-        print(f"[RegimeAwareHierarchicalFeatures] Fitted on {total_tests:,} samples")
-        print(f"  K_GLOBAL={self.K_GLOBAL}, K_REGIME={self.K_REGIME}, K_POWERTRAIN={self.K_POWERTRAIN}, K_SEGMENT={self.K_SEGMENT}")
-        print(f"  Global failure rate: {self.global_fail_rate:.4f}")
-        print(f"\n  Regime Statistics:")
+        # Log diagnostic information
+        logger.info(f"[RegimeAwareHierarchicalFeatures] Fitted on {total_tests:,} samples")
+        logger.info(f"  K_GLOBAL={self.K_GLOBAL}, K_REGIME={self.K_REGIME}, K_POWERTRAIN={self.K_POWERTRAIN}, K_SEGMENT={self.K_SEGMENT}")
+        logger.info(f"  Global failure rate: {self.global_fail_rate:.4f}")
+        logger.info("  Regime Statistics:")
         for regime in REGIMES:
             regime_df = df[df['_regime'] == regime]
             if len(regime_df) > 0:
                 raw_rate = regime_df[target_col].mean()
                 smoothed = self.regime_rates.get(regime, 0)
                 n_makes = len(make_stats[make_stats['regime'] == regime])
-                print(f"    {regime:<12}: {len(regime_df):>10,} samples, "
-                      f"{raw_rate*100:.1f}% raw -> {smoothed*100:.1f}% smoothed, "
-                      f"{n_makes} makes")
-        print(f"\n  Powertrain Statistics:")
+                logger.info(f"    {regime:<12}: {len(regime_df):>10,} samples, "
+                            f"{raw_rate*100:.1f}% raw -> {smoothed*100:.1f}% smoothed, "
+                            f"{n_makes} makes")
+        logger.info("  Powertrain Statistics:")
         for (regime, pt), rate in sorted(self.powertrain_rates.items()):
             pt_df = df[(df['_regime'] == regime) & (df['_powertrain'] == pt)]
             if len(pt_df) > 0:
                 raw_rate = pt_df[target_col].mean()
-                print(f"    {regime}+{pt:<4}: {len(pt_df):>8,} samples, "
-                      f"{raw_rate*100:.1f}% raw -> {rate*100:.1f}% smoothed")
-        print(f"\n  Make-level rates: {len(self.make_rates)} makes")
-        print(f"  Segment-level rates: {len(self.segment_rates)} segments")
+                logger.info(f"    {regime}+{pt:<4}: {len(pt_df):>8,} samples, "
+                            f"{raw_rate*100:.1f}% raw -> {rate*100:.1f}% smoothed")
+        logger.info(f"  Make-level rates: {len(self.make_rates)} makes")
+        logger.info(f"  Segment-level rates: {len(self.segment_rates)} segments")
 
         return self
 
@@ -948,7 +951,7 @@ class RegimeAwareHierarchicalFeatures:
                 'K_POWERTRAIN': self.K_POWERTRAIN,
                 'K_SEGMENT': self.K_SEGMENT,
             }, f)
-        print(f"[RegimeAwareHierarchicalFeatures] Saved to {path}")
+        logger.info(f"[RegimeAwareHierarchicalFeatures] Saved to {path}")
 
     @classmethod
     def load(cls, path: Path) -> 'RegimeAwareHierarchicalFeatures':
@@ -971,7 +974,7 @@ class RegimeAwareHierarchicalFeatures:
         rhf.K_SEGMENT = data['K_SEGMENT']
         rhf.fitted = True
 
-        print(f"[RegimeAwareHierarchicalFeatures] Loaded from {path}")
+        logger.info(f"[RegimeAwareHierarchicalFeatures] Loaded from {path}")
         return rhf
 
     def get_summary(self) -> dict:

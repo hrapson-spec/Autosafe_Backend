@@ -234,6 +234,5 @@ async def retry_failed_distributions() -> dict:
     Returns:
         Dict with retry results
     """
-    # This could be called by a scheduled job
-    # For now, just a placeholder
-    pass
+    # TODO: Implement retry logic for failed distributions
+    return {"retried": 0, "success": 0, "failed": 0}
