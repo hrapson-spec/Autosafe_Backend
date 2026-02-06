@@ -22,9 +22,11 @@ const checkAnotherBtn = document.getElementById('checkAnotherBtn');
 // Handle "Check Another Car" button click
 if (checkAnotherBtn) {
     checkAnotherBtn.addEventListener('click', () => {
-        // Show the search form and header
+        // Show the search form, header, and example preview
         if (searchPanel) searchPanel.classList.remove('hidden');
         if (appHeader) appHeader.classList.remove('hidden');
+        const examplePreview = document.getElementById('examplePreview');
+        if (examplePreview) examplePreview.classList.remove('hidden');
         // Hide the results panel
         if (resultsPanel) resultsPanel.classList.add('hidden');
         // Clear the form
@@ -249,9 +251,11 @@ function displayResults(data) {
     // Store for lead form submission
     currentResultsData = data;
 
-    // Hide the search form and header to make results more prominent
+    // Hide the search form, header, and example preview to make results more prominent
     if (searchPanel) searchPanel.classList.add('hidden');
     if (appHeader) appHeader.classList.add('hidden');
+    const examplePreview = document.getElementById('examplePreview');
+    if (examplePreview) examplePreview.classList.add('hidden');
 
     resultsPanel.classList.remove('hidden');
 

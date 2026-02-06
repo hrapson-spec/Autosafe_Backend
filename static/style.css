@@ -720,6 +720,39 @@ input:focus:not(:focus-visible) {
     color: var(--text-secondary);
 }
 
+/* ===== Example Preview ===== */
+.example-preview {
+    margin-top: var(--space-2xl);
+    margin-bottom: var(--space-lg);
+}
+
+.example-label {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-md);
+}
+
+.example-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-card);
+    position: relative;
+    border: 1px dashed var(--border-color);
+}
+
+.example-cta {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: var(--space-md);
+}
+
 /* ===== Features Section ===== */
 .visually-hidden {
     position: absolute;
