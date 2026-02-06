@@ -264,13 +264,9 @@ function displayResults(data) {
     // Track conversion in Google Ads
     if (typeof gtag === 'function') {
         gtag('event', 'conversion', {
-            'send_to': 'AW-17896487388/VEHICLE_CHECK_LABEL',
+            'send_to': 'AW-17896487388/C81ZCL3WgfQbENzz2tVC',
             'value': 1.0,
             'currency': 'GBP'
-        });
-        gtag('event', 'generate_lead', {
-            'event_category': 'engagement',
-            'event_label': 'risk_check_success'
         });
     }
 
@@ -522,30 +518,27 @@ if (leadForm) {
             leadCapture.classList.add('hidden');
             leadSuccess.classList.remove('hidden');
 
-            // Track lead conversion in Google Ads
+            // Track service-specific conversions in Google Ads
             if (typeof gtag === 'function') {
-                gtag('event', 'conversion', {
-                    'send_to': 'AW-17896487388/LEAD_SUBMIT_LABEL',
-                    'value': 5.0,
-                    'currency': 'GBP'
-                });
-                // Track service-specific events for Google Ads
                 if (selectedServices.includes('mot')) {
-                    gtag('event', 'click_book_mot', {
-                        'event_category': 'outbound_click',
-                        'event_label': 'book_mot'
+                    gtag('event', 'conversion', {
+                        'send_to': 'AW-17896487388/5dOuCMDWgfQbENzz2tVC',
+                        'value': 5.0,
+                        'currency': 'GBP'
                     });
                 }
                 if (selectedServices.includes('repair')) {
-                    gtag('event', 'click_book_repair', {
-                        'event_category': 'outbound_click',
-                        'event_label': 'book_repair'
+                    gtag('event', 'conversion', {
+                        'send_to': 'AW-17896487388/fe4lCMPWgfQbENzz2tVC',
+                        'value': 5.0,
+                        'currency': 'GBP'
                     });
                 }
                 if (selectedServices.includes('reminder')) {
-                    gtag('event', 'sign_up', {
-                        'event_category': 'engagement',
-                        'event_label': 'mot_reminder'
+                    gtag('event', 'conversion', {
+                        'send_to': 'AW-17896487388/Z1LqCJ6Bj_QbENzz2tVC',
+                        'value': 1.0,
+                        'currency': 'GBP'
                     });
                 }
             }
