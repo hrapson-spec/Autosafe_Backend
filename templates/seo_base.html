@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-17896487388');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MOT Check | AutoSafe{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Check MOT failure rates by car make and model. Data from 142 million UK MOT tests.{% endblock %}">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta property="og:title" content="{% block og_title %}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{% endblock %}">
+    <meta property="og:type" content="article">
+    <meta property="og:image" content="https://www.autosafe.one/static/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{% endblock %}">
+    <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
+    <link rel="canonical" href="{% block canonical_url %}{% endblock %}">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    {% block structured_data %}{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .guide-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .guide-content h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; margin-bottom: 1rem; }
+        .guide-content h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: #e5c07b; }
+        .guide-content h3 { font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .guide-content p { line-height: 1.8; margin-bottom: 1rem; color: #a0a0a0; }
+        .guide-content ul { margin-bottom: 1.5rem; padding-left: 1.5rem; }
+        .guide-content li { margin-bottom: 0.75rem; line-height: 1.6; color: #a0a0a0; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        .data-table th { text-align: left; padding: 0.75rem; border-bottom: 2px solid #e5c07b; color: #fff; font-weight: 600; }
+        .data-table td { padding: 0.75rem; border-bottom: 1px solid #333; color: #a0a0a0; }
+        .data-table tr:hover { background: rgba(229, 192, 123, 0.05); }
+        .fail-rate { color: #e5c07b; font-weight: 600; }
+        .fail-rate.high { color: #ef4444; }
+        .fail-rate.low { color: #22c55e; }
+        .sample-size { font-size: 0.85rem; color: #666; }
+        .stat-highlight { background: #2a2a2a; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; text-align: center; }
+        .stat-highlight .big-number { font-size: 3rem; font-weight: 700; color: #e5c07b; }
+        .stat-highlight .label { color: #a0a0a0; margin-top: 0.5rem; }
+        .cta-box { background: linear-gradient(135deg, #2a2a2a, #1a1a1a); border: 1px solid #333; border-radius: 12px; padding: 2rem; margin: 2rem 0; text-align: center; }
+        .cta-box h3 { color: #fff; margin-bottom: 1rem; }
+        .cta-box a { display: inline-block; background: #e5c07b; color: #1a1a1a; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .cta-box a:hover { background: #d4a85a; }
+        .back-link { display: inline-block; margin-bottom: 2rem; color: #e5c07b; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .methodology { background: #1f1f1f; border-left: 3px solid #e5c07b; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: 0.9rem; }
+        .methodology p { margin-bottom: 0.5rem; }
+        .risk-bar-container { margin: 0.5rem 0; }
+        .risk-bar-label { display: flex; justify-content: space-between; margin-bottom: 0.25rem; color: #a0a0a0; font-size: 0.9rem; }
+        .risk-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+        .risk-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+        .risk-bar-fill.low { background: #22c55e; }
+        .risk-bar-fill.medium { background: #e5c07b; }
+        .risk-bar-fill.high { background: #ef4444; }
+        .faq-section { margin-top: 2rem; }
+        .faq-item { margin-bottom: 1.5rem; }
+        .faq-item h3 { color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .faq-item p { margin-bottom: 0.5rem; }
+        .related-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+        .related-links a { background: #2a2a2a; color: #e5c07b; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+        .related-links a:hover { background: #333; }
+        .make-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin: 1.5rem 0; }
+        .make-grid a { background: #2a2a2a; color: #e5c07b; padding: 0.75rem 1rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 500; }
+        .make-grid a:hover { background: #333; }
+    </style>
+</head>
+<body>
+    <div class="app-container" style="max-width: 100%;">
+        <header class="app-header" style="padding: 1rem 0;">
+            <div class="logo">
+                <a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a>
+            </div>
+        </header>
+
+        <main class="guide-content">
+            {% block content %}{% endblock %}
+
+            <div class="cta-box">
+                <h3>{% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}</h3>
+                <p style="color: #a0a0a0; margin-bottom: 1rem;">{% block cta_text %}Get a personalised failure prediction based on your car's age, mileage and history.{% endblock %}</p>
+                <a href="/">Check Your MOT Risk Free</a>
+            </div>
+
+            <h2>Related Guides</h2>
+            <ul>
+                <li><a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check</a></li>
+                <li><a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points</a></li>
+                <li><a href="/static/guides/when-is-mot-due.html" style="color: #e5c07b;">When Is My MOT Due?</a></li>
+                <li><a href="/static/guides/mot-failure-rates-by-car.html" style="color: #e5c07b;">MOT Failure Rates by Car</a></li>
+                <li><a href="/mot-check/" style="color: #e5c07b;">Browse All Makes &amp; Models</a></li>
+            </ul>
+        </main>
+
+        <footer class="app-footer">
+            <p>Contains public sector information licensed under the <a
+                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+                    target="_blank">Open Government Licence v3.0</a></p>
+            <p>Data from UK DVSA &bull; Not official government advice or endorsement.</p>
+            <div class="footer-links">
+                <a href="/static/guides/mot-checklist.html">MOT Checklist</a> &bull;
+                <a href="/static/guides/common-mot-failures.html">Common Failures</a> &bull;
+                <a href="/static/guides/when-is-mot-due.html">When Is MOT Due?</a> &bull;
+                <a href="/static/guides/mot-failure-rates-by-car.html">Failure Rates by Car</a>
+            </div>
+            <div class="footer-links" style="margin-top: 0.5rem;">
+                <a href="/static/terms.html">Terms</a> &bull; <a href="/static/privacy.html">Privacy</a> &bull; <a href="mailto:autosafehq@gmail.com">Send Feedback</a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data) | AutoSafe{% endblock %}
+{% block meta_description %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% MOT failure rate based on {{ "{:,}".format(overall_tests) }} tests. See failure breakdown by age, component risks, and common MOT problems.{% endblock %}
+{% block og_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
+{% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{ "{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
+{% block twitter_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
+{% block twitter_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{ "{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the MOT failure rate for a {{ make_display }} {{ model_display }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The {{ make_display }} {{ model_display }} has an overall MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}%, based on {{ "{:,}".format(overall_tests) }} MOT tests in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK average of 28%."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the most common MOT failures on a {{ make_display }} {{ model_display }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The most common MOT failure areas for the {{ make_display }} {{ model_display }} are: {% for comp in top_components[:3] %}{{ comp.name }} ({{ "%.1f"|format(comp.risk * 100) }}% risk){{ ", " if not loop.last else "" }}{% endfor %}. These are based on weighted component failure rates across all age and mileage bands."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the {{ make_display }} {{ model_display }} reliable for MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "{% if overall_fail_rate < 0.20 %}Yes, the {{ make_display }} {{ model_display }} is more reliable than average for MOT, with a failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%.{% elif overall_fail_rate < 0.30 %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% MOT failure rate, which is close to the UK average of 28%.{% else %}The {{ make_display }} {{ model_display }} has a higher-than-average MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%. Pay extra attention to {{ top_components[0].name|lower if top_components else "common wear items" }} before your test.{% endif %}"
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "{{ make_display }} {{ model_display }} MOT Failure Rate Data",
+  "description": "MOT test failure rates and component risk breakdown for the {{ make_display }} {{ model_display }}, sourced from official DVSA records.",
+  "url": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/",
+  "creator": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one"
+  },
+  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "variableMeasured": [
+    {"@type": "PropertyValue", "name": "MOT Failure Rate", "value": "{{ "%.4f"|format(overall_fail_rate) }}"},
+    {"@type": "PropertyValue", "name": "Total Tests", "value": "{{ overall_tests }}"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/mot-check/{{ make_slug }}/" class="back-link">&larr; All {{ make_display }} Models</a>
+
+<h1>{{ make_display }} {{ model_display }} MOT Failure Rate</h1>
+
+<div class="stat-highlight">
+    <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
+    <div class="label">MOT failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
+    <div class="label" style="margin-top: 0.5rem;">
+        {% if overall_fail_rate > 0.28 %}
+        <span style="color: #ef4444;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }} percentage points above the UK average (28%)</span>
+        {% elif overall_fail_rate < 0.28 %}
+        <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall_fail_rate) * 100) }} percentage points below the UK average (28%)</span>
+        {% else %}
+        <span>Equal to the UK average (28%)</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if age_bands %}
+<h2>Failure Rate by Vehicle Age</h2>
+<p>How the {{ make_display }} {{ model_display }} MOT failure rate changes with age:</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Age</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th>Worst Area</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for band in age_bands %}
+        <tr>
+            <td>{{ band.age_band }} years</td>
+            <td><span class="fail-rate {% if band.fail_rate > 0.35 %}high{% elif band.fail_rate < 0.20 %}low{% endif %}">{{ "%.1f"|format(band.fail_rate * 100) }}%</span></td>
+            <td class="sample-size">{{ "{:,}".format(band.total_tests) }}</td>
+            <td>{{ band.worst_component }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h2>Component Risk Breakdown</h2>
+<p>Which parts of the {{ make_display }} {{ model_display }} are most likely to cause an MOT failure:</p>
+
+{% for comp in components %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ comp.name }}</span>
+        <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (comp.risk * 500)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+        <h3>What is the MOT failure rate for a {{ make_display }} {{ model_display }}?</h3>
+        <p>The {{ make_display }} {{ model_display }} has an overall MOT failure rate of <strong>{{ "%.1f"|format(overall_fail_rate * 100) }}%</strong>, based on {{ "{:,}".format(overall_tests) }} MOT tests recorded in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK national average of approximately 28%.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>What are the most common MOT failures on a {{ make_display }} {{ model_display }}?</h3>
+        <p>The most common areas for MOT failure on a {{ make_display }} {{ model_display }} are:</p>
+        <ul>
+            {% for comp in top_components[:3] %}
+            <li><strong>{{ comp.name }}</strong> &mdash; {{ "%.1f"|format(comp.risk * 100) }}% failure risk</li>
+            {% endfor %}
+        </ul>
+        <p>These component risks are weighted averages across all age and mileage bands in the dataset.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Is the {{ make_display }} {{ model_display }} reliable for MOT?</h3>
+        {% if overall_fail_rate < 0.20 %}
+        <p>Yes, the {{ make_display }} {{ model_display }} performs <strong>better than average</strong> in MOT tests. Its {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate is well below the UK average of 28%, making it one of the more reliable options.</p>
+        {% elif overall_fail_rate < 0.30 %}
+        <p>The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate, which is <strong>close to the UK average</strong> of 28%. It's neither particularly unreliable nor exceptionally reliable for MOT purposes.</p>
+        {% else %}
+        <p>The {{ make_display }} {{ model_display }} has a <strong>higher-than-average</strong> MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}%, compared to the UK average of 28%. Before your MOT, pay extra attention to <strong>{{ top_components[0].name|lower if top_components else "common wear items" }}</strong>, which is the most common failure area for this model.</p>
+        {% endif %}
+    </div>
+</div>
+
+<h2>Other {{ make_display }} Models</h2>
+<div class="related-links">
+    {% for sibling in sibling_models %}
+    <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ sibling.display_name }}</a>
+    {% endfor %}
+</div>
+
+<div class="methodology">
+    <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
+</div>
+{% endblock %}
+
+{% block cta_heading %}Check Your Specific {{ make_display }} {{ model_display }}{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle's age, mileage and history.{% endblock %}

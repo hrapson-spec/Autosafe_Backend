@@ -1,0 +1,75 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ make_display }} MOT Failure Rates by Model | AutoSafe{% endblock %}
+{% block meta_description %}See MOT failure rates for {{ models|length }} {{ make_display }} models. Find out which {{ make_display }} cars are most and least likely to fail, based on real DVSA test data.{% endblock %}
+{% block og_title %}{{ make_display }} MOT Failure Rates by Model{% endblock %}
+{% block og_description %}See MOT failure rates for {{ models|length }} {{ make_display }} models based on real DVSA data.{% endblock %}
+{% block twitter_title %}{{ make_display }} MOT Failure Rates by Model{% endblock %}
+{% block twitter_description %}See MOT failure rates for {{ models|length }} {{ make_display }} models based on real DVSA data.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "{{ make_display }} MOT Failure Rates by Model",
+  "description": "MOT failure rates for {{ models|length }} {{ make_display }} models based on 142 million UK MOT tests.",
+  "url": "https://www.autosafe.one/mot-check/{{ make_slug }}/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.autosafe.one/static/logo_clean.png"
+    }
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/mot-check/" class="back-link">&larr; All Makes</a>
+
+<h1>{{ make_display }} MOT Failure Rates</h1>
+<p>MOT failure rates for <strong>{{ models|length }} {{ make_display }} models</strong>, ranked from highest to lowest failure rate. Data from official DVSA MOT test records.</p>
+
+{% if models %}
+<h2>Which {{ make_display }} Models Fail MOT Most?</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th>Failure Rate</th>
+            <th>Total Tests</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for model in models %}
+        <tr>
+            <td><a href="/mot-check/{{ make_slug }}/{{ model.slug }}/" style="color: #e5c07b; text-decoration: none;">{{ make_display }} {{ model.display_name }}</a></td>
+            <td><span class="fail-rate {% if model.fail_rate > 0.35 %}high{% elif model.fail_rate < 0.20 %}low{% endif %}">{{ "%.1f"|format(model.fail_rate * 100) }}%</span></td>
+            <td class="sample-size">{{ "{:,}".format(model.total_tests) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="methodology">
+    <p><strong>How we calculate failure rates:</strong> Rates are weighted averages across all mileage bands for each model. Only models with 100+ test records are shown. Data sourced from official DVSA MOT test records covering 142 million tests.</p>
+</div>
+{% else %}
+<p>No models with sufficient test data found for {{ make_display }}.</p>
+{% endif %}
+
+<h2>Other Makes</h2>
+<div class="related-links">
+    {% for other in other_makes[:12] %}
+    <a href="/mot-check/{{ other.slug }}/">{{ other.display_name }}</a>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block cta_heading %}Check Your {{ make_display }}{% endblock %}
+{% block cta_text %}Enter your reg to get a personalised MOT failure prediction for your specific {{ make_display }}.{% endblock %}
