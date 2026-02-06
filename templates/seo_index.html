@@ -1,0 +1,52 @@
+{% extends "seo_base.html" %}
+
+{% block title %}MOT Failure Rates by Make &amp; Model (2026 Data) | AutoSafe{% endblock %}
+{% block meta_description %}Browse MOT failure rates for {{ makes|length }} car makes and hundreds of models. Find out how your car compares using data from 142 million UK MOT tests.{% endblock %}
+{% block og_title %}MOT Failure Rates by Make &amp; Model (2026 Data){% endblock %}
+{% block og_description %}Browse MOT failure rates for {{ makes|length }} car makes and hundreds of models.{% endblock %}
+{% block twitter_title %}MOT Failure Rates by Make &amp; Model (2026 Data){% endblock %}
+{% block twitter_description %}Browse MOT failure rates for {{ makes|length }} car makes and hundreds of models.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/mot-check/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "MOT Failure Rates by Make & Model",
+  "description": "Browse MOT failure rates for {{ makes|length }} car makes and hundreds of models. Data from 142 million UK MOT tests.",
+  "url": "https://www.autosafe.one/mot-check/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.autosafe.one/static/logo_clean.png"
+    }
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="back-link">&larr; Back to MOT Check</a>
+
+<h1>MOT Failure Rates by Make &amp; Model</h1>
+<p>Browse MOT failure rate data for <strong>{{ makes|length }} car makes</strong> and hundreds of models, based on <strong>142 million UK MOT test records</strong> from the DVSA.</p>
+<p>Select a make below to see model-by-model failure rates, component breakdowns, and reliability rankings.</p>
+
+<h2>All Makes</h2>
+<div class="make-grid">
+    {% for make in makes %}
+    <a href="/mot-check/{{ make.slug }}/">{{ make.display_name }}</a>
+    {% endfor %}
+</div>
+
+<div class="methodology">
+    <p><strong>About this data:</strong> Failure rates are calculated from official DVSA MOT test records. Only models with at least 100 test records are included for statistical reliability. Rates are weighted averages across all mileage bands.</p>
+</div>
+{% endblock %}
+
+{% block cta_heading %}Check Your Specific Vehicle{% endblock %}
+{% block cta_text %}Enter your reg to get a personalised MOT failure prediction based on your exact car.{% endblock %}

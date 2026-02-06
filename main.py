@@ -99,12 +99,17 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("No SQLite fallback available")
 
+    # Initialize SEO landing page data (needs SQLite)
+    from seo_pages import initialize_seo_data
+    initialize_seo_data(get_sqlite_connection)
+
     # Initialize DVSA client
     dvsa_client = get_dvsa_client()
     if dvsa_client.is_configured:
         logger.info("DVSA client initialized with OAuth credentials")
     else:
-        logger.warning("DVSA OAuth credentials not configured - V55 predictions will fail")
+        logger.error("DVSA OAuth credentials NOT configured - all V55 predictions will fall back to population averages!")
+        logger.error("Set DVSA_CLIENT_ID, DVSA_CLIENT_SECRET, DVSA_TOKEN_URL, and DVSA_API_KEY to enable real predictions")
 
     yield  # Application runs here
 
@@ -145,6 +150,20 @@ else:
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+
+
+# Non-WWW to WWW Redirect Middleware
+from starlette.responses import RedirectResponse
+
+@app.middleware("http")
+async def redirect_non_www(request, call_next):
+    """Redirect autosafe.one to www.autosafe.one for SEO canonicalization."""
+    host = request.headers.get("host", "")
+    if host == "autosafe.one":
+        url = request.url.replace(scheme="https")
+        new_url = str(url).replace("://autosafe.one", "://www.autosafe.one", 1)
+        return RedirectResponse(url=new_url, status_code=301)
+    return await call_next(request)
 
 
 # Security Headers Middleware
@@ -1738,26 +1757,25 @@ async def report_outcome(assignment_id: str, request: Request):
     }
 
 
-# Debug endpoint for testing risk_checks save
-@app.get("/api/debug/test-risk-check")
-async def test_risk_check():
-    """Test endpoint to debug risk_checks saving."""
-    from datetime import date
+# Debug endpoint for testing risk_checks save (admin-only)
+@app.get("/api/admin/test-risk-check")
+@limiter.limit("5/minute")
+async def test_risk_check(request: Request):
+    """Test endpoint to debug risk_checks saving (admin only)."""
+    api_key = request.headers.get("X-API-Key")
+    if not _verify_admin_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-    # Return actual DATABASE_URL being used
-    db_url = db.DATABASE_URL
-    db_url_masked = db_url[:50] + "..." if db_url else "NOT SET"
+    from datetime import date
 
     pool = await db.get_pool()
     if not pool:
-        return {"error": "No database pool", "DATABASE_URL": db_url_masked}
+        return {"error": "No database pool"}
 
     try:
-        # First, count existing records
         async with pool.acquire() as conn:
             count_before = await conn.fetchval("SELECT COUNT(*) FROM risk_checks")
 
-        # Insert test record
         result = await db.save_risk_check({
             'registration': 'DEBUG123',
             'postcode': 'SW1A1AA',
@@ -1777,20 +1795,18 @@ async def test_risk_check():
             'is_dvsa_data': False,
         })
 
-        # Count after
         async with pool.acquire() as conn:
             count_after = await conn.fetchval("SELECT COUNT(*) FROM risk_checks")
 
         return {
             "success": True,
             "risk_check_id": result,
-            "DATABASE_URL": db_url_masked,
             "count_before": count_before,
             "count_after": count_after
         }
     except Exception as e:
-        import traceback
-        return {"error": str(e), "type": type(e).__name__, "traceback": traceback.format_exc()}
+        logger.error(f"Test risk check failed: {type(e).__name__}: {e}")
+        return {"error": str(e), "type": type(e).__name__}
 
 
 # Mount static files (only if the folder exists)
@@ -1800,15 +1816,20 @@ if os.path.isdir("static"):
         app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Register SEO pages (must be before SPA catch-all)
+from seo_pages import register_seo_routes
+register_seo_routes(app, get_sqlite_connection)
+
+if os.path.isdir("static"):
     @app.get("/")
     async def read_index():
         return FileResponse('static/index.html')
 
-    # Catch-all route for SPA client-side routing (must be after API routes)
+    # Catch-all route for SPA client-side routing (must be after API routes and SEO routes)
     @app.get("/{path:path}")
     async def serve_spa(path: str):
-        # Don't serve index.html for API routes or static files
-        if path.startswith("api/") or path.startswith("static/"):
+        # Don't serve index.html for API routes, static files, or SEO pages
+        if path.startswith(("api/", "static/", "mot-check")):
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return FileResponse('static/index.html')
 else:
