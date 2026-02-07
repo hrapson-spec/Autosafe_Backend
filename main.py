@@ -1405,12 +1405,13 @@ def _verify_admin_api_key(api_key: Optional[str]) -> bool:
     """
     Verify admin API key using constant-time comparison.
 
-    Prevents timing attacks by using secrets.compare_digest() which
-    takes the same amount of time regardless of where strings differ.
+    Reads ADMIN_API_KEY from environment at call time (not module load)
+    so that Railway env var changes take effect without redeployment.
     """
-    if not ADMIN_API_KEY or not api_key:
+    admin_key = os.environ.get("ADMIN_API_KEY") or ADMIN_API_KEY
+    if not admin_key or not api_key:
         return False
-    return secrets.compare_digest(api_key, ADMIN_API_KEY)
+    return secrets.compare_digest(api_key, admin_key)
 
 
 @app.get("/api/leads")
