@@ -1404,14 +1404,10 @@ else:
 def _verify_admin_api_key(api_key: Optional[str]) -> bool:
     """
     Verify admin API key using constant-time comparison.
-
-    Reads ADMIN_API_KEY from environment at call time (not module load)
-    so that Railway env var changes take effect without redeployment.
     """
-    admin_key = os.environ.get("ADMIN_API_KEY") or ADMIN_API_KEY
-    if not admin_key or not api_key:
+    if not ADMIN_API_KEY or not api_key:
         return False
-    return secrets.compare_digest(api_key, admin_key)
+    return secrets.compare_digest(api_key, ADMIN_API_KEY)
 
 
 @app.get("/api/leads")
@@ -1760,21 +1756,6 @@ async def report_outcome(assignment_id: str, request: Request):
         "success": True,
         "message": "Outcome recorded. Thanks!",
         "outcome": outcome
-    }
-
-
-@app.get("/api/admin/debug-key")
-async def debug_key(request: Request):
-    """Temporary debug endpoint - REMOVE after fixing."""
-    api_key = request.headers.get("X-API-Key")
-    admin_key = os.environ.get("ADMIN_API_KEY")
-    return {
-        "received_key_len": len(api_key) if api_key else 0,
-        "env_key_len": len(admin_key) if admin_key else 0,
-        "received_repr": repr(api_key[:5]) if api_key else None,
-        "env_repr": repr(admin_key[:5]) if admin_key else None,
-        "match": secrets.compare_digest(api_key, admin_key) if api_key and admin_key else False,
-        "module_key_len": len(ADMIN_API_KEY) if ADMIN_API_KEY else 0,
     }
 
 
