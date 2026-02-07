@@ -853,5 +853,23 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
 
     except Exception as e:
         logger.error(f"Failed to save risk check: {e}")
+        # Backup to local file so data is never lost
+        _backup_risk_check_to_file(risk_data)
         return None
 
+
+def _backup_risk_check_to_file(risk_data: Dict):
+    """Append risk check to a local JSONL file as backup when DB save fails."""
+    try:
+        import json
+        from datetime import datetime, date
+        backup_path = os.path.join(os.path.dirname(__file__), "risk_checks_backup.jsonl")
+        entry = {**risk_data, "backup_timestamp": datetime.now().isoformat()}
+        for k, v in entry.items():
+            if isinstance(v, (datetime, date)):
+                entry[k] = v.isoformat()
+        with open(backup_path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+        logger.info(f"Risk check backed up to file: {risk_data.get('registration')}")
+    except Exception as e:
+        logger.error(f"Failed to backup risk check to file: {e}")
