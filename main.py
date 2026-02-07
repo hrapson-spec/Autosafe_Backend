@@ -1395,6 +1395,10 @@ async def submit_lead(request: Request, lead: LeadSubmission):
 
 # Admin API key for accessing leads
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
+if ADMIN_API_KEY:
+    logger.info(f"ADMIN_API_KEY loaded ({len(ADMIN_API_KEY)} chars)")
+else:
+    logger.warning("ADMIN_API_KEY not set - admin endpoints will be inaccessible")
 
 
 def _verify_admin_api_key(api_key: Optional[str]) -> bool:
