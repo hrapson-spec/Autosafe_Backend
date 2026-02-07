@@ -1778,13 +1778,15 @@ async def export_risk_checks(
     try:
         async with pool.acquire() as conn:
             if since:
+                from datetime import datetime as dt
+                since_dt = dt.fromisoformat(since) if "T" in since else dt.fromisoformat(since + "T00:00:00")
                 rows = await conn.fetch(
                     """SELECT created_at, registration, postcode, vehicle_make, vehicle_model,
                               vehicle_year, vehicle_fuel_type, mileage, last_mot_date, last_mot_result,
                               failure_risk, confidence_level, model_version, prediction_source
-                       FROM risk_checks WHERE created_at >= $1::timestamp
+                       FROM risk_checks WHERE created_at >= $1
                        ORDER BY created_at DESC""",
-                    since
+                    since_dt
                 )
             else:
                 rows = await conn.fetch(
