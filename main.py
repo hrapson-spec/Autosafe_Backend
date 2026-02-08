@@ -1286,6 +1286,9 @@ class RiskData(BaseModel):
         return v
 
 
+ALLOWED_URGENCY_VALUES = {'asap', 'this_week', 'this_month', 'exploring'}
+
+
 class LeadSubmission(BaseModel):
     email: str
     postcode: str
@@ -1293,6 +1296,9 @@ class LeadSubmission(BaseModel):
     phone: Optional[str] = None
     lead_type: str = "garage"
     services_requested: Optional[List[str]] = None
+    description: Optional[str] = None
+    urgency: Optional[str] = None
+    consent_given: bool
     vehicle: Optional[VehicleInfo] = None
     risk_data: Optional[RiskData] = None
 
@@ -1302,10 +1308,8 @@ class LeadSubmission(BaseModel):
         """Sanitize name field to prevent XSS (defense-in-depth with Jinja2 escaping)."""
         if v is None:
             return v
-        # Use bleach to safely strip all HTML tags (more robust than regex)
         import bleach
         v = bleach.clean(v, tags=[], strip=True)
-        # Limit length to prevent abuse
         v = v.strip()[:100]
         return v if v else None
 
@@ -1316,15 +1320,42 @@ class LeadSubmission(BaseModel):
         if v is None:
             return v
         import re
-        # Keep only digits, spaces, +, -, (, )
         v = re.sub(r'[^\d\s+\-()]', '', v)
-        v = v.strip()[:20]  # Limit length
+        v = v.strip()[:20]
         return v if v else None
+
+    @field_validator('description')
+    @classmethod
+    def sanitize_description(cls, v):
+        """Sanitize description field - strip HTML, limit to 1000 chars."""
+        if v is None:
+            return v
+        import bleach
+        v = bleach.clean(v, tags=[], strip=True)
+        v = v.strip()[:1000]
+        return v if v else None
+
+    @field_validator('urgency')
+    @classmethod
+    def validate_urgency(cls, v):
+        """Validate urgency is one of the allowed values."""
+        if v is None:
+            return v
+        if v not in ALLOWED_URGENCY_VALUES:
+            raise ValueError(f'urgency must be one of: {", ".join(ALLOWED_URGENCY_VALUES)}')
+        return v
+
+    @field_validator('consent_given')
+    @classmethod
+    def validate_consent(cls, v):
+        """Consent must be True to submit a lead."""
+        if not v:
+            raise ValueError('Consent is required to submit a lead')
+        return v
 
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        # Basic email validation: must contain @ with something before and after
         if not v or '@' not in v:
             raise ValueError('Invalid email format')
         local, domain = v.rsplit('@', 1)
@@ -1368,6 +1399,9 @@ async def submit_lead(request: Request, lead: LeadSubmission):
         "phone": lead.phone,
         "lead_type": lead.lead_type,
         "services_requested": lead.services_requested,
+        "description": lead.description,
+        "urgency": lead.urgency,
+        "consent_given": lead.consent_given,
         "vehicle": lead.vehicle.model_dump() if lead.vehicle else {},
         "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
     }

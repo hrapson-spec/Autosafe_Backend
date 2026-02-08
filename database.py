@@ -303,14 +303,17 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
         risk_data = lead_data.get('risk_data', {})
         top_risks = risk_data.get('top_risks', [])
         services_requested = lead_data.get('services_requested', [])
+        consent_given = lead_data.get('consent_given', False)
 
         async with pool.acquire() as conn:
             result = await conn.fetchrow(
                 """INSERT INTO leads (
                     email, postcode, name, phone, lead_type,
                     vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                    failure_risk, reliability_score, top_risks, services_requested
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb)
+                    failure_risk, reliability_score, top_risks, services_requested,
+                    description, urgency, consent_given, consent_timestamp
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb,
+                          $14, $15, $16, CASE WHEN $16 THEN NOW() ELSE NULL END)
                 RETURNING id""",
                 lead_data.get('email'),
                 lead_data.get('postcode'),
@@ -324,7 +327,10 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                 risk_data.get('failure_risk'),
                 risk_data.get('reliability_score'),
                 json.dumps(top_risks) if top_risks else '[]',
-                json.dumps(services_requested) if services_requested else '[]'
+                json.dumps(services_requested) if services_requested else '[]',
+                lead_data.get('description'),
+                lead_data.get('urgency'),
+                consent_given
             )
 
             lead_id = str(result['id'])
