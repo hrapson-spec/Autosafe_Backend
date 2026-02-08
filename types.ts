@@ -107,7 +107,13 @@ export interface GarageLeadRiskData {
 export interface GarageLeadSubmission {
   email: string;
   postcode: string;
+  name?: string;
+  phone?: string;
   lead_type: 'garage';
+  services_requested: string[];
+  description?: string;
+  urgency?: string;
+  consent_given: boolean;
   vehicle: GarageLeadVehicle;
   risk_data: GarageLeadRiskData;
 }

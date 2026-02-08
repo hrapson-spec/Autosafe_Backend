@@ -18,7 +18,10 @@ import {
   Mail,
   Car,
   Check,
-  Heart
+  Heart,
+  Phone,
+  User,
+  Clock
 } from 'lucide-react';
 
 export {
@@ -40,5 +43,8 @@ export {
   Mail,
   Car,
   Check,
-  Heart
+  Heart,
+  Phone,
+  User,
+  Clock
 };

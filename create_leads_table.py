@@ -40,13 +40,17 @@ def main():
             failure_risk REAL,
             reliability_score INTEGER,
             top_risks JSONB,
+            description TEXT,
+            urgency VARCHAR(20),
+            consent_given BOOLEAN NOT NULL DEFAULT FALSE,
+            consent_timestamp TIMESTAMP,
             created_at TIMESTAMP DEFAULT NOW(),
             contacted_at TIMESTAMP,
             notes TEXT
         )
     """)
 
-    # Add name and phone columns if they don't exist (for existing tables)
+    # Add columns if they don't exist (for existing tables)
     cur.execute("""
         DO $$
         BEGIN
@@ -55,6 +59,18 @@ def main():
             END IF;
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='phone') THEN
                 ALTER TABLE leads ADD COLUMN phone VARCHAR(50);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='description') THEN
+                ALTER TABLE leads ADD COLUMN description TEXT;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='urgency') THEN
+                ALTER TABLE leads ADD COLUMN urgency VARCHAR(20);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='consent_given') THEN
+                ALTER TABLE leads ADD COLUMN consent_given BOOLEAN NOT NULL DEFAULT FALSE;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='consent_timestamp') THEN
+                ALTER TABLE leads ADD COLUMN consent_timestamp TIMESTAMP;
             END IF;
         END $$;
     """)
