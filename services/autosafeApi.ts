@@ -127,7 +127,27 @@ export async function getRiskAssessment(
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  const raw = await response.json();
+
+  // Map lowercase API response to PascalCase BackendRiskResponse
+  return {
+    model_id: raw.vehicle || `${make} ${model}`,
+    age_band: raw.age_band || `${year}`,
+    mileage_band: raw.mileage_band || `${mileage}`,
+    Total_Tests: raw.Total_Tests || raw.total_tests || 0,
+    Total_Failures: raw.Total_Failures || raw.total_failures || 0,
+    Failure_Risk: raw.Failure_Risk ?? raw.failure_risk ?? 0,
+    Confidence_Level: raw.Confidence_Level || raw.confidence_level,
+    Risk_Brakes: raw.Risk_Brakes ?? raw.risk_brakes,
+    Risk_Suspension: raw.Risk_Suspension ?? raw.risk_suspension,
+    Risk_Tyres: raw.Risk_Tyres ?? raw.risk_tyres,
+    Risk_Steering: raw.Risk_Steering ?? raw.risk_steering,
+    Risk_Visibility: raw.Risk_Visibility ?? raw.risk_visibility,
+    Risk_Lamps: raw.Risk_Lamps ?? raw.risk_lamps,
+    Risk_Body: raw.Risk_Body ?? raw.risk_body,
+    Repair_Cost_Estimate: raw.Repair_Cost_Estimate || raw.repair_cost_estimate,
+    note: raw.note,
+  } as BackendRiskResponse;
 }
 
 // ============================================================================
