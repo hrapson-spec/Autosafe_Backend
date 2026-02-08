@@ -789,7 +789,11 @@ input:focus:not(:focus-visible) {
     max-width: 1000px;
     margin: 60px auto 0;
     padding: 0 20px;
-    width: 100%;
+    /* Break out of narrow container */
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .feature-card {
