@@ -26,11 +26,18 @@ COMPONENTS = [
     ("Risk_Body_Chassis_Structure", "Body & Chassis"),
 ]
 
-DB_FILE = Path(__file__).parent.parent / "autosafe.db"
+_PROJECT_ROOT = Path(__file__).parent.parent
+_CANDIDATE_PATHS = [
+    Path("/tmp/autosafe.db"),          # Production (built on container start)
+    _PROJECT_ROOT / "autosafe.db",     # Local development
+]
+DB_FILE = next((p for p in _CANDIDATE_PATHS if p.exists()), _CANDIDATE_PATHS[-1])
 
 
 def get_connection() -> sqlite3.Connection:
     """Get a SQLite connection with Row factory."""
+    if not DB_FILE.exists():
+        raise FileNotFoundError(f"SQLite database not found at {DB_FILE}")
     conn = sqlite3.connect(str(DB_FILE))
     conn.row_factory = sqlite3.Row
     return conn
