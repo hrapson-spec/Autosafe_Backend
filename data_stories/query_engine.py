@@ -78,7 +78,7 @@ def query_reliability_ranking(limit: int = 10, order: str = "best") -> dict:
     order: 'best' (lowest fail rate) or 'worst' (highest fail rate)
     """
     direction = "ASC" if order == "best" else "DESC"
-    adjective = "Most Reliable" if order == "best" else "Least Reliable"
+    adjective = "Lowest MOT Failure Rates" if order == "best" else "Highest MOT Failure Rates"
 
     conn = get_connection()
     try:
@@ -132,16 +132,19 @@ def query_reliability_ranking(limit: int = 10, order: str = "best") -> dict:
         return {
             "story_type": "reliability_ranking",
             "slug": f"{'most' if order == 'best' else 'least'}-reliable-cars",
-            "title": f"Britain's {limit} {adjective} Cars for MOT",
+            "title": f"Britain's {limit} {adjective}",
             "subtitle": f"Ranked by MOT failure rate from millions of real test results",
             "data": data,
             "methodology": (
                 f"Failure rates are weighted averages across all age and mileage bands, "
                 f"calculated from official DVSA MOT records. Only models with 10,000+ "
-                f"recorded tests are included. Data covers 142 million MOT tests across the UK."
+                f"recorded tests are included. Data covers 142 million MOT tests across the UK. "
+                f"MOT failure rates reflect test outcomes recorded by DVSA, not a measure of "
+                f"manufacturer quality. Results are influenced by vehicle age, mileage, "
+                f"maintenance history, and driving conditions."
             ),
             "key_stat": (
-                f"The {adjective.lower()} car for MOT is the "
+                f"The {'lowest' if order == 'best' else 'highest'} MOT failure rate belongs to the "
                 f"{data[0]['make']} {data[0]['model']} with a {data[0]['fail_rate']}% failure rate"
                 if data else "No data available"
             ),
@@ -211,11 +214,13 @@ def query_first_mot_failures(limit: int = 10) -> dict:
                 "Analysis of MOT test results for vehicles aged 3-5 years (the typical "
                 "age for a first or second MOT). Only models with 5,000+ tests in this "
                 "age band are included. Data from official DVSA MOT records covering "
-                "142 million tests."
+                "142 million tests. MOT failure rates reflect test outcomes recorded by "
+                "DVSA, not a measure of manufacturer quality. Results are influenced by "
+                "vehicle age, mileage, maintenance history, and driving conditions."
             ),
             "key_stat": (
                 f"The {data[0]['make']} {data[0]['model']} has a {data[0]['fail_rate']}% "
-                f"failure rate at just 3-5 years old -- the worst of any popular car"
+                f"failure rate at just 3-5 years old -- the highest of any popular car in this age group"
                 if data else "No data available"
             ),
         }
@@ -306,7 +311,9 @@ def query_component_breakdown() -> dict:
                 "Component failure rates are weighted averages across all makes, models, "
                 "ages and mileages in the DVSA dataset. Each component rate represents "
                 "the probability of that specific area causing an MOT failure. Data covers "
-                "142 million MOT tests across the UK."
+                "142 million MOT tests across the UK. MOT failure rates reflect test outcomes "
+                "recorded by DVSA, not a measure of manufacturer quality. Results are "
+                "influenced by vehicle age, mileage, maintenance history, and driving conditions."
             ),
             "key_stat": (
                 f"{overall_risks[0]['component']} is the #1 cause of MOT failures at "

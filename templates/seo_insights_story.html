@@ -37,6 +37,11 @@
     <div class="label" style="font-size: 1.1rem;">{{ story.key_stat }}</div>
 </div>
 
+<div style="background: #1f1f1f; border: 1px solid #444; border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: 0.9rem;">
+    <p style="margin: 0 0 0.5rem 0; color: #e5c07b; font-weight: 600;">Data disclaimer</p>
+    <p style="margin: 0; color: #a0a0a0;">These rankings are based on official DVSA MOT test records and reflect test outcomes, not manufacturer quality assessments. Failure rates are influenced by vehicle age, average mileage, owner maintenance habits, and driving conditions. A high failure rate does not necessarily indicate poor manufacturing.</p>
+</div>
+
 {% if story.story_type in ('reliability_ranking', 'most_reliable', 'first_mot_failures') %}
 {# --- Ranking table --- #}
 <h2>The Full Ranking</h2>

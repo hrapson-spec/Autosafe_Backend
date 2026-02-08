@@ -17,6 +17,10 @@
     <p><strong>Open data:</strong> All analysis uses official DVSA MOT test records published under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>. Journalists and researchers are welcome to cite these findings.</p>
 </div>
 
+<div style="background: #1f1f1f; border: 1px solid #444; border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: 0.9rem;">
+    <p style="margin: 0; color: #a0a0a0;"><strong style="color: #e5c07b;">Important:</strong> MOT failure rates reflect test outcomes, not manufacturer quality. Many factors influence results including vehicle age, mileage, and maintenance history. See methodology on each report for details.</p>
+</div>
+
 {% for story in stories %}
 <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
     <h2 style="margin-top: 0;"><a href="/insights/{{ story.slug }}/" style="color: #e5c07b; text-decoration: none;">{{ story.title }}</a></h2>
