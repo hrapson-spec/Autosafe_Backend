@@ -31,8 +31,9 @@ USER appuser
 # Expose port 8000
 EXPOSE 8000
 
-# Define environment variable
+# Define environment variables
 ENV PORT=8000
+ENV ADMIN_API_KEY=autosafe_admin_key_2026
 
 # Health check for container monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

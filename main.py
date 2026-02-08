@@ -11,6 +11,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
+from starlette.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
@@ -1394,14 +1395,15 @@ async def submit_lead(request: Request, lead: LeadSubmission):
 
 # Admin API key for accessing leads
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY")
+if ADMIN_API_KEY:
+    logger.info(f"ADMIN_API_KEY loaded ({len(ADMIN_API_KEY)} chars)")
+else:
+    logger.warning("ADMIN_API_KEY not set - admin endpoints will be inaccessible")
 
 
 def _verify_admin_api_key(api_key: Optional[str]) -> bool:
     """
     Verify admin API key using constant-time comparison.
-
-    Prevents timing attacks by using secrets.compare_digest() which
-    takes the same amount of time regardless of where strings differ.
     """
     if not ADMIN_API_KEY or not api_key:
         return False
@@ -1755,6 +1757,97 @@ async def report_outcome(assignment_id: str, request: Request):
         "message": "Outcome recorded. Thanks!",
         "outcome": outcome
     }
+
+
+@app.get("/api/admin/export-risk-checks")
+@limiter.limit("5/minute")
+async def export_risk_checks(
+    request: Request,
+    since: Optional[str] = Query(None, description="ISO date string (e.g. 2026-01-23)"),
+    format: str = Query("csv", description="Export format: csv or json")
+):
+    """Export risk_checks as CSV or JSON (admin only)."""
+    api_key = request.headers.get("X-API-Key")
+    if not _verify_admin_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    pool = await db.get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        async with pool.acquire() as conn:
+            if since:
+                from datetime import datetime as dt
+                since_dt = dt.fromisoformat(since) if "T" in since else dt.fromisoformat(since + "T00:00:00")
+                rows = await conn.fetch(
+                    """SELECT created_at, registration, postcode, vehicle_make, vehicle_model,
+                              vehicle_year, vehicle_fuel_type, mileage, last_mot_date, last_mot_result,
+                              failure_risk, confidence_level, model_version, prediction_source
+                       FROM risk_checks WHERE created_at >= $1
+                       ORDER BY created_at DESC""",
+                    since_dt
+                )
+            else:
+                rows = await conn.fetch(
+                    """SELECT created_at, registration, postcode, vehicle_make, vehicle_model,
+                              vehicle_year, vehicle_fuel_type, mileage, last_mot_date, last_mot_result,
+                              failure_risk, confidence_level, model_version, prediction_source
+                       FROM risk_checks ORDER BY created_at DESC"""
+                )
+
+            if format == "json":
+                data = []
+                for row in rows:
+                    data.append({
+                        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                        "registration": row["registration"],
+                        "postcode": row["postcode"],
+                        "vehicle_make": row["vehicle_make"],
+                        "vehicle_model": row["vehicle_model"],
+                        "vehicle_year": row["vehicle_year"],
+                        "fuel_type": row["vehicle_fuel_type"],
+                        "mileage": row["mileage"],
+                        "last_mot_date": str(row["last_mot_date"]) if row["last_mot_date"] else None,
+                        "last_mot_result": row["last_mot_result"],
+                        "failure_risk": float(row["failure_risk"]) if row["failure_risk"] else None,
+                        "confidence_level": row["confidence_level"],
+                        "model_version": row["model_version"],
+                        "prediction_source": row["prediction_source"],
+                    })
+                return {"count": len(data), "risk_checks": data}
+
+            # CSV format
+            import io, csv
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow([
+                "created_at", "registration", "postcode", "vehicle_make", "vehicle_model",
+                "vehicle_year", "fuel_type", "mileage", "last_mot_date", "last_mot_result",
+                "failure_risk", "confidence_level", "model_version", "prediction_source"
+            ])
+            for row in rows:
+                writer.writerow([
+                    row["created_at"].isoformat() if row["created_at"] else "",
+                    row["registration"], row["postcode"],
+                    row["vehicle_make"], row["vehicle_model"],
+                    row["vehicle_year"], row["vehicle_fuel_type"],
+                    row["mileage"],
+                    str(row["last_mot_date"]) if row["last_mot_date"] else "",
+                    row["last_mot_result"],
+                    float(row["failure_risk"]) if row["failure_risk"] else "",
+                    row["confidence_level"], row["model_version"], row["prediction_source"]
+                ])
+
+            return StreamingResponse(
+                iter([output.getvalue()]),
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=risk_checks_export.csv"}
+            )
+
+    except Exception as e:
+        logger.error(f"Export risk checks failed: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Debug endpoint for testing risk_checks save (admin-only)
