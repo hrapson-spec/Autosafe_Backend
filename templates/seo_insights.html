@@ -1,0 +1,31 @@
+{% extends "seo_base.html" %}
+
+{% block title %}MOT Data Insights &amp; Reports | AutoSafe{% endblock %}
+{% block meta_description %}Data-driven insights from 142 million UK MOT tests. Discover the most reliable cars, common failure patterns, and what really causes MOT failures.{% endblock %}
+{% block og_title %}MOT Data Insights &amp; Reports | AutoSafe{% endblock %}
+{% block og_description %}Data-driven insights from 142 million UK MOT tests.{% endblock %}
+{% block twitter_title %}MOT Data Insights &amp; Reports | AutoSafe{% endblock %}
+{% block twitter_description %}Data-driven insights from 142 million UK MOT tests.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/insights/{% endblock %}
+
+{% block content %}
+<h1>MOT Data Insights</h1>
+
+<p>We've analysed 142 million official DVSA MOT test records to uncover the data behind Britain's MOT results. These reports are updated regularly and free to cite with attribution.</p>
+
+<div class="methodology">
+    <p><strong>Open data:</strong> All analysis uses official DVSA MOT test records published under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>. Journalists and researchers are welcome to cite these findings.</p>
+</div>
+
+{% for story in stories %}
+<div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;">
+    <h2 style="margin-top: 0;"><a href="/insights/{{ story.slug }}/" style="color: #e5c07b; text-decoration: none;">{{ story.title }}</a></h2>
+    <p>{{ story.subtitle }}</p>
+    <p style="font-style: italic; color: #e5c07b;">{{ story.key_stat }}.</p>
+    <a href="/insights/{{ story.slug }}/" style="color: #e5c07b;">Read full report &rarr;</a>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block cta_heading %}Check Your Own Vehicle{% endblock %}
+{% block cta_text %}See how your specific car compares. Enter your registration for a personalised MOT failure prediction.{% endblock %}

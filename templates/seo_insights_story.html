@@ -1,0 +1,144 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ story.title }} (2026 Data) | AutoSafe{% endblock %}
+{% block meta_description %}{{ story.key_stat }}. Analysis of 142 million official DVSA MOT test records.{% endblock %}
+{% block og_title %}{{ story.title }} | AutoSafe{% endblock %}
+{% block og_description %}{{ story.key_stat }}.{% endblock %}
+{% block twitter_title %}{{ story.title }} | AutoSafe{% endblock %}
+{% block twitter_description %}{{ story.key_stat }}.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/insights/{{ story.slug }}/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "{{ story.title }}",
+  "description": "{{ story.methodology }}",
+  "url": "https://www.autosafe.one/insights/{{ story.slug }}/",
+  "creator": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one"
+  },
+  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "datePublished": "{{ today }}"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/insights/" class="back-link">&larr; All Insights</a>
+
+<h1>{{ story.title }}</h1>
+<p style="font-size: 1.15rem;">{{ story.subtitle }}</p>
+
+<div class="stat-highlight">
+    <div class="label" style="font-size: 1.1rem;">{{ story.key_stat }}</div>
+</div>
+
+{% if story.story_type in ('reliability_ranking', 'most_reliable', 'first_mot_failures') %}
+{# --- Ranking table --- #}
+<h2>The Full Ranking</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Vehicle</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th>Worst Area</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in story.data %}
+        <tr>
+            <td>{{ item.rank }}</td>
+            <td><strong>{{ item.make }} {{ item.model }}</strong></td>
+            <td>
+                <span class="fail-rate {% if item.fail_rate > 35 %}high{% elif item.fail_rate < 20 %}low{% endif %}">
+                    {{ item.fail_rate }}%
+                </span>
+            </td>
+            <td class="sample-size">{{ "{:,}".format(item.total_tests) }}</td>
+            <td>{{ item.worst_component }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{# Component breakdown for each vehicle #}
+<h2>What Fails on Each Vehicle</h2>
+{% for item in story.data %}
+<h3>{{ item.rank }}. {{ item.make }} {{ item.model }} ({{ item.fail_rate }}%)</h3>
+{% for comp_name, comp_risk in item.component_risks.items() %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ comp_name }}</span>
+        <span>{{ comp_risk }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if comp_risk > 15 %}high{% elif comp_risk > 8 %}medium{% else %}low{% endif %}" style="width: {{ (comp_risk * 5)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+{% endfor %}
+
+{% elif story.story_type == 'component_breakdown' %}
+{# --- Component breakdown --- #}
+<h2>Overall Component Failure Rates</h2>
+<p>Across all makes, models, ages and mileages:</p>
+{% for r in story.overall_risks %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ r.component }}</span>
+        <span>{{ r.risk }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if r.risk > 15 %}high{% elif r.risk > 8 %}medium{% else %}low{% endif %}" style="width: {{ (r.risk * 5)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+
+{% if story.age_bands %}
+<h2>How Failure Patterns Change With Age</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Age Band</th>
+            <th>Tests</th>
+            <th>Worst Area</th>
+            {% for r in story.overall_risks %}
+            <th>{{ r.component }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for ab in story.age_bands %}
+        <tr>
+            <td>{{ ab.age_band }} years</td>
+            <td class="sample-size">{{ "{:,}".format(ab.total_tests) }}</td>
+            <td>{{ ab.worst_component }}</td>
+            {% for r in story.overall_risks %}
+            <td>
+                <span class="fail-rate {% if ab.components.get(r.component, 0) > 15 %}high{% elif ab.components.get(r.component, 0) < 8 %}low{% endif %}">
+                    {{ ab.components.get(r.component, 0) }}%
+                </span>
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+<div class="methodology">
+    <p><strong>Methodology:</strong> {{ story.methodology }}</p>
+    <p><strong>Data licence:</strong> Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>.</p>
+    <p>Journalists and researchers: you are welcome to cite this data with attribution to AutoSafe (autosafe.one).</p>
+</div>
+{% endblock %}
+
+{% block cta_heading %}Check Your Own Vehicle{% endblock %}
+{% block cta_text %}See how your specific car compares. Enter your registration for a personalised MOT failure prediction.{% endblock %}

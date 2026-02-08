@@ -12,7 +12,7 @@ Three tiers:
   /mot-check/{make}/             - Make page listing models with failure rates
   /mot-check/{make}/{model}/     - Model page with full stats, component breakdown, FAQs
 
-Plus a dynamic /sitemap.xml that includes all ~400 new URLs.
+Plus /insights/ data story pages and a dynamic /sitemap.xml.
 """
 
 import logging
@@ -431,6 +431,54 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- /insights/ routes (Data PR stories) ---
+
+    @app.get("/insights/", response_class=HTMLResponse)
+    async def insights_index():
+        cache_key = "seo:insights:index"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        from data_stories.query_engine import STORY_QUERIES
+        stories = []
+        for name, query_fn in STORY_QUERIES.items():
+            try:
+                story = query_fn()
+                stories.append(story)
+            except Exception as e:
+                logger.warning(f"Insights: Failed to load story '{name}': {e}")
+
+        template = jinja_env.get_template("seo_insights.html")
+        html = template.render(stories=stories)
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
+    @app.get("/insights/{story_slug}/", response_class=HTMLResponse)
+    async def insights_story(story_slug: str):
+        cache_key = f"seo:insights:{story_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        from data_stories.query_engine import STORY_QUERIES
+        # Find the story by slug
+        story_data = None
+        for name, query_fn in STORY_QUERIES.items():
+            try:
+                candidate = query_fn()
+                if candidate["slug"] == story_slug:
+                    story_data = candidate
+                    break
+            except Exception as e:
+                logger.warning(f"Insights: Failed to query story '{name}': {e}")
+
+        if not story_data:
+            return _not_found_html("Insight report not found.")
+
+        from data_stories.story_templates import render_html
+        html = render_html(story_data)
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     @app.get("/sitemap.xml", response_class=Response)
     async def sitemap():
         cache_key = "sitemap"
@@ -464,6 +512,33 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 f"    <changefreq>{freq}</changefreq>\n"
                 f"  </url>"
             )
+
+        # Insights pages
+        urls.append(
+            f"  <url>\n"
+            f"    <loc>{base}/insights/</loc>\n"
+            f"    <lastmod>{today}</lastmod>\n"
+            f"    <priority>0.8</priority>\n"
+            f"    <changefreq>weekly</changefreq>\n"
+            f"  </url>"
+        )
+        try:
+            from data_stories.query_engine import STORY_QUERIES
+            for name, query_fn in STORY_QUERIES.items():
+                try:
+                    story = query_fn()
+                    urls.append(
+                        f"  <url>\n"
+                        f"    <loc>{base}/insights/{story['slug']}/</loc>\n"
+                        f"    <lastmod>{today}</lastmod>\n"
+                        f"    <priority>0.7</priority>\n"
+                        f"    <changefreq>monthly</changefreq>\n"
+                        f"  </url>"
+                    )
+                except Exception:
+                    pass
+        except ImportError:
+            pass
 
         # SEO index page
         urls.append(
