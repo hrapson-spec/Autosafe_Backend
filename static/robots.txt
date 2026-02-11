@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /health
+Disallow: /ready
 
 Sitemap: https://www.autosafe.one/sitemap.xml

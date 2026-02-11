@@ -29,6 +29,20 @@
 </script>
 {% endblock %}
 
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
+    {"@type": "ListItem", "position": 3, "name": "{{ make_display }}"}
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <a href="/mot-check/" class="back-link">&larr; All Makes</a>
 

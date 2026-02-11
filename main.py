@@ -158,11 +158,17 @@ from starlette.responses import RedirectResponse
 
 @app.middleware("http")
 async def redirect_non_www(request, call_next):
-    """Redirect autosafe.one to www.autosafe.one for SEO canonicalization."""
+    """Redirect autosafe.one to www.autosafe.one for SEO canonicalization.
+
+    Railway terminates TLS at the edge, so request.url.scheme is 'http'
+    even for HTTPS requests. We construct the redirect URL explicitly
+    to always use HTTPS and avoid a protocol downgrade.
+    """
     host = request.headers.get("host", "")
     if host == "autosafe.one":
-        url = request.url.replace(scheme="https")
-        new_url = str(url).replace("://autosafe.one", "://www.autosafe.one", 1)
+        new_url = f"https://www.autosafe.one{request.url.path}"
+        if request.url.query:
+            new_url += f"?{request.url.query}"
         return RedirectResponse(url=new_url, status_code=301)
     return await call_next(request)
 
@@ -1948,6 +1954,11 @@ from seo_pages import register_seo_routes
 register_seo_routes(app, get_sqlite_connection)
 
 if os.path.isdir("static"):
+    @app.get("/robots.txt")
+    async def robots_txt():
+        """Serve robots.txt at root URL for search engine crawlers."""
+        return FileResponse('static/robots.txt', media_type='text/plain')
+
     @app.get("/")
     async def read_index():
         return FileResponse('static/index.html')
