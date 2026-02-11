@@ -431,6 +431,73 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- K7 Pillar Page: "Will My Car Pass Its MOT?" ---
+
+    @app.get("/will-my-car-pass-mot/", response_class=HTMLResponse)
+    async def seo_k7_pillar():
+        cache_key = "seo:k7-pillar"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            # Top 20 models by test volume
+            top_models = []
+            for (make_slug, model_slug), model_info in _model_by_slug.items():
+                make = model_info["make"]
+                model = model_info["model_id"]
+                overall = _query_model_overall(conn, make, model)
+                if overall:
+                    make_info = _make_by_slug.get(make_slug, {})
+                    top_models.append({
+                        "make_display": make_info.get("display", make),
+                        "model_display": model_info["display"],
+                        "make_slug": make_slug,
+                        "model_slug": model_slug,
+                        "fail_rate": overall["fail_rate"],
+                        "total_tests": overall["total_tests"],
+                    })
+
+            top_models.sort(key=lambda m: m["total_tests"], reverse=True)
+            top_models = top_models[:20]
+
+            # National average component risks
+            comp_cols = ", ".join(
+                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
+                for col, _ in COMPONENTS
+            )
+            row = conn.execute(
+                f"""SELECT SUM(Total_Tests) as total_tests,
+                           {comp_cols}
+                    FROM risks
+                    WHERE age_band != 'Unknown'"""
+            ).fetchone()
+
+            total_tests_analysed = int(row["total_tests"]) if row and row["total_tests"] else 142000000
+
+            top_components = []
+            if row:
+                for col, name in COMPONENTS:
+                    val = row[col] if row[col] else 0
+                    top_components.append({"name": name, "avg_risk": float(val)})
+                top_components.sort(key=lambda c: c["avg_risk"], reverse=True)
+
+            conn.row_factory = old_factory
+
+        template = jinja_env.get_template("seo_pillar_k7.html")
+        html = template.render(
+            top_models=top_models,
+            national_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
+            top_components=top_components,
+            total_tests_analysed=total_tests_analysed,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     # --- /insights/ routes (Data PR stories) ---
 
     @app.get("/insights/", response_class=HTMLResponse)
@@ -496,10 +563,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         # Static pages
         static_pages = [
             ("/", "1.0", "weekly"),
+            ("/will-my-car-pass-mot/", "0.95", "weekly"),
             ("/static/guides/mot-checklist.html", "0.8", "monthly"),
             ("/static/guides/common-mot-failures.html", "0.8", "monthly"),
             ("/static/guides/when-is-mot-due.html", "0.8", "monthly"),
             ("/static/guides/mot-failure-rates-by-car.html", "0.8", "monthly"),
+            ("/static/guides/mot-rules-2026.html", "0.8", "monthly"),
+            ("/static/guides/mot-defect-categories.html", "0.8", "monthly"),
+            ("/static/guides/mot-cost.html", "0.8", "monthly"),
+            ("/static/guides/first-mot-guide.html", "0.8", "monthly"),
             ("/static/privacy.html", "0.3", "yearly"),
             ("/static/terms.html", "0.3", "yearly"),
         ]
