@@ -571,6 +571,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             ("/static/guides/mot-rules-2026.html", "0.8", "monthly"),
             ("/static/guides/mot-defect-categories.html", "0.8", "monthly"),
             ("/static/guides/mot-cost.html", "0.8", "monthly"),
+            ("/static/guides/mot-history-check.html", "0.8", "monthly"),
             ("/static/guides/first-mot-guide.html", "0.8", "monthly"),
             ("/static/privacy.html", "0.3", "yearly"),
             ("/static/terms.html", "0.3", "yearly"),

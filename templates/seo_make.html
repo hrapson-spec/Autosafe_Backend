@@ -27,6 +27,38 @@
   }
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Are {{ make_display }} cars reliable for MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "{{ make_display }} has {{ models|length }} models in our database with varying MOT reliability. Check individual model pages for specific failure rates and component breakdowns."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which {{ make_display }} model is best for MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Based on DVSA test data, the most and least reliable {{ make_display }} models are ranked by failure rate on this page."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I predict if my {{ make_display }} will pass its MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "AutoSafe offers a free AI-powered MOT prediction tool. Enter your registration number to get a personalised failure risk assessment based on your vehicle's age, mileage, and MOT history."
+      }
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block breadcrumb_data %}
@@ -43,13 +75,30 @@
 </script>
 {% endblock %}
 
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+    <span>{{ make_display }}</span>
+</nav>
+{% endblock %}
+
 {% block content %}
-<a href="/mot-check/" class="back-link">&larr; All Makes</a>
 
 <h1>{{ make_display }} MOT Failure Rates</h1>
-<p>MOT failure rates for <strong>{{ models|length }} {{ make_display }} models</strong>, ranked from highest to lowest failure rate. Data from official DVSA MOT test records.</p>
+<p>MOT failure rates for <strong>{{ models|length }} {{ make_display }} models</strong>, ranked from highest to lowest failure rate. Data from official DVSA MOT test records covering 142 million UK MOT tests.</p>
 
+<h2>{{ make_display }} MOT Reliability Overview</h2>
 {% if models %}
+{% set avg_fail = (models | map(attribute='fail_rate') | sum) / models|length %}
+{% set best_model = models | sort(attribute='fail_rate') | first %}
+{% set worst_model = models | sort(attribute='fail_rate') | last %}
+<p>Across {{ models|length }} models with sufficient test data, {{ make_display }} vehicles have an average MOT failure rate of <strong>{{ "%.1f"|format(avg_fail * 100) }}%</strong>. {% if avg_fail < 0.28 %}This puts {{ make_display }} <strong>below the UK national average</strong> of 28%, suggesting above-average reliability across the range.{% elif avg_fail < 0.32 %}This is <strong>close to the UK national average</strong> of 28%, indicating typical reliability for a mainstream manufacturer.{% else %}This is <strong>above the UK national average</strong> of 28%. Some {{ make_display }} models perform well, but others have higher-than-average failure rates.{% endif %}</p>
+
+<p>The <strong>most reliable</strong> {{ make_display }} model for MOT is the <a href="/mot-check/{{ make_slug }}/{{ best_model.slug }}/" style="color: #e5c07b;">{{ make_display }} {{ best_model.display_name }}</a> with a {{ "%.1f"|format(best_model.fail_rate * 100) }}% failure rate. The <strong>highest failure rate</strong> belongs to the <a href="/mot-check/{{ make_slug }}/{{ worst_model.slug }}/" style="color: #e5c07b;">{{ make_display }} {{ worst_model.display_name }}</a> at {{ "%.1f"|format(worst_model.fail_rate * 100) }}%.</p>
+
+<p>These figures are calculated from real DVSA MOT test records and represent weighted averages across all vehicle ages and mileage bands. Only models with 100 or more test records are included to ensure statistical reliability.</p>
+
 <h2>Which {{ make_display }} Models Fail MOT Most?</h2>
 <table class="data-table">
     <thead>
@@ -73,6 +122,40 @@
 <div class="methodology">
     <p><strong>How we calculate failure rates:</strong> Rates are weighted averages across all mileage bands for each model. Only models with 100+ test records are shown. Data sourced from official DVSA MOT test records covering 142 million tests.</p>
 </div>
+
+<div class="faq-section">
+    <h2>{{ make_display }} MOT FAQs</h2>
+
+    <div class="faq-item">
+        <h3>Are {{ make_display }} cars reliable for MOT?</h3>
+        <p>{{ make_display }} has {{ models|length }} models in our database. {% if avg_fail < 0.25 %}Overall, {{ make_display }} vehicles perform well in MOT tests with an average failure rate below the national average of 28%.{% elif avg_fail < 0.32 %}{{ make_display }} vehicles have average MOT reliability, with failure rates close to the UK average of 28%. Performance varies between models.{% else %}Some {{ make_display }} models have higher-than-average MOT failure rates. Check individual model pages for specific data.{% endif %} Click on any model above to see a detailed component-level breakdown.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Which {{ make_display }} model is best for MOT?</h3>
+        <p>The {{ make_display }} {{ best_model.display_name }} has the lowest MOT failure rate at {{ "%.1f"|format(best_model.fail_rate * 100) }}%, making it the most reliable {{ make_display }} model in our dataset. <a href="/mot-check/{{ make_slug }}/{{ best_model.slug }}/" style="color: #e5c07b;">See full {{ make_display }} {{ best_model.display_name }} MOT data</a>.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Which {{ make_display }} model fails MOT most?</h3>
+        <p>The {{ make_display }} {{ worst_model.display_name }} has the highest failure rate at {{ "%.1f"|format(worst_model.fail_rate * 100) }}%. This doesn&rsquo;t necessarily mean it&rsquo;s a bad car &mdash; higher failure rates often correlate with older average vehicle age. <a href="/mot-check/{{ make_slug }}/{{ worst_model.slug }}/" style="color: #e5c07b;">See full {{ make_display }} {{ worst_model.display_name }} MOT data</a>.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>How can I predict if my {{ make_display }} will pass its MOT?</h3>
+        <p>AutoSafe offers a <a href="/" style="color: #e5c07b;">free AI-powered MOT prediction tool</a>. Enter your registration number and postcode to get a personalised failure risk assessment based on your specific vehicle&rsquo;s age, mileage, and MOT history.</p>
+    </div>
+</div>
+
+<h2>Related Guides</h2>
+<ul>
+    <li><a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points</a></li>
+    <li><a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">Pre-MOT Checklist</a></li>
+    <li><a href="/static/guides/mot-failure-rates-by-car.html" style="color: #e5c07b;">MOT Failure Rates by Car</a></li>
+    <li><a href="/static/guides/mot-history-check.html" style="color: #e5c07b;">How to Check MOT History</a></li>
+    <li><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car Pass Its MOT?</a></li>
+</ul>
+
 {% else %}
 <p>No models with sufficient test data found for {{ make_display }}.</p>
 {% endif %}

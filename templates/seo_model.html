@@ -37,6 +37,22 @@
         "@type": "Answer",
         "text": "{% if overall_fail_rate < 0.20 %}Yes, the {{ make_display }} {{ model_display }} is more reliable than average for MOT, with a failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%.{% elif overall_fail_rate < 0.30 %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% MOT failure rate, which is close to the UK average of 28%.{% else %}The {{ make_display }} {{ model_display }} has a higher-than-average MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%. Pay extra attention to {{ top_components[0].name|lower if top_components else "common wear items" }} before your test.{% endif %}"
       }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The {{ make_display }} {{ model_display }} MOT failure rate increases with vehicle age. Newer models typically have lower failure rates, while vehicles over 10 years old see significantly higher rates, often above 35%. Regular maintenance becomes more important as your vehicle ages."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Check all lights and bulbs, inspect tyre tread depth, test windscreen washers and wipers, listen for brake or suspension noises, and consider a pre-MOT check at a local garage. Use AutoSafe's free prediction tool for a personalised risk assessment."
+      }
     }
   ]
 }
@@ -77,8 +93,16 @@
 </script>
 {% endblock %}
 
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+    <a href="/mot-check/{{ make_slug }}/">{{ make_display }}</a><span class="sep">/</span>
+    <span>{{ model_display }}</span>
+</nav>
+{% endblock %}
+
 {% block content %}
-<a href="/mot-check/{{ make_slug }}/" class="back-link">&larr; All {{ make_display }} Models</a>
 
 <h1>{{ make_display }} {{ model_display }} MOT Failure Rate</h1>
 
@@ -136,6 +160,15 @@
 </div>
 {% endfor %}
 
+<h2>What {{ make_display }} {{ model_display }} Owners Should Watch For</h2>
+<p>Based on the MOT test data for the {{ make_display }} {{ model_display }}, here are the key areas to pay attention to before your MOT:</p>
+<ul>
+    {% for comp in top_components[:3] %}
+    <li><strong>{{ comp.name }}</strong> ({{ "%.1f"|format(comp.risk * 100) }}% failure risk) &mdash; {% if comp.name == "Brakes" %}Check brake pad thickness, disc condition, and handbrake operation. Listen for grinding or squealing when braking.{% elif comp.name == "Suspension" %}Look for leaking shock absorbers, worn bushes, and damaged springs. A bouncing or uneven ride often signals problems.{% elif comp.name == "Tyres" %}Ensure all tyres have at least 1.6mm tread depth across the central three-quarters. Check for sidewall damage, bulges, and uneven wear.{% elif comp.name == "Steering" %}Check for play in the steering wheel, power steering fluid levels, and worn track rod ends.{% elif comp.name == "Visibility" %}Inspect windscreen for chips larger than 10mm in the driver&rsquo;s line of vision and 40mm elsewhere in the swept area. Check all washers and wipers.{% elif comp.name == "Lamps & Electrics" %}Walk around the car and check every bulb &mdash; headlights, brake lights, indicators, fog lights, and number plate lights. This is one of the cheapest and easiest fixes.{% elif comp.name == "Body & Chassis" %}Inspect the underside and sills for rust holes, particularly around structural mounting points. Corrosion that weakens the structure within 30cm of a mounting point is an automatic fail.{% else %}Inspect this area carefully before your test and address any worn or damaged components.{% endif %}</li>
+    {% endfor %}
+</ul>
+<p>Many of these issues are inexpensive to fix when caught early. A pre-MOT inspection at a local garage typically costs &pound;20&ndash;&pound;40 and can save you the cost of a retest (&pound;15&ndash;&pound;30) plus the inconvenience of a failed MOT.</p>
+
 <div class="faq-section">
     <h2>Frequently Asked Questions</h2>
 
@@ -165,14 +198,42 @@
         <p>The {{ make_display }} {{ model_display }} has a <strong>higher-than-average</strong> MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}%, compared to the UK average of 28%. Before your MOT, pay extra attention to <strong>{{ top_components[0].name|lower if top_components else "common wear items" }}</strong>, which is the most common failure area for this model.</p>
         {% endif %}
     </div>
+
+    <div class="faq-item">
+        <h3>How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?</h3>
+        {% if age_bands|length > 1 %}
+        <p>The failure rate increases significantly with vehicle age. {% if age_bands[0].fail_rate < 0.15 %}Newer {{ make_display }} {{ model_display }} models ({{ age_bands[0].age_band }} years) have a relatively low {{ "%.1f"|format(age_bands[0].fail_rate * 100) }}% failure rate{% endif %}{% if age_bands[-1].fail_rate > 0.30 %}, while older examples ({{ age_bands[-1].age_band }} years) see failure rates rise to {{ "%.1f"|format(age_bands[-1].fail_rate * 100) }}%{% endif %}. This pattern is common across most vehicle models and reflects increased wear on mechanical components over time.</p>
+        {% else %}
+        <p>We have limited age-band data for this model. In general, MOT failure rates increase steadily with vehicle age as components wear. Vehicles over 10 years old typically have failure rates above 35%.</p>
+        {% endif %}
+    </div>
+
+    <div class="faq-item">
+        <h3>How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?</h3>
+        <p>The most effective steps are: (1) Check all lights and bulbs before your test &mdash; lighting failures are the most common and cheapest to fix. (2) Inspect tyre tread depth and condition. (3) Test your windscreen washers and wipers. (4) Listen for unusual noises from brakes or suspension. (5) Consider a pre-MOT check at a local garage. You can also <a href="/" style="color: #e5c07b;">use our free prediction tool</a> to get a personalised risk breakdown for your specific vehicle.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Where can I check the MOT history of a {{ make_display }} {{ model_display }}?</h3>
+        <p>You can check any vehicle's full MOT history for free on the <a href="https://www.gov.uk/check-mot-history" style="color: #e5c07b;" rel="nofollow">official DVSA service</a>. This shows all previous test results, advisory items, and failure reasons. AutoSafe goes further by analysing this data with AI to <a href="/" style="color: #e5c07b;">predict your future MOT outcome</a>.</p>
+    </div>
 </div>
 
 <h2>Other {{ make_display }} Models</h2>
+<p>Compare the {{ make_display }} {{ model_display }} MOT failure rate against other {{ make_display }} models:</p>
 <div class="related-links">
     {% for sibling in sibling_models %}
-    <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ sibling.display_name }}</a>
+    <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ make_display }} {{ sibling.display_name }}</a>
     {% endfor %}
 </div>
+
+<h2>Related Guides</h2>
+<ul>
+    <li><a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid Them</a></li>
+    <li><a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a></li>
+    <li><a href="/static/guides/mot-failure-rates-by-car.html" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a></li>
+    <li><a href="/static/guides/mot-history-check.html" style="color: #e5c07b;">How to Check MOT History</a></li>
+</ul>
 
 <div class="methodology">
     <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>

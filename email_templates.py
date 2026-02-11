@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 from jinja2 import Environment, BaseLoader, select_autoescape
 
 # Base URL for outcome reporting links
-BASE_URL = os.environ.get("BASE_URL", "https://autosafe.co.uk")
+BASE_URL = os.environ.get("BASE_URL", "https://www.autosafe.one")
 
 # Create Jinja2 environment with autoescape enabled for HTML
 # This automatically escapes dangerous characters like <, >, &, ", '

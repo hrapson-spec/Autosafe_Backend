@@ -58,7 +58,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Playfair+Display:wght@600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <!-- Umami Analytics -->
@@ -239,6 +239,60 @@
 
 
 
+        <!-- Pre-rendered SEO content (React hydrates over app above; this is visible to crawlers) -->
+        <section style="max-width: 800px; margin: 2rem auto; padding: 0 1.5rem;">
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-bottom: 1rem; text-align: center;">How AutoSafe MOT Prediction Works</h2>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">AutoSafe uses machine learning trained on <strong style="color: #e5c07b;">142 million official DVSA MOT test records</strong> to predict whether your car will pass or fail its next MOT. Simply enter your registration number and postcode to get an instant, personalised risk assessment covering seven key failure areas.</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">1</div>
+                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">Enter Your Reg</h3>
+                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Type your vehicle registration number and postcode. We look up your car's full MOT history from the DVSA database instantly.</p>
+                </div>
+                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">2</div>
+                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">AI Analyses Your Car</h3>
+                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Our CatBoost model evaluates 104 features from your vehicle's age, mileage, MOT history, previous advisories and failure patterns.</p>
+                </div>
+                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">3</div>
+                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">Get Your Risk Score</h3>
+                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Receive a clear percentage failure risk plus a breakdown by component &mdash; brakes, suspension, tyres, lights and more &mdash; so you know exactly what to check.</p>
+                </div>
+            </div>
+
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">Why Check Your MOT Risk Before Your Test?</h2>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">Every year, around <strong style="color: #e5c07b;">28% of vehicles fail their MOT</strong> in the UK &mdash; that's roughly 7.5 million cars. A failed MOT means unexpected repair bills, wasted time, and potentially being left without a legal vehicle to drive. The average cost of MOT failure repairs is between &pound;150 and &pound;500, depending on the issues found.</p>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">By checking your risk score before your test, you can identify the specific components most likely to cause a failure on <em>your</em> car. This gives you the opportunity to have issues fixed proactively at a garage of your choice &mdash; often cheaper than emergency repairs after a failed MOT. Many common MOT failures, such as worn brake pads, faulty bulbs, or low tyre tread, are inexpensive to fix when caught early.</p>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">AutoSafe's prediction goes beyond generic advice. Because we analyse your car's individual MOT history &mdash; including past advisories, previous failure reasons, mileage patterns and vehicle age &mdash; the risk score is tailored specifically to your vehicle, not just a national average.</p>
+
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">UK MOT Statistics at a Glance</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">142M+</div>
+                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">MOT tests analysed</div>
+                </div>
+                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">28%</div>
+                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">National failure rate</div>
+                </div>
+                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">7</div>
+                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">Failure areas checked</div>
+                </div>
+                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">104</div>
+                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">Prediction features</div>
+                </div>
+            </div>
+
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">Common MOT Failure Areas</h2>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">MOT testers inspect your vehicle across multiple categories. The most common reasons for MOT failure in the UK include problems with <strong style="color:#fff;">lighting and signalling</strong> (blown bulbs, misaligned headlamps), <strong style="color:#fff;">suspension</strong> (worn shock absorbers, damaged springs), <strong style="color:#fff;">brakes</strong> (worn pads, corroded discs, binding calipers), and <strong style="color:#fff;">tyres</strong> (insufficient tread depth, sidewall damage, incorrect pressures).</p>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">Other frequent failure points include windscreen chips in the driver's line of vision, excessive exhaust emissions, worn steering components, and structural corrosion. The risk weighting varies significantly by vehicle make, model, and age &mdash; for example, older vehicles are far more likely to fail on corrosion and suspension, while newer cars more commonly fail on lighting issues.</p>
+            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1.5rem;">Explore our detailed guides for more information: <a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points</a>, <a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">Pre-MOT Checklist</a>, and <a href="/static/guides/mot-failure-rates-by-car.html" style="color: #e5c07b;">MOT Failure Rates by Car</a>. Or <a href="/mot-check/" style="color: #e5c07b;">browse MOT data by make and model</a>.</p>
+        </section>
+
         <!-- Features Section -->
         <section class="features-section" aria-labelledby="features-heading">
             <h2 id="features-heading" class="visually-hidden">Key Features</h2>
@@ -291,7 +345,8 @@
                 <a href="/static/guides/mot-failure-rates-by-car.html">Failure Rates by Car</a> •
                 <a href="/static/guides/mot-rules-2026.html">MOT Rules 2026</a> •
                 <a href="/static/guides/mot-cost.html">MOT Costs</a> •
-                <a href="/static/guides/first-mot-guide.html">First MOT Guide</a>
+                <a href="/static/guides/first-mot-guide.html">First MOT Guide</a> •
+                <a href="/static/guides/mot-history-check.html">MOT History Check</a>
             </div>
             <div class="footer-links" style="margin-top: 0.5rem;">
                 <a href="/mot-check/">Popular MOT Checks</a>:

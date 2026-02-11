@@ -32,7 +32,7 @@
     {% block breadcrumb_data %}{% endblock %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .guide-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
@@ -78,17 +78,39 @@
         .make-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin: 1.5rem 0; }
         .make-grid a { background: #2a2a2a; color: #e5c07b; padding: 0.75rem 1rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 500; }
         .make-grid a:hover { background: #333; }
+        /* Header nav */
+        .site-nav { display: flex; align-items: center; gap: 1.5rem; }
+        .site-nav a { color: #a0a0a0; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: color 0.2s; }
+        .site-nav a:hover { color: #e5c07b; }
+        .nav-cta { background: #e5c07b; color: #1a1a1a !important; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; }
+        .nav-cta:hover { background: #d4a85a; }
+        .app-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+        @media (max-width: 640px) {
+            .site-nav { gap: 1rem; font-size: 0.85rem; }
+            .app-header { flex-direction: column; text-align: center; }
+        }
+        /* Breadcrumbs */
+        .breadcrumbs { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; margin-bottom: 1.5rem; font-size: 0.85rem; color: #666; }
+        .breadcrumbs a { color: #e5c07b; text-decoration: none; }
+        .breadcrumbs a:hover { text-decoration: underline; }
+        .breadcrumbs .sep { margin: 0 0.25rem; color: #555; }
     </style>
 </head>
 <body>
     <div class="app-container" style="max-width: 100%;">
-        <header class="app-header" style="padding: 1rem 0;">
+        <header class="app-header" style="padding: 1rem 2rem;">
             <div class="logo">
                 <a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a>
             </div>
+            <nav class="site-nav" aria-label="Main navigation">
+                <a href="/mot-check/">MOT Check</a>
+                <a href="/static/guides/common-mot-failures.html">Guides</a>
+                <a href="/" class="nav-cta">Free Prediction</a>
+            </nav>
         </header>
 
         <main class="guide-content">
+            {% block breadcrumbs %}{% endblock %}
             {% block content %}{% endblock %}
 
             <div class="cta-box">
@@ -107,6 +129,7 @@
                 <li><a href="/static/guides/mot-rules-2026.html" style="color: #e5c07b;">New MOT Rules 2026</a></li>
                 <li><a href="/static/guides/mot-defect-categories.html" style="color: #e5c07b;">MOT Defect Categories Explained</a></li>
                 <li><a href="/static/guides/mot-cost.html" style="color: #e5c07b;">How Much Does an MOT Cost?</a></li>
+                <li><a href="/static/guides/mot-history-check.html" style="color: #e5c07b;">How to Check MOT History</a></li>
                 <li><a href="/static/guides/first-mot-guide.html" style="color: #e5c07b;">Your First MOT Guide</a></li>
                 <li><a href="/mot-check/" style="color: #e5c07b;">Browse All Makes &amp; Models</a></li>
             </ul>
@@ -124,7 +147,8 @@
                 <a href="/static/guides/when-is-mot-due.html">When Is MOT Due?</a> &bull;
                 <a href="/static/guides/mot-failure-rates-by-car.html">Failure Rates by Car</a> &bull;
                 <a href="/static/guides/mot-rules-2026.html">MOT Rules 2026</a> &bull;
-                <a href="/static/guides/mot-cost.html">MOT Costs</a>
+                <a href="/static/guides/mot-cost.html">MOT Costs</a> &bull;
+                <a href="/static/guides/mot-history-check.html">MOT History</a>
             </div>
             <div class="footer-links" style="margin-top: 0.5rem;">
                 <a href="/static/terms.html">Terms</a> &bull; <a href="/static/privacy.html">Privacy</a> &bull; <a href="mailto:autosafehq@gmail.com">Send Feedback</a>
