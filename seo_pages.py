@@ -774,7 +774,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 FROM risks
                 WHERE age_band = '0-3'
                 GROUP BY model_id
-                HAVING SUM(Total_Tests) >= 5000
+                HAVING SUM(Total_Tests) >= 1000
                 ORDER BY fail_rate DESC
                 LIMIT 10
             """).fetchall()
@@ -855,7 +855,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 FROM risks
                 WHERE age_band = '0-3'
                 GROUP BY model_id
-                HAVING SUM(Total_Tests) >= 5000
+                HAVING SUM(Total_Tests) >= 1000
                 ORDER BY fail_rate DESC
                 LIMIT 20
             """).fetchall()
