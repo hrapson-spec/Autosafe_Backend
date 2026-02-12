@@ -11,7 +11,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
