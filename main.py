@@ -2262,6 +2262,7 @@ register_seo_routes(app, get_sqlite_connection)
 INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "autosafe-indexnow-key")
 
 
+@app.get(f"/{INDEXNOW_KEY}.txt")
 @app.get("/indexnow-key.txt")
 async def indexnow_key_file():
     """Serve IndexNow verification key file."""
@@ -2286,7 +2287,7 @@ async def ping_indexnow(request: Request):
     payload = {
         "host": "www.autosafe.one",
         "key": INDEXNOW_KEY,
-        "keyLocation": "https://www.autosafe.one/indexnow-key.txt",
+        "keyLocation": f"https://www.autosafe.one/{INDEXNOW_KEY}.txt",
         "urlList": url_list[:10000],
     }
     try:

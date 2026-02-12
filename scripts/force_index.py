@@ -24,7 +24,7 @@ import httpx
 # ---------------------------------------------------------------------------
 SITE_HOST = "www.autosafe.one"
 SITEMAP_URL = f"https://{SITE_HOST}/sitemap.xml"
-KEY_VERIFICATION_URL = f"https://{SITE_HOST}/indexnow-key.txt"
+DEFAULT_KEY = "autosafe-indexnow-key"
 INDEXNOW_API_URL = "https://api.indexnow.org/indexnow"
 BATCH_SIZE = 10_000
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
@@ -34,18 +34,24 @@ PRIORITY_PREFIXES = ("/insights/", "/will-my-car-pass-mot/")
 # ---------------------------------------------------------------------------
 # Functions
 # ---------------------------------------------------------------------------
+def key_url(key: str) -> str:
+    """Return the verification URL for a given key."""
+    return f"https://{SITE_HOST}/{key}.txt"
+
+
 def get_indexnow_key() -> str:
     """Read IndexNow key from env, falling back to the production default."""
-    key = os.environ.get("INDEXNOW_KEY", "autosafe-indexnow-key")
+    key = os.environ.get("INDEXNOW_KEY", DEFAULT_KEY)
     print(f"[key] Using IndexNow key: {key[:8]}...")
     return key
 
 
 def preflight_check(client: httpx.Client, key: str) -> bool:
     """Verify the key-verification endpoint is live and returns the key."""
-    print(f"[preflight] GET {KEY_VERIFICATION_URL}")
+    url = key_url(key)
+    print(f"[preflight] GET {url}")
     try:
-        resp = client.get(KEY_VERIFICATION_URL, timeout=10)
+        resp = client.get(url, timeout=10)
     except httpx.ConnectError as exc:
         print(f"[preflight] FAIL — could not connect: {exc}")
         return False
@@ -114,7 +120,7 @@ def submit_to_indexnow(client: httpx.Client, key: str, urls: list[str]) -> None:
         payload = {
             "host": SITE_HOST,
             "key": key,
-            "keyLocation": KEY_VERIFICATION_URL,
+            "keyLocation": key_url(key),
             "urlList": batch,
         }
 
