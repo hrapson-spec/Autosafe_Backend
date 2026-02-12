@@ -6,7 +6,8 @@
 import { CarSelection, CarReport, Fault, MotReminderSubmission, MotReminderResponse, ReportEmailSubmission, PublicStats } from '../types';
 
 // API base URL - configured via environment variable
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// In production, use same-origin (empty string). In dev, set VITE_API_URL=http://localhost:8000
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // ============================================================================
 // Types for Backend Responses
