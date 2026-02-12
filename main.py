@@ -2335,7 +2335,7 @@ if os.path.isdir("static"):
     # SPA quarantined under /app/* with noindex
     @app.get("/app/{path:path}")
     async def serve_spa(path: str):
-        response = FileResponse('static/index.html')
+        response = FileResponse('static/spa.html')
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
         return response
 else:
