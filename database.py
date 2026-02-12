@@ -311,9 +311,10 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                     email, postcode, name, phone, lead_type,
                     vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
                     failure_risk, reliability_score, top_risks, services_requested,
-                    description, urgency, consent_given, consent_timestamp
+                    description, urgency, consent_given, consent_timestamp,
+                    utm_source, utm_medium, utm_campaign, referrer
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb,
-                          $14, $15, $16, CASE WHEN $16 THEN NOW() ELSE NULL END)
+                          $14, $15, $16, CASE WHEN $16 THEN NOW() ELSE NULL END, $17, $18, $19, $20)
                 RETURNING id""",
                 lead_data.get('email'),
                 lead_data.get('postcode'),
@@ -330,7 +331,11 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                 json.dumps(services_requested) if services_requested else '[]',
                 lead_data.get('description'),
                 lead_data.get('urgency'),
-                consent_given
+                consent_given,
+                lead_data.get('utm_source'),
+                lead_data.get('utm_medium'),
+                lead_data.get('utm_campaign'),
+                lead_data.get('referrer')
             )
 
             lead_id = str(result['id'])
@@ -832,8 +837,9 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
                     vehicle_make, vehicle_model, vehicle_year, vehicle_fuel_type,
                     mileage, last_mot_date, last_mot_result,
                     failure_risk, confidence_level, risk_components, repair_cost_estimate,
-                    model_version, prediction_source, is_dvsa_data
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15, $16)
+                    model_version, prediction_source, is_dvsa_data,
+                    utm_source, utm_medium, utm_campaign, referrer
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19, $20)
                 RETURNING id""",
                 risk_data.get('registration'),
                 risk_data.get('postcode'),
@@ -850,7 +856,11 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
                 json.dumps(risk_data.get('repair_cost_estimate', {})),
                 risk_data.get('model_version'),
                 risk_data.get('prediction_source'),
-                risk_data.get('is_dvsa_data', False)
+                risk_data.get('is_dvsa_data', False),
+                risk_data.get('utm_source'),
+                risk_data.get('utm_medium'),
+                risk_data.get('utm_campaign'),
+                risk_data.get('referrer')
             )
 
             risk_check_id = str(result['id'])

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from starlette.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
@@ -166,11 +166,23 @@ async def redirect_non_www(request, call_next):
     to always use HTTPS and avoid a protocol downgrade.
     """
     host = request.headers.get("host", "")
-    if host == "autosafe.one":
+    if host in ("autosafe.one", "autosafe.co.uk", "www.autosafe.co.uk"):
         new_url = f"https://www.autosafe.one{request.url.path}"
         if request.url.query:
             new_url += f"?{request.url.query}"
         return RedirectResponse(url=new_url, status_code=301)
+
+    # 301 redirect old /static/ URLs to clean URLs
+    path = request.url.path
+    if path == "/static/privacy.html":
+        return RedirectResponse(url="/privacy", status_code=301)
+    if path == "/static/terms.html":
+        return RedirectResponse(url="/terms", status_code=301)
+    if path.startswith("/static/guides/") and path.endswith(".html"):
+        slug = path.removeprefix("/static/guides/").removesuffix(".html")
+        if slug:
+            return RedirectResponse(url=f"/guides/{slug}", status_code=301)
+
     return await call_next(request)
 
 
@@ -774,7 +786,10 @@ async def get_risk(
 async def get_risk_v55(
     request: Request,
     registration: str = Query(..., min_length=2, max_length=8, description="Vehicle registration mark (e.g., AB12CDE)"),
-    postcode: str = Query("", max_length=10, description="UK postcode for regional factors (optional)")
+    postcode: str = Query("", max_length=10, description="UK postcode for regional factors (optional)"),
+    utm_source: str = Query("", max_length=100, description="UTM source"),
+    utm_medium: str = Query("", max_length=100, description="UTM medium"),
+    utm_campaign: str = Query("", max_length=100, description="UTM campaign"),
 ):
     """
     V55 model prediction using real-time DVSA MOT history.
@@ -817,6 +832,18 @@ async def get_risk_v55(
             # Use postcode as-is for corrosion lookup (will get default value)
             validated_postcode = postcode.strip().upper()
 
+    # Capture UTM attribution data
+    utm_data = {}
+    if utm_source:
+        utm_data['utm_source'] = utm_source
+    if utm_medium:
+        utm_data['utm_medium'] = utm_medium
+    if utm_campaign:
+        utm_data['utm_campaign'] = utm_campaign
+    referrer = request.headers.get("referer", "")
+    if referrer:
+        utm_data['referrer'] = referrer
+
     if not dvsa_client.is_configured:
         logger.warning(f"DVSA not configured for {hash_vrm(vrm)}, falling back to lookup")
         return await _fallback_prediction(
@@ -825,7 +852,8 @@ async def get_risk_v55(
             model="",
             year=None,
             postcode=validated_postcode,
-            note="DVSA integration not configured"
+            note="DVSA integration not configured",
+            utm_data=utm_data,
         )
 
     # Fetch MOT history from DVSA (P1-10 fix: use hashed VRM in logs)
@@ -842,7 +870,8 @@ async def get_risk_v55(
             model="",
             year=None,
             postcode=validated_postcode,
-            note="Vehicle not found in DVSA database"
+            note="Vehicle not found in DVSA database",
+            utm_data=utm_data,
         )
 
     except DVSAAPIError as e:
@@ -853,7 +882,8 @@ async def get_risk_v55(
             model="",
             year=None,
             postcode=validated_postcode,
-            note=f"DVSA API unavailable: {str(e)}"
+            note=f"DVSA API unavailable: {str(e)}",
+            utm_data=utm_data,
         )
 
     # Engineer features from MOT history
@@ -936,6 +966,7 @@ async def get_risk_v55(
             'model_version': 'v55',
             'prediction_source': 'dvsa',
             'is_dvsa_data': True,
+            **utm_data,
         })
     except Exception as e:
         logger.warning(f"Failed to log risk check: {e}")
@@ -949,12 +980,15 @@ async def _fallback_prediction(
     model: str,
     year: Optional[int],
     postcode: str,
-    note: str = ""
+    note: str = "",
+    utm_data: dict = None,
 ) -> Dict:
     """
     Fallback prediction using SQLite lookup when DVSA data unavailable.
     Returns population average if vehicle data insufficient.
     """
+    utm_data = utm_data or {}
+
     # If no vehicle data, return population average
     if not make or not model:
         response = {
@@ -994,6 +1028,7 @@ async def _fallback_prediction(
                 'model_version': 'lookup',
                 'prediction_source': 'fallback',
                 'is_dvsa_data': False,
+                **utm_data,
             })
         except Exception as e:
             logger.warning(f"Failed to log fallback risk check: {e}")
@@ -1064,6 +1099,7 @@ async def _fallback_prediction(
                         'model_version': 'lookup',
                         'prediction_source': 'lookup',
                         'is_dvsa_data': False,
+                        **utm_data,
                     })
                 except Exception as e:
                     logger.warning(f"Failed to log lookup risk check: {e}")
@@ -1106,6 +1142,7 @@ async def _fallback_prediction(
             'model_version': 'lookup',
             'prediction_source': 'fallback',
             'is_dvsa_data': False,
+            **utm_data,
         })
     except Exception as e:
         logger.warning(f"Failed to log default fallback risk check: {e}")
@@ -1385,7 +1422,13 @@ class LeadSubmission(BaseModel):
 
 @app.post("/api/leads", status_code=201)
 @limiter.limit("10/minute")
-async def submit_lead(request: Request, lead: LeadSubmission):
+async def submit_lead(
+    request: Request,
+    lead: LeadSubmission,
+    utm_source: str = Query("", max_length=100),
+    utm_medium: str = Query("", max_length=100),
+    utm_campaign: str = Query("", max_length=100),
+):
     """
     Submit a lead for garage matching.
 
@@ -1415,8 +1458,19 @@ async def submit_lead(request: Request, lead: LeadSubmission):
         "urgency": lead.urgency,
         "consent_given": lead.consent_given,
         "vehicle": lead.vehicle.model_dump() if lead.vehicle else {},
-        "risk_data": lead.risk_data.model_dump() if lead.risk_data else {}
+        "risk_data": lead.risk_data.model_dump() if lead.risk_data else {},
     }
+
+    # Add UTM attribution data
+    if utm_source:
+        lead_data['utm_source'] = utm_source
+    if utm_medium:
+        lead_data['utm_medium'] = utm_medium
+    if utm_campaign:
+        lead_data['utm_campaign'] = utm_campaign
+    referrer = request.headers.get("referer", "")
+    if referrer:
+        lead_data['referrer'] = referrer
 
     # Save to database (PostgreSQL only - verified above)
     lead_id = await db.save_lead(lead_data)
@@ -2248,6 +2302,25 @@ async def ping_indexnow(request: Request):
         return {"success": False, "error": str(e)}
 
 
+# --- Clean URL routes for static content ---
+@app.get("/privacy", response_class=HTMLResponse)
+async def serve_privacy():
+    return FileResponse('static/privacy.html')
+
+@app.get("/terms", response_class=HTMLResponse)
+async def serve_terms():
+    return FileResponse('static/terms.html')
+
+@app.get("/guides/{slug}", response_class=HTMLResponse)
+async def serve_guide(slug: str):
+    filepath = f'static/guides/{slug}.html'
+    if os.path.isfile(filepath):
+        return FileResponse(filepath)
+    return JSONResponse(status_code=404, content={"detail": "Guide not found"})
+
+
+
+
 if os.path.isdir("static"):
     @app.get("/robots.txt")
     async def robots_txt():
@@ -2258,13 +2331,12 @@ if os.path.isdir("static"):
     async def read_index():
         return FileResponse('static/index.html')
 
-    # Catch-all route for SPA client-side routing (must be after API routes and SEO routes)
-    @app.get("/{path:path}")
+    # SPA quarantined under /app/* with noindex
+    @app.get("/app/{path:path}")
     async def serve_spa(path: str):
-        # Don't serve index.html for API routes, static files, or SEO pages
-        if path.startswith(("api/", "static/", "assets/", "mot-check", "insights", "will-my-car-pass-mot", "robots.txt", "sitemap.xml", "indexnow-key")):
-            return JSONResponse(status_code=404, content={"detail": "Not Found"})
-        return FileResponse('static/index.html')
+        response = FileResponse('static/index.html')
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        return response
 else:
     @app.get("/")
     def read_root():

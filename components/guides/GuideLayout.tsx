@@ -29,7 +29,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
         <meta name="description" content={metaDescription} />
         <meta property="og:title" content={metaTitle} />
         <meta property="og:description" content={metaDescription} />
-        <link rel="canonical" href={`https://autosafe.co.uk${canonicalPath}`} />
+        <link rel="canonical" href={`https://www.autosafe.one${canonicalPath}`} />
       </Helmet>
 
       {/* Header */}

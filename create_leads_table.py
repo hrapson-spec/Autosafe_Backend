@@ -46,7 +46,13 @@ def main():
             consent_timestamp TIMESTAMP,
             created_at TIMESTAMP DEFAULT NOW(),
             contacted_at TIMESTAMP,
-            notes TEXT
+            notes TEXT,
+
+            -- Attribution
+            utm_source VARCHAR(100),
+            utm_medium VARCHAR(100),
+            utm_campaign VARCHAR(100),
+            referrer TEXT
         )
     """)
 

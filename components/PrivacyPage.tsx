@@ -10,7 +10,7 @@ const PrivacyPage: React.FC = () => {
       <Helmet>
         <title>Privacy Notice | AutoSafe</title>
         <meta name="description" content="How AutoSafe handles your data. We don't store your vehicle registration or postcode. Read our full privacy notice." />
-        <link rel="canonical" href="https://autosafe.co.uk/privacy" />
+        <link rel="canonical" href="https://www.autosafe.one/privacy" />
       </Helmet>
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">

@@ -191,12 +191,12 @@ const App: React.FC = () => {
 
   return (
     <Routes>
-      <RouterRoute path="/" element={<HomePage />} />
-      <RouterRoute path="/privacy" element={<PrivacyPage />} />
-      <RouterRoute path="/terms" element={<TermsPage />} />
-      <RouterRoute path="/guides/mot-checklist" element={<MOTChecklist />} />
-      <RouterRoute path="/guides/common-mot-failures" element={<CommonFailures />} />
-      <RouterRoute path="/guides/when-is-mot-due" element={<WhenMOTDue />} />
+      <RouterRoute path="/app" element={<HomePage />} />
+      <RouterRoute path="/app/privacy" element={<PrivacyPage />} />
+      <RouterRoute path="/app/terms" element={<TermsPage />} />
+      <RouterRoute path="/app/guides/mot-checklist" element={<MOTChecklist />} />
+      <RouterRoute path="/app/guides/common-mot-failures" element={<CommonFailures />} />
+      <RouterRoute path="/app/guides/when-is-mot-due" element={<WhenMOTDue />} />
     </Routes>
   );
 };

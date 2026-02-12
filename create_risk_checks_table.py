@@ -57,12 +57,19 @@ def main():
             -- Metadata
             model_version VARCHAR(20),
             prediction_source VARCHAR(50),
-            is_dvsa_data BOOLEAN DEFAULT FALSE
+            is_dvsa_data BOOLEAN DEFAULT FALSE,
+
+            -- Attribution
+            utm_source VARCHAR(100),
+            utm_medium VARCHAR(100),
+            utm_campaign VARCHAR(100),
+            referrer TEXT
         )
     """)
 
     print("Creating indexes...")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_registration ON risk_checks(registration)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_utm_source ON risk_checks(utm_source)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_postcode ON risk_checks(postcode)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_created ON risk_checks(created_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_make_model ON risk_checks(vehicle_make, vehicle_model)")

@@ -207,7 +207,12 @@ form.addEventListener('submit', async (e) => {
     if (banner) banner.classList.add('hidden');
 
     try {
-        const url = `${API_BASE}/risk/v55?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const utm = ['utm_source', 'utm_medium', 'utm_campaign']
+            .filter(k => urlParams.has(k))
+            .map(k => `${k}=${encodeURIComponent(urlParams.get(k))}`)
+            .join('&');
+        const url = `${API_BASE}/risk/v55?registration=${encodeURIComponent(registration)}&postcode=${encodeURIComponent(postcode)}${utm ? '&' + utm : ''}`;
         const res = await fetch(url);
 
         if (!res.ok) {

@@ -10,7 +10,7 @@ const TermsPage: React.FC = () => {
       <Helmet>
         <title>Terms of Use | AutoSafe</title>
         <meta name="description" content="Terms and conditions for using AutoSafe's free MOT prediction service. Our predictions are for information only." />
-        <link rel="canonical" href="https://autosafe.co.uk/terms" />
+        <link rel="canonical" href="https://www.autosafe.one/terms" />
       </Helmet>
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">
