@@ -4,9 +4,12 @@ FROM python:3.9-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies for CatBoost
+# Install system dependencies for CatBoost + Node.js for frontend build
 RUN apt-get update && apt-get install -y \
     libgomp1 \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
@@ -17,6 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
+
+# Build the React frontend (outputs to static/)
+RUN npm install && npm run build
 
 # Create a non-root user with an explicit UID and add permission to access the /app folder
 # This prevents potential container escapes by running the application as a restricted user
@@ -44,4 +50,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # - keep-alive for connection reuse
 # - timeout for slow requests
 CMD python3 build_db.py && python3 create_leads_table.py && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 30
-
