@@ -32,7 +32,7 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 
 # --- Dedicated SEO cache (separate from API cache in main.py) ---
-_seo_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)
+_seo_cache: TTLCache = TTLCache(maxsize=2000, ttl=3600)
 _sitemap_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
 
 # --- Slug lookup dicts (populated at startup) ---
@@ -42,6 +42,46 @@ _make_by_slug: dict = {}
 _model_by_slug: dict = {}
 # make_slug -> [model_slug, ...]
 _models_for_make: dict = {}
+# Models with enough tests for age-band pages (staged rollout)
+_age_band_eligible: set = set()  # set of (make_slug, model_slug)
+
+# Age band slug mappings
+AGE_BAND_SLUGS = {
+    "0-3-years": "0-3",
+    "3-5-years": "3-5",
+    "6-10-years": "6-10",
+    "10-15-years": "10-15",
+    "15-plus-years": "15+",
+}
+AGE_BAND_DISPLAY = {
+    "0-3": "0-3",
+    "3-5": "3-5",
+    "6-10": "6-10",
+    "10-15": "10-15",
+    "15+": "15+",
+}
+
+# Competitor model mapping (same-segment rivals for internal linking)
+COMPETITOR_MODELS = {
+    "FIESTA": [("VAUXHALL", "CORSA"), ("VOLKSWAGEN", "POLO"), ("RENAULT", "CLIO"), ("PEUGEOT", "208")],
+    "FOCUS": [("VAUXHALL", "ASTRA"), ("VOLKSWAGEN", "GOLF"), ("PEUGEOT", "308"), ("KIA", "CEED")],
+    "CORSA": [("FORD", "FIESTA"), ("VOLKSWAGEN", "POLO"), ("RENAULT", "CLIO"), ("PEUGEOT", "208")],
+    "ASTRA": [("FORD", "FOCUS"), ("VOLKSWAGEN", "GOLF"), ("PEUGEOT", "308"), ("KIA", "CEED")],
+    "GOLF": [("FORD", "FOCUS"), ("VAUXHALL", "ASTRA"), ("PEUGEOT", "308"), ("SEAT", "LEON")],
+    "POLO": [("FORD", "FIESTA"), ("VAUXHALL", "CORSA"), ("RENAULT", "CLIO"), ("SEAT", "IBIZA")],
+    "3 SERIES": [("AUDI", "A4"), ("MERCEDES-BENZ", "C-CLASS"), ("JAGUAR", "XE")],
+    "A3": [("VOLKSWAGEN", "GOLF"), ("BMW", "1 SERIES"), ("MERCEDES-BENZ", "A-CLASS")],
+    "A4": [("BMW", "3 SERIES"), ("MERCEDES-BENZ", "C-CLASS"), ("JAGUAR", "XE")],
+    "CLIO": [("FORD", "FIESTA"), ("VAUXHALL", "CORSA"), ("VOLKSWAGEN", "POLO"), ("PEUGEOT", "208")],
+    "QASHQAI": [("KIA", "SPORTAGE"), ("HYUNDAI", "TUCSON"), ("FORD", "KUGA"), ("TOYOTA", "RAV4")],
+    "YARIS": [("HONDA", "JAZZ"), ("FORD", "FIESTA"), ("VOLKSWAGEN", "POLO"), ("SUZUKI", "SWIFT")],
+    "CIVIC": [("FORD", "FOCUS"), ("VOLKSWAGEN", "GOLF"), ("TOYOTA", "COROLLA"), ("MAZDA", "3")],
+    "208": [("FORD", "FIESTA"), ("VAUXHALL", "CORSA"), ("VOLKSWAGEN", "POLO"), ("RENAULT", "CLIO")],
+    "308": [("FORD", "FOCUS"), ("VOLKSWAGEN", "GOLF"), ("VAUXHALL", "ASTRA"), ("KIA", "CEED")],
+    "1 SERIES": [("AUDI", "A3"), ("VOLKSWAGEN", "GOLF"), ("MERCEDES-BENZ", "A-CLASS")],
+    "SPORTAGE": [("NISSAN", "QASHQAI"), ("HYUNDAI", "TUCSON"), ("FORD", "KUGA")],
+    "TUCSON": [("NISSAN", "QASHQAI"), ("KIA", "SPORTAGE"), ("FORD", "KUGA")],
+}
 
 # Component columns in the risks table (in display order)
 COMPONENTS = [
@@ -132,10 +172,27 @@ def initialize_seo_data(get_sqlite_connection):
                 except sqlite3.Error as e:
                     logger.warning(f"SEO: Error checking {make} {model}: {e}")
 
+    # Identify top models eligible for age-band pages (>= 10,000 total tests)
+    age_band_candidates = set()
+    with get_sqlite_connection() as conn:
+        if conn:
+            for make, model in valid_models:
+                try:
+                    where, params = _model_where_clause(make, model)
+                    row = conn.execute(
+                        f"SELECT SUM(Total_Tests) as total FROM risks WHERE {where} AND age_band != 'Unknown'",
+                        params,
+                    ).fetchone()
+                    if row and row[0] and row[0] >= 10000:
+                        age_band_candidates.add((make, model))
+                except sqlite3.Error:
+                    pass
+
     # Build lookup dicts
     _make_by_slug.clear()
     _model_by_slug.clear()
     _models_for_make.clear()
+    _age_band_eligible.clear()
 
     makes_with_models = set()
     for make, model in valid_models:
@@ -150,6 +207,9 @@ def initialize_seo_data(get_sqlite_connection):
         }
         _models_for_make.setdefault(make_slug, []).append(model_slug)
 
+        if (make, model) in age_band_candidates:
+            _age_band_eligible.add((make_slug, model_slug))
+
     for make in makes_with_models:
         slug = _slugify(make)
         _make_by_slug[slug] = {"make": make, "display": _display_name(make)}
@@ -163,7 +223,8 @@ def initialize_seo_data(get_sqlite_connection):
     total_pages = len(_make_by_slug) + len(_model_by_slug)
     logger.info(
         f"SEO: Initialized {len(_make_by_slug)} makes, "
-        f"{len(_model_by_slug)} models ({total_pages} landing pages)"
+        f"{len(_model_by_slug)} models ({total_pages} landing pages), "
+        f"{len(_age_band_eligible)} models eligible for age-band pages"
     )
 
 
@@ -431,6 +492,99 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- Age-band pages: /mot-check/{make}/{model}/{age_slug}/ ---
+
+    @app.get("/mot-check/{make_slug}/{model_slug}/{age_slug}/", response_class=HTMLResponse)
+    async def seo_model_age(make_slug: str, model_slug: str, age_slug: str):
+        if make_slug not in _make_by_slug:
+            return _not_found_html("Make not found.")
+        if (make_slug, model_slug) not in _model_by_slug:
+            return _not_found_html(
+                f"Model not found for {_make_by_slug[make_slug]['display']}."
+            )
+        # Only serve age-band pages for eligible models (staged rollout)
+        if (make_slug, model_slug) not in _age_band_eligible:
+            return _not_found_html("Age-band data not available for this model.")
+
+        age_band_raw = AGE_BAND_SLUGS.get(age_slug)
+        if not age_band_raw:
+            return _not_found_html("Invalid age range.")
+
+        cache_key = f"seo:age:{make_slug}:{model_slug}:{age_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        make_info = _make_by_slug[make_slug]
+        model_info = _model_by_slug[(make_slug, model_slug)]
+        make = make_info["make"]
+        model = model_info["model_id"]
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+            all_age_bands = _query_model_age_bands(conn, make, model)
+            conn.row_factory = old_factory
+
+        # Find the specific age band
+        current_band = None
+        for band in all_age_bands:
+            if band["age_band"] == age_band_raw:
+                current_band = band
+                break
+
+        if not current_band:
+            return _not_found_html(
+                f"Not enough test data for {make_info['display']} {model_info['display']} "
+                f"in the {AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw)} year age range."
+            )
+
+        # Build component list sorted by risk
+        components = sorted(
+            [{"name": name, "risk": current_band["components"].get(name, 0)}
+             for _, name in COMPONENTS],
+            key=lambda c: c["risk"],
+            reverse=True,
+        )
+
+        # Get competitor models
+        competitors = []
+        rival_list = COMPETITOR_MODELS.get(model, [])
+        for rival_make, rival_model in rival_list:
+            rival_make_slug = _slugify(rival_make)
+            rival_model_slug = _slugify(rival_model)
+            if (rival_make_slug, rival_model_slug) in _model_by_slug:
+                rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
+                competitors.append({
+                    "make_slug": rival_make_slug,
+                    "model_slug": rival_model_slug,
+                    "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
+                    "model_display": rival_info["display"],
+                })
+
+        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{age_slug}/"
+
+        template = jinja_env.get_template("seo_model_age.html")
+        html = template.render(
+            make_display=make_info["display"],
+            make_slug=make_slug,
+            model_display=model_info["display"],
+            model_slug=model_slug,
+            age_band_display=AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw),
+            age_band_raw=age_band_raw,
+            age_slug=age_slug,
+            fail_rate=current_band["fail_rate"],
+            total_tests=current_band["total_tests"],
+            components=components,
+            top_components=components[:3],
+            all_age_bands=all_age_bands,
+            competitors=competitors,
+            canonical_url=canonical_url,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     # --- K7 Pillar Page: "Will My Car Pass Its MOT?" ---
 
     @app.get("/will-my-car-pass-mot/", response_class=HTMLResponse)
@@ -645,6 +799,18 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 f"  </url>"
             )
 
+        # Age-band pages (only for eligible models)
+        for (make_slug, model_slug) in sorted(_age_band_eligible):
+            for age_slug in AGE_BAND_SLUGS:
+                urls.append(
+                    f"  <url>\n"
+                    f"    <loc>{base}/mot-check/{make_slug}/{model_slug}/{age_slug}/</loc>\n"
+                    f"    <lastmod>{today}</lastmod>\n"
+                    f"    <priority>0.6</priority>\n"
+                    f"    <changefreq>monthly</changefreq>\n"
+                    f"  </url>"
+                )
+
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -659,4 +825,4 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
-    logger.info("SEO: Routes registered (/mot-check/, /sitemap.xml)")
+    logger.info("SEO: Routes registered (/mot-check/, /mot-check/{make}/{model}/{age}/, /sitemap.xml)")

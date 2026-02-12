@@ -61,7 +61,7 @@ const App: React.FC = () => {
         <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple." />
         <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
         <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
-        <link rel="canonical" href="https://autosafe.co.uk/" />
+        <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}
       <nav className="w-full bg-transparent pt-12 pb-8 z-50" aria-label="Main navigation">

@@ -2204,6 +2204,50 @@ if os.path.isdir("static"):
 from seo_pages import register_seo_routes
 register_seo_routes(app, get_sqlite_connection)
 
+# IndexNow protocol for faster search engine indexation
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "autosafe-indexnow-key")
+
+
+@app.get("/indexnow-key.txt")
+async def indexnow_key_file():
+    """Serve IndexNow verification key file."""
+    return Response(content=INDEXNOW_KEY, media_type="text/plain")
+
+
+@app.post("/api/admin/indexnow")
+@limiter.limit("5/minute")
+async def ping_indexnow(request: Request):
+    """Ping IndexNow with a list of URLs (admin only)."""
+    api_key = request.headers.get("X-API-Key")
+    if not _verify_admin_api_key(api_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+    body = await request.json()
+    url_list = body.get("urls", [])
+
+    if not url_list:
+        raise HTTPException(status_code=400, detail="No URLs provided")
+
+    import httpx
+    payload = {
+        "host": "www.autosafe.one",
+        "key": INDEXNOW_KEY,
+        "keyLocation": "https://www.autosafe.one/indexnow-key.txt",
+        "urlList": url_list[:10000],
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.indexnow.org/indexnow",
+                json=payload,
+                timeout=10,
+            )
+        return {"success": True, "status_code": resp.status_code, "urls_submitted": len(url_list)}
+    except Exception as e:
+        logger.error(f"IndexNow ping failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
 if os.path.isdir("static"):
     @app.get("/robots.txt")
     async def robots_txt():
@@ -2218,7 +2262,7 @@ if os.path.isdir("static"):
     @app.get("/{path:path}")
     async def serve_spa(path: str):
         # Don't serve index.html for API routes, static files, or SEO pages
-        if path.startswith(("api/", "static/", "assets/", "mot-check", "insights", "will-my-car-pass-mot", "robots.txt", "sitemap.xml")):
+        if path.startswith(("api/", "static/", "assets/", "mot-check", "insights", "will-my-car-pass-mot", "robots.txt", "sitemap.xml", "indexnow-key")):
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return FileResponse('static/index.html')
 else:

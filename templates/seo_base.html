@@ -8,6 +8,7 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'AW-17896487388');
+      gtag('config', 'G-8PV2HG1QDC');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,7 +26,7 @@
     <meta name="twitter:title" content="{% block twitter_title %}{% endblock %}">
     <meta name="twitter:description" content="{% block twitter_description %}{% endblock %}">
     <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
-    <link rel="canonical" href="{% block canonical_url %}{% endblock %}">
+    <link rel="canonical" href="{% block canonical_url %}https://www.autosafe.one{{ request.url.path if request else '/' }}{% endblock %}">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     {% block structured_data %}{% endblock %}
@@ -94,6 +95,46 @@
         .breadcrumbs a { color: #e5c07b; text-decoration: none; }
         .breadcrumbs a:hover { text-decoration: underline; }
         .breadcrumbs .sep { margin: 0 0.25rem; color: #555; }
+        /* UK number plate styled reg input */
+        .reg-plate-wrapper { position: relative; display: inline-block; }
+        .reg-plate-wrapper::before {
+            content: "GB";
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 28px;
+            background: #003399;
+            color: white;
+            font-size: 0.6rem;
+            font-weight: bold;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 4px;
+            border-radius: 4px 0 0 4px;
+            z-index: 1;
+        }
+        .reg-plate-input {
+            background-color: #FFD200;
+            color: #000;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 1.25rem;
+            border: 2px solid #333;
+            border-radius: 4px;
+            letter-spacing: 3px;
+            padding: 0.75rem 1rem 0.75rem 2.25rem;
+            text-align: center;
+            width: 220px;
+        }
+        .reg-plate-input::placeholder { color: #666; letter-spacing: 2px; font-size: 1rem; }
+        .reg-lookup-form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: center; margin: 1.5rem 0; }
+        .reg-lookup-btn {
+            background: #e5c07b; color: #1a1a1a; padding: 0.75rem 1.5rem;
+            border: none; border-radius: 8px; font-weight: 600; font-size: 1rem;
+            cursor: pointer; text-decoration: none;
+        }
+        .reg-lookup-btn:hover { background: #d4a85a; }
     </style>
 </head>
 <body>

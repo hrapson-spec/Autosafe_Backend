@@ -147,6 +147,17 @@
     </div>
 </div>
 
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Check Your {{ make_display }}</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to get a personalised MOT failure prediction for your specific {{ make_display }}.</p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+    </form>
+</div>
+
 <h2>Related Guides</h2>
 <ul>
     <li><a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points</a></li>

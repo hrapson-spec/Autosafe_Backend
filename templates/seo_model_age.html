@@ -1,0 +1,214 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ make_display }} {{ model_display }} MOT Failure Rate ({{ age_band_display }} Years Old) | AutoSafe{% endblock %}
+{% block meta_description %}{{ make_display }} {{ model_display }} ({{ age_band_display }} years old): {{ "%.1f"|format(fail_rate * 100) }}% MOT failure rate. Top issues: {{ top_components[0].name if top_components else "various" }} and {{ top_components[1].name if top_components|length > 1 else "general wear" }}. Based on {{ "{:,}".format(total_tests) }} real MOT tests.{% endblock %}
+{% block og_title %}{{ make_display }} {{ model_display }} MOT Risk ({{ age_band_display }} Years Old){% endblock %}
+{% block og_description %}{{ "%.1f"|format(fail_rate * 100) }}% failure rate for {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles.{% endblock %}
+{% block twitter_title %}{{ make_display }} {{ model_display }} MOT Risk ({{ age_band_display }} Years Old){% endblock %}
+{% block twitter_description %}{{ "%.1f"|format(fail_rate * 100) }}% failure rate for {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles.{% endblock %}
+{% block canonical_url %}{{ canonical_url }}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is a {{ age_band_display }} year old {{ make_display }} {{ model_display }} reliable?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Based on {{ "{:,}".format(total_tests) }} MOT tests, {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles have a {{ "%.1f"|format(fail_rate * 100) }}% failure rate. This is {{ "above" if fail_rate > 0.28 else "below" }} the UK average of 28%."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the common MOT failures on a {{ age_band_display }} year old {{ make_display }} {{ model_display }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The top failure areas for {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles are: {% for comp in top_components[:3] %}{{ comp.name }} ({{ "%.1f"|format(comp.risk * 100) }}% risk){{ ", " if not loop.last else "" }}{% endfor %}."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The {{ make_display }} {{ model_display }} MOT failure rate varies by age group: {% for band in all_age_bands %}{{ band.age_band }} years: {{ "%.1f"|format(band.fail_rate * 100) }}%{{ ", " if not loop.last else "" }}{% endfor %}."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
+    {"@type": "ListItem", "position": 3, "name": "{{ make_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/"},
+    {"@type": "ListItem", "position": 4, "name": "{{ model_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/"},
+    {"@type": "ListItem", "position": 5, "name": "{{ age_band_display }} Years"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+    <a href="/mot-check/{{ make_slug }}/">{{ make_display }}</a><span class="sep">/</span>
+    <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/">{{ model_display }}</a><span class="sep">/</span>
+    <span>{{ age_band_display }} Years</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<h1>{{ make_display }} {{ model_display }} MOT Failure Rate &mdash; {{ age_band_display }} Years Old</h1>
+
+<div class="stat-highlight">
+    <div class="big-number">{{ "%.1f"|format(fail_rate * 100) }}%</div>
+    <div class="label">MOT failure rate for {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles</div>
+    <div class="label" style="margin-top: 0.25rem;">Based on {{ "{:,}".format(total_tests) }} MOT tests</div>
+    <div class="label" style="margin-top: 0.5rem;">
+        {% if fail_rate > 0.28 %}
+        <span style="color: #ef4444;">{{ "%.1f"|format((fail_rate - 0.28) * 100) }}pp above the UK average (28%)</span>
+        {% elif fail_rate < 0.28 %}
+        <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - fail_rate) * 100) }}pp below the UK average (28%)</span>
+        {% else %}
+        <span>Equal to the UK average (28%)</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if fail_rate < 0.10 %}
+<p>This model is exceptionally reliable for its age. Only <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> of {{ make_display }} {{ model_display }} vehicles in this age bracket fail their MOT.</p>
+{% elif fail_rate < 0.20 %}
+<p>{{ make_display }} {{ model_display }} shows good reliability at this age, with a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate &mdash; below the national average.</p>
+{% elif fail_rate < 0.30 %}
+<p>{{ make_display }} {{ model_display }} in this age bracket has a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate. Key areas to check before your MOT: {{ top_components[0].name|lower if top_components else "general wear items" }}{% if top_components|length > 1 %} and {{ top_components[1].name|lower }}{% endif %}.</p>
+{% else %}
+<p>This model shows significant deterioration in this age bracket, with a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate. Pre-MOT inspection strongly recommended, especially for {{ top_components[0].name|lower if top_components else "common wear items" }}.</p>
+{% endif %}
+
+<h2>Component Risk Breakdown ({{ age_band_display }} Years)</h2>
+<p>Which parts of a {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} are most likely to cause an MOT failure:</p>
+
+{% for comp in components %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ comp.name }}</span>
+        <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (comp.risk * 500)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+
+<h2>How Does This Compare?</h2>
+<p>{{ make_display }} {{ model_display }} MOT failure rate across all age groups:</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Age</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th>Worst Area</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for band in all_age_bands %}
+        <tr{% if band.age_band == age_band_raw %} style="background: rgba(229, 192, 123, 0.15);"{% endif %}>
+            <td>
+                {% if band.age_band == age_band_raw %}
+                <strong>{{ band.age_band }} years</strong>
+                {% else %}
+                <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/" style="color: #e5c07b; text-decoration: none;">{{ band.age_band }} years</a>
+                {% endif %}
+            </td>
+            <td><span class="fail-rate {% if band.fail_rate > 0.35 %}high{% elif band.fail_rate < 0.20 %}low{% endif %}">{{ "%.1f"|format(band.fail_rate * 100) }}%</span></td>
+            <td class="sample-size">{{ "{:,}".format(band.total_tests) }}</td>
+            <td>{{ band.worst_component }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if competitors %}
+<h2>Nearby Competitors</h2>
+<p>How does the {{ make_display }} {{ model_display }} compare to similar models at this age?</p>
+<div class="related-links">
+    {% for comp in competitors %}
+    <a href="/mot-check/{{ comp.make_slug }}/{{ comp.model_slug }}/">{{ comp.make_display }} {{ comp.model_display }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display }} {{ model_display }} is at risk.</p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+    </form>
+</div>
+
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+        <h3>Is a {{ age_band_display }} year old {{ make_display }} {{ model_display }} reliable?</h3>
+        {% if fail_rate < 0.20 %}
+        <p>Yes. Based on {{ "{:,}".format(total_tests) }} MOT tests, {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles have a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate, which is below the UK average of 28%. This is a reliable choice at this age.</p>
+        {% elif fail_rate < 0.30 %}
+        <p>{{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles have a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate, which is close to the UK average. It offers typical reliability for this age bracket.</p>
+        {% else %}
+        <p>{{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles have a <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate, which is above average. Consider a pre-MOT inspection, particularly checking {{ top_components[0].name|lower if top_components else "common wear items" }}.</p>
+        {% endif %}
+    </div>
+
+    <div class="faq-item">
+        <h3>What are the common MOT failures on a {{ age_band_display }} year old {{ make_display }} {{ model_display }}?</h3>
+        <p>The most common MOT failure areas at this age are:</p>
+        <ul>
+            {% for comp in top_components[:3] %}
+            <li><strong>{{ comp.name }}</strong> &mdash; {{ "%.1f"|format(comp.risk * 100) }}% failure risk</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="faq-item">
+        <h3>How can I prepare my {{ make_display }} {{ model_display }} for its MOT?</h3>
+        <p>For a {{ age_band_display }}-year-old {{ make_display }} {{ model_display }}, focus on: (1) {{ top_components[0].name if top_components else "Brakes" }} &mdash; the most common failure area at this age. (2) Check all lights and bulbs. (3) Inspect tyres for tread depth and damage. (4) Consider a pre-MOT check at a local garage (&pound;20&ndash;&pound;40). You can also <a href="/" style="color: #e5c07b;">use our free prediction tool</a> for a personalised risk breakdown.</p>
+    </div>
+</div>
+
+<h2>Other {{ make_display }} {{ model_display }} Age Groups</h2>
+<div class="related-links">
+    {% for band in all_age_bands %}
+    {% if band.age_band != age_band_raw %}
+    <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{ band.age_band }} years</a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<p style="margin-top: 1rem;"><a href="/mot-check/{{ make_slug }}/{{ model_slug }}/" style="color: #e5c07b;">&larr; Back to {{ make_display }} {{ model_display }} overview</a></p>
+
+<div class="methodology">
+    <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands for the {{ age_band_display }}-year age group, calculated from official DVSA MOT test records. Only combinations with 100+ tests are included. Data covers 142 million MOT tests across the UK.</p>
+</div>
+
+{% endblock %}
+
+{% block cta_heading %}Check Your {{ make_display }} {{ model_display }}{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle.{% endblock %}
