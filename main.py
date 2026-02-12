@@ -2213,7 +2213,7 @@ if os.path.isdir("static"):
     @app.get("/{path:path}")
     async def serve_spa(path: str):
         # Don't serve index.html for API routes, static files, or SEO pages
-        if path.startswith(("api/", "static/", "mot-check", "insights", "will-my-car-pass-mot", "robots.txt", "sitemap.xml")):
+        if path.startswith(("api/", "static/", "assets/", "mot-check", "insights", "will-my-car-pass-mot", "robots.txt", "sitemap.xml")):
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
         return FileResponse('static/index.html')
 else:
