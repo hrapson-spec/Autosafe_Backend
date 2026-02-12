@@ -556,27 +556,13 @@ input:focus:not(:focus-visible) {
     text-align: center;
 }
 
-/* ===== Lead Capture Section ===== */
+/* ===== Lead Capture Form Wrapper ===== */
 .lead-capture {
-    background: var(--border-light);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
     margin: var(--space-lg) 0;
     text-align: center;
-}
-
-.lead-capture h3 {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--space-sm);
-}
-
-.lead-capture>p {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: var(--space-lg);
+    background: var(--border-light);
 }
 
 .lead-capture .form-group {
@@ -596,119 +582,239 @@ input:focus:not(:focus-visible) {
     margin-top: var(--space-md);
 }
 
-/* ===== Service Selection ===== */
-.service-selection {
-    margin-bottom: var(--space-md);
+/* ===== Action Cards (Option C — Urgency Cards) ===== */
+.action-cards {
+    margin: var(--space-lg) 0;
 }
 
-.service-prompt {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: var(--space-md);
-}
-
-.service-options {
-    display: flex;
-    gap: var(--space-md);
-    margin-bottom: var(--space-md);
-}
-
-.service-option {
-    flex: 1;
-    cursor: pointer;
-}
-
-.service-option input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.service-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--space-lg) var(--space-md);
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
+/* Primary: Repair Urgency Card */
+.urgency-card {
+    background: rgba(220, 38, 38, 0.04);
+    border-left: 4px solid var(--danger-red);
     border-radius: var(--radius-lg);
-    transition: all var(--transition-smooth);
-    height: 100%;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+    text-align: left;
 }
 
-.service-card:hover {
-    border-color: var(--text-muted);
+.urgency-card.low-risk {
+    background: rgba(5, 150, 105, 0.04);
+    border-left-color: var(--success-green);
 }
 
-.service-option input[type="checkbox"]:checked+.service-card {
-    border-color: var(--primary-charcoal);
-    background: rgba(55, 65, 81, 0.05);
-}
-
-.service-option input[type="checkbox"]:focus-visible+.service-card {
-    outline: 2px solid var(--primary-charcoal);
-    outline-offset: 2px;
-}
-
-.service-icon {
+.urgency-card__icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 40px;
     height: 40px;
+    background: rgba(220, 38, 38, 0.08);
+    border-radius: var(--radius-md);
+    color: var(--danger-red);
+    margin-bottom: var(--space-md);
+}
+
+.urgency-card.low-risk .urgency-card__icon {
+    background: rgba(5, 150, 105, 0.08);
+    color: var(--success-green);
+}
+
+.urgency-card__components {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
     margin-bottom: var(--space-sm);
+    line-height: 1.4;
+}
+
+.urgency-card__savings {
+    font-size: 0.85rem;
     color: var(--text-secondary);
-    transition: color var(--transition-fast);
+    margin-bottom: var(--space-lg);
+    line-height: 1.5;
 }
 
-.service-option input[type="checkbox"]:checked+.service-card .service-icon {
-    color: var(--primary-charcoal);
+.urgency-card__savings strong {
+    color: var(--text-primary);
+    font-weight: 700;
 }
 
-.service-title {
+.urgency-card__btn {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: white;
+    background: var(--primary-charcoal-dark);
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all var(--transition-smooth);
+    box-shadow: var(--shadow-button);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.urgency-card__btn:hover {
+    background: var(--primary-charcoal);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(55, 65, 81, 0.25);
+}
+
+.urgency-card__btn:active {
+    transform: translateY(0);
+}
+
+/* Secondary: Book MOT + MOT Reminder side-by-side */
+.secondary-actions {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.action-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-lg) var(--space-md);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    transition: transform var(--transition-smooth);
+}
+
+.action-card:hover {
+    transform: translateY(-1px);
+}
+
+.action-card--mot {
+    background: rgba(5, 150, 105, 0.05);
+    border: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.action-card--reminder {
+    background: rgba(37, 99, 235, 0.05);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.action-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+}
+
+.action-card--mot .action-card__icon {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-green);
+}
+
+.action-card--reminder .action-card__icon {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+}
+
+.action-card__title {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: var(--space-xs);
 }
 
-.service-desc {
+.action-card__desc {
     font-size: 0.75rem;
     color: var(--text-muted);
-    text-align: center;
+    margin-bottom: var(--space-md);
+    line-height: 1.4;
 }
 
-#serviceContinueBtn {
+.action-card__btn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all var(--transition-smooth);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: auto;
+}
+
+.action-card--mot .action-card__btn {
+    background: var(--success-green);
+    color: white;
+}
+
+.action-card--mot .action-card__btn:hover {
+    background: #047857;
+}
+
+.action-card--reminder .action-card__btn {
+    background: #2563eb;
+    color: white;
+}
+
+.action-card--reminder .action-card__btn:hover {
+    background: #1d4ed8;
+}
+
+/* Trust line */
+.trust-line {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
     margin-top: var(--space-sm);
 }
 
-#serviceContinueBtn:disabled {
-    background: var(--text-muted);
-    cursor: not-allowed;
-    box-shadow: none;
+/* Back link in contact form */
+.back-link {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: var(--space-md) 0 0;
+    text-align: center;
+    transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+    color: var(--text-primary);
+}
+
+/* Lead form title */
+.lead-capture h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+    text-align: center;
 }
 
 @media (max-width: 500px) {
-    .service-options {
-        flex-wrap: wrap;
+    .secondary-actions {
+        gap: var(--space-sm);
     }
 
-    .service-option {
-        flex: 1 1 calc(50% - var(--space-sm));
-        min-width: 0;
-    }
-
-    .service-card {
+    .action-card {
         padding: var(--space-md) var(--space-sm);
     }
 
-    .service-title {
+    .action-card__title {
         font-size: 0.8rem;
     }
 
-    .service-desc {
+    .action-card__desc {
         font-size: 0.7rem;
     }
 }

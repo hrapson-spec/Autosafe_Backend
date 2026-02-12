@@ -45,16 +45,31 @@ const leadForm = document.getElementById('leadForm');
 const leadCapture = document.getElementById('leadCapture');
 const leadSuccess = document.getElementById('leadSuccess');
 
-// Service selection elements
-const serviceSelection = document.getElementById('serviceSelection');
-const serviceContinueBtn = document.getElementById('serviceContinueBtn');
-const serviceCheckboxes = document.querySelectorAll('input[name="service"]');
+// Action card elements
+const actionCards = document.getElementById('actionCards');
+const repairBtn = document.getElementById('repairBtn');
+const motBtn = document.getElementById('motBtn');
+const reminderBtn = document.getElementById('reminderBtn');
+const backToCardsBtn = document.getElementById('backToCards');
 
 // Store current results for lead submission
 let currentResultsData = null;
 
 // Store selected services
 let selectedServices = [];
+
+/**
+ * Component display name mapping
+ */
+const componentDisplayNames = {
+    'brakes': 'Brakes',
+    'suspension': 'Suspension',
+    'tyres': 'Tyres',
+    'steering': 'Steering',
+    'visibility': 'Visibility',
+    'lamps': 'Lights',
+    'body': 'Body/Structure',
+};
 
 /**
  * Initialize the page
@@ -68,69 +83,110 @@ function init() {
         postcodeInput.addEventListener('input', formatPostcode);
     }
 
-    // Initialize service selection
-    initServiceSelection();
+    // Initialize action card click handlers
+    initActionCards();
 }
 
 /**
- * Initialize service selection handlers
+ * Initialize action card click handlers
  */
-function initServiceSelection() {
-    if (!serviceCheckboxes.length || !serviceContinueBtn) return;
-
-    // Handle checkbox changes
-    serviceCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateServiceSelection);
-    });
-
-    // Handle continue button click
-    serviceContinueBtn.addEventListener('click', showContactForm);
+function initActionCards() {
+    if (repairBtn) repairBtn.addEventListener('click', () => handleCardClick('repair'));
+    if (motBtn) motBtn.addEventListener('click', () => handleCardClick('mot'));
+    if (reminderBtn) reminderBtn.addEventListener('click', () => handleCardClick('reminder'));
+    if (backToCardsBtn) backToCardsBtn.addEventListener('click', showActionCards);
 }
 
 /**
- * Update service selection state
+ * Handle CTA card click — pre-select the service and show the contact form
  */
-function updateServiceSelection() {
-    selectedServices = Array.from(serviceCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
+function handleCardClick(service) {
+    selectedServices = [service];
 
-    // Enable/disable continue button based on selection
-    if (serviceContinueBtn) {
-        serviceContinueBtn.disabled = selectedServices.length === 0;
+    // Update form title based on selected service
+    const leadFormTitle = document.getElementById('leadFormTitle');
+    if (leadFormTitle) {
+        const titles = {
+            'repair': 'Get repair quotes from local garages',
+            'mot': 'Book your MOT with a trusted garage',
+            'reminder': 'Set up your free MOT reminder',
+        };
+        leadFormTitle.textContent = titles[service] || 'Get connected with a local garage';
     }
+
+    // Hide action cards, show the contact form
+    if (actionCards) actionCards.classList.add('hidden');
+    if (leadCapture) leadCapture.classList.remove('hidden');
+    if (leadForm) leadForm.classList.remove('hidden');
 }
 
 /**
- * Show contact form after service selection
+ * Show action cards and hide the contact form (back button)
  */
-function showContactForm() {
-    if (selectedServices.length === 0) return;
-
-    if (serviceSelection) {
-        serviceSelection.classList.add('hidden');
-    }
+function showActionCards() {
+    if (actionCards) actionCards.classList.remove('hidden');
+    if (leadCapture) leadCapture.classList.add('hidden');
     if (leadForm) {
-        leadForm.classList.remove('hidden');
+        leadForm.classList.add('hidden');
+        leadForm.reset();
     }
 }
 
 /**
- * Reset service selection to initial state
+ * Reset CTA state for a new search
  */
 function resetServiceSelection() {
     selectedServices = [];
-    serviceCheckboxes.forEach(cb => {
-        cb.checked = false;
-    });
-    if (serviceContinueBtn) {
-        serviceContinueBtn.disabled = true;
-    }
-    if (serviceSelection) {
-        serviceSelection.classList.remove('hidden');
-    }
-    if (leadForm) {
-        leadForm.classList.add('hidden');
+    showActionCards();
+}
+
+/**
+ * Build action cards content from API response data
+ */
+function buildActionCards(data) {
+    const urgencyCard = document.getElementById('repairUrgencyCard');
+    const componentsEl = document.getElementById('urgencyComponents');
+    const savingsEl = document.getElementById('urgencySavings');
+
+    if (!urgencyCard || !componentsEl || !savingsEl) return;
+
+    const risk = data.failure_risk || 0;
+    const riskComponents = data.risk_components || {};
+
+    // Get top risk components (>5% risk, sorted descending, max 3)
+    const topRisks = Object.entries(riskComponents)
+        .filter(([_, value]) => value > 0.05)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([key]) => componentDisplayNames[key] || key);
+
+    // Low risk variant
+    if (risk < 0.15) {
+        urgencyCard.classList.add('low-risk');
+        componentsEl.textContent = 'Your car looks healthy — stay ahead with regular maintenance';
+        savingsEl.textContent = 'Book a pre-MOT check to keep it that way';
+        const repairBtnEl = document.getElementById('repairBtn');
+        if (repairBtnEl) repairBtnEl.textContent = 'Book a Check-up →';
+    } else {
+        urgencyCard.classList.remove('low-risk');
+
+        // Show top risk components
+        if (topRisks.length > 0) {
+            componentsEl.textContent = 'Likely to fail on: ' + topRisks.join(', ');
+        } else {
+            componentsEl.textContent = 'Your car has an elevated failure risk';
+        }
+
+        // Show potential savings from repair cost estimate
+        const rangeHigh = data.repair_cost_estimate?.range_high;
+        if (rangeHigh) {
+            savingsEl.innerHTML = `Fix these issues before your MOT to save up to <strong>£${rangeHigh}</strong>`;
+        } else {
+            savingsEl.textContent = 'Fix these issues before your MOT to avoid costly failures';
+        }
+
+        const repairBtnEl = document.getElementById('repairBtn');
+        if (repairBtnEl) repairBtnEl.textContent = 'Get Repair Quotes →';
     }
 }
 
@@ -197,7 +253,7 @@ form.addEventListener('submit', async (e) => {
     if (resultsPanel) resultsPanel.classList.add('hidden');
 
     // Reset lead form state for new search
-    if (leadCapture) leadCapture.classList.remove('hidden');
+    if (leadCapture) leadCapture.classList.add('hidden');
     if (leadSuccess) leadSuccess.classList.add('hidden');
     if (leadForm) leadForm.reset();
     resetServiceSelection();
@@ -408,6 +464,9 @@ function displayResults(data) {
         }
     }
 
+    // Build urgency action cards from risk data
+    buildActionCards(data);
+
     // Update Components (V55 uses risk_components object)
     const componentsGrid = document.getElementById('componentsGrid');
     if (!componentsGrid) return;
@@ -415,15 +474,6 @@ function displayResults(data) {
     componentsGrid.innerHTML = '';
 
     const riskComponents = data.risk_components || {};
-    const componentDisplayNames = {
-        'brakes': 'Brakes',
-        'suspension': 'Suspension',
-        'tyres': 'Tyres',
-        'steering': 'Steering',
-        'visibility': 'Visibility',
-        'lamps': 'Lights',
-        'body': 'Body/Structure',
-    };
 
     const components = [];
     for (const [key, name] of Object.entries(componentDisplayNames)) {
