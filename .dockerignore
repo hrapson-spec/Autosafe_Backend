@@ -1,0 +1,14 @@
+.venv/
+node_modules/
+frontend/
+work/
+features/
+backend/
+catboost_info/
+*.csv
+*.db
+*.pdf
+*.log
+.git/
+.DS_Store
+__pycache__/

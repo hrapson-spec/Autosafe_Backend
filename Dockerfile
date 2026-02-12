@@ -4,12 +4,9 @@ FROM python:3.9-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies for CatBoost + Node.js for frontend build
+# Install system dependencies for CatBoost
 RUN apt-get update && apt-get install -y \
     libgomp1 \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
@@ -19,10 +16,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
+# Note: React SPA is pre-built and committed to static/ (run npm run build locally before deploying)
 COPY . .
-
-# Build the React frontend (outputs to static/)
-RUN npm install && npm run build
 
 # Create a non-root user with an explicit UID and add permission to access the /app folder
 # This prevents potential container escapes by running the application as a restricted user
