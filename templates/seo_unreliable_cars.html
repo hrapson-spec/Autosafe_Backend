@@ -1,0 +1,216 @@
+{% extends "seo_base.html" %}
+
+{% block title %}10 Most Unreliable 3-Year-Old Cars for MOT 2026 | AutoSafe{% endblock %}
+{% block meta_description %}Which 3-year-old cars are most likely to fail their first MOT in 2026? We ranked the top 10 based on {{ "{:,}".format(total_young_tests) }} official DVSA tests.{% endblock %}
+{% block og_title %}10 Most Unreliable 3-Year-Old Cars for MOT 2026{% endblock %}
+{% block og_description %}Which 3-year-old cars are most likely to fail their first MOT in 2026? We ranked the top 10 based on {{ "{:,}".format(total_young_tests) }} official DVSA tests.{% endblock %}
+{% block twitter_title %}10 Most Unreliable 3-Year-Old Cars for MOT 2026{% endblock %}
+{% block twitter_description %}Which 3-year-old cars are most likely to fail their first MOT in 2026? We ranked the top 10 based on {{ "{:,}".format(total_young_tests) }} official DVSA tests.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/insights/unreliable-3-year-old-cars-2026/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which 3-year-old cars are most likely to fail their MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Based on our analysis of {{ "{:,}".format(total_young_tests) }} DVSA test records for vehicles in the 0-3 year age band, the {{ cars[0].display_name }} has the highest first-MOT failure rate at {{ "%.1f"|format(cars[0].fail_rate * 100) }}%. The top 10 most unreliable 3-year-old cars also include {% for car in cars[1:3] %}the {{ car.display_name }} ({{ "%.1f"|format(car.fail_rate * 100) }}%){{ ', ' if not loop.last else '' }}{% endfor %}, and others. Only models with at least 5,000 tests were included for statistical reliability."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why do some new cars fail their first MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Even relatively new cars can fail their first MOT at 3 years old. The most common reasons include lighting and electrical faults (blown bulbs, misaligned headlights), tyre wear below the legal 1.6mm minimum, and brake wear — particularly on vehicles that have covered high mileage in their first three years. Some models have design-related weaknesses that show up early, such as premature suspension wear or electrical issues."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I prepare my car for its first MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To prepare your car for its first MOT, check all lights and bulbs are working, ensure tyre tread depth is above 1.6mm across the central three-quarters of the tread, inspect wiper blades for wear, top up windscreen washer fluid, and check for any warning lights on the dashboard. A pre-MOT inspection at a local garage (typically £20-£30) can identify issues before the official test. Book your MOT 2-4 weeks before the due date to allow time for any necessary repairs."
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "The 10 Most Unreliable 3-Year-Old Cars Heading into March 2026 MOTs",
+  "datePublished": "2026-02-12",
+  "dateModified": "2026-02-12",
+  "author": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.autosafe.one/static/logo_clean.png"
+    }
+  },
+  "description": "Which 3-year-old cars are most likely to fail their first MOT in 2026? We ranked the top 10 based on {{ "{:,}".format(total_young_tests) }} official DVSA tests.",
+  "mainEntityOfPage": "https://www.autosafe.one/insights/unreliable-3-year-old-cars-2026/"
+}
+</script>
+{% endblock %}
+
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "Insights", "item": "https://www.autosafe.one/insights/"},
+    {"@type": "ListItem", "position": 3, "name": "Most Unreliable 3-Year-Old Cars 2026"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">&rsaquo;</span>
+    <a href="/insights/">Insights</a><span class="sep">&rsaquo;</span>
+    <span>Most Unreliable 3-Year-Old Cars 2026</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<a href="/insights/" class="back-link">&larr; Back to Insights</a>
+
+<h1>The 10 Most Unreliable 3-Year-Old Cars Heading into March 2026 MOTs</h1>
+
+<p>March 2026 sees a wave of cars registered on March 2023 plates reaching their mandatory first MOT at three years old. For hundreds of thousands of UK drivers, it will be the first time their vehicle faces official scrutiny at a DVSA-approved testing station. Most will sail through. But some models have a track record that suggests their owners should prepare carefully.</p>
+
+<p>We analysed {{ "{:,}".format(total_young_tests) }} official DVSA test records for vehicles in the 0-3 year age band to find which models are most likely to fail their very first MOT. Only models with at least 5,000 tests were included to ensure statistical reliability. Here are the 10 worst performers.</p>
+
+{% if cars %}
+<div class="stat-highlight">
+    <div class="big-number">{{ "%.1f"|format(cars[0].fail_rate * 100) }}%</div>
+    <div class="label">First-MOT failure rate for the {{ cars[0].display_name }} — the least reliable 3-year-old car in our data</div>
+</div>
+
+<h2>The Top 10 Ranked</h2>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Vehicle</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th>Worst Area</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for car in cars %}
+        <tr>
+            <td>{{ car.rank }}</td>
+            <td>{% if car.page_link %}<a href="{{ car.page_link }}" style="color: #e5c07b;">{{ car.display_name }}</a>{% else %}{{ car.display_name }}{% endif %}</td>
+            <td><span class="fail-rate {% if car.fail_rate > 0.20 %}high{% elif car.fail_rate < 0.10 %}low{% endif %}">{{ "%.1f"|format(car.fail_rate * 100) }}%</span></td>
+            <td class="sample-size">{{ "{:,}".format(car.total_tests) }}</td>
+            <td>{{ car.top_components[0].name if car.top_components else 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>Model-by-Model Breakdown</h2>
+
+{% for car in cars %}
+<h3>{{ car.rank }}. {{ car.display_name }} — {{ "%.1f"|format(car.fail_rate * 100) }}% failure rate</h3>
+
+<p>Based on {{ "{:,}".format(car.total_tests) }} tests in the 0-3 year age band, the {{ car.display_name }} has a first-MOT failure rate of {{ "%.1f"|format(car.fail_rate * 100) }}%. Its biggest weakness is <strong>{{ car.top_components[0].name if car.top_components else 'N/A' }}</strong>{% if car.top_components and car.top_components|length > 1 %}, followed by {{ car.top_components[1].name }}{% if car.top_components|length > 2 %} and {{ car.top_components[2].name }}{% endif %}{% endif %}.</p>
+
+<div style="margin: 1rem 0;">
+    {% for comp in car.all_components %}
+    <div class="risk-bar-container">
+        <div class="risk-bar-label">
+            <span>{{ comp.name }}</span>
+            <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
+        </div>
+        <div class="risk-bar">
+            <div class="risk-bar-fill {% if comp.risk > 0.10 %}high{% elif comp.risk > 0.05 %}medium{% else %}low{% endif %}" style="width: {{ (comp.risk * 500)|round|int }}%"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if car.page_link %}
+<p><a href="{{ car.page_link }}" style="color: #e5c07b;">View full {{ car.display_name }} MOT data &rarr;</a></p>
+{% endif %}
+
+{% endfor %}
+
+<h2>What This Means for March 2026 MOTs</h2>
+
+<p>Every March sees a surge in first-time MOTs as vehicles registered on the previous March plates hit their third birthday. For cars registered in March 2023, that milestone arrives in March 2026. This creates one of the busiest periods of the year for testing stations — and for drivers who have never had to deal with MOT preparation before.</p>
+
+<p>If you own one of the models listed above, there is no need to panic. A high failure rate does not mean your car will definitely fail. It means that, statistically, your model has a higher proportion of vehicles that present with defects at their first MOT compared to other models. The most common reasons for first-MOT failures are straightforward: lighting faults (blown bulbs, misaligned headlights), tyre wear, and brake wear from high early mileage.</p>
+
+<p>Here is what we recommend for owners of these vehicles:</p>
+
+<ul>
+    <li><strong>Book early:</strong> Do not leave your MOT until the last day of the month. Book 2-4 weeks ahead of your due date so you have time for repairs if needed. Remember, you can have your MOT done up to one month (minus a day) before expiry without losing any time on your certificate.</li>
+    <li><strong>Walk-around check:</strong> Spend 10 minutes checking all your lights, tyre tread depths, wiper blades, and windscreen for chips. These are the most common first-MOT failure points and the cheapest to fix yourself.</li>
+    <li><strong>Check your advisories:</strong> If this is not your car's first MOT, review any advisories from the previous test. Items flagged as advisory last time may have deteriorated enough to become a failure this time around.</li>
+    <li><strong>Consider a pre-MOT inspection:</strong> A pre-MOT check at a local garage typically costs between £20 and £30. It is the cheapest insurance against an unexpected failure and gives you time to shop around for competitive repair prices.</li>
+    <li><strong>Focus on your model's weak spots:</strong> Use the component breakdowns above to see where your specific model is most likely to have issues, and pay extra attention to those areas during your pre-MOT checks.</li>
+</ul>
+
+<h2>Explore These Models on AutoSafe</h2>
+
+<div class="related-links">
+    {% for car in cars %}
+    {% if car.page_link %}
+    <a href="{{ car.page_link }}">{{ car.display_name }}</a>
+    {% endif %}
+    {% endfor %}
+    <a href="/mot-check/">Browse All Makes &amp; Models</a>
+</div>
+
+<div class="methodology">
+    <p><strong>Methodology:</strong> This analysis is based on {{ "{:,}".format(total_young_tests) }} MOT test records for vehicles in the 0-3 year age band, sourced from the official DVSA database (over 142 million total test records). Data is used under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>.</p>
+    <p>Only models with 5,000 or more tests in the 0-3 year age band were included to ensure statistical significance. Failure rates are weighted averages calculated as total failures divided by total tests for each model within the age band. Component risk scores are weighted averages across mileage bands.</p>
+    <p>Journalists and researchers are welcome to cite this data with attribution to AutoSafe (www.autosafe.one). For press enquiries, contact <a href="mailto:autosafehq@gmail.com" style="color: #e5c07b;">autosafehq@gmail.com</a>.</p>
+    <p>Data last updated: February 2026</p>
+</div>
+
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+        <h3>Which 3-year-old cars are most likely to fail their MOT?</h3>
+        <p>Based on our analysis of {{ "{:,}".format(total_young_tests) }} DVSA test records, the {{ cars[0].display_name }} has the highest first-MOT failure rate at {{ "%.1f"|format(cars[0].fail_rate * 100) }}%. The full top 10 includes {% for car in cars %}{{ car.display_name }}{{ ', ' if not loop.last else '.' }}{% endfor %} Only models with at least 5,000 tests were included for statistical reliability.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Why do some new cars fail their first MOT?</h3>
+        <p>Even relatively new cars can fail their first MOT at 3 years old. The most common reasons include lighting and electrical faults (blown bulbs, misaligned headlights), tyre wear below the legal 1.6mm minimum, and brake wear — particularly on vehicles that have covered high mileage in their first three years. Some models have design-related weaknesses that show up early, such as premature suspension wear or electrical issues.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>How can I prepare my car for its first MOT?</h3>
+        <p>To prepare your car for its first MOT, check all lights and bulbs are working, ensure tyre tread depth is above 1.6mm across the central three-quarters of the tread, inspect wiper blades for wear, top up windscreen washer fluid, and check for any warning lights on the dashboard. A pre-MOT inspection at a local garage (typically £20-£30) can identify issues before the official test. Book your MOT 2-4 weeks before the due date to allow time for any necessary repairs.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}
+{% block cta_text %}Own one of these models? Get a personalised failure prediction based on your car's actual history, age and mileage.{% endblock %}

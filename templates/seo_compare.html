@@ -1,0 +1,313 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ display1 }} vs {{ display2 }} MOT Failure Rate Comparison | AutoSafe{% endblock %}
+{% block meta_description %}{{ display1 }} vs {{ display2 }} MOT comparison: {{ "%.1f"|format(overall1.fail_rate * 100) }}% vs {{ "%.1f"|format(overall2.fail_rate * 100) }}% failure rate. Side-by-side breakdown of component risks, age-band data and reliability from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} real UK MOT tests.{% endblock %}
+{% block og_title %}{{ display1 }} vs {{ display2 }} MOT Failure Rate Comparison{% endblock %}
+{% block og_description %}{{ "%.1f"|format(overall1.fail_rate * 100) }}% vs {{ "%.1f"|format(overall2.fail_rate * 100) }}% failure rate from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} MOT tests.{% endblock %}
+{% block twitter_title %}{{ display1 }} vs {{ display2 }} MOT Failure Rate Comparison{% endblock %}
+{% block twitter_description %}{{ "%.1f"|format(overall1.fail_rate * 100) }}% vs {{ "%.1f"|format(overall2.fail_rate * 100) }}% failure rate from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} MOT tests.{% endblock %}
+{% block canonical_url %}{{ canonical_url }}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which is more reliable, {{ display1 }} or {{ display2 }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "{% if winner %}Based on {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} MOT tests, the {{ winner }} is more reliable with a {{ "%.1f"|format(diff * 100) }} percentage point lower failure rate. The {{ display1 }} has a {{ "%.1f"|format(overall1.fail_rate * 100) }}% failure rate while the {{ display2 }} has {{ "%.1f"|format(overall2.fail_rate * 100) }}%.{% else %}Based on MOT data, the {{ display1 }} and {{ display2 }} have comparable reliability with identical failure rates of {{ "%.1f"|format(overall1.fail_rate * 100) }}%.{% endif %}"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the main MOT differences between {{ display1 }} and {{ display2 }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The {{ display1 }} has a {{ "%.1f"|format(overall1.fail_rate * 100) }}% overall MOT failure rate ({{ "{:,}".format(overall1.total_tests) }} tests) while the {{ display2 }} has {{ "%.1f"|format(overall2.fail_rate * 100) }}% ({{ "{:,}".format(overall2.total_tests) }} tests). The top failure area for the {{ display1 }} is {{ overall1.components[0].name|lower if overall1.components else 'general wear' }}, while for the {{ display2 }} it is {{ overall2.components[0].name|lower if overall2.components else 'general wear' }}."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should I buy a {{ display1 }} or {{ display2 }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "{% if winner %}From an MOT reliability standpoint, the {{ winner }} has a lower failure rate. However, MOT pass rates are just one factor — also consider insurance costs, fuel economy, running costs and personal preference. Use AutoSafe's free prediction tool to check a specific vehicle by registration.{% else %}Both models have similar MOT reliability. Consider other factors like insurance costs, fuel economy, running costs and personal preference. Use AutoSafe's free prediction tool to check a specific vehicle by registration.{% endif %}"
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
+    {"@type": "ListItem", "position": 3, "name": "Compare", "item": "https://www.autosafe.one/mot-check/compare/"},
+    {"@type": "ListItem", "position": 4, "name": "{{ display1 }} vs {{ display2 }}"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+    <span>Compare</span><span class="sep">/</span>
+    <span>{{ display1 }} vs {{ display2 }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+    .compare-grid .stat-highlight { margin: 0; }
+    .compare-grid .stat-highlight h3 { color: #fff; font-size: 1.1rem; margin-bottom: 0.75rem; font-family: 'DM Sans', sans-serif; }
+    .verdict-box { background: #2a2a2a; border-left: 4px solid #e5c07b; border-radius: 0 8px 8px 0; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+    .verdict-box p { margin-bottom: 0; }
+    .compare-component-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+    .compare-component-table th { text-align: left; padding: 0.75rem; border-bottom: 2px solid #e5c07b; color: #fff; font-weight: 600; }
+    .compare-component-table td { padding: 0.75rem; border-bottom: 1px solid #333; color: #a0a0a0; }
+    .compare-component-table tr:hover { background: rgba(229, 192, 123, 0.05); }
+    .better { color: #22c55e; font-weight: 600; }
+    .worse { color: #ef4444; font-weight: 600; }
+    .compare-bar-row { display: grid; grid-template-columns: 1fr 120px 1fr; gap: 0.5rem; align-items: center; margin: 0.75rem 0; padding: 0.5rem 0; border-bottom: 1px solid #2a2a2a; }
+    .compare-bar-row .comp-label { text-align: center; color: #fff; font-size: 0.9rem; font-weight: 500; }
+    .compare-bar-left { display: flex; justify-content: flex-end; align-items: center; gap: 0.5rem; }
+    .compare-bar-right { display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; }
+    .compare-bar-left .risk-bar { flex: 1; direction: rtl; }
+    .compare-bar-right .risk-bar { flex: 1; }
+    .compare-bar-val { font-size: 0.85rem; min-width: 40px; }
+    .compare-bar-left .compare-bar-val { text-align: right; }
+    .compare-bar-right .compare-bar-val { text-align: left; }
+    .compare-bar-header { display: grid; grid-template-columns: 1fr 120px 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .compare-bar-header span { font-weight: 600; color: #e5c07b; font-size: 0.9rem; }
+    .compare-bar-header span:first-child { text-align: right; }
+    .compare-bar-header span:last-child { text-align: left; }
+    .compare-bar-header span:nth-child(2) { text-align: center; color: #fff; }
+    @media (max-width: 640px) {
+        .compare-grid { grid-template-columns: 1fr; }
+        .compare-bar-row { grid-template-columns: 1fr; gap: 0.25rem; }
+        .compare-bar-left, .compare-bar-right { justify-content: flex-start; }
+        .compare-bar-left .risk-bar { direction: ltr; }
+        .compare-bar-header { display: none; }
+        .compare-bar-row .comp-label { text-align: left; font-weight: 600; margin-bottom: 0.25rem; }
+    }
+</style>
+
+<h1>{{ display1 }} vs {{ display2 }} &mdash; MOT Failure Rate Comparison</h1>
+
+<!-- Side-by-side stat highlights -->
+<div class="compare-grid">
+    <div class="stat-highlight">
+        <h3><a href="/mot-check/{{ make1_slug }}/{{ model1_slug }}/" style="color: #e5c07b; text-decoration: none;">{{ display1 }}</a></h3>
+        <div class="big-number">{{ "%.1f"|format(overall1.fail_rate * 100) }}%</div>
+        <div class="label">failure rate from {{ "{:,}".format(overall1.total_tests) }} tests</div>
+        <div class="label" style="margin-top: 0.5rem;">
+            {% if overall1.fail_rate > 0.28 %}
+            <span style="color: #ef4444;">{{ "%.1f"|format((overall1.fail_rate - 0.28) * 100) }}pp above UK avg (28%)</span>
+            {% elif overall1.fail_rate < 0.28 %}
+            <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall1.fail_rate) * 100) }}pp below UK avg (28%)</span>
+            {% else %}
+            <span>Equal to UK average (28%)</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-highlight">
+        <h3><a href="/mot-check/{{ make2_slug }}/{{ model2_slug }}/" style="color: #e5c07b; text-decoration: none;">{{ display2 }}</a></h3>
+        <div class="big-number">{{ "%.1f"|format(overall2.fail_rate * 100) }}%</div>
+        <div class="label">failure rate from {{ "{:,}".format(overall2.total_tests) }} tests</div>
+        <div class="label" style="margin-top: 0.5rem;">
+            {% if overall2.fail_rate > 0.28 %}
+            <span style="color: #ef4444;">{{ "%.1f"|format((overall2.fail_rate - 0.28) * 100) }}pp above UK avg (28%)</span>
+            {% elif overall2.fail_rate < 0.28 %}
+            <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall2.fail_rate) * 100) }}pp below UK avg (28%)</span>
+            {% else %}
+            <span>Equal to UK average (28%)</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick verdict -->
+<div class="verdict-box">
+    {% if winner %}
+    <p><strong>Verdict:</strong> The <strong>{{ winner }}</strong> is more reliable based on MOT data, with a <strong>{{ "%.1f"|format(diff * 100) }} percentage point</strong> lower failure rate than the {{ loser }}.</p>
+    {% else %}
+    <p><strong>Verdict:</strong> The {{ display1 }} and {{ display2 }} have comparable MOT reliability, with identical overall failure rates of {{ "%.1f"|format(overall1.fail_rate * 100) }}%.</p>
+    {% endif %}
+</div>
+
+<!-- Age-band comparison table -->
+{% if age_bands1 and age_bands2 %}
+<h2>Failure Rate by Vehicle Age</h2>
+<p>How the {{ display1 }} and {{ display2 }} compare across different age groups:</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Age</th>
+            <th>{{ display1 }}</th>
+            <th>{{ display2 }}</th>
+            <th>Difference</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set ns = namespace(bands_shown=false) %}
+        {% for band1 in age_bands1 %}
+            {% for band2 in age_bands2 %}
+                {% if band1.age_band == band2.age_band %}
+                    {% set ns.bands_shown = true %}
+                    {% set diff_val = band1.fail_rate - band2.fail_rate %}
+                    <tr>
+                        <td>{{ band1.age_band }} years</td>
+                        <td>
+                            <span class="fail-rate {% if band1.fail_rate <= band2.fail_rate %}low{% else %}high{% endif %}">
+                                {{ "%.1f"|format(band1.fail_rate * 100) }}%
+                            </span>
+                        </td>
+                        <td>
+                            <span class="fail-rate {% if band2.fail_rate <= band1.fail_rate %}low{% else %}high{% endif %}">
+                                {{ "%.1f"|format(band2.fail_rate * 100) }}%
+                            </span>
+                        </td>
+                        <td>
+                            {% if diff_val > 0 %}
+                            <span class="better">{{ display2 }} +{{ "%.1f"|format(diff_val * 100) }}pp</span>
+                            {% elif diff_val < 0 %}
+                            <span class="better">{{ display1 }} +{{ "%.1f"|format((-diff_val) * 100) }}pp</span>
+                            {% else %}
+                            <span style="color: #a0a0a0;">Equal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<!-- Component risk comparison -->
+<h2>Component Risk Comparison</h2>
+<p>Side-by-side breakdown of which MOT failure areas each model is weaker in:</p>
+
+<div class="compare-bar-header">
+    <span>{{ display1 }}</span>
+    <span>Component</span>
+    <span>{{ display2 }}</span>
+</div>
+
+{% for comp1 in overall1.components %}
+    {% set comp_name = comp1.name %}
+    {% set risk1 = comp1.risk %}
+    {% set ns_comp = namespace(risk2=0) %}
+    {% for comp2 in overall2.components %}
+        {% if comp2.name == comp_name %}
+            {% set ns_comp.risk2 = comp2.risk %}
+        {% endif %}
+    {% endfor %}
+    <div class="compare-bar-row">
+        <div class="compare-bar-left">
+            <span class="compare-bar-val {% if risk1 <= ns_comp.risk2 %}better{% else %}worse{% endif %}">{{ "%.1f"|format(risk1 * 100) }}%</span>
+            <div class="risk-bar" style="flex: 1; max-width: 200px;">
+                <div class="risk-bar-fill {% if risk1 > 0.15 %}high{% elif risk1 > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (risk1 * 500)|round|int }}%"></div>
+            </div>
+        </div>
+        <div class="comp-label">{{ comp_name }}</div>
+        <div class="compare-bar-right">
+            <div class="risk-bar" style="flex: 1; max-width: 200px;">
+                <div class="risk-bar-fill {% if ns_comp.risk2 > 0.15 %}high{% elif ns_comp.risk2 > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (ns_comp.risk2 * 500)|round|int }}%"></div>
+            </div>
+            <span class="compare-bar-val {% if ns_comp.risk2 <= risk1 %}better{% else %}worse{% endif %}">{{ "%.1f"|format(ns_comp.risk2 * 100) }}%</span>
+        </div>
+    </div>
+{% endfor %}
+
+<!-- Also show as a table for accessibility / mobile -->
+<table class="compare-component-table" style="margin-top: 1rem;">
+    <thead>
+        <tr>
+            <th>Component</th>
+            <th>{{ display1 }}</th>
+            <th>{{ display2 }}</th>
+            <th>Better</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for comp1 in overall1.components %}
+            {% set comp_name = comp1.name %}
+            {% set risk1 = comp1.risk %}
+            {% set ns_tbl = namespace(risk2=0) %}
+            {% for comp2 in overall2.components %}
+                {% if comp2.name == comp_name %}
+                    {% set ns_tbl.risk2 = comp2.risk %}
+                {% endif %}
+            {% endfor %}
+            <tr>
+                <td>{{ comp_name }}</td>
+                <td><span class="{% if risk1 <= ns_tbl.risk2 %}better{% else %}worse{% endif %}">{{ "%.1f"|format(risk1 * 100) }}%</span></td>
+                <td><span class="{% if ns_tbl.risk2 <= risk1 %}better{% else %}worse{% endif %}">{{ "%.1f"|format(ns_tbl.risk2 * 100) }}%</span></td>
+                <td>
+                    {% if risk1 < ns_tbl.risk2 %}
+                    <span class="better">{{ display1 }}</span>
+                    {% elif ns_tbl.risk2 < risk1 %}
+                    <span class="better">{{ display2 }}</span>
+                    {% else %}
+                    <span style="color: #a0a0a0;">Equal</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- "Which is more reliable?" verdict section -->
+<h2>Which Is More Reliable: {{ display1 }} or {{ display2 }}?</h2>
+{% if winner %}
+<p>Based on official DVSA MOT test records covering {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} tests between these two models, the <strong>{{ winner }}</strong> comes out ahead with a <strong>{{ "%.1f"|format(diff * 100) }} percentage point</strong> lower overall failure rate. {% if overall1.fail_rate < overall2.fail_rate %}The {{ display1 }} fails {{ "%.1f"|format(overall1.fail_rate * 100) }}% of the time compared to the {{ display2 }}'s {{ "%.1f"|format(overall2.fail_rate * 100) }}%.{% else %}The {{ display2 }} fails {{ "%.1f"|format(overall2.fail_rate * 100) }}% of the time compared to the {{ display1 }}'s {{ "%.1f"|format(overall1.fail_rate * 100) }}%.{% endif %}</p>
+
+<p>However, the gap between these models varies by vehicle age. {% if age_bands1 and age_bands2 %}Younger examples of both models tend to have more similar pass rates, while differences can become more pronounced as vehicles age and accumulate wear.{% endif %} Component-level data shows each model has different weak spots &mdash; the {{ display1 }}'s top risk area is {{ overall1.components[0].name|lower if overall1.components else "general wear" }} while the {{ display2 }}'s is {{ overall2.components[0].name|lower if overall2.components else "general wear" }}. Knowing your model's specific weaknesses helps you target pre-MOT checks where they matter most.</p>
+{% else %}
+<p>Based on {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} official MOT tests, the {{ display1 }} and {{ display2 }} have <strong>identical overall failure rates</strong> of {{ "%.1f"|format(overall1.fail_rate * 100) }}%. Neither model has a clear reliability advantage from an MOT perspective.</p>
+
+<p>That said, their failure patterns differ. The {{ display1 }}'s top risk area is {{ overall1.components[0].name|lower if overall1.components else "general wear" }} while the {{ display2 }}'s is {{ overall2.components[0].name|lower if overall2.components else "general wear" }}. Check the component breakdown above to understand each model's specific weaknesses before your MOT test.</p>
+{% endif %}
+
+<!-- Links to both model pages -->
+<h2>Explore Each Model in Detail</h2>
+<div class="related-links">
+    <a href="/mot-check/{{ make1_slug }}/{{ model1_slug }}/">{{ display1 }} MOT Data</a>
+    <a href="/mot-check/{{ make2_slug }}/{{ model2_slug }}/">{{ display2 }} MOT Data</a>
+</div>
+
+<!-- CTA: reg lookup form -->
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Check Your Specific Vehicle</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Considering a {{ display1 }} or {{ display2 }}? Enter a reg to see that exact vehicle's MOT risk.</p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+    </form>
+</div>
+
+<!-- Methodology note -->
+<div class="methodology">
+    <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK. Comparisons are based on aggregate statistics and individual vehicle condition will vary.</p>
+</div>
+
+{% endblock %}
+
+{% block cta_heading %}Check Your {{ display1 }} or {{ display2 }}{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction for your specific vehicle.{% endblock %}

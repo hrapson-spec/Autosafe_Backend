@@ -1,0 +1,254 @@
+{% extends "seo_base.html" %}
+
+{% block title %}March 2026 MOT Rush: Which Cars Will Fail? | AutoSafe{% endblock %}
+{% block meta_description %}March 2026 is the UK's busiest MOT month as 2023-plate cars face their first test. See which models are most likely to fail, based on 142M official DVSA test records.{% endblock %}
+{% block og_title %}March 2026 MOT Rush: Which Cars Will Fail? | AutoSafe{% endblock %}
+{% block og_description %}March 2023 plates hit their first MOT in 2026. See which cars are most at risk of failing.{% endblock %}
+{% block twitter_title %}March 2026 MOT Rush: Which Cars Will Fail? | AutoSafe{% endblock %}
+{% block twitter_description %}March 2023 plates hit their first MOT in 2026. See which cars are most at risk of failing.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/insights/march-mot-rush-2026/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why is March 2026 the busiest MOT month?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "March is historically the UK's busiest month for new car registrations due to the spring plate change. Cars registered in March 2023 (23-plate) reach their mandatory 3-year first MOT in March 2026, creating a surge of first-time MOT tests."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which 2023-plate cars are most likely to fail their first MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Based on DVSA data for 0-3 year old vehicles, the models with the highest first-MOT failure rates include: {% for car in cars[:3] %}{{ car.display_name }} ({{ "%.1f"|format(car.fail_rate * 100) }}%){{ ", " if not loop.last else "" }}{% endfor %}. These rates reflect historical patterns for vehicles in the same age bracket."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the most common reasons for failing a first MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The top failure areas for vehicles under 3 years old are: {% for area in top_failure_areas[:3] %}{{ area.name }} ({{ "%.1f"|format(area.risk * 100) }}% risk){{ ", " if not loop.last else "" }}{% endfor %}. Even relatively new cars can fail on lighting, tyres, and visibility issues."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "When is my car's first MOT due?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "New cars need their first MOT exactly 3 years after registration. If your car was registered in March 2023, its first MOT is due in March 2026. You can take the test up to one month before the due date without losing any time on the certificate."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can I prepare my 2023-plate car for its first MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Check all lights and bulbs, inspect tyre tread depth (minimum 1.6mm), test windscreen washers and wipers, ensure your number plates are clean and legible, and look for any windscreen chips in the driver's line of sight. A pre-MOT check at a local garage typically costs around 20 to 40 pounds."
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "March 2026 MOT Rush: Which Cars Are Most at Risk?",
+  "description": "March 2023 plates face their first MOT in 2026. Data analysis of 142 million DVSA tests reveals which models are most likely to fail.",
+  "url": "https://www.autosafe.one/insights/march-mot-rush-2026/",
+  "publisher": {
+    "@type": "Organization",
+    "name": "AutoSafe",
+    "url": "https://www.autosafe.one",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.autosafe.one/static/logo_clean.png"
+    }
+  },
+  "datePublished": "2026-02-01",
+  "dateModified": "2026-02-01"
+}
+</script>
+{% endblock %}
+
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "Insights", "item": "https://www.autosafe.one/insights/"},
+    {"@type": "ListItem", "position": 3, "name": "March 2026 MOT Rush"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/insights/">Insights</a><span class="sep">/</span>
+    <span>March 2026 MOT Rush</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<h1>March 2026 MOT Rush &mdash; Which Cars Are Most at Risk?</h1>
+
+<p style="font-size: 1.15rem; color: #a0a0a0;">March is the UK&rsquo;s busiest month for MOT tests. Here&rsquo;s what the data says about which 2023-plate cars are most likely to fail their first MOT.</p>
+
+<!-- Section 1: Why March is the busiest MOT month -->
+
+<h2>Why March Is the UK&rsquo;s Busiest MOT Month</h2>
+
+<p>Every March and September, the UK number plate changes. March is historically the biggest month for new car registrations &mdash; in 2023 alone, hundreds of thousands of new cars hit the road with 23-plates.</p>
+
+<p>Under UK law, new vehicles must have their first MOT exactly <strong>3 years</strong> after registration. That means the wave of March 2023 registrations will all need their first MOT in <strong>March 2026</strong>, creating the year&rsquo;s biggest rush at testing stations across the country.</p>
+
+<div class="stat-highlight">
+    <div class="big-number">3 years</div>
+    <div class="label">Time until a new car's first MOT is due</div>
+    <div class="label" style="margin-top: 0.5rem;">March 2023 plates &rarr; First MOT due March 2026</div>
+</div>
+
+<p>This matters for two reasons: (1) testing stations fill up fast, so <strong>book early</strong> to avoid delays, and (2) even relatively new cars can and do fail their first MOT. The data below shows which models are most at risk.</p>
+
+<!-- Section 2: Which 2023-plate cars are most likely to fail -->
+
+<h2>Which 2023-Plate Cars Are Most Likely to Fail Their First MOT?</h2>
+
+<p>Using DVSA data for vehicles aged 0&ndash;3 years (the same age bracket as 2023-plate cars in 2026), we ranked models by first-MOT failure rate. Only models with 5,000+ tests are included for statistical reliability.</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Model</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th>Top Issue</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for car in cars %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td><strong>{{ car.display_name }}</strong></td>
+            <td>
+                <span class="fail-rate {% if car.fail_rate > 0.10 %}high{% elif car.fail_rate < 0.05 %}low{% endif %}">
+                    {{ "%.1f"|format(car.fail_rate * 100) }}%
+                </span>
+            </td>
+            <td class="sample-size">{{ "{:,}".format(car.total_tests) }}</td>
+            <td>{{ car.top_components[0].name if car.top_components else "N/A" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="background: #1f1f1f; border: 1px solid #444; border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: 0.9rem;">
+    <p style="margin: 0 0 0.5rem 0; color: #e5c07b; font-weight: 600;">Data note</p>
+    <p style="margin: 0; color: #a0a0a0;">These failure rates reflect historical DVSA data for 0&ndash;3 year old vehicles of each model. Actual 2026 outcomes may vary due to changes in manufacturing, maintenance patterns, and testing standards. A high failure rate does not necessarily indicate poor build quality &mdash; it can also reflect owner maintenance habits and typical use patterns.</p>
+</div>
+
+<!-- Section 3: Top 5 failure areas for first-time MOT vehicles -->
+
+<h2>Top 5 Failure Areas for First-Time MOT Vehicles</h2>
+
+<p>Across all vehicles in the 0&ndash;3 year age bracket, these are the component areas most likely to cause a first-MOT failure:</p>
+
+{% for area in top_failure_areas %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ area.name }}</span>
+        <span>{{ "%.1f"|format(area.risk * 100) }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if area.risk > 0.15 %}high{% elif area.risk > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (area.risk * 500)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+
+<p>Even on nearly-new cars, <strong>{{ top_failure_areas[0].name|lower if top_failure_areas else "lighting" }}</strong> is the most common reason for an MOT failure. Many of these issues are inexpensive to fix &mdash; a blown bulb or worn wiper blade can mean the difference between a pass and a fail.</p>
+
+<!-- Section 4: Links to relevant model pages -->
+
+{% if model_links %}
+<h2>Check Your 2023-Plate Car</h2>
+
+<p>See full MOT failure data for the UK&rsquo;s most popular 2023 models:</p>
+
+<div class="related-links">
+    {% for link in model_links %}
+    <a href="/mot-check/{{ link.make_slug }}/{{ link.model_slug }}/">{{ link.make_display }} {{ link.model_display }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Section 5: CTA reg lookup -->
+
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Is Your Car Ready for Its First MOT?</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration for a free, personalised failure risk prediction based on your specific vehicle.</p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB23 CDE" maxlength="8" required aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+    </form>
+    <p style="color: #a0a0a0; font-size: 0.9rem; margin-top: 1rem;">Or download our <a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">free pre-MOT checklist</a> &mdash; 15 things to check before your test.</p>
+</div>
+
+<!-- FAQs -->
+
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+        <h3>Why is March 2026 the busiest MOT month?</h3>
+        <p>March is historically the UK&rsquo;s biggest month for new car registrations due to the spring plate change. Cars registered in March 2023 (23-plate) reach their mandatory 3-year first MOT in March 2026, creating a surge of first-time MOT tests at stations across the country.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>When is my car&rsquo;s first MOT due?</h3>
+        <p>New cars need their first MOT exactly <strong>3 years</strong> after registration. If your car was registered in March 2023, its first MOT is due in March 2026. You can take the test up to <strong>one month early</strong> without losing any time on the certificate &mdash; so booking in February is a smart way to beat the rush.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Can a brand new car fail its first MOT?</h3>
+        <p>Yes. While first-MOT failure rates are lower than for older vehicles, they are not zero. Common issues include blown bulbs, worn tyres, windscreen chips, and wiper blade deterioration &mdash; all things that can develop within 3 years of normal driving.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>How can I prepare my 2023-plate car for its first MOT?</h3>
+        <p>Check all lights and bulbs, inspect tyre tread depth (minimum 1.6mm), test windscreen washers and wipers, ensure number plates are clean and legible, and look for any windscreen chips in the driver&rsquo;s line of sight. A pre-MOT check at a local garage typically costs &pound;20&ndash;&pound;40. See our <a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">full pre-MOT checklist</a> for a complete guide.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Should I book my MOT early to avoid the March rush?</h3>
+        <p>Definitely. You can book your MOT up to one month before the due date without losing any days on your certificate. Booking in late February for a March-registered car means you avoid the busiest period and have more choice of test slots.</p>
+    </div>
+</div>
+
+<div class="methodology">
+    <p><strong>Data methodology:</strong> Failure rates are based on official DVSA MOT test records for vehicles in the 0&ndash;3 year age bracket. Only models with 5,000+ tests are included for statistical reliability. Component risks are weighted averages across all mileage bands. Data covers 142 million MOT tests across the UK.</p>
+    <p><strong>Data licence:</strong> Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>.</p>
+    <p>Journalists and researchers: you are welcome to cite this data with attribution to AutoSafe (autosafe.one).</p>
+</div>
+
+<p style="text-align: center; margin-top: 1.5rem;"><a href="/insights/" style="color: #e5c07b;">&larr; Back to All Insights</a></p>
+
+{% endblock %}
+
+{% block cta_heading %}Is Your Car Ready for March 2026?{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction before the March rush.{% endblock %}

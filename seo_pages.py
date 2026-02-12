@@ -83,6 +83,30 @@ COMPETITOR_MODELS = {
     "TUCSON": [("NISSAN", "QASHQAI"), ("KIA", "SPORTAGE"), ("FORD", "KUGA")],
 }
 
+# Top 20 comparison pairs for SEO (derived from COMPETITOR_MODELS)
+COMPARISON_PAIRS = [
+    (("FORD", "FIESTA"), ("VAUXHALL", "CORSA")),
+    (("FORD", "FOCUS"), ("VOLKSWAGEN", "GOLF")),
+    (("VOLKSWAGEN", "POLO"), ("FORD", "FIESTA")),
+    (("BMW", "3 SERIES"), ("AUDI", "A4")),
+    (("BMW", "3 SERIES"), ("MERCEDES-BENZ", "C-CLASS")),
+    (("AUDI", "A3"), ("VOLKSWAGEN", "GOLF")),
+    (("FORD", "FOCUS"), ("VAUXHALL", "ASTRA")),
+    (("NISSAN", "QASHQAI"), ("KIA", "SPORTAGE")),
+    (("NISSAN", "QASHQAI"), ("HYUNDAI", "TUCSON")),
+    (("TOYOTA", "YARIS"), ("HONDA", "JAZZ")),
+    (("HONDA", "CIVIC"), ("TOYOTA", "COROLLA")),
+    (("FORD", "FIESTA"), ("VOLKSWAGEN", "POLO")),
+    (("VAUXHALL", "CORSA"), ("PEUGEOT", "208")),
+    (("VAUXHALL", "ASTRA"), ("PEUGEOT", "308")),
+    (("KIA", "SPORTAGE"), ("HYUNDAI", "TUCSON")),
+    (("RENAULT", "CLIO"), ("PEUGEOT", "208")),
+    (("BMW", "1 SERIES"), ("AUDI", "A3")),
+    (("FORD", "KUGA"), ("NISSAN", "QASHQAI")),
+    (("MERCEDES-BENZ", "A-CLASS"), ("BMW", "1 SERIES")),
+    (("VOLKSWAGEN", "GOLF"), ("SEAT", "LEON")),
+]
+
 # Component columns in the risks table (in display order)
 COMPONENTS = [
     ("Risk_Brakes", "Brakes"),
@@ -652,6 +676,264 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- Comparison pages: /mot-check/compare/{slug1}-vs-{slug2}/ ---
+
+    @app.get("/mot-check/compare/{slug1}-vs-{slug2}/", response_class=HTMLResponse)
+    async def seo_compare(slug1: str, slug2: str):
+        # Find matching pair
+        pair_key = f"{slug1}-vs-{slug2}"
+        cache_key = f"seo:compare:{pair_key}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        # Resolve slugs to models
+        target_pair = None
+        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
+            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
+            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            if slug1 == s1 and slug2 == s2:
+                target_pair = ((make1, model1), (make2, model2))
+                break
+
+        if not target_pair:
+            return _not_found_html("Comparison not found.")
+
+        (make1, model1), (make2, model2) = target_pair
+        make1_slug, model1_slug = _slugify(make1), _slugify(model1)
+        make2_slug, model2_slug = _slugify(make2), _slugify(model2)
+
+        display1 = f"{_display_name(make1)} {_display_name(model1)}"
+        display2 = f"{_display_name(make2)} {_display_name(model2)}"
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            overall1 = _query_model_overall(conn, make1, model1)
+            overall2 = _query_model_overall(conn, make2, model2)
+            age_bands1 = _query_model_age_bands(conn, make1, model1)
+            age_bands2 = _query_model_age_bands(conn, make2, model2)
+
+            conn.row_factory = old_factory
+
+        if not overall1 or not overall2:
+            return _not_found_html("Not enough data for this comparison.")
+
+        # Determine verdict
+        if overall1["fail_rate"] < overall2["fail_rate"]:
+            winner = display1
+            loser = display2
+            diff = overall2["fail_rate"] - overall1["fail_rate"]
+        elif overall2["fail_rate"] < overall1["fail_rate"]:
+            winner = display2
+            loser = display1
+            diff = overall1["fail_rate"] - overall2["fail_rate"]
+        else:
+            winner = None
+            loser = None
+            diff = 0
+
+        canonical_url = f"https://www.autosafe.one/mot-check/compare/{slug1}-vs-{slug2}/"
+
+        template = jinja_env.get_template("seo_compare.html")
+        html = template.render(
+            display1=display1, display2=display2,
+            make1_slug=make1_slug, model1_slug=model1_slug,
+            make2_slug=make2_slug, model2_slug=model2_slug,
+            overall1=overall1, overall2=overall2,
+            age_bands1=age_bands1, age_bands2=age_bands2,
+            winner=winner, loser=loser, diff=diff,
+            canonical_url=canonical_url,
+            slug1=slug1, slug2=slug2,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
+    # --- /insights/ data story: Unreliable 3-year-old cars 2026 ---
+
+    @app.get("/insights/unreliable-3-year-old-cars-2026/", response_class=HTMLResponse)
+    async def seo_unreliable_cars():
+        cache_key = "seo:unreliable-cars-2026"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            # Top 10 most unreliable 3-year-old cars (5,000+ tests for statistical significance)
+            rows = conn.execute("""
+                SELECT model_id,
+                       SUM(Total_Tests) as total_tests,
+                       SUM(Total_Failures) as total_failures,
+                       ROUND(CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests), 4) as fail_rate
+                FROM risks
+                WHERE age_band = '0-3'
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= 5000
+                ORDER BY fail_rate DESC
+                LIMIT 10
+            """).fetchall()
+
+            cars = []
+            for rank, row in enumerate(rows, 1):
+                model_id = row["model_id"]
+                # Get component breakdown
+                comp_row = conn.execute(f"""
+                    SELECT {', '.join(f'ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}' for col, _ in COMPONENTS)}
+                    FROM risks
+                    WHERE model_id = ? AND age_band = '0-3'
+                """, (model_id,)).fetchone()
+
+                comp_risks = []
+                if comp_row:
+                    for col, name in COMPONENTS:
+                        val = comp_row[col] if comp_row[col] else 0
+                        comp_risks.append({"name": name, "risk": float(val)})
+                    comp_risks.sort(key=lambda c: c["risk"], reverse=True)
+
+                # Try to find AutoSafe page link for this model
+                page_link = None
+                for (ms, mds), info in _model_by_slug.items():
+                    full_id = f"{info['make']} {info['model_id']}"
+                    if full_id == model_id or model_id.startswith(full_id):
+                        page_link = f"/mot-check/{ms}/{mds}/"
+                        break
+
+                cars.append({
+                    "rank": rank,
+                    "model_id": model_id,
+                    "display_name": _display_name(model_id),
+                    "total_tests": int(row["total_tests"]),
+                    "total_failures": int(row["total_failures"]),
+                    "fail_rate": float(row["fail_rate"]),
+                    "top_components": comp_risks[:3],
+                    "all_components": comp_risks,
+                    "page_link": page_link,
+                })
+
+            # Total tests in the 0-3 age band for methodology note
+            total_row = conn.execute("""
+                SELECT SUM(Total_Tests) as total FROM risks WHERE age_band = '0-3'
+            """).fetchone()
+            total_young_tests = int(total_row["total"]) if total_row and total_row["total"] else 0
+
+            conn.row_factory = old_factory
+
+        template = jinja_env.get_template("seo_unreliable_cars.html")
+        html = template.render(
+            cars=cars,
+            total_young_tests=total_young_tests,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
+    # --- March 2026 MOT Rush insight page ---
+
+    @app.get("/insights/march-mot-rush-2026/", response_class=HTMLResponse)
+    async def seo_march_rush():
+        cache_key = "seo:march-rush-2026"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            # Query top failing 0-3 year old cars (March 2023 plates hitting first MOT in 2026)
+            rows = conn.execute("""
+                SELECT model_id,
+                       SUM(Total_Tests) as total_tests,
+                       SUM(Total_Failures) as total_failures,
+                       ROUND(CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests), 4) as fail_rate
+                FROM risks
+                WHERE age_band = '0-3'
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= 5000
+                ORDER BY fail_rate DESC
+                LIMIT 20
+            """).fetchall()
+
+            # Build cars list with component breakdown
+            cars = []
+            for row in rows:
+                model_id = row["model_id"]
+                # Get component risks for this model at 0-3 age band
+                comp_row = conn.execute(f"""
+                    SELECT {', '.join(f'ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}' for col, _ in COMPONENTS)}
+                    FROM risks
+                    WHERE model_id = ? AND age_band = '0-3'
+                """, (model_id,)).fetchone()
+
+                comp_risks = []
+                if comp_row:
+                    for col, name in COMPONENTS:
+                        val = comp_row[col] if comp_row[col] else 0
+                        comp_risks.append({"name": name, "risk": float(val)})
+                    comp_risks.sort(key=lambda c: c["risk"], reverse=True)
+
+                cars.append({
+                    "model_id": model_id,
+                    "display_name": _display_name(model_id),
+                    "total_tests": int(row["total_tests"]),
+                    "fail_rate": float(row["fail_rate"]),
+                    "top_components": comp_risks[:3],
+                })
+
+            # Get top 5 failure areas across all 0-3 year old vehicles
+            comp_cols = ", ".join(
+                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
+                for col, _ in COMPONENTS
+            )
+            overall_comp = conn.execute(f"""
+                SELECT {comp_cols}, SUM(Total_Tests) as total_tests
+                FROM risks
+                WHERE age_band = '0-3'
+            """).fetchone()
+
+            top_failure_areas = []
+            if overall_comp:
+                for col, name in COMPONENTS:
+                    val = overall_comp[col] if overall_comp[col] else 0
+                    top_failure_areas.append({"name": name, "risk": float(val)})
+                top_failure_areas.sort(key=lambda c: c["risk"], reverse=True)
+
+            conn.row_factory = old_factory
+
+        # Popular 2023 sellers to link to
+        popular_models = [
+            ("ford", "fiesta"), ("vauxhall", "corsa"), ("volkswagen", "golf"),
+            ("nissan", "qashqai"), ("ford", "focus"), ("toyota", "yaris"),
+            ("kia", "sportage"), ("hyundai", "tucson"), ("peugeot", "208"),
+            ("volkswagen", "polo"),
+        ]
+        model_links = []
+        for make_slug, model_slug in popular_models:
+            if (make_slug, model_slug) in _model_by_slug:
+                info = _model_by_slug[(make_slug, model_slug)]
+                make_info = _make_by_slug.get(make_slug, {})
+                model_links.append({
+                    "make_slug": make_slug,
+                    "model_slug": model_slug,
+                    "make_display": make_info.get("display", make_slug.title()),
+                    "model_display": info["display"],
+                })
+
+        template = jinja_env.get_template("seo_march_rush.html")
+        html = template.render(
+            cars=cars,
+            top_failure_areas=top_failure_areas[:5],
+            model_links=model_links,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     # --- /insights/ routes (Data PR stories) ---
 
     @app.get("/insights/", response_class=HTMLResponse)
@@ -729,6 +1011,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             ("/static/guides/first-mot-guide.html", "0.8", "monthly"),
             ("/static/privacy.html", "0.3", "yearly"),
             ("/static/terms.html", "0.3", "yearly"),
+            ("/insights/unreliable-3-year-old-cars-2026/", "0.7", "monthly"),
+            ("/insights/march-mot-rush-2026/", "0.7", "monthly"),
         ]
         for path, priority, freq in static_pages:
             urls.append(
@@ -810,6 +1094,19 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                     f"    <changefreq>monthly</changefreq>\n"
                     f"  </url>"
                 )
+
+        # Comparison pages
+        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
+            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
+            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            urls.append(
+                f"  <url>\n"
+                f"    <loc>{base}/mot-check/compare/{s1}-vs-{s2}/</loc>\n"
+                f"    <lastmod>{today}</lastmod>\n"
+                f"    <priority>0.6</priority>\n"
+                f"    <changefreq>monthly</changefreq>\n"
+                f"  </url>"
+            )
 
         xml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
