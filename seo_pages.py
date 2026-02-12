@@ -575,6 +575,34 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             if ms != model_slug
         ]
 
+        # Competitor models (same-segment rivals for cross-brand linking)
+        competitors = []
+        rival_list = COMPETITOR_MODELS.get(model, [])
+        for rival_make, rival_model in rival_list:
+            rival_make_slug = _slugify(rival_make)
+            rival_model_slug = _slugify(rival_model)
+            if (rival_make_slug, rival_model_slug) in _model_by_slug:
+                rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
+                competitors.append({
+                    "make_slug": rival_make_slug,
+                    "model_slug": rival_model_slug,
+                    "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
+                    "model_display": rival_info["display"],
+                })
+
+        # Comparison page links (find any COMPARISON_PAIRS involving this model)
+        comparisons = []
+        for (m1_make, m1_model), (m2_make, m2_model) in COMPARISON_PAIRS:
+            if (make == m1_make and model == m1_model) or (make == m2_make and model == m2_model):
+                s1 = f"{_slugify(m1_make)}-{_slugify(m1_model)}"
+                s2 = f"{_slugify(m2_make)}-{_slugify(m2_model)}"
+                d1 = f"{_display_name(m1_make)} {_display_name(m1_model)}"
+                d2 = f"{_display_name(m2_make)} {_display_name(m2_model)}"
+                comparisons.append({
+                    "url": f"/mot-check/compare/{s1}-vs-{s2}/",
+                    "title": f"{d1} vs {d2}",
+                })
+
         template = jinja_env.get_template("seo_model.html")
         html = template.render(
             make_display=make_info["display"],
@@ -587,6 +615,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             components=overall["components"],
             top_components=overall["components"][:3],
             sibling_models=sibling_models,
+            competitors=competitors,
+            comparisons=comparisons,
         )
         _seo_cache[cache_key] = html
         return _html_response(html)

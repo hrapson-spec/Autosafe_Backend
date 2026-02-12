@@ -248,12 +248,31 @@
     {% endfor %}
 </div>
 
+{% if competitors %}
+<h2>How {{ make_display }} {{ model_display }} Compares to Rivals</h2>
+<p>See how the {{ make_display }} {{ model_display }} stacks up against similar models:</p>
+<div class="related-links">
+    {% for comp in competitors %}
+    <a href="/mot-check/{{ comp.make_slug }}/{{ comp.model_slug }}/">{{ comp.make_display }} {{ comp.model_display }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if comparisons %}
+<h2>{{ make_display }} {{ model_display }} vs. Rivals</h2>
+<div class="related-links">
+    {% for comp in comparisons %}
+    <a href="{{ comp.url }}">{{ comp.title }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
 <h2>Related Guides</h2>
 <ul>
-    <li><a href="/static/guides/common-mot-failures.html" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid Them</a></li>
-    <li><a href="/static/guides/mot-checklist.html" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a></li>
-    <li><a href="/static/guides/mot-failure-rates-by-car.html" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a></li>
-    <li><a href="/static/guides/mot-history-check.html" style="color: #e5c07b;">How to Check MOT History</a></li>
+    <li><a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid Them</a></li>
+    <li><a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a></li>
+    <li><a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a></li>
+    <li><a href="/guides/mot-history-check" style="color: #e5c07b;">How to Check MOT History</a></li>
 </ul>
 
 <div class="methodology">
