@@ -25,7 +25,7 @@ class TestWilsonInterval(unittest.TestCase):
         """Test handling of zero total trials."""
         lower, upper = wilson_interval(0, 0)
         self.assertEqual(lower, 0.0)
-        self.assertEqual(upper, 0.0)
+        self.assertEqual(upper, 1.0)
     
     def test_zero_successes(self):
         """Test when there are no successes."""
@@ -64,16 +64,28 @@ class TestClassifyConfidence(unittest.TestCase):
         self.assertEqual(classify_confidence(50000), "High")
     
     def test_good_confidence(self):
-        """Test good confidence classification."""
-        self.assertEqual(classify_confidence(1000), "Good")
-        self.assertEqual(classify_confidence(5000), "Good")
-        self.assertEqual(classify_confidence(9999), "Good")
-    
-    def test_limited_confidence(self):
-        """Test limited confidence classification."""
-        self.assertEqual(classify_confidence(0), "Limited")
-        self.assertEqual(classify_confidence(100), "Limited")
-        self.assertEqual(classify_confidence(999), "Limited")
+        """Test that 1000+ tests classify as High."""
+        self.assertEqual(classify_confidence(1000), "High")
+        self.assertEqual(classify_confidence(5000), "High")
+        self.assertEqual(classify_confidence(9999), "High")
+
+    def test_medium_confidence(self):
+        """Test that 100-999 tests classify as Medium."""
+        self.assertEqual(classify_confidence(100), "Medium")
+        self.assertEqual(classify_confidence(500), "Medium")
+        self.assertEqual(classify_confidence(999), "Medium")
+
+    def test_low_confidence(self):
+        """Test that 20-99 tests classify as Low."""
+        self.assertEqual(classify_confidence(20), "Low")
+        self.assertEqual(classify_confidence(50), "Low")
+        self.assertEqual(classify_confidence(99), "Low")
+
+    def test_very_low_confidence(self):
+        """Test that <20 tests classify as Very Low."""
+        self.assertEqual(classify_confidence(0), "Very Low")
+        self.assertEqual(classify_confidence(10), "Very Low")
+        self.assertEqual(classify_confidence(19), "Very Low")
 
 
 if __name__ == '__main__':

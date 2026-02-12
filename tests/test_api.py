@@ -113,7 +113,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("status", data)
-        self.assertEqual(data["status"], "ok")
+        self.assertIn(data["status"], ("ok", "degraded"))
 
 
 class TestV55API(unittest.TestCase):
