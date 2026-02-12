@@ -407,6 +407,81 @@ def _not_found_html(message: str) -> HTMLResponse:
 def register_seo_routes(app: FastAPI, get_sqlite_connection):
     """Register all SEO landing page routes on the FastAPI app."""
 
+    # --- Comparison pages (registered first so /mot-check/compare/ isn't caught by {make_slug}) ---
+
+    @app.get("/mot-check/compare/{slug1}-vs-{slug2}/", response_class=HTMLResponse)
+    async def seo_compare(slug1: str, slug2: str):
+        # Find matching pair
+        pair_key = f"{slug1}-vs-{slug2}"
+        cache_key = f"seo:compare:{pair_key}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        # Resolve slugs to models
+        target_pair = None
+        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
+            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
+            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            if slug1 == s1 and slug2 == s2:
+                target_pair = ((make1, model1), (make2, model2))
+                break
+
+        if not target_pair:
+            return _not_found_html("Comparison not found.")
+
+        (make1, model1), (make2, model2) = target_pair
+        make1_slug, model1_slug = _slugify(make1), _slugify(model1)
+        make2_slug, model2_slug = _slugify(make2), _slugify(model2)
+
+        display1 = f"{_display_name(make1)} {_display_name(model1)}"
+        display2 = f"{_display_name(make2)} {_display_name(model2)}"
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            overall1 = _query_model_overall(conn, make1, model1)
+            overall2 = _query_model_overall(conn, make2, model2)
+            age_bands1 = _query_model_age_bands(conn, make1, model1)
+            age_bands2 = _query_model_age_bands(conn, make2, model2)
+
+            conn.row_factory = old_factory
+
+        if not overall1 or not overall2:
+            return _not_found_html("Not enough data for this comparison.")
+
+        # Determine verdict
+        if overall1["fail_rate"] < overall2["fail_rate"]:
+            winner = display1
+            loser = display2
+            diff = overall2["fail_rate"] - overall1["fail_rate"]
+        elif overall2["fail_rate"] < overall1["fail_rate"]:
+            winner = display2
+            loser = display1
+            diff = overall1["fail_rate"] - overall2["fail_rate"]
+        else:
+            winner = None
+            loser = None
+            diff = 0
+
+        canonical_url = f"https://www.autosafe.one/mot-check/compare/{slug1}-vs-{slug2}/"
+
+        template = jinja_env.get_template("seo_compare.html")
+        html = template.render(
+            display1=display1, display2=display2,
+            make1_slug=make1_slug, model1_slug=model1_slug,
+            make2_slug=make2_slug, model2_slug=model2_slug,
+            overall1=overall1, overall2=overall2,
+            age_bands1=age_bands1, age_bands2=age_bands2,
+            winner=winner, loser=loser, diff=diff,
+            canonical_url=canonical_url,
+            slug1=slug1, slug2=slug2,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     @app.get("/mot-check/", response_class=HTMLResponse)
     async def seo_index():
         cache_key = "seo:index"
@@ -672,81 +747,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             national_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
             top_components=top_components,
             total_tests_analysed=total_tests_analysed,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
-
-    # --- Comparison pages: /mot-check/compare/{slug1}-vs-{slug2}/ ---
-
-    @app.get("/mot-check/compare/{slug1}-vs-{slug2}/", response_class=HTMLResponse)
-    async def seo_compare(slug1: str, slug2: str):
-        # Find matching pair
-        pair_key = f"{slug1}-vs-{slug2}"
-        cache_key = f"seo:compare:{pair_key}"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        # Resolve slugs to models
-        target_pair = None
-        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
-            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
-            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
-            if slug1 == s1 and slug2 == s2:
-                target_pair = ((make1, model1), (make2, model2))
-                break
-
-        if not target_pair:
-            return _not_found_html("Comparison not found.")
-
-        (make1, model1), (make2, model2) = target_pair
-        make1_slug, model1_slug = _slugify(make1), _slugify(model1)
-        make2_slug, model2_slug = _slugify(make2), _slugify(model2)
-
-        display1 = f"{_display_name(make1)} {_display_name(model1)}"
-        display2 = f"{_display_name(make2)} {_display_name(model2)}"
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-
-            overall1 = _query_model_overall(conn, make1, model1)
-            overall2 = _query_model_overall(conn, make2, model2)
-            age_bands1 = _query_model_age_bands(conn, make1, model1)
-            age_bands2 = _query_model_age_bands(conn, make2, model2)
-
-            conn.row_factory = old_factory
-
-        if not overall1 or not overall2:
-            return _not_found_html("Not enough data for this comparison.")
-
-        # Determine verdict
-        if overall1["fail_rate"] < overall2["fail_rate"]:
-            winner = display1
-            loser = display2
-            diff = overall2["fail_rate"] - overall1["fail_rate"]
-        elif overall2["fail_rate"] < overall1["fail_rate"]:
-            winner = display2
-            loser = display1
-            diff = overall1["fail_rate"] - overall2["fail_rate"]
-        else:
-            winner = None
-            loser = None
-            diff = 0
-
-        canonical_url = f"https://www.autosafe.one/mot-check/compare/{slug1}-vs-{slug2}/"
-
-        template = jinja_env.get_template("seo_compare.html")
-        html = template.render(
-            display1=display1, display2=display2,
-            make1_slug=make1_slug, model1_slug=model1_slug,
-            make2_slug=make2_slug, model2_slug=model2_slug,
-            overall1=overall1, overall2=overall2,
-            age_bands1=age_bands1, age_bands2=age_bands2,
-            winner=winner, loser=loser, diff=diff,
-            canonical_url=canonical_url,
-            slug1=slug1, slug2=slug2,
         )
         _seo_cache[cache_key] = html
         return _html_response(html)
