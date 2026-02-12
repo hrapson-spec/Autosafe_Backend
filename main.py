@@ -29,7 +29,8 @@ from regional_defaults import validate_postcode, get_corrosion_index
 
 # Lead distribution
 from lead_distributor import distribute_lead
-from email_service import close_email_client
+from email_service import close_email_client, send_email, is_configured as email_configured
+from email_templates import generate_mot_reminder_confirmation, generate_report_email
 
 # V55 imports
 from dvsa_client import (
@@ -1940,6 +1941,251 @@ async def test_risk_check(request: Request):
     except Exception as e:
         logger.error(f"Test risk check failed: {type(e).__name__}: {e}")
         return {"error": str(e), "type": type(e).__name__}
+
+
+# ============================================================================
+# MOT Reminder + Report Email + Stats Endpoints
+# ============================================================================
+
+class MotReminderSubmission(BaseModel):
+    """Pydantic model for MOT reminder signup."""
+    email: str
+    registration: str
+    postcode: str
+    vehicle_make: Optional[str] = None
+    vehicle_model: Optional[str] = None
+    vehicle_year: Optional[int] = None
+    mot_expiry_date: Optional[str] = None
+    failure_risk: Optional[float] = None
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError('Invalid email format')
+        local, domain = v.rsplit('@', 1)
+        if not local or not domain or '.' not in domain:
+            raise ValueError('Invalid email format')
+        return v.lower().strip()
+
+    @field_validator('registration')
+    @classmethod
+    def validate_registration(cls, v):
+        import bleach
+        v = bleach.clean(v, tags=[], strip=True).strip().upper()
+        if not v or len(v) > 8:
+            raise ValueError('Invalid registration')
+        return v
+
+    @field_validator('postcode')
+    @classmethod
+    def validate_postcode(cls, v):
+        if not v or len(v.strip()) < 3:
+            raise ValueError('Postcode must be at least 3 characters')
+        return v.upper().strip()
+
+    @field_validator('failure_risk')
+    @classmethod
+    def validate_failure_risk(cls, v):
+        if v is not None and (v < 0.0 or v > 1.0):
+            raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+
+class ReportEmailSubmission(BaseModel):
+    """Pydantic model for email report request."""
+    email: str
+    registration: str
+    postcode: str
+    vehicle_make: Optional[str] = None
+    vehicle_model: Optional[str] = None
+    vehicle_year: Optional[int] = None
+    reliability_score: int
+    mot_pass_prediction: int
+    failure_risk: float
+    common_faults: List[Dict] = []
+    repair_cost_min: Optional[int] = None
+    repair_cost_max: Optional[int] = None
+    mot_expiry_date: Optional[str] = None
+    days_until_mot_expiry: Optional[int] = None
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError('Invalid email format')
+        local, domain = v.rsplit('@', 1)
+        if not local or not domain or '.' not in domain:
+            raise ValueError('Invalid email format')
+        return v.lower().strip()
+
+    @field_validator('registration')
+    @classmethod
+    def validate_registration(cls, v):
+        import bleach
+        v = bleach.clean(v, tags=[], strip=True).strip().upper()
+        if len(v) > 8:
+            raise ValueError('Invalid registration')
+        return v
+
+    @field_validator('postcode')
+    @classmethod
+    def validate_postcode(cls, v):
+        if not v or len(v.strip()) < 3:
+            raise ValueError('Postcode must be at least 3 characters')
+        return v.upper().strip()
+
+    @field_validator('reliability_score')
+    @classmethod
+    def validate_reliability_score(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError('reliability_score must be between 0 and 100')
+        return v
+
+    @field_validator('failure_risk')
+    @classmethod
+    def validate_failure_risk(cls, v):
+        if v < 0.0 or v > 1.0:
+            raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+
+# Stats cache (5-minute TTL)
+_stats_cache = TTLCache(maxsize=1, ttl=300)
+
+
+@app.post("/api/mot-reminder")
+@limiter.limit("10/minute")
+async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
+    """
+    Submit an MOT reminder signup.
+
+    Rate limited to 10 requests per minute per IP.
+    """
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+
+    result = await db.save_mot_reminder({
+        "email": data.email,
+        "registration": data.registration,
+        "postcode": data.postcode,
+        "vehicle_make": data.vehicle_make,
+        "vehicle_model": data.vehicle_model,
+        "vehicle_year": data.vehicle_year,
+        "mot_expiry_date": data.mot_expiry_date,
+        "failure_risk": data.failure_risk,
+    })
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail="Failed to save reminder")
+
+    # Send confirmation email (unless duplicate)
+    if not result.get("already_subscribed") and email_configured():
+        try:
+            email_content = generate_mot_reminder_confirmation(
+                email=data.email,
+                registration=data.registration,
+                vehicle_make=data.vehicle_make or "Unknown",
+                vehicle_model=data.vehicle_model or "Vehicle",
+                vehicle_year=data.vehicle_year or 0,
+                mot_expiry_date=data.mot_expiry_date,
+                failure_risk=data.failure_risk,
+            )
+            await send_email(
+                to_email=data.email,
+                subject=email_content["subject"],
+                html_body=email_content["html"],
+                text_body=email_content["text"],
+                tags={"type": "mot_reminder_confirmation"},
+            )
+        except Exception as e:
+            logger.error(f"Failed to send MOT reminder confirmation: {e}")
+
+    return {
+        "success": True,
+        "already_subscribed": result.get("already_subscribed", False),
+        "message": "Reminder set" if not result.get("already_subscribed") else "Already subscribed",
+    }
+
+
+@app.post("/api/email-report")
+@limiter.limit("10/minute")
+async def email_report(request: Request, data: ReportEmailSubmission):
+    """
+    Send the vehicle report to the user's email.
+
+    Rate limited to 10 requests per minute per IP.
+    """
+    if not await db.is_postgres_available():
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+
+    # Save lead
+    lead_id = await db.save_report_email_lead({
+        "email": data.email,
+        "registration": data.registration,
+        "postcode": data.postcode,
+        "vehicle_make": data.vehicle_make,
+        "vehicle_model": data.vehicle_model,
+        "vehicle_year": data.vehicle_year,
+        "failure_risk": data.failure_risk,
+        "reliability_score": data.reliability_score,
+        "common_faults": [{"component": f.get("component"), "risk_level": f.get("risk_level")} for f in data.common_faults],
+    })
+
+    if not lead_id:
+        raise HTTPException(status_code=500, detail="Failed to save request")
+
+    # Send report email
+    if email_configured():
+        try:
+            email_content = generate_report_email(
+                email=data.email,
+                registration=data.registration,
+                vehicle_make=data.vehicle_make or "Unknown",
+                vehicle_model=data.vehicle_model or "Vehicle",
+                vehicle_year=data.vehicle_year or 0,
+                reliability_score=data.reliability_score,
+                mot_pass_prediction=data.mot_pass_prediction,
+                failure_risk=data.failure_risk,
+                common_faults=data.common_faults,
+                repair_cost_min=data.repair_cost_min,
+                repair_cost_max=data.repair_cost_max,
+                mot_expiry_date=data.mot_expiry_date,
+                days_until_mot_expiry=data.days_until_mot_expiry,
+            )
+            await send_email(
+                to_email=data.email,
+                subject=email_content["subject"],
+                html_body=email_content["html"],
+                text_body=email_content["text"],
+                tags={"type": "report_email"},
+            )
+        except Exception as e:
+            logger.error(f"Failed to send report email: {e}")
+
+    return {"success": True}
+
+
+@app.get("/api/stats")
+@limiter.limit("60/minute")
+async def get_stats(request: Request):
+    """
+    Get public stats for the trust bar.
+
+    Cached for 5 minutes.
+    """
+    cache_key = "public_stats"
+    if cache_key in _stats_cache:
+        return _stats_cache[cache_key]
+
+    stats = await db.get_risk_check_stats()
+    result = {
+        "total_checks": stats.get("total_checks", 0),
+        "checks_this_month": stats.get("checks_this_month", 0),
+        "mot_records": "142M+",
+    }
+    _stats_cache[cache_key] = result
+    return result
 
 
 # Mount static files (only if the folder exists)

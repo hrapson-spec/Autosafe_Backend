@@ -72,6 +72,12 @@ def main():
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='consent_timestamp') THEN
                 ALTER TABLE leads ADD COLUMN consent_timestamp TIMESTAMP;
             END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='registration') THEN
+                ALTER TABLE leads ADD COLUMN registration VARCHAR(8);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='mot_expiry_date') THEN
+                ALTER TABLE leads ADD COLUMN mot_expiry_date DATE;
+            END IF;
         END $$;
     """)
 

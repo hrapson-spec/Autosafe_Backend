@@ -444,3 +444,385 @@ Questions? Reply to this email
         "html": html_body,
         "text": text_body,
     }
+
+
+def generate_mot_reminder_confirmation(
+    email: str,
+    registration: str,
+    vehicle_make: str,
+    vehicle_model: str,
+    vehicle_year: int,
+    mot_expiry_date: Optional[str] = None,
+    failure_risk: Optional[float] = None,
+) -> Dict[str, str]:
+    """
+    Generate MOT reminder confirmation email.
+
+    Args:
+        email: Subscriber email
+        registration: Vehicle registration
+        vehicle_make/model/year: Vehicle details
+        mot_expiry_date: ISO date string
+        failure_risk: Overall failure risk (0-1)
+
+    Returns:
+        Dict with 'subject', 'html', and 'text' keys
+    """
+    # Format MOT date for display
+    mot_display = "Unknown"
+    if mot_expiry_date:
+        try:
+            from datetime import datetime as dt
+            d = dt.strptime(mot_expiry_date[:10], "%Y-%m-%d")
+            mot_display = d.strftime("%d %B %Y")
+        except (ValueError, IndexError):
+            mot_display = mot_expiry_date[:10]
+
+    # Risk display
+    risk_display = ""
+    if failure_risk is not None:
+        risk_pct = int(failure_risk * 100)
+        risk_level, risk_color = _get_risk_level(failure_risk)
+        risk_display_template = _jinja_env.from_string("""
+            <div style="margin: 16px 0; padding: 12px 16px; background-color: #F8FAFC; border-radius: 8px; border-left: 4px solid {{ color }};">
+                <p style="margin: 0; font-size: 14px; color: #374151;">
+                    Current failure risk: <strong style="color: {{ color }};">{{ pct }}% ({{ level }})</strong>
+                </p>
+            </div>
+        """)
+        risk_display = risk_display_template.render(color=risk_color, pct=risk_pct, level=risk_level)
+
+    subject = f"MOT Reminder Set - {vehicle_make} {vehicle_model} ({registration})"
+
+    html_template = _jinja_env.from_string("""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF;">
+        <tr>
+            <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
+                <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700; font-family: Georgia, serif;">AutoSafe</h1>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 32px 24px;">
+                <h2 style="margin: 0 0 8px 0; font-size: 20px; color: #1E293B; font-weight: 700;">
+                    Your MOT reminder is set
+                </h2>
+                <p style="margin: 0 0 20px 0; font-size: 15px; color: #64748B;">
+                    We'll email you 4 weeks before your MOT is due.
+                </p>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; background-color: #F8FAFC; border-radius: 8px;">
+                    <tr>
+                        <td style="padding: 16px;">
+                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Vehicle</p>
+                            <p style="margin: 0 0 12px 0; font-size: 16px; color: #1E293B; font-weight: 600;">
+                                {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+                            </p>
+                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">MOT Due</p>
+                            <p style="margin: 0; font-size: 16px; color: #1E293B; font-weight: 600;">{{ mot_display }}</p>
+                        </td>
+                    </tr>
+                </table>
+
+                {{ risk_display|safe }}
+
+                <div style="margin: 24px 0; padding: 16px; background-color: #F0FDF4; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #166534; font-weight: 600;">Need a garage?</p>
+                    <p style="margin: 0; font-size: 14px; color: #15803D;">
+                        Simply reply to this email and we'll find one near you.
+                    </p>
+                </div>
+
+                <p style="margin: 24px 0 0 0; font-size: 12px; color: #94A3B8; text-align: center;">
+                    You can unsubscribe at any time by replying to this email.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>""")
+
+    html_body = html_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        mot_display=mot_display,
+        risk_display=risk_display,
+        base_url=BASE_URL,
+    )
+
+    text_template = _jinja_env.from_string("""
+MOT REMINDER SET - AutoSafe
+============================
+
+Your MOT reminder is confirmed.
+
+Vehicle: {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+MOT Due: {{ mot_display }}
+
+We'll email you 4 weeks before your MOT is due.
+
+Need a garage? Reply to this email and we'll find one near you.
+
+Unsubscribe any time by replying to this email.
+
+AutoSafe - {{ base_url }}
+""")
+
+    text_body = text_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        mot_display=mot_display,
+        base_url=BASE_URL,
+    )
+
+    return {
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }
+
+
+def generate_report_email(
+    email: str,
+    registration: str,
+    vehicle_make: str,
+    vehicle_model: str,
+    vehicle_year: int,
+    reliability_score: int,
+    mot_pass_prediction: int,
+    failure_risk: float,
+    common_faults: List[Dict],
+    repair_cost_min: Optional[int] = None,
+    repair_cost_max: Optional[int] = None,
+    mot_expiry_date: Optional[str] = None,
+    days_until_mot_expiry: Optional[int] = None,
+) -> Dict[str, str]:
+    """
+    Generate a designed report email for the user.
+
+    Returns:
+        Dict with 'subject', 'html', and 'text' keys
+    """
+    # Color for reliability score
+    if reliability_score > 75:
+        score_color = "#059669"
+    elif reliability_score > 50:
+        score_color = "#D97706"
+    else:
+        score_color = "#DC2626"
+
+    # MOT expiry display
+    mot_display = ""
+    if mot_expiry_date:
+        try:
+            from datetime import datetime as dt
+            d = dt.strptime(mot_expiry_date[:10], "%Y-%m-%d")
+            mot_display = d.strftime("%d %B %Y")
+        except (ValueError, IndexError):
+            mot_display = mot_expiry_date[:10]
+
+    # Build fault rows
+    fault_rows = ""
+    fault_row_template = _jinja_env.from_string("""
+        <tr>
+            <td style="padding: 8px 0; font-size: 14px; color: #374151;">{{ component }}</td>
+            <td style="padding: 8px 0; text-align: right;">
+                <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+                    background-color: {{ bg_color }}; color: {{ text_color }};">
+                    {{ level }}
+                </span>
+            </td>
+        </tr>
+    """)
+    for fault in common_faults[:6]:
+        level = fault.get('risk_level', 'Low')
+        if level == 'High':
+            bg_color, text_color = "#FEE2E2", "#DC2626"
+        elif level == 'Medium':
+            bg_color, text_color = "#FEF3C7", "#D97706"
+        else:
+            bg_color, text_color = "#DBEAFE", "#2563EB"
+        fault_rows += fault_row_template.render(
+            component=fault.get('component', 'Unknown'),
+            level=level,
+            bg_color=bg_color,
+            text_color=text_color,
+        )
+
+    # Repair cost display
+    cost_display = ""
+    if repair_cost_min is not None and repair_cost_max is not None:
+        cost_display = f"£{repair_cost_min} - £{repair_cost_max}"
+
+    subject_template = _jinja_env.from_string(
+        "Your AutoSafe Report - {{ make }} {{ model }} ({{ reg }})"
+    )
+    subject = subject_template.render(make=vehicle_make, model=vehicle_model, reg=registration)
+
+    html_template = _jinja_env.from_string("""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF;">
+        <tr>
+            <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
+                <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700; font-family: Georgia, serif;">AutoSafe</h1>
+                <p style="margin: 6px 0 0 0; color: #94A3B8; font-size: 13px;">Vehicle Risk Report</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 24px;">
+                <h2 style="margin: 0 0 4px 0; font-size: 20px; color: #1E293B;">
+                    {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }}
+                </h2>
+                <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748B;">Registration: {{ registration }}</p>
+
+                <!-- Score Cards -->
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                    <tr>
+                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; text-align: center; border: 1px solid #E2E8F0;" width="48%">
+                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Reliability</p>
+                            <p style="margin: 0; font-size: 32px; font-weight: 700; color: {{ score_color }};">{{ reliability_score }}/100</p>
+                        </td>
+                        <td width="4%"></td>
+                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; text-align: center; border: 1px solid #E2E8F0;" width="48%">
+                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">MOT Pass</p>
+                            <p style="margin: 0; font-size: 32px; font-weight: 700; color: #2563EB;">{{ mot_pass }}%</p>
+                        </td>
+                    </tr>
+                </table>
+
+                {% if cost_display %}
+                <div style="margin-bottom: 24px; padding: 12px 16px; background-color: #FFF7ED; border-radius: 8px; border: 1px solid #FED7AA; text-align: center;">
+                    <p style="margin: 0 0 2px 0; font-size: 11px; color: #9A3412; text-transform: uppercase;">Estimated Repair Costs</p>
+                    <p style="margin: 0; font-size: 20px; font-weight: 700; color: #9A3412;">{{ cost_display }}</p>
+                </div>
+                {% endif %}
+
+                {% if mot_display %}
+                <div style="margin-bottom: 24px; padding: 12px 16px; background-color: #F0F9FF; border-radius: 8px; border: 1px solid #BAE6FD;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td>
+                                <p style="margin: 0 0 2px 0; font-size: 11px; color: #0369A1; text-transform: uppercase;">MOT Expiry</p>
+                                <p style="margin: 0; font-size: 16px; font-weight: 600; color: #0C4A6E;">{{ mot_display }}</p>
+                            </td>
+                            {% if days_until is not none %}
+                            <td style="text-align: right;">
+                                <p style="margin: 0; font-size: 24px; font-weight: 700; color: #0369A1;">{{ days_until }}d</p>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if fault_rows %}
+                <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Component Risk Breakdown
+                </h3>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                    {{ fault_rows|safe }}
+                </table>
+                {% endif %}
+
+                <div style="margin: 24px 0; padding: 16px; background-color: #F0FDF4; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #166534; font-weight: 600;">Need a garage?</p>
+                    <p style="margin: 0; font-size: 14px; color: #15803D;">
+                        Reply to this email and we'll find one near you.
+                    </p>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 16px 24px; background-color: #1E293B; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                    Based on analysis of 142M+ official DVSA MOT test records
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                    AutoSafe &middot;
+                    <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a> &middot;
+                    <a href="{{ base_url }}" style="color: #64748B; text-decoration: none;">Check another vehicle</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>""")
+
+    html_body = html_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        reliability_score=reliability_score,
+        score_color=score_color,
+        mot_pass=mot_pass_prediction,
+        cost_display=cost_display,
+        mot_display=mot_display,
+        days_until=days_until_mot_expiry,
+        fault_rows=fault_rows,
+        base_url=BASE_URL,
+    )
+
+    # Plain text version
+    fault_text = ""
+    for fault in common_faults[:6]:
+        fault_text += f"  - {fault.get('component', 'Unknown')}: {fault.get('risk_level', 'Low')} Risk\n"
+
+    text_template = _jinja_env.from_string("""
+AUTOSAFE VEHICLE REPORT
+========================
+
+{{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+
+RELIABILITY SCORE: {{ reliability_score }}/100
+MOT PASS PROBABILITY: {{ mot_pass }}%
+{% if cost_display %}ESTIMATED REPAIR COSTS: {{ cost_display }}{% endif %}
+{% if mot_display %}MOT EXPIRY: {{ mot_display }}{% endif %}
+
+COMPONENT RISKS:
+{{ fault_text }}
+Need a garage? Reply to this email and we'll find one near you.
+
+Based on analysis of 142M+ official DVSA MOT test records.
+
+AutoSafe - {{ base_url }}
+""")
+
+    text_body = text_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        reliability_score=reliability_score,
+        mot_pass=mot_pass_prediction,
+        cost_display=cost_display,
+        mot_display=mot_display,
+        fault_text=fault_text,
+        base_url=BASE_URL,
+    )
+
+    return {
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }

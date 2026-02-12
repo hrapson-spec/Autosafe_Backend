@@ -3,7 +3,7 @@
  * Connects the React frontend to the FastAPI backend for real risk assessments.
  */
 
-import { CarSelection, CarReport, Fault } from '../types';
+import { CarSelection, CarReport, Fault, MotReminderSubmission, MotReminderResponse, ReportEmailSubmission, PublicStats } from '../types';
 
 // API base URL - configured via environment variable
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -329,6 +329,19 @@ export async function getReportByRegistration(registration: string): Promise<{
 
   const report = transformToCarReport(riskData);
 
+  // Pass MOT expiry data through from DVLA lookup
+  if (vehicle.mot_expiry) {
+    const expiryDate = new Date(vehicle.mot_expiry);
+    const now = new Date();
+    const diffMs = expiryDate.getTime() - now.getTime();
+    const daysUntilExpiry = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    report.motExpiryDate = vehicle.mot_expiry;
+    report.daysUntilMotExpiry = daysUntilExpiry;
+    report.motExpired = daysUntilExpiry < 0;
+  }
+  report.registration = registration.replace(/\s/g, '').toUpperCase();
+
   return { selection, report };
 }
 
@@ -362,7 +375,7 @@ export async function getReportBySelection(
 // Lead Capture
 // ============================================================================
 
-import { GarageLeadSubmission, GarageLeadResponse } from '../types';
+import { GarageLeadSubmission, GarageLeadResponse } from '../types';  // eslint-disable-line
 
 /**
  * Submit a garage lead to the backend.
@@ -383,5 +396,58 @@ export async function submitGarageLead(
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
+  return response.json();
+}
+
+// ============================================================================
+// MOT Reminder + Report Email + Stats
+// ============================================================================
+
+/**
+ * Submit an MOT reminder signup.
+ */
+export async function submitMotReminder(
+  data: MotReminderSubmission
+): Promise<MotReminderResponse> {
+  const response = await fetch(`${API_BASE}/api/mot-reminder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Submit a request to email the report.
+ */
+export async function submitReportEmail(
+  data: ReportEmailSubmission
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/api/email-report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get public stats for the trust bar.
+ */
+export async function getPublicStats(): Promise<PublicStats> {
+  const response = await fetch(`${API_BASE}/api/stats`);
+  if (!response.ok) throw new Error('Failed to fetch stats');
   return response.json();
 }

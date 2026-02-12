@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route as RouterRoute, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
@@ -6,17 +6,24 @@ import ReportDashboard from './components/ReportDashboard';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import { MOTChecklist, CommonFailures, WhenMOTDue } from './components/guides';
-import { CarSelection, CarReport, RegistrationQuery } from './types';
-import { getReportBySelection } from './services/autosafeApi';
+import { CarSelection, CarReport, RegistrationQuery, PublicStats } from './types';
+import { getReportByRegistration, getPublicStats } from './services/autosafeApi';
 import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
 import { Logo } from './components/Logo';
+import { trackConversion } from './utils/analytics';
 
 const App: React.FC = () => {
   const [selection, setSelection] = useState<CarSelection | null>(null);
   const [report, setReport] = useState<CarReport | null>(null);
   const [postcode, setPostcode] = useState<string>('');
+  const [registration, setRegistration] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<PublicStats | null>(null);
+
+  useEffect(() => {
+    getPublicStats().then(setStats).catch(() => {});
+  }, []);
 
   const handleCarCheck = async (data: RegistrationQuery) => {
     setLoading(true);
@@ -24,11 +31,11 @@ const App: React.FC = () => {
     setPostcode(data.postcode);
 
     try {
-      // DEMO MODE: Use backend demo data until DVLA API is configured
-      // This simulates a Ford Fiesta lookup for any registration
-      const result = await getReportBySelection('FORD', 'FIESTA', 2018);
+      const result = await getReportByRegistration(data.registration);
       setSelection(result.selection);
       setReport(result.report);
+      setRegistration(data.registration.replace(/\s/g, '').toUpperCase());
+      trackConversion('risk_check');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(message);
@@ -42,6 +49,7 @@ const App: React.FC = () => {
     setReport(null);
     setSelection(null);
     setPostcode('');
+    setRegistration('');
     setError(null);
   };
 
@@ -77,7 +85,7 @@ const App: React.FC = () => {
 
       <main id="main-content" className="flex-grow flex flex-col">
         {report && selection ? (
-          <ReportDashboard report={report} selection={selection} postcode={postcode} onReset={handleReset} />
+          <ReportDashboard report={report} selection={selection} postcode={postcode} registration={registration} onReset={handleReset} />
         ) : (
           /* Landing Hero Section - Centered Layout */
           <div className="relative flex-grow flex flex-col items-center justify-start pt-12 pb-20 px-4 md:px-6">
@@ -101,6 +109,15 @@ const App: React.FC = () => {
                   onSubmit={handleCarCheck}
                   isLoading={loading}
                 />
+              </div>
+
+              {/* Trust Bar */}
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 tracking-wide mt-4">
+                <span>142M+ MOT records analysed</span>
+                <span className="hidden md:inline" aria-hidden="true">&middot;</span>
+                <span>{stats ? `${stats.checks_this_month.toLocaleString()} vehicles checked this month` : 'Free vehicle checks'}</span>
+                <span className="hidden md:inline" aria-hidden="true">&middot;</span>
+                <span>Free &amp; instant</span>
               </div>
             </div>
 

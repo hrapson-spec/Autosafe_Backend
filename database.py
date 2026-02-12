@@ -879,3 +879,143 @@ def _backup_risk_check_to_file(risk_data: Dict):
         logger.info(f"Risk check backed up to file: {risk_data.get('registration')}")
     except Exception as e:
         logger.error(f"Failed to backup risk check to file: {e}")
+
+
+# ============================================================================
+# MOT Reminder + Report Email Functions
+# ============================================================================
+
+async def save_mot_reminder(data: Dict) -> Dict:
+    """
+    Save an MOT reminder signup. Checks for duplicates (same email + registration).
+
+    Returns:
+        Dict with 'success', 'already_subscribed', and optionally 'lead_id'
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for saving MOT reminder")
+        return {"success": False, "already_subscribed": False}
+
+    try:
+        import json
+        email = data.get('email', '').lower().strip()
+        registration = data.get('registration', '').upper().strip()
+
+        async with pool.acquire() as conn:
+            # Check for duplicate
+            existing = await conn.fetchrow(
+                """SELECT id FROM leads
+                   WHERE email = $1 AND registration = $2 AND lead_type = 'mot_reminder'""",
+                email, registration
+            )
+
+            if existing:
+                return {"success": True, "already_subscribed": True, "lead_id": str(existing['id'])}
+
+            # Parse mot_expiry_date to date object if provided
+            mot_expiry = None
+            if data.get('mot_expiry_date'):
+                from datetime import date as date_type
+                try:
+                    parts = data['mot_expiry_date'][:10].split('-')
+                    mot_expiry = date_type(int(parts[0]), int(parts[1]), int(parts[2]))
+                except (ValueError, IndexError):
+                    pass
+
+            result = await conn.fetchrow(
+                """INSERT INTO leads (
+                    email, postcode, lead_type, registration, mot_expiry_date,
+                    vehicle_make, vehicle_model, vehicle_year,
+                    failure_risk, consent_given, consent_timestamp
+                ) VALUES ($1, $2, 'mot_reminder', $3, $4, $5, $6, $7, $8, TRUE, NOW())
+                RETURNING id""",
+                email,
+                data.get('postcode', '').upper().strip(),
+                registration,
+                mot_expiry,
+                data.get('vehicle_make'),
+                data.get('vehicle_model'),
+                data.get('vehicle_year'),
+                data.get('failure_risk'),
+            )
+
+            lead_id = str(result['id'])
+            logger.info(f"MOT reminder saved: id={lead_id} registration={registration}")
+            return {"success": True, "already_subscribed": False, "lead_id": lead_id}
+
+    except Exception as e:
+        logger.error(f"Failed to save MOT reminder: {e}")
+        return {"success": False, "already_subscribed": False}
+
+
+async def save_report_email_lead(data: Dict) -> Optional[str]:
+    """
+    Save a report email lead to the database.
+
+    Returns:
+        Lead ID on success, None on failure
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for saving report email lead")
+        return None
+
+    try:
+        import json
+        email = data.get('email', '').lower().strip()
+
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO leads (
+                    email, postcode, lead_type, registration,
+                    vehicle_make, vehicle_model, vehicle_year,
+                    failure_risk, reliability_score,
+                    top_risks, consent_given, consent_timestamp
+                ) VALUES ($1, $2, 'report_email', $3, $4, $5, $6, $7, $8, $9::jsonb, TRUE, NOW())
+                RETURNING id""",
+                email,
+                data.get('postcode', '').upper().strip(),
+                data.get('registration', '').upper().strip(),
+                data.get('vehicle_make'),
+                data.get('vehicle_model'),
+                data.get('vehicle_year'),
+                data.get('failure_risk'),
+                data.get('reliability_score'),
+                json.dumps(data.get('common_faults', [])),
+            )
+
+            lead_id = str(result['id'])
+            logger.info(f"Report email lead saved: id={lead_id}")
+            return lead_id
+
+    except Exception as e:
+        logger.error(f"Failed to save report email lead: {e}")
+        return None
+
+
+async def get_risk_check_stats() -> Dict:
+    """
+    Get total and monthly risk check counts for the public stats endpoint.
+
+    Returns:
+        Dict with 'total_checks' and 'checks_this_month'
+    """
+    pool = await get_pool()
+    if not pool:
+        return {"total_checks": 0, "checks_this_month": 0}
+
+    try:
+        async with pool.acquire() as conn:
+            total = await conn.fetchval("SELECT COUNT(*) FROM risk_checks")
+            monthly = await conn.fetchval(
+                """SELECT COUNT(*) FROM risk_checks
+                   WHERE created_at >= date_trunc('month', CURRENT_DATE)"""
+            )
+            return {
+                "total_checks": total or 0,
+                "checks_this_month": monthly or 0,
+            }
+    except Exception as e:
+        logger.error(f"Failed to get risk check stats: {e}")
+        return {"total_checks": 0, "checks_this_month": 0}

@@ -32,6 +32,10 @@ export interface CarReport {
   estimatedAnnualMaintenance: number;
   repairCostEstimate?: RepairCostEstimate;
   motPassRatePrediction: number;
+  motExpiryDate?: string;
+  daysUntilMotExpiry?: number;
+  motExpired?: boolean;
+  registration?: string;
 }
 
 export interface MockCarModel {
@@ -122,4 +126,44 @@ export interface GarageLeadResponse {
   success: boolean;
   lead_id: string;
   message: string;
+}
+
+export interface MotReminderSubmission {
+  email: string;
+  registration: string;
+  postcode: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_year?: number;
+  mot_expiry_date?: string;
+  failure_risk?: number;
+}
+
+export interface MotReminderResponse {
+  success: boolean;
+  already_subscribed?: boolean;
+  message: string;
+}
+
+export interface ReportEmailSubmission {
+  email: string;
+  registration: string;
+  postcode: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  vehicle_year?: number;
+  reliability_score: number;
+  mot_pass_prediction: number;
+  failure_risk: number;
+  common_faults: { component: string; risk_level: string }[];
+  repair_cost_min?: number;
+  repair_cost_max?: number;
+  mot_expiry_date?: string;
+  days_until_mot_expiry?: number;
+}
+
+export interface PublicStats {
+  total_checks: number;
+  checks_this_month: number;
+  mot_records: string;
 }
