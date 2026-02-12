@@ -1191,6 +1191,10 @@ async def get_vehicle(
         try:
             history = await dvsa_client.fetch_vehicle_history(vrm)
             year = history.manufacture_date.year if history.manufacture_date else None
+            # Get MOT expiry from latest passing test
+            mot_expiry = None
+            if history.latest_test and history.latest_test.expiry_date:
+                mot_expiry = history.latest_test.expiry_date.strftime("%Y-%m-%d")
             return {
                 "registration": vrm,
                 "dvla": {
@@ -1200,6 +1204,7 @@ async def get_vehicle(
                     "fuelType": history.fuel_type,
                     "colour": history.colour,
                 },
+                "mot_expiry": mot_expiry,
                 "source": "dvsa"
             }
         except VehicleNotFoundError:

@@ -71,7 +71,23 @@ export async function lookupVehicle(registration: string): Promise<VehicleLookup
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  const raw = await response.json();
+
+  // API returns nested { dvla: { make, model, yearOfManufacture, ... } } — flatten it
+  const dvla = raw.dvla || {};
+  return {
+    registration: raw.registration || cleanReg,
+    make: dvla.make || '',
+    model: dvla.model || '',
+    year: dvla.yearOfManufacture || 0,
+    fuel_type: dvla.fuelType || '',
+    colour: dvla.colour || '',
+    engine_capacity: dvla.engineCapacity || null,
+    mot_status: dvla.motStatus || raw.mot_status || '',
+    mot_expiry: dvla.motExpiry || raw.mot_expiry || '',
+    tax_status: dvla.taxStatus || raw.tax_status || '',
+    tax_due_date: dvla.taxDueDate || raw.tax_due_date || '',
+  };
 }
 
 /**
