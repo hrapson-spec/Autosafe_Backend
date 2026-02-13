@@ -30,8 +30,8 @@ const FAULT_TO_ISSUE: Record<string, string> = {
 
 const URGENCY_OPTIONS = [
   { value: 'exploring', label: 'Just exploring', desc: 'Getting quotes for now' },
-  { value: 'soon', label: 'Soon', desc: 'Ideally within the next few weeks' },
-  { value: 'urgent', label: 'Urgent', desc: 'I need this fixed quickly' },
+  { value: 'this_week', label: 'Soon', desc: 'Ideally within the next few weeks' },
+  { value: 'asap', label: 'Urgent', desc: 'I need this fixed quickly' },
 ] as const;
 
 const validateEmail = (value: string): string | undefined => {
@@ -116,9 +116,9 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
 
       // Set default urgency
       if (report.daysUntilMotExpiry !== undefined && report.daysUntilMotExpiry <= 30) {
-        setUrgency('soon');
+        setUrgency('this_week');
       } else if (failureRisk > 0.5) {
-        setUrgency('soon');
+        setUrgency('this_week');
       } else {
         setUrgency('exploring');
       }

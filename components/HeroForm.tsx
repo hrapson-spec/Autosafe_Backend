@@ -7,8 +7,8 @@ interface HeroFormProps {
   isLoading: boolean;
 }
 
-// UK registration plate pattern: AA00 AAA or AA00AAA
-const UK_REG_PATTERN = /^[A-Z]{2}[0-9]{2}\s?[A-Z]{3}$/i;
+// UK registration plate pattern: 2-8 alphanumeric characters (backend handles detailed format checking)
+const UK_REG_PATTERN = /^[A-Z0-9]{2,8}$/i;
 
 // UK postcode pattern
 const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
@@ -17,7 +17,7 @@ const validateRegistration = (value: string): string | undefined => {
   if (!value) return 'Registration is required';
   if (value.length < 2) return 'Registration is too short';
   if (!UK_REG_PATTERN.test(value.replace(/\s/g, ''))) {
-    return 'Enter a valid UK registration (e.g. AB12 CDE)';
+    return 'Enter a valid UK registration (2-8 characters)';
   }
   return undefined;
 };

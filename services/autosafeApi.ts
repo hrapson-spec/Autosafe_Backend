@@ -17,7 +17,7 @@ export interface VehicleLookupResponse {
   registration: string;
   make: string;
   model: string;
-  year: number;
+  year: number | null;
   fuel_type: string;
   colour: string;
   engine_capacity: number | null;
@@ -45,11 +45,14 @@ export interface BackendRiskResponse {
   Risk_Lamps?: number;
   Risk_Body?: number;
   Repair_Cost_Estimate?: {
-    cost_min: number;
-    cost_mid: number;
-    cost_max: number;
-    display: string;
-    disclaimer: string;
+    cost_min?: number;
+    cost_mid?: number;
+    cost_max?: number;
+    expected?: number;
+    range_low?: number;
+    range_high?: number;
+    display?: string;
+    disclaimer?: string;
   };
   note?: string;
 }
@@ -79,7 +82,7 @@ export async function lookupVehicle(registration: string): Promise<VehicleLookup
     registration: raw.registration || cleanReg,
     make: dvla.make || '',
     model: dvla.model || '',
-    year: dvla.yearOfManufacture || 0,
+    year: dvla.yearOfManufacture || null,
     fuel_type: dvla.fuelType || '',
     colour: dvla.colour || '',
     engine_capacity: dvla.engineCapacity || null,
@@ -294,17 +297,18 @@ export function transformToCarReport(data: BackendRiskResponse): CarReport {
   const riskOrder = { High: 0, Medium: 1, Low: 2 };
   commonFaults.sort((a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel]);
 
-  // Get repair cost estimate - use cost_mid as the main estimate
-  const estimatedAnnualMaintenance = data.Repair_Cost_Estimate?.cost_mid ||
+  // Get repair cost estimate - map backend field names (expected/range_low/range_high) to frontend names
+  const estimatedAnnualMaintenance = data.Repair_Cost_Estimate?.expected ??
+    data.Repair_Cost_Estimate?.cost_mid ??
     Math.round(data.Failure_Risk * 800 + 150); // Fallback estimate
 
-  // Pass through full cost data if available
+  // Pass through full cost data if available, mapping backend → frontend field names
   const repairCostEstimate = data.Repair_Cost_Estimate ? {
-    cost_min: data.Repair_Cost_Estimate.cost_min,
-    cost_mid: data.Repair_Cost_Estimate.cost_mid,
-    cost_max: data.Repair_Cost_Estimate.cost_max,
-    display: data.Repair_Cost_Estimate.display,
-    disclaimer: data.Repair_Cost_Estimate.disclaimer
+    cost_min: data.Repair_Cost_Estimate.range_low ?? data.Repair_Cost_Estimate.cost_min,
+    cost_mid: data.Repair_Cost_Estimate.expected ?? data.Repair_Cost_Estimate.cost_mid,
+    cost_max: data.Repair_Cost_Estimate.range_high ?? data.Repair_Cost_Estimate.cost_max,
+    display: data.Repair_Cost_Estimate.display || 'if your vehicle fails its MOT',
+    disclaimer: data.Repair_Cost_Estimate.disclaimer || 'Estimate based on common repair costs for similar vehicles'
   } : undefined;
 
   return {

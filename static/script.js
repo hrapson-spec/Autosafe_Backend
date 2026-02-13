@@ -550,6 +550,7 @@ if (leadForm) {
                 phone: phone || null,
                 postcode: postcode,
                 lead_type: 'garage',
+                consent_given: true,
                 services_requested: selectedServices.length > 0 ? selectedServices : null,
                 vehicle: currentResultsData?.vehicle || null,
                 risk_data: currentResultsData ? {
