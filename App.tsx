@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route as RouterRoute, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
-import ReportDashboard from './components/ReportDashboard';
-import PrivacyPage from './components/PrivacyPage';
-import TermsPage from './components/TermsPage';
-import { MOTChecklist, CommonFailures, WhenMOTDue } from './components/guides';
+
+const ReportDashboard = lazy(() => import('./components/ReportDashboard'));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
+const TermsPage = lazy(() => import('./components/TermsPage'));
+const MOTChecklist = lazy(() => import('./components/guides').then(m => ({ default: m.MOTChecklist })));
+const CommonFailures = lazy(() => import('./components/guides').then(m => ({ default: m.CommonFailures })));
+const WhenMOTDue = lazy(() => import('./components/guides').then(m => ({ default: m.WhenMOTDue })));
 import { CarSelection, CarReport, RegistrationQuery, PublicStats } from './types';
 import { getReportByRegistration, getPublicStats } from './services/autosafeApi';
 import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
 import { Logo } from './components/Logo';
-import { trackConversion } from './utils/analytics';
+import { trackConversion, trackFunnel, trackReportView } from './utils/analytics';
 
 const App: React.FC = () => {
   const [selection, setSelection] = useState<CarSelection | null>(null);
@@ -36,6 +39,8 @@ const App: React.FC = () => {
       setReport(result.report);
       setRegistration(data.registration.replace(/\s/g, '').toUpperCase());
       trackConversion('risk_check');
+      trackFunnel('reg_entered');
+      trackReportView(result.selection.make, result.selection.model, 100 - result.report.reliabilityScore);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(message);
@@ -85,7 +90,9 @@ const App: React.FC = () => {
 
       <main id="main-content" className="flex-grow flex flex-col">
         {report && selection ? (
+          <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" /></div>}>
           <ReportDashboard report={report} selection={selection} postcode={postcode} registration={registration} onReset={handleReset} />
+          </Suspense>
         ) : (
           /* Landing Hero Section - Centered Layout */
           <div className="relative flex-grow flex flex-col items-center justify-start pt-12 pb-20 px-4 md:px-6">
@@ -190,14 +197,16 @@ const App: React.FC = () => {
   );
 
   return (
-    <Routes>
-      <RouterRoute path="/app" element={<HomePage />} />
-      <RouterRoute path="/app/privacy" element={<PrivacyPage />} />
-      <RouterRoute path="/app/terms" element={<TermsPage />} />
-      <RouterRoute path="/app/guides/mot-checklist" element={<MOTChecklist />} />
-      <RouterRoute path="/app/guides/common-mot-failures" element={<CommonFailures />} />
-      <RouterRoute path="/app/guides/when-is-mot-due" element={<WhenMOTDue />} />
-    </Routes>
+    <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" /></div>}>
+      <Routes>
+        <RouterRoute path="/app" element={<HomePage />} />
+        <RouterRoute path="/app/privacy" element={<PrivacyPage />} />
+        <RouterRoute path="/app/terms" element={<TermsPage />} />
+        <RouterRoute path="/app/guides/mot-checklist" element={<MOTChecklist />} />
+        <RouterRoute path="/app/guides/common-mot-failures" element={<CommonFailures />} />
+        <RouterRoute path="/app/guides/when-is-mot-due" element={<WhenMOTDue />} />
+      </Routes>
+    </Suspense>
   );
 };
 

@@ -826,3 +826,181 @@ AutoSafe - {{ base_url }}
         "html": html_body,
         "text": text_body,
     }
+
+
+def generate_mot_reminder_28d(
+    email: str,
+    registration: str,
+    vehicle_make: str,
+    vehicle_model: str,
+    vehicle_year: int,
+    mot_expiry_date: str,
+    failure_risk: Optional[float] = None,
+) -> Dict[str, str]:
+    """
+    Generate the 28-day MOT reminder email.
+
+    This is the actual reminder sent ~4 weeks before the MOT is due,
+    fulfilling the promise made in the confirmation email.
+
+    Returns:
+        Dict with 'subject', 'html', and 'text' keys
+    """
+    # Format MOT date
+    mot_display = mot_expiry_date[:10]
+    try:
+        from datetime import datetime as dt
+        d = dt.strptime(mot_expiry_date[:10], "%Y-%m-%d")
+        mot_display = d.strftime("%d %B %Y")
+    except (ValueError, IndexError):
+        pass
+
+    # Risk section
+    risk_html = ""
+    risk_text = ""
+    if failure_risk is not None:
+        risk_pct = int(failure_risk * 100)
+        risk_level, risk_color = _get_risk_level(failure_risk)
+        risk_template = _jinja_env.from_string("""
+            <div style="margin: 20px 0; padding: 16px; background-color: #FEF2F2; border-radius: 8px; border-left: 4px solid {{ color }};">
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Your Predicted Failure Risk</p>
+                <p style="margin: 0; font-size: 24px; font-weight: 700; color: {{ color }};">{{ pct }}%</p>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748B;">
+                    {% if pct > 35 %}A pre-MOT check could save you time and money.{% elif pct > 20 %}Some areas may need attention before your test.{% else %}Your vehicle looks in good shape, but a check never hurts.{% endif %}
+                </p>
+            </div>
+        """)
+        risk_html = risk_template.render(color=risk_color, pct=risk_pct)
+        risk_text = f"Predicted failure risk: {risk_pct}% ({risk_level})"
+
+    subject_template = _jinja_env.from_string(
+        "Your MOT is due in 4 weeks - {{ make }} {{ model }} ({{ reg }})"
+    )
+    subject = subject_template.render(make=vehicle_make, model=vehicle_model, reg=registration)
+
+    html_template = _jinja_env.from_string("""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F3F4F6;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; margin: 0 auto; background-color: #FFFFFF;">
+        <tr>
+            <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
+                <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700; font-family: Georgia, serif;">AutoSafe</h1>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 12px 24px; background-color: #FEF3C7; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #92400E; font-weight: 600;">
+                    &#9200; Your MOT is due in approximately 4 weeks
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 32px 24px;">
+                <h2 style="margin: 0 0 8px 0; font-size: 20px; color: #1E293B; font-weight: 700;">
+                    Time to prepare for your MOT
+                </h2>
+                <p style="margin: 0 0 20px 0; font-size: 15px; color: #64748B;">
+                    Your {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }}) has its MOT due on <strong>{{ mot_display }}</strong>.
+                </p>
+
+                {{ risk_html|safe }}
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                    <tr>
+                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px;">
+                            <p style="margin: 0 0 12px 0; font-size: 14px; color: #1E293B; font-weight: 600;">Quick pre-MOT checklist:</p>
+                            <table cellpadding="0" cellspacing="0">
+                                <tr><td style="padding: 3px 0; font-size: 14px; color: #475569;">&#9744; Check all lights and indicators</td></tr>
+                                <tr><td style="padding: 3px 0; font-size: 14px; color: #475569;">&#9744; Check tyre tread depth (min 1.6mm)</td></tr>
+                                <tr><td style="padding: 3px 0; font-size: 14px; color: #475569;">&#9744; Top up washer fluid</td></tr>
+                                <tr><td style="padding: 3px 0; font-size: 14px; color: #475569;">&#9744; Check windscreen for chips/cracks</td></tr>
+                                <tr><td style="padding: 3px 0; font-size: 14px; color: #475569;">&#9744; Test horn and wipers</td></tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="margin: 24px 0; text-align: center;">
+                    <a href="{{ base_url }}?utm_source=reminder&utm_medium=email&utm_campaign=mot_28d"
+                       style="display: inline-block; padding: 14px 32px; background-color: #1E293B; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                        Check your latest risk score
+                    </a>
+                </div>
+
+                <div style="margin: 24px 0; padding: 16px; background-color: #F0FDF4; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #166534; font-weight: 600;">Need a garage for your MOT?</p>
+                    <p style="margin: 0; font-size: 14px; color: #15803D;">
+                        Reply to this email and we'll find one near you.
+                    </p>
+                </div>
+
+                <p style="margin: 24px 0 0 0; font-size: 12px; color: #94A3B8; text-align: center;">
+                    You can unsubscribe at any time by replying to this email.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>""")
+
+    html_body = html_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        mot_display=mot_display,
+        risk_html=risk_html,
+        base_url=BASE_URL,
+    )
+
+    text_template = _jinja_env.from_string("""
+YOUR MOT IS DUE IN 4 WEEKS - AutoSafe
+=======================================
+
+Your {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+has its MOT due on {{ mot_display }}.
+
+{% if risk_text %}{{ risk_text }}{% endif %}
+
+QUICK PRE-MOT CHECKLIST:
+[ ] Check all lights and indicators
+[ ] Check tyre tread depth (min 1.6mm)
+[ ] Top up washer fluid
+[ ] Check windscreen for chips/cracks
+[ ] Test horn and wipers
+
+Check your latest risk score: {{ base_url }}?utm_source=reminder&utm_medium=email&utm_campaign=mot_28d
+
+Need a garage? Reply to this email and we'll find one near you.
+
+Unsubscribe any time by replying to this email.
+
+AutoSafe - {{ base_url }}
+""")
+
+    text_body = text_template.render(
+        vehicle_year=vehicle_year,
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
+        registration=registration,
+        mot_display=mot_display,
+        risk_text=risk_text,
+        base_url=BASE_URL,
+    )
+
+    return {
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }

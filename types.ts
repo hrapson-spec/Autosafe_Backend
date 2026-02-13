@@ -120,6 +120,7 @@ export interface GarageLeadSubmission {
   consent_given: boolean;
   vehicle: GarageLeadVehicle;
   risk_data: GarageLeadRiskData;
+  experiment_variant?: string;
 }
 
 export interface GarageLeadResponse {
@@ -137,6 +138,7 @@ export interface MotReminderSubmission {
   vehicle_year?: number;
   mot_expiry_date?: string;
   failure_risk?: number;
+  experiment_variant?: string;
 }
 
 export interface MotReminderResponse {
@@ -160,6 +162,7 @@ export interface ReportEmailSubmission {
   repair_cost_max?: number;
   mot_expiry_date?: string;
   days_until_mot_expiry?: number;
+  experiment_variant?: string;
 }
 
 export interface PublicStats {

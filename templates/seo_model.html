@@ -69,7 +69,8 @@
     "name": "AutoSafe",
     "url": "https://www.autosafe.one"
   },
-  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",{% if data_updated %}
+  "dateModified": "{{ data_updated }}",{% endif %}
   "variableMeasured": [
     {"@type": "PropertyValue", "name": "MOT Failure Rate", "value": "{{ "%.4f"|format(overall_fail_rate) }}"},
     {"@type": "PropertyValue", "name": "Total Tests", "value": "{{ overall_tests }}"}
@@ -263,6 +264,16 @@
 <div class="related-links">
     {% for comp in comparisons %}
     <a href="{{ comp.url }}">{{ comp.title }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if similar_models %}
+<h2>Similar Failure Rate Models</h2>
+<p>These models from other manufacturers have a similar MOT failure rate to the {{ make_display }} {{ model_display }}:</p>
+<div class="related-links">
+    {% for sim in similar_models %}
+    <a href="/mot-check/{{ sim.make_slug }}/{{ sim.model_slug }}/">{{ sim.make_display }} {{ sim.model_display }} ({{ "%.1f"|format(sim.fail_rate * 100) }}%)</a>
     {% endfor %}
 </div>
 {% endif %}

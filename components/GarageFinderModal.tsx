@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CarSelection, CarReport, GarageLeadSubmission } from '../types';
 import { submitGarageLead } from '../services/autosafeApi';
 import { trackConversion } from '../utils/analytics';
+import { getAllVariants } from '../utils/experiments';
 import { X, MapPin, Mail, Car, AlertTriangle, Heart, Phone, Clock } from './Icons';
 import { Input, Button } from './ui';
 
@@ -204,7 +205,8 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
           failure_risk: failureRisk,
           reliability_score: report.reliabilityScore,
           top_risks: topRisks.map(r => r.component.toLowerCase())
-        }
+        },
+        experiment_variant: getAllVariants() || undefined,
       };
 
       await submitGarageLead(lead);

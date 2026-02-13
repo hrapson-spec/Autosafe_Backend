@@ -6,7 +6,8 @@ import { Button, Card } from './ui';
 import GarageFinderModal from './GarageFinderModal';
 import MotReminderCapture from './MotReminderCapture';
 import { submitReportEmail } from '../services/autosafeApi';
-import { trackConversion } from '../utils/analytics';
+import { trackConversion, trackFunnel } from '../utils/analytics';
+import { getAllVariants } from '../utils/experiments';
 
 interface ReportDashboardProps {
   report: CarReport;
@@ -85,10 +86,12 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
         repair_cost_max: report.repairCostEstimate?.cost_max,
         mot_expiry_date: report.motExpiryDate,
         days_until_mot_expiry: report.daysUntilMotExpiry,
+        experiment_variant: getAllVariants() || undefined,
       };
       await submitReportEmail(data);
       setEmailReportState('success');
       trackConversion('mot_reminder');
+      trackFunnel('email_report_submitted');
     } catch {
       setEmailReportState('error');
     }
@@ -352,7 +355,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
               <Button
                 variant="secondary"
                 size="md"
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => { trackFunnel('garage_cta_clicked'); setIsModalOpen(true); }}
               >
                 {getGarageCtaText()}
               </Button>

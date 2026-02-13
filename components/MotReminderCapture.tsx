@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CarReport, CarSelection } from '../types';
 import { submitMotReminder } from '../services/autosafeApi';
-import { trackConversion } from '../utils/analytics';
+import { trackConversion, trackFunnel } from '../utils/analytics';
+import { getAllVariants } from '../utils/experiments';
 import { Mail, Check, AlertTriangle, Clock } from './Icons';
 import { Button } from './ui';
 
@@ -37,6 +38,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         vehicle_year: selection.year,
         mot_expiry_date: motExpiryDate,
         failure_risk: (100 - report.reliabilityScore) / 100,
+        experiment_variant: getAllVariants() || undefined,
       });
 
       if (result.already_subscribed) {
@@ -44,6 +46,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
       } else {
         setState('success');
         trackConversion('mot_reminder');
+        trackFunnel('mot_reminder_submitted');
       }
     } catch {
       setState('error');

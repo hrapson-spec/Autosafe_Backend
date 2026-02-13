@@ -937,8 +937,10 @@ async def save_mot_reminder(data: Dict) -> Dict:
                 """INSERT INTO leads (
                     email, postcode, lead_type, registration, mot_expiry_date,
                     vehicle_make, vehicle_model, vehicle_year,
-                    failure_risk, consent_given, consent_timestamp
-                ) VALUES ($1, $2, 'mot_reminder', $3, $4, $5, $6, $7, $8, TRUE, NOW())
+                    failure_risk, consent_given, consent_timestamp,
+                    utm_campaign
+                ) VALUES ($1, $2, 'mot_reminder', $3, $4, $5, $6, $7, $8, TRUE, NOW(),
+                          $9)
                 RETURNING id""",
                 email,
                 data.get('postcode', '').upper().strip(),
@@ -948,6 +950,7 @@ async def save_mot_reminder(data: Dict) -> Dict:
                 data.get('vehicle_model'),
                 data.get('vehicle_year'),
                 data.get('failure_risk'),
+                data.get('utm_campaign'),
             )
 
             lead_id = str(result['id'])

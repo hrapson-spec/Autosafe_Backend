@@ -42,8 +42,12 @@ _make_by_slug: dict = {}
 _model_by_slug: dict = {}
 # make_slug -> [model_slug, ...]
 _models_for_make: dict = {}
+# (make_slug, model_slug) -> fail_rate (for data-driven related models)
+_model_fail_rates: dict = {}
 # Models with enough tests for age-band pages (staged rollout)
 _age_band_eligible: set = set()  # set of (make_slug, model_slug)
+# Data freshness timestamp (set during initialization)
+_data_updated: str = ""
 
 # Age band slug mappings
 AGE_BAND_SLUGS = {
@@ -244,12 +248,81 @@ def initialize_seo_data(get_sqlite_connection):
             key=lambda ms: _model_by_slug[(make_slug, ms)]["display"]
         )
 
+    # Compute failure rates for all models (for data-driven related model linking)
+    _model_fail_rates.clear()
+    with get_sqlite_connection() as conn:
+        if conn:
+            for make, model in valid_models:
+                try:
+                    where, params = _model_where_clause(make, model)
+                    row = conn.execute(
+                        f"""SELECT CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests) as fail_rate
+                            FROM risks WHERE {where} AND age_band != 'Unknown'
+                            HAVING SUM(Total_Tests) >= 100""",
+                        params,
+                    ).fetchone()
+                    if row and row[0] is not None:
+                        make_slug = _slugify(make)
+                        model_slug = _slugify(model)
+                        _model_fail_rates[(make_slug, model_slug)] = float(row[0])
+                except sqlite3.Error:
+                    pass
+
+    global _data_updated
+    _data_updated = date.today().isoformat()
+    jinja_env.globals["data_updated"] = _data_updated
+
     total_pages = len(_make_by_slug) + len(_model_by_slug)
     logger.info(
         f"SEO: Initialized {len(_make_by_slug)} makes, "
         f"{len(_model_by_slug)} models ({total_pages} landing pages), "
-        f"{len(_age_band_eligible)} models eligible for age-band pages"
+        f"{len(_age_band_eligible)} models eligible for age-band pages, "
+        f"{len(_model_fail_rates)} models with fail rates for linking"
     )
+
+
+def _get_similar_models(make_slug: str, model_slug: str, max_results: int = 4) -> list[dict]:
+    """
+    Find models with similar failure rates from OTHER makes.
+    This provides data-driven cross-brand internal links for every model page,
+    supplementing the hardcoded COMPETITOR_MODELS mappings.
+    """
+    current_rate = _model_fail_rates.get((make_slug, model_slug))
+    if current_rate is None:
+        return []
+
+    # Find models from other makes, sorted by similarity in failure rate
+    candidates = []
+    for (ms, mds), rate in _model_fail_rates.items():
+        if ms == make_slug:  # Skip same-make models (already shown as siblings)
+            continue
+        diff = abs(rate - current_rate)
+        candidates.append((diff, ms, mds, rate))
+
+    candidates.sort(key=lambda x: x[0])
+
+    results = []
+    seen_makes = set()
+    for diff, ms, mds, rate in candidates:
+        if len(results) >= max_results:
+            break
+        # Diversify: max one model per make
+        if ms in seen_makes:
+            continue
+        seen_makes.add(ms)
+
+        model_info = _model_by_slug.get((ms, mds))
+        make_info = _make_by_slug.get(ms)
+        if model_info and make_info:
+            results.append({
+                "make_slug": ms,
+                "model_slug": mds,
+                "make_display": make_info["display"],
+                "model_display": model_info["display"],
+                "fail_rate": rate,
+            })
+
+    return results
 
 
 def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
@@ -603,6 +676,9 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                     "title": f"{d1} vs {d2}",
                 })
 
+        # Data-driven similar models (supplements hardcoded competitors)
+        similar_models = _get_similar_models(make_slug, model_slug)
+
         template = jinja_env.get_template("seo_model.html")
         html = template.render(
             make_display=make_info["display"],
@@ -617,6 +693,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             sibling_models=sibling_models,
             competitors=competitors,
             comparisons=comparisons,
+            similar_models=similar_models,
         )
         _seo_cache[cache_key] = html
         return _html_response(html)

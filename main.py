@@ -124,6 +124,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
 
+# GZip Compression Middleware - compress responses > 500 bytes
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 # CORS Middleware - Configure cross-origin requests
 # In production, set CORS_ORIGINS env var to restrict (e.g., "https://autosafe.co.uk,https://www.autosafe.co.uk")
 from fastapi.middleware.cors import CORSMiddleware
@@ -1350,6 +1354,7 @@ class LeadSubmission(BaseModel):
     consent_given: bool
     vehicle: Optional[VehicleInfo] = None
     risk_data: Optional[RiskData] = None
+    experiment_variant: Optional[str] = None
 
     @field_validator('name')
     @classmethod
@@ -1471,6 +1476,12 @@ async def submit_lead(
     referrer = request.headers.get("referer", "")
     if referrer:
         lead_data['referrer'] = referrer
+
+    # Persist experiment variant in utm_campaign (append if campaign already set)
+    if lead.experiment_variant:
+        existing = lead_data.get('utm_campaign', '')
+        variant_tag = f"exp:{lead.experiment_variant}"
+        lead_data['utm_campaign'] = f"{existing}|{variant_tag}" if existing else variant_tag
 
     # Save to database (PostgreSQL only - verified above)
     lead_id = await db.save_lead(lead_data)
@@ -2016,6 +2027,7 @@ class MotReminderSubmission(BaseModel):
     vehicle_year: Optional[int] = None
     mot_expiry_date: Optional[str] = None
     failure_risk: Optional[float] = None
+    experiment_variant: Optional[str] = None
 
     @field_validator('email')
     @classmethod
@@ -2067,6 +2079,7 @@ class ReportEmailSubmission(BaseModel):
     repair_cost_max: Optional[int] = None
     mot_expiry_date: Optional[str] = None
     days_until_mot_expiry: Optional[int] = None
+    experiment_variant: Optional[str] = None
 
     @field_validator('email')
     @classmethod
@@ -2124,7 +2137,7 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
     if not await db.is_postgres_available():
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
-    result = await db.save_mot_reminder({
+    reminder_data = {
         "email": data.email,
         "registration": data.registration,
         "postcode": data.postcode,
@@ -2133,7 +2146,10 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
         "vehicle_year": data.vehicle_year,
         "mot_expiry_date": data.mot_expiry_date,
         "failure_risk": data.failure_risk,
-    })
+    }
+    if data.experiment_variant:
+        reminder_data["utm_campaign"] = f"exp:{data.experiment_variant}"
+    result = await db.save_mot_reminder(reminder_data)
 
     if not result.get("success"):
         raise HTTPException(status_code=500, detail="Failed to save reminder")

@@ -1,11 +1,13 @@
 /**
- * Google Ads conversion tracking utility.
- * Fires gtag conversion events for key user actions.
+ * Analytics utility.
+ * - Google Ads conversion tracking (gtag)
+ * - Umami custom event tracking for funnel visibility
  */
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
+    umami?: { track: (event: string, data?: Record<string, string | number>) => void };
   }
 }
 
@@ -41,4 +43,44 @@ export function trackConversion(type: ConversionType): void {
       currency: 'GBP',
     });
   }
+}
+
+// ============================================================================
+// Funnel Event Tracking (Umami custom events)
+// ============================================================================
+
+type FunnelStep =
+  | 'page_view'
+  | 'reg_entered'
+  | 'report_viewed'
+  | 'garage_cta_clicked'
+  | 'garage_lead_submitted'
+  | 'mot_reminder_submitted'
+  | 'email_report_submitted';
+
+/**
+ * Track a funnel step via Umami custom events.
+ * Events are fire-and-forget; failures are silently ignored.
+ */
+export function trackFunnel(
+  step: FunnelStep,
+  data?: Record<string, string | number>
+): void {
+  if (typeof window === 'undefined') return;
+
+  // Umami custom event tracking
+  if (window.umami?.track) {
+    window.umami.track(step, data);
+  }
+}
+
+/**
+ * Track report view with vehicle context for funnel analysis.
+ */
+export function trackReportView(make: string, model: string, riskPercent: number): void {
+  trackFunnel('report_viewed', {
+    make,
+    model,
+    risk_bucket: riskPercent > 50 ? 'high' : riskPercent > 30 ? 'medium' : 'low',
+  });
 }
