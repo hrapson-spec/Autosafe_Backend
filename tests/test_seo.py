@@ -18,7 +18,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi.testclient import TestClient
 from main import app
 
+# Enter context manager so lifespan (including SEO data init) runs before tests
 client = TestClient(app)
+client.__enter__()
+
+
+def teardown_module():
+    """Clean up TestClient context after all tests."""
+    try:
+        client.__exit__(None, None, None)
+    except Exception:
+        pass
 
 
 class TestSeoPages(unittest.TestCase):
