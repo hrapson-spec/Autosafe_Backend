@@ -44,6 +44,11 @@
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
     --radius-pill: 100px;
+    --radius-card: 0.75rem;
+
+    /* Surfaces */
+    --surface-card: #f9fafb;
+    --surface-card-hover: #f3f4f6;
 
     /* Shadows */
     --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
@@ -1046,13 +1051,14 @@ input:focus:not(:focus-visible) {
 }
 .motivator-supporting {
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     line-height: 1.5;
 }
 
 /* Recommendation Block */
 .recommendation-block {
-    background: var(--primary-charcoal-dark);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-card);
     padding: 1.5rem;
     margin: 1.5rem 0;
@@ -1064,14 +1070,14 @@ input:focus:not(:focus-visible) {
     z-index: 1;
 }
 .rec-content h3 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-primary);
     margin: 0 0 0.5rem;
 }
 .rec-supporting {
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
     margin: 0 0 1rem;
     line-height: 1.5;
 }
@@ -1081,8 +1087,8 @@ input:focus:not(:focus-visible) {
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--primary-charcoal-dark);
-    background: #fff;
+    color: white;
+    background: var(--primary-charcoal-dark);
     border: none;
     border-radius: var(--radius-pill);
     cursor: pointer;
@@ -1091,19 +1097,19 @@ input:focus:not(:focus-visible) {
     letter-spacing: 0.02em;
 }
 .rec-primary-btn:hover {
-    background: #f0f0f0;
+    background: var(--primary-charcoal);
     transform: translateY(-1px);
 }
 .rec-trust-microcopy {
     font-size: 0.75rem;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-muted);
     margin: 0.75rem 0 0;
 }
 .rec-secondary-link {
     display: inline-block;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.6);
+    color: var(--text-secondary);
     font-size: 0.85rem;
     font-family: inherit;
     cursor: pointer;
@@ -1113,25 +1119,19 @@ input:focus:not(:focus-visible) {
     text-underline-offset: 2px;
 }
 .rec-secondary-link:hover {
-    color: rgba(255,255,255,0.9);
+    color: var(--text-primary);
 }
 .rec-success-badge {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #4ade80;
+    color: var(--success-green);
     font-weight: 600;
     font-size: 0.95rem;
     margin-top: 0.75rem;
 }
 .rec-decorative-circle {
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 160px;
-    height: 160px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
+    display: none;
 }
 
 /* Treatment Accordion */

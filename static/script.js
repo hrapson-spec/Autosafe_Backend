@@ -23,7 +23,7 @@ function getRecommendation(data) {
     let primaryAction, ctaText, headline, supporting;
     if (risk >= 0.5) {
         primaryAction = 'GET_QUOTES'; ctaText = 'Get repair quotes';
-        headline = `Your ${make} ${model} has a ${pct}% chance of failing`;
+        headline = `${pct}% chance of failing its next MOT`;
         supporting = `We found ${highRiskCount} high-risk area${highRiskCount !== 1 ? 's' : ''}. Getting quotes now means you can compare prices and book before your MOT.`;
     } else if (risk >= 0.3) {
         primaryAction = 'PRE_MOT_CHECK'; ctaText = 'Book a pre-MOT check';
@@ -31,7 +31,7 @@ function getRecommendation(data) {
         supporting = `With a ${pct}% failure risk, a quick inspection can catch issues before they become expensive MOT failures.`;
     } else {
         primaryAction = 'SET_REMINDER'; ctaText = 'Get a free MOT reminder';
-        headline = `Your ${make} ${model} is in good shape`;
+        headline = 'Looking good \u2014 low risk of failure';
         supporting = "No urgent action needed. Set a free reminder and we\u2019ll email you when your MOT is approaching.";
     }
 
@@ -39,8 +39,8 @@ function getRecommendation(data) {
     let motivatorType, motivatorHeadline, motivatorSupporting;
     if (rc && (primaryAction === 'GET_QUOTES' || primaryAction === 'PRE_MOT_CHECK')) {
         motivatorType = 'COST_ESTIMATE';
-        motivatorHeadline = `Estimated repair cost: \u00A3${rc.range_low}\u2013\u00A3${rc.range_high}`;
-        motivatorSupporting = `Based on common faults for your ${make} ${model}. Get quotes to compare.`;
+        motivatorHeadline = `Estimated repair cost: ${rc.expected}`;
+        motivatorSupporting = `Could range from \u00A3${rc.range_low} to \u00A3${rc.range_high}. Get quotes to compare.`;
     } else {
         motivatorType = 'REMINDER_PITCH';
         motivatorHeadline = 'Never miss your MOT';
