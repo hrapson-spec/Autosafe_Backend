@@ -56,7 +56,12 @@ type FunnelStep =
   | 'garage_cta_clicked'
   | 'garage_lead_submitted'
   | 'mot_reminder_submitted'
-  | 'email_report_submitted';
+  | 'email_report_submitted'
+  | 'recommendation_viewed'
+  | 'motivator_card_viewed'
+  | 'secondary_cta_clicked'
+  | 'accordion_opened'
+  | 'sticky_cta_clicked';
 
 /**
  * Track a funnel step via Umami custom events.

@@ -13,6 +13,7 @@ interface GarageFinderModalProps {
   selection: CarSelection;
   report: CarReport;
   initialPostcode?: string;
+  ctaText?: string;
 }
 
 // UK postcode pattern
@@ -60,7 +61,8 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   onSubmitSuccess,
   selection,
   report,
-  initialPostcode = ''
+  initialPostcode = '',
+  ctaText,
 }) => {
   const [email, setEmail] = useState('');
   const [postcode, setPostcode] = useState(initialPostcode);
@@ -521,12 +523,12 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               disabled={!isFormValid}
               className="mt-2"
             >
-              {failureRisk > 0.5
+              {ctaText || (failureRisk > 0.5
                 ? 'Reduce your failure risk'
                 : failureRisk > 0.3
                 ? 'Book a pre-MOT check'
                 : 'Find Garages Near Me'
-              }
+              )}
             </Button>
           </form>
         </div>

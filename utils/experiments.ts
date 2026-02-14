@@ -19,8 +19,7 @@ interface ExperimentConfig {
 
 /** Active experiments. Add/remove entries here to manage tests. */
 const EXPERIMENTS: Record<string, ExperimentConfig> = {
-  // Example: uncomment to run a test
-  // garage_cta_v1: { variants: ['a', 'b'] },
+  results_page_v1: { variants: ['control', 'treatment'] },
 };
 
 function loadAssignments(): Record<string, string> {

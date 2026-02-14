@@ -170,3 +170,36 @@ export interface PublicStats {
   checks_this_month: number;
   mot_records: string;
 }
+
+// Recommendation Engine Types
+export type PrimaryAction = 'GET_QUOTES' | 'PRE_MOT_CHECK' | 'BOOK_MOT' | 'SET_REMINDER' | 'FIND_GARAGE';
+export type CtaVariant = 'primary' | 'secondary' | 'tertiary';
+export type MotivatorCardType = 'COST_ESTIMATE' | 'MOT_COUNTDOWN' | 'REMINDER_PITCH';
+
+export interface RecommendationInput {
+  failureRisk: number;                // 0-1
+  repairCostEstimate?: { cost_min: number; cost_max: number; display: string };
+  motExpired?: boolean;
+  daysUntilMotExpiry?: number;        // undefined = unknown
+  motExpiryDate?: string;
+  highRiskFaultCount: number;
+  make: string;
+  model: string;
+}
+
+export interface Recommendation {
+  primaryAction: PrimaryAction;
+  ctaText: string;
+  recommendationHeadline: string;
+  supportingLine: string;
+  ctaVariant: CtaVariant;
+  trustMicrocopy: string;
+  secondaryAction: PrimaryAction | null;
+  secondaryCtaText: string | null;
+  secondaryVariant: CtaVariant;
+  motivatorCardType: MotivatorCardType;
+  motivatorHeadline: string;
+  motivatorSupportingLine: string;
+  failureRiskPercent: number;
+  scoreLabel: string;
+}
