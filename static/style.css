@@ -9,8 +9,8 @@
 
     /* Neutrals */
     --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --text-muted: #9ca3af;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
     --border-color: #e5e7eb;
     --border-light: #f3f4f6;
 
@@ -142,7 +142,6 @@ body {
     font-weight: 500;
     letter-spacing: 0.05em;
     margin: 0.25rem auto 0;
-    opacity: 0.7;
 }
 
 /* ===== Main Content ===== */
@@ -259,7 +258,7 @@ input::placeholder {
 .app-footer {
     text-align: center;
     padding: var(--space-xl) var(--space-md);
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 0.7rem;
     line-height: 1.6;
     margin-top: auto;
@@ -451,7 +450,7 @@ input:focus:not(:focus-visible) {
 .repair-label {
     display: block;
     font-size: 0.7rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: var(--space-xs);
@@ -467,7 +466,7 @@ input:focus:not(:focus-visible) {
 .repair-range {
     display: block;
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     margin-top: var(--space-xs);
 }
 
@@ -787,7 +786,7 @@ input:focus:not(:focus-visible) {
 .trust-line {
     text-align: center;
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     margin-top: var(--space-sm);
 }
 
@@ -872,7 +871,7 @@ input:focus:not(:focus-visible) {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     margin-bottom: var(--space-md);
 }
 
