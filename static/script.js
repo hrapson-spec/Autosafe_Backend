@@ -39,7 +39,7 @@ function getRecommendation(data) {
     let motivatorType, motivatorHeadline, motivatorSupporting;
     if (rc && (primaryAction === 'GET_QUOTES' || primaryAction === 'PRE_MOT_CHECK')) {
         motivatorType = 'COST_ESTIMATE';
-        motivatorHeadline = `Estimated repair cost: ${rc.expected}`;
+        motivatorHeadline = `Estimated repair cost: \u00A3${rc.expected}`;
         motivatorSupporting = `Could range from \u00A3${rc.range_low} to \u00A3${rc.range_high}. Get quotes to compare.`;
     } else {
         motivatorType = 'REMINDER_PITCH';
@@ -271,6 +271,31 @@ function displayResults(data) {
 
     // Stats
     populateStats(data, 'lastMOTDateT', 'lastMOTResultT', 'mileageT');
+
+    // MOT countdown
+    const motCountdownEl = document.getElementById('motCountdownT');
+    if (motCountdownEl) {
+        if (data.mot_expiry_date) {
+            const expiry = new Date(data.mot_expiry_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            expiry.setHours(0, 0, 0, 0);
+            const diffDays = Math.round((expiry - today) / (1000 * 60 * 60 * 24));
+            motCountdownEl.classList.remove('hidden');
+            if (diffDays < 0) {
+                motCountdownEl.textContent = `MOT expired ${Math.abs(diffDays)} days ago`;
+                motCountdownEl.style.color = '#ef4444';
+            } else if (diffDays <= 60) {
+                motCountdownEl.textContent = `MOT due in ${diffDays} days`;
+                motCountdownEl.style.color = diffDays <= 14 ? '#ef4444' : '#f59e0b';
+            } else {
+                motCountdownEl.textContent = `MOT due in ${diffDays} days`;
+                motCountdownEl.style.color = 'var(--text-secondary)';
+            }
+        } else {
+            motCountdownEl.classList.add('hidden');
+        }
+    }
 
     // Failure score
     const risk = data.failure_risk;

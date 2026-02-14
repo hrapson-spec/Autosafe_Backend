@@ -943,6 +943,7 @@ async def get_risk_v55(
         },
         "mileage": last_test.odometer_value if last_test else None,
         "last_mot_date": last_test.test_date.isoformat() if last_test else None,
+        "mot_expiry_date": last_test.expiry_date.isoformat() if last_test and last_test.expiry_date else None,
         "last_mot_result": last_test.test_result if last_test else None,
         "failure_risk": prediction['failure_risk'],
         "confidence_level": prediction['confidence_level'],

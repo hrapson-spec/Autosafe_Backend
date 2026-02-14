@@ -539,7 +539,21 @@ input:focus:not(:focus-visible) {
 /* Check Another Car Button */
 .check-another-btn {
     margin-top: var(--space-xl);
-    background: var(--primary-charcoal);
+    background: none;
+    color: var(--text-secondary);
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.check-another-btn:hover {
+    background: none;
+    color: var(--text-primary);
+    box-shadow: none;
+    transform: none;
 }
 
 /* Source Note */
@@ -1051,8 +1065,16 @@ input:focus:not(:focus-visible) {
 }
 .motivator-supporting {
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--primary-charcoal-light);
     line-height: 1.5;
+}
+
+/* MOT Countdown */
+.mot-countdown {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
 }
 
 /* Recommendation Block */
