@@ -63,7 +63,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/style.css?v=3">
     <!-- Umami Analytics -->
     <script defer src="https://umami-production-cb51.up.railway.app/script.js"
         data-website-id="0dead4c2-42a2-456c-abc1-42f93e1a991b" data-domains="autosafe.one,www.autosafe.one"></script>
@@ -105,146 +105,6 @@
             </section>
 
             <!-- Results Panel (hidden until search) -->
-            <section class="results-card hidden" id="resultsPanel">
-                <div class="results-header">
-                    <h2 id="vehicleTag">Vehicle</h2>
-                    <span class="reg-badge" id="vehicleDetails"></span>
-                </div>
-
-                <div class="stats-row">
-                    <div class="stat">
-                        <span class="stat-label">Last MOT</span>
-                        <span class="stat-value" id="lastMOTDate">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Result</span>
-                        <span class="stat-value" id="lastMOTResult">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Mileage</span>
-                        <span class="stat-value" id="mileage">-</span>
-                    </div>
-                </div>
-
-                <div class="risk-display">
-                    <div class="risk-main">
-                        <span class="risk-percentage" id="riskValue">-</span>
-                        <span class="risk-label" id="riskText">Failure Risk</span>
-                    </div>
-                    <span class="confidence-badge" id="confidenceBadge">-</span>
-                </div>
-
-                <div class="repair-cost">
-                    <span class="repair-label">Estimated Repair Cost</span>
-                    <span class="repair-value" id="repairCostValue">-</span>
-                    <span class="repair-range" id="repairCostRange"></span>
-                </div>
-
-                <a href="#componentsSection" class="component-link">
-                    See component breakdown
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
-                </a>
-
-                <!-- Action Cards Section -->
-                <div class="action-cards" id="actionCards">
-                    <!-- Primary: Repair Urgency Card -->
-                    <div class="urgency-card" id="repairUrgencyCard">
-                        <div class="urgency-card__icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z">
-                                </path>
-                            </svg>
-                        </div>
-                        <p class="urgency-card__components" id="urgencyComponents">Likely to fail on: Brakes, Suspension
-                        </p>
-                        <p class="urgency-card__savings" id="urgencySavings">Fix these issues before your MOT to save up
-                            to <strong>£270</strong></p>
-                        <button type="button" class="urgency-card__btn" id="repairBtn"
-                            data-umami-event="cta-repair-click">
-                            Get Repair Quotes →
-                        </button>
-                    </div>
-
-                    <!-- Secondary: Book MOT + MOT Reminder -->
-                    <div class="secondary-actions">
-                        <div class="action-card action-card--mot">
-                            <div class="action-card__icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                </svg>
-                            </div>
-                            <span class="action-card__title">Book MOT</span>
-                            <span class="action-card__desc">Schedule your MOT test</span>
-                            <button type="button" class="action-card__btn" id="motBtn"
-                                data-umami-event="cta-mot-click">Book Now</button>
-                        </div>
-                        <div class="action-card action-card--reminder">
-                            <div class="action-card__icon">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                                </svg>
-                            </div>
-                            <span class="action-card__title">MOT Reminder</span>
-                            <span class="action-card__desc">Never miss your MOT</span>
-                            <button type="button" class="action-card__btn" id="reminderBtn"
-                                data-umami-event="cta-reminder-click">Set Reminder</button>
-                        </div>
-                    </div>
-
-                    <p class="trust-line">Free · No obligation · Trusted local garages</p>
-                </div>
-
-                <!-- Contact Form (initially hidden) -->
-                <div class="lead-capture" id="leadCapture">
-                    <form id="leadForm" class="hidden">
-                        <h3 id="leadFormTitle">Get connected with a local garage</h3>
-                        <div class="form-group">
-                            <label for="leadName">Name</label>
-                            <input type="text" id="leadName" placeholder="Your name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadEmail">Email</label>
-                            <input type="email" id="leadEmail" placeholder="your@email.com" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadPhone">Phone (optional)</label>
-                            <input type="tel" id="leadPhone" placeholder="07xxx xxxxxx">
-                        </div>
-                        <button type="submit" class="primary-btn lead-btn">
-                            <span class="btn-text">Find a Garage</span>
-                            <div class="loader hidden"></div>
-                        </button>
-                        <button type="button" class="back-link" id="backToCards">← Back to options</button>
-                    </form>
-                </div>
-
-                <!-- Lead Success Message (hidden by default) -->
-                <div class="lead-success hidden" id="leadSuccess">
-                    <h3>Thanks! We'll be in touch soon.</h3>
-                    <p>A local garage will contact you shortly.</p>
-                </div>
-
-                <div class="components-section" id="componentsSection">
-                    <h3>Risk by Component</h3>
-                    <div class="components-grid" id="componentsGrid"></div>
-                </div>
-
-                <p class="source-note" id="sourceNote"></p>
-
-                <button type="button" id="checkAnotherBtn" class="primary-btn check-another-btn">
-                    <span class="btn-text">Check Another Car</span>
-                </button>
-            </section>
-
-            <!-- Results Panel: TREATMENT variant (hidden until search) -->
             <section class="results-card hidden" id="resultsPanelTreatment">
                 <div class="results-header">
                     <h2 id="vehicleTagT">Vehicle</h2>
@@ -534,7 +394,7 @@
         </footer>
     </div>
 
-    <script src="/static/script.js?v=2"></script>
+    <script src="/static/script.js?v=3"></script>
 </body>
 
 </html>

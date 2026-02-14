@@ -5,32 +5,6 @@
 
 const API_BASE = '/api';
 
-// ── A/B Experiment Allocator ────────────────────────────────────────
-const EXP_KEY = 'autosafe_experiments';
-const EXPERIMENTS = { results_page_v1: { variants: ['control', 'treatment'] } };
-
-function getVariant(name) {
-    const config = EXPERIMENTS[name];
-    if (!config) return undefined;
-    try {
-        const assignments = JSON.parse(localStorage.getItem(EXP_KEY) || '{}');
-        if (assignments[name]) return assignments[name];
-        const variant = config.variants[Math.floor(Math.random() * config.variants.length)];
-        assignments[name] = variant;
-        localStorage.setItem(EXP_KEY, JSON.stringify(assignments));
-        return variant;
-    } catch { return config.variants[0]; }
-}
-
-function getAllVariants() {
-    try {
-        const a = JSON.parse(localStorage.getItem(EXP_KEY) || '{}');
-        return Object.entries(a).filter(([k]) => k in EXPERIMENTS).map(([k, v]) => `${k}:${v}`).join(',');
-    } catch { return ''; }
-}
-
-const experimentVariant = getVariant('results_page_v1');
-
 // ── Umami Analytics Helper ──────────────────────────────────────────
 function trackEvent(name, data) {
     if (typeof umami !== 'undefined' && umami.track) umami.track(name, data || {});
@@ -99,52 +73,14 @@ const btnText = analyzeBtn.querySelector('.btn-text');
 const searchPanel = document.getElementById('searchPanel');
 const appHeader = document.querySelector('.app-header');
 
-// Results panels
-let resultsPanel = document.getElementById('resultsPanel');
-const resultsPanelT = document.getElementById('resultsPanelTreatment');
-const checkAnotherBtn = document.getElementById('checkAnotherBtn');
-const checkAnotherBtnT = document.getElementById('checkAnotherBtnT');
+// Results panel
+const resultsPanel = document.getElementById('resultsPanelTreatment');
+const checkAnotherBtn = document.getElementById('checkAnotherBtnT');
 
-// Treatment state
+// State
 let treatmentHasSubmitted = false;
 let currentRecommendation = null;
-
-function resetToSearch() {
-    if (searchPanel) searchPanel.classList.remove('hidden');
-    if (appHeader) appHeader.classList.remove('hidden');
-    const examplePreview = document.getElementById('examplePreview');
-    if (examplePreview) examplePreview.classList.remove('hidden');
-    if (resultsPanel) resultsPanel.classList.add('hidden');
-    if (resultsPanelT) resultsPanelT.classList.add('hidden');
-    const stickyCta = document.getElementById('stickyCta');
-    if (stickyCta) stickyCta.classList.remove('sticky-cta-visible');
-    registrationInput.value = '';
-    postcodeInput.value = '';
-    const banner = document.getElementById('errorBanner');
-    if (banner) banner.classList.add('hidden');
-    registrationInput.focus();
-    treatmentHasSubmitted = false;
-}
-
-if (checkAnotherBtn) checkAnotherBtn.addEventListener('click', resetToSearch);
-if (checkAnotherBtnT) checkAnotherBtnT.addEventListener('click', resetToSearch);
-
-// Lead form elements
-const leadForm = document.getElementById('leadForm');
-const leadCapture = document.getElementById('leadCapture');
-const leadSuccess = document.getElementById('leadSuccess');
-
-// Action card elements
-const actionCards = document.getElementById('actionCards');
-const repairBtn = document.getElementById('repairBtn');
-const motBtn = document.getElementById('motBtn');
-const reminderBtn = document.getElementById('reminderBtn');
-const backToCardsBtn = document.getElementById('backToCards');
-
-// Store current results for lead submission
 let currentResultsData = null;
-
-// Store selected services
 let selectedServices = [];
 
 /**
@@ -160,128 +96,33 @@ const componentDisplayNames = {
     'body': 'Body/Structure',
 };
 
+function resetToSearch() {
+    if (searchPanel) searchPanel.classList.remove('hidden');
+    if (appHeader) appHeader.classList.remove('hidden');
+    const examplePreview = document.getElementById('examplePreview');
+    if (examplePreview) examplePreview.classList.remove('hidden');
+    if (resultsPanel) resultsPanel.classList.add('hidden');
+    const stickyCta = document.getElementById('stickyCta');
+    if (stickyCta) stickyCta.classList.remove('sticky-cta-visible');
+    registrationInput.value = '';
+    postcodeInput.value = '';
+    const banner = document.getElementById('errorBanner');
+    if (banner) banner.classList.add('hidden');
+    registrationInput.focus();
+    treatmentHasSubmitted = false;
+}
+
+if (checkAnotherBtn) checkAnotherBtn.addEventListener('click', resetToSearch);
+
 /**
  * Initialize the page
  */
 function init() {
-    // Add input formatting
-    if (registrationInput) {
-        registrationInput.addEventListener('input', formatRegistration);
-    }
-    if (postcodeInput) {
-        postcodeInput.addEventListener('input', formatPostcode);
-    }
-
-    // Initialize action card click handlers
-    initActionCards();
-
-    // Treatment: lead form, sticky CTA, accordion tracking
-    initTreatmentLeadForm();
+    if (registrationInput) registrationInput.addEventListener('input', formatRegistration);
+    if (postcodeInput) postcodeInput.addEventListener('input', formatPostcode);
+    initLeadForm();
     initStickyCta();
     initAccordionTracking();
-}
-
-/**
- * Initialize action card click handlers
- */
-function initActionCards() {
-    if (repairBtn) repairBtn.addEventListener('click', () => handleCardClick('repair'));
-    if (motBtn) motBtn.addEventListener('click', () => handleCardClick('mot'));
-    if (reminderBtn) reminderBtn.addEventListener('click', () => handleCardClick('reminder'));
-    if (backToCardsBtn) backToCardsBtn.addEventListener('click', showActionCards);
-}
-
-/**
- * Handle CTA card click — pre-select the service and show the contact form
- */
-function handleCardClick(service) {
-    selectedServices = [service];
-
-    // Update form title based on selected service
-    const leadFormTitle = document.getElementById('leadFormTitle');
-    if (leadFormTitle) {
-        const titles = {
-            'repair': 'Get repair quotes from local garages',
-            'mot': 'Book your MOT with a trusted garage',
-            'reminder': 'Set up your free MOT reminder',
-        };
-        leadFormTitle.textContent = titles[service] || 'Get connected with a local garage';
-    }
-
-    // Hide action cards, show the contact form
-    if (actionCards) actionCards.classList.add('hidden');
-    if (leadCapture) leadCapture.classList.remove('hidden');
-    if (leadForm) leadForm.classList.remove('hidden');
-}
-
-/**
- * Show action cards and hide the contact form (back button)
- */
-function showActionCards() {
-    if (actionCards) actionCards.classList.remove('hidden');
-    if (leadCapture) leadCapture.classList.add('hidden');
-    if (leadForm) {
-        leadForm.classList.add('hidden');
-        leadForm.reset();
-    }
-}
-
-/**
- * Reset CTA state for a new search
- */
-function resetServiceSelection() {
-    selectedServices = [];
-    showActionCards();
-}
-
-/**
- * Build action cards content from API response data
- */
-function buildActionCards(data) {
-    const urgencyCard = document.getElementById('repairUrgencyCard');
-    const componentsEl = document.getElementById('urgencyComponents');
-    const savingsEl = document.getElementById('urgencySavings');
-
-    if (!urgencyCard || !componentsEl || !savingsEl) return;
-
-    const risk = data.failure_risk || 0;
-    const riskComponents = data.risk_components || {};
-
-    // Get top risk components (>5% risk, sorted descending, max 3)
-    const topRisks = Object.entries(riskComponents)
-        .filter(([_, value]) => value > 0.05)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([key]) => componentDisplayNames[key] || key);
-
-    // Low risk variant
-    if (risk < 0.15) {
-        urgencyCard.classList.add('low-risk');
-        componentsEl.textContent = 'Your car looks healthy — stay ahead with regular maintenance';
-        savingsEl.textContent = 'Book a pre-MOT check to keep it that way';
-        const repairBtnEl = document.getElementById('repairBtn');
-        if (repairBtnEl) repairBtnEl.textContent = 'Book a Check-up →';
-    } else {
-        urgencyCard.classList.remove('low-risk');
-
-        // Show top risk components
-        if (topRisks.length > 0) {
-            componentsEl.textContent = 'Likely to fail on: ' + topRisks.join(', ');
-        } else {
-            componentsEl.textContent = 'Your car has an elevated failure risk';
-        }
-
-        // Show potential savings from repair cost estimate
-        const rangeHigh = data.repair_cost_estimate?.range_high;
-        if (rangeHigh) {
-            savingsEl.innerHTML = `Fix these issues before your MOT to save up to <strong>£${rangeHigh}</strong>`;
-        } else {
-            savingsEl.textContent = 'Fix these issues before your MOT to avoid costly failures';
-        }
-
-        const repairBtnEl = document.getElementById('repairBtn');
-        if (repairBtnEl) repairBtnEl.textContent = 'Get Repair Quotes →';
-    }
 }
 
 /**
@@ -329,7 +170,6 @@ form.addEventListener('submit', async (e) => {
     const registration = registrationInput.value.replace(/\s/g, '').toUpperCase();
     const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
 
-    // Basic validation
     if (!registration || registration.length < 2) {
         showError('Please enter a valid registration number');
         return;
@@ -345,15 +185,8 @@ form.addEventListener('submit', async (e) => {
     loader.classList.remove('hidden');
     analyzeBtn.disabled = true;
     if (resultsPanel) resultsPanel.classList.add('hidden');
-    if (resultsPanelT) resultsPanelT.classList.add('hidden');
 
-    // Reset lead form state for new search
-    if (leadCapture) leadCapture.classList.add('hidden');
-    if (leadSuccess) leadSuccess.classList.add('hidden');
-    if (leadForm) leadForm.reset();
-    resetServiceSelection();
-
-    // Reset treatment lead form
+    // Reset lead form state
     const leadCaptureT = document.getElementById('leadCaptureT');
     const leadSuccessT = document.getElementById('leadSuccessT');
     const leadFormT = document.getElementById('leadFormT');
@@ -361,8 +194,8 @@ form.addEventListener('submit', async (e) => {
     if (leadSuccessT) leadSuccessT.classList.add('hidden');
     if (leadFormT) leadFormT.reset();
     treatmentHasSubmitted = false;
+    selectedServices = [];
 
-    // Hide any previous errors
     const banner = document.getElementById('errorBanner');
     if (banner) banner.classList.add('hidden');
 
@@ -407,10 +240,8 @@ form.addEventListener('submit', async (e) => {
  * Display prediction results
  */
 function displayResults(data) {
-    // Store for lead form submission
     currentResultsData = data;
 
-    // Hide the search form and example preview
     if (searchPanel) searchPanel.classList.add('hidden');
     const examplePreview = document.getElementById('examplePreview');
     if (examplePreview) examplePreview.classList.add('hidden');
@@ -424,303 +255,13 @@ function displayResults(data) {
         });
     }
 
-    // Branch on experiment variant
-    if (experimentVariant === 'treatment' && resultsPanelT) {
-        displayResultsTreatment(data);
-        return;
-    }
-
-    // ── CONTROL PATH ──
     if (!resultsPanel) return;
-    resultsPanel.classList.remove('hidden');
-    resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    trackEvent('report_viewed', { variant: 'control' });
 
-    // Update Header
-    const vehicleTag = document.getElementById('vehicleTag');
-    const vehicleDetails = document.getElementById('vehicleDetails');
-
-    if (vehicleTag) {
-        if (data.vehicle) {
-            vehicleTag.textContent = `${data.vehicle.make} ${data.vehicle.model}` +
-                (data.vehicle.year ? ` (${data.vehicle.year})` : '');
-        } else {
-            vehicleTag.textContent = data.registration || 'Vehicle';
-        }
-    }
-    if (vehicleDetails) {
-        vehicleDetails.textContent = data.registration || '';
-    }
-
-    // Update stats
-    const lastMOTDate = document.getElementById('lastMOTDate');
-    const lastMOTResult = document.getElementById('lastMOTResult');
-    const mileage = document.getElementById('mileage');
-
-    if (lastMOTDate) {
-        if (data.last_mot_date) {
-            const date = new Date(data.last_mot_date);
-            lastMOTDate.textContent = date.toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
-        } else {
-            lastMOTDate.textContent = '-';
-        }
-    }
-
-    if (lastMOTResult) {
-        lastMOTResult.textContent = data.last_mot_result || '-';
-        lastMOTResult.className = 'stat-value';
-        if (data.last_mot_result === 'PASSED') {
-            lastMOTResult.classList.add('text-low');
-        } else if (data.last_mot_result === 'FAILED') {
-            lastMOTResult.classList.add('text-high');
-        }
-    }
-
-    if (mileage) mileage.textContent = data.mileage ? data.mileage.toLocaleString() + ' mi' : '-';
-
-    // Update Main Risk
-    const risk = data.failure_risk;
-    const riskValueEl = document.getElementById('riskValue');
-    const riskText = document.getElementById('riskText');
-
-    if (risk !== undefined && risk !== null) {
-        const riskPercent = (risk * 100).toFixed(1) + '%';
-
-        if (riskValueEl) {
-            riskValueEl.textContent = riskPercent;
-            riskValueEl.className = 'risk-percentage';
-
-            if (risk < 0.20) {
-                riskValueEl.classList.add('text-low');
-            } else if (risk < 0.40) {
-                riskValueEl.classList.add('text-med');
-            } else {
-                riskValueEl.classList.add('text-high');
-            }
-        }
-
-        if (riskText) {
-            riskText.className = 'risk-label';
-
-            if (risk < 0.20) {
-                riskText.textContent = "Low Risk";
-                riskText.classList.add('text-low');
-            } else if (risk < 0.40) {
-                riskText.textContent = "Moderate Risk";
-                riskText.classList.add('text-med');
-            } else {
-                riskText.textContent = "High Risk";
-                riskText.classList.add('text-high');
-            }
-        }
-    } else {
-        if (riskValueEl) riskValueEl.textContent = '--';
-        if (riskText) riskText.textContent = 'Unknown';
-    }
-
-    // Update confidence badge
-    const confidenceBadge = document.getElementById('confidenceBadge');
-    if (confidenceBadge) {
-        confidenceBadge.textContent = (data.confidence_level || 'Unknown') + ' Confidence';
-        confidenceBadge.className = 'confidence-badge';
-        if (data.confidence_level === 'High') {
-            confidenceBadge.classList.add('confidence-high');
-        } else if (data.confidence_level === 'Medium') {
-            confidenceBadge.classList.add('confidence-med');
-        } else {
-            confidenceBadge.classList.add('confidence-low');
-        }
-    }
-
-    // Update repair cost
-    const repairCostValue = document.getElementById('repairCostValue');
-    const repairCostRange = document.getElementById('repairCostRange');
-
-    if (data.repair_cost_estimate && repairCostValue) {
-        const repairCost = data.repair_cost_estimate;
-        const expected = typeof repairCost.expected === 'string'
-            ? repairCost.expected
-            : `£${repairCost.expected}`;
-        repairCostValue.textContent = expected;
-        if (repairCostRange) {
-            repairCostRange.textContent =
-                `Range: £${repairCost.range_low} - £${repairCost.range_high}`;
-        }
-    } else if (repairCostValue) {
-        repairCostValue.textContent = '-';
-        if (repairCostRange) repairCostRange.textContent = '';
-    }
-
-    // Update source note
-    const sourceNote = document.getElementById('sourceNote');
-    if (sourceNote) {
-        if (data.model_version === 'v55') {
-            sourceNote.textContent = 'Prediction based on real-time MOT history analysis';
-        } else if (data.model_version === 'lookup') {
-            sourceNote.textContent = data.note || 'Based on historical MOT data for similar vehicles.';
-        } else if (data.note) {
-            sourceNote.textContent = data.note;
-        } else {
-            sourceNote.textContent = '';
-        }
-    }
-
-    // Build urgency action cards from risk data
-    buildActionCards(data);
-
-    // Update Components (V55 uses risk_components object)
-    const componentsGrid = document.getElementById('componentsGrid');
-    if (!componentsGrid) return;
-
-    componentsGrid.innerHTML = '';
-
-    const riskComponents = data.risk_components || {};
-
-    const components = [];
-    for (const [key, name] of Object.entries(componentDisplayNames)) {
-        const value = riskComponents[key] ?? data[`risk_${key}`];
-        if (value !== undefined && value !== null) {
-            components.push({ name, value, key });
-        }
-    }
-
-    // Sort by risk value descending
-    components.sort((a, b) => b.value - a.value);
-
-    components.forEach(comp => {
-        const card = document.createElement('div');
-        const compPercent = (comp.value * 100).toFixed(1) + '%';
-
-        let textClass = 'text-low';
-        if (comp.value > 0.10) {
-            textClass = 'text-high';
-        } else if (comp.value > 0.05) {
-            textClass = 'text-med';
-        }
-
-        card.className = 'component-card';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'comp-name';
-        nameSpan.textContent = comp.name;
-
-        const valSpan = document.createElement('span');
-        valSpan.className = `comp-val ${textClass}`;
-        valSpan.textContent = compPercent;
-
-        card.appendChild(nameSpan);
-        card.appendChild(valSpan);
-
-        componentsGrid.appendChild(card);
-    });
-}
-
-// Lead Form Submission
-if (leadForm) {
-    leadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const submitBtn = leadForm.querySelector('button[type="submit"]');
-        const btnText = submitBtn.querySelector('.btn-text');
-        const loader = submitBtn.querySelector('.loader');
-
-        // Loading state
-        btnText.textContent = 'Submitting...';
-        loader.classList.remove('hidden');
-        submitBtn.disabled = true;
-
-        const name = document.getElementById('leadName').value.trim();
-        const email = document.getElementById('leadEmail').value.trim();
-        const phone = document.getElementById('leadPhone').value.trim();
-        const postcode = postcodeInput.value.replace(/\s/g, '').toUpperCase();
-
-        try {
-            // Get top risk components as list
-            const topRisks = [];
-            if (currentResultsData?.risk_components) {
-                const comps = Object.entries(currentResultsData.risk_components)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 3)
-                    .map(([name]) => name);
-                topRisks.push(...comps);
-            }
-
-            const payload = {
-                name: name,
-                email: email,
-                phone: phone || null,
-                postcode: postcode,
-                lead_type: 'garage',
-                consent_given: true,
-                services_requested: selectedServices.length > 0 ? selectedServices : null,
-                vehicle: currentResultsData?.vehicle || null,
-                risk_data: currentResultsData ? {
-                    failure_risk: currentResultsData.failure_risk,
-                    top_risks: topRisks
-                } : null
-            };
-
-            const res = await fetch(`${API_BASE}/leads`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.detail || 'Failed to submit. Please try again.');
-            }
-
-            // Success - show thank you message
-            leadCapture.classList.add('hidden');
-            leadSuccess.classList.remove('hidden');
-
-            // Track service-specific conversions in Google Ads
-            if (typeof gtag === 'function') {
-                if (selectedServices.includes('mot')) {
-                    gtag('event', 'conversion', {
-                        'send_to': 'AW-17896487388/5dOuCMDWgfQbENzz2tVC',
-                        'value': 5.0,
-                        'currency': 'GBP'
-                    });
-                }
-                if (selectedServices.includes('repair')) {
-                    gtag('event', 'conversion', {
-                        'send_to': 'AW-17896487388/fe4lCMPWgfQbENzz2tVC',
-                        'value': 5.0,
-                        'currency': 'GBP'
-                    });
-                }
-                if (selectedServices.includes('reminder')) {
-                    gtag('event', 'conversion', {
-                        'send_to': 'AW-17896487388/Z1LqCJ6Bj_QbENzz2tVC',
-                        'value': 1.0,
-                        'currency': 'GBP'
-                    });
-                }
-            }
-
-        } catch (err) {
-            showError(err.message);
-        } finally {
-            btnText.textContent = 'Find a Garage';
-            loader.classList.add('hidden');
-            submitBtn.disabled = false;
-        }
-    });
-}
-
-// ── Treatment Display ───────────────────────────────────────────────
-function displayResultsTreatment(data) {
     const rec = getRecommendation(data);
     currentRecommendation = rec;
-    resultsPanelT.classList.remove('hidden');
-    resultsPanelT.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    trackEvent('recommendation_viewed', { primary_action: rec.primaryAction, variant: 'treatment' });
+    resultsPanel.classList.remove('hidden');
+    resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    trackEvent('recommendation_viewed', { primary_action: rec.primaryAction });
 
     // Vehicle header
     const vehicleTagT = document.getElementById('vehicleTagT');
@@ -762,7 +303,7 @@ function displayResultsTreatment(data) {
     }
     if (motivatorHL) motivatorHL.textContent = rec.motivatorHeadline;
     if (motivatorSup) motivatorSup.textContent = rec.motivatorSupporting;
-    trackEvent('motivator_card_viewed', { type: rec.motivatorType, variant: 'treatment' });
+    trackEvent('motivator_card_viewed', { type: rec.motivatorType });
 
     // Recommendation block
     const recHL = document.getElementById('recHeadlineT');
@@ -773,9 +314,9 @@ function displayResultsTreatment(data) {
     const recBadge = document.getElementById('recSuccessBadgeT');
     if (recHL) recHL.textContent = rec.headline;
     if (recSup) recSup.textContent = rec.supporting;
-    if (recBtn) { recBtn.textContent = rec.ctaText; recBtn.classList.remove('hidden'); recBtn.onclick = () => handleTreatmentPrimary(rec); }
+    if (recBtn) { recBtn.textContent = rec.ctaText; recBtn.classList.remove('hidden'); recBtn.onclick = () => handlePrimaryCta(rec); }
     if (recTrust) { recTrust.textContent = rec.trust; recTrust.classList.remove('hidden'); }
-    if (recSecBtn && rec.secondaryText) { recSecBtn.textContent = rec.secondaryText; recSecBtn.classList.remove('hidden'); recSecBtn.onclick = () => handleTreatmentSecondary(rec); }
+    if (recSecBtn && rec.secondaryText) { recSecBtn.textContent = rec.secondaryText; recSecBtn.classList.remove('hidden'); recSecBtn.onclick = () => handleSecondaryCta(rec); }
     else if (recSecBtn) recSecBtn.classList.add('hidden');
     if (recBadge) recBadge.classList.add('hidden');
 
@@ -783,21 +324,20 @@ function displayResultsTreatment(data) {
     const leadBtnTextT = document.getElementById('leadBtnTextT');
     if (leadBtnTextT) leadBtnTextT.textContent = rec.ctaText;
 
-    // Source note
+    // Source note + components + sticky CTA
     populateSourceNote(data, 'sourceNoteT');
-    // Components in accordion
     populateComponents(data, 'componentsGridT');
-    // Sticky CTA
     setupStickyCtaForResults(rec);
 }
 
-function handleTreatmentPrimary(rec) {
-    trackEvent('garage_cta_clicked', { primary_action: rec.primaryAction, variant: 'treatment' });
+// ── CTA Handlers ────────────────────────────────────────────────────
+function handlePrimaryCta(rec) {
+    trackEvent('garage_cta_clicked', { primary_action: rec.primaryAction });
+    selectedServices = [rec.primaryAction === 'GET_QUOTES' || rec.primaryAction === 'PRE_MOT_CHECK' ? 'repair' : rec.primaryAction === 'SET_REMINDER' ? 'reminder' : 'mot'];
     const leadCaptureT = document.getElementById('leadCaptureT');
     const leadFormT = document.getElementById('leadFormT');
     if (leadCaptureT) { leadCaptureT.classList.remove('hidden'); leadCaptureT.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     if (leadFormT) leadFormT.classList.remove('hidden');
-    // Update form title
     const titleEl = document.getElementById('leadFormTitleT');
     if (titleEl) {
         const titles = { GET_QUOTES: 'Get repair quotes from local garages', PRE_MOT_CHECK: 'Book a pre-MOT check with a local garage', SET_REMINDER: 'Set up your free MOT reminder', FIND_GARAGE: 'Get connected with a local garage' };
@@ -805,8 +345,9 @@ function handleTreatmentPrimary(rec) {
     }
 }
 
-function handleTreatmentSecondary(rec) {
-    trackEvent('secondary_cta_clicked', { primary_action: rec.primaryAction, secondary_action: rec.secondaryAction, variant: 'treatment' });
+function handleSecondaryCta(rec) {
+    trackEvent('secondary_cta_clicked', { primary_action: rec.primaryAction, secondary_action: rec.secondaryAction });
+    selectedServices = [rec.secondaryAction === 'SET_REMINDER' ? 'reminder' : rec.secondaryAction === 'GET_QUOTES' ? 'repair' : 'repair'];
     const leadCaptureT = document.getElementById('leadCaptureT');
     const leadFormT = document.getElementById('leadFormT');
     if (leadCaptureT) { leadCaptureT.classList.remove('hidden'); leadCaptureT.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -816,12 +357,10 @@ function handleTreatmentSecondary(rec) {
         const titles = { SET_REMINDER: 'Set up your free MOT reminder', GET_QUOTES: 'Get repair quotes from local garages', FIND_GARAGE: 'Get connected with a local garage' };
         titleEl.textContent = titles[rec.secondaryAction] || 'Get connected with a local garage';
     }
-    // Pre-select service
-    selectedServices = [rec.secondaryAction === 'SET_REMINDER' ? 'reminder' : rec.secondaryAction === 'GET_QUOTES' ? 'repair' : 'repair'];
 }
 
-// ── Treatment Lead Form ─────────────────────────────────────────────
-function initTreatmentLeadForm() {
+// ── Lead Form ───────────────────────────────────────────────────────
+function initLeadForm() {
     const leadFormT = document.getElementById('leadFormT');
     if (!leadFormT) return;
     leadFormT.addEventListener('submit', async (e) => {
@@ -842,9 +381,8 @@ function initTreatmentLeadForm() {
                 phone: document.getElementById('leadPhoneT').value.trim() || null,
                 postcode: postcodeInput.value.replace(/\s/g, '').toUpperCase(),
                 lead_type: 'garage', consent_given: true,
-                services_requested: selectedServices.length > 0 ? selectedServices : (currentRecommendation ? [currentRecommendation.primaryAction === 'GET_QUOTES' || currentRecommendation.primaryAction === 'PRE_MOT_CHECK' ? 'repair' : currentRecommendation.primaryAction === 'SET_REMINDER' ? 'reminder' : 'mot'] : null),
+                services_requested: selectedServices.length > 0 ? selectedServices : null,
                 vehicle: currentResultsData?.vehicle || null,
-                experiment_variant: getAllVariants(),
                 risk_data: currentResultsData ? { failure_risk: currentResultsData.failure_risk, top_risks: topRisks } : null,
             };
             const res = await fetch(`${API_BASE}/leads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -866,13 +404,13 @@ function initTreatmentLeadForm() {
             if (recBtn) recBtn.classList.add('hidden');
             if (recTrust) recTrust.classList.add('hidden');
 
-            trackEvent('garage_lead_submitted', { variant: 'treatment', primary_action: currentRecommendation?.primaryAction || '' });
+            trackEvent('garage_lead_submitted', { primary_action: currentRecommendation?.primaryAction || '' });
 
             if (typeof gtag === 'function') {
                 const svc = selectedServices;
-                if (svc.includes('mot') || currentRecommendation?.primaryAction === 'BOOK_MOT') gtag('event', 'conversion', { 'send_to': 'AW-17896487388/5dOuCMDWgfQbENzz2tVC', 'value': 5.0, 'currency': 'GBP' });
-                if (svc.includes('repair') || currentRecommendation?.primaryAction === 'GET_QUOTES' || currentRecommendation?.primaryAction === 'PRE_MOT_CHECK') gtag('event', 'conversion', { 'send_to': 'AW-17896487388/fe4lCMPWgfQbENzz2tVC', 'value': 5.0, 'currency': 'GBP' });
-                if (svc.includes('reminder') || currentRecommendation?.primaryAction === 'SET_REMINDER') gtag('event', 'conversion', { 'send_to': 'AW-17896487388/Z1LqCJ6Bj_QbENzz2tVC', 'value': 1.0, 'currency': 'GBP' });
+                if (svc.includes('mot')) gtag('event', 'conversion', { 'send_to': 'AW-17896487388/5dOuCMDWgfQbENzz2tVC', 'value': 5.0, 'currency': 'GBP' });
+                if (svc.includes('repair')) gtag('event', 'conversion', { 'send_to': 'AW-17896487388/fe4lCMPWgfQbENzz2tVC', 'value': 5.0, 'currency': 'GBP' });
+                if (svc.includes('reminder')) gtag('event', 'conversion', { 'send_to': 'AW-17896487388/Z1LqCJ6Bj_QbENzz2tVC', 'value': 1.0, 'currency': 'GBP' });
             }
         } catch (err) { showError(err.message); }
         finally { btnTextEl.textContent = currentRecommendation?.ctaText || 'Find a Garage'; loaderEl.classList.add('hidden'); submitBtn.disabled = false; }
@@ -935,7 +473,7 @@ function populateComponents(data, gridId) {
 // ── Accordion Analytics ─────────────────────────────────────────────
 function initAccordionTracking() {
     const acc = document.getElementById('accordionT');
-    if (acc) acc.addEventListener('toggle', () => { if (acc.open) trackEvent('accordion_opened', { variant: 'treatment' }); });
+    if (acc) acc.addEventListener('toggle', () => { if (acc.open) trackEvent('accordion_opened', {}); });
 }
 
 // ── Sticky CTA ──────────────────────────────────────────────────────
@@ -959,7 +497,7 @@ function setupStickyCtaForResults(rec) {
     const stickyCtaBtn = document.getElementById('stickyCtaBtn');
     if (stickyCtaBtn) {
         stickyCtaBtn.textContent = rec.ctaText;
-        stickyCtaBtn.onclick = () => { trackEvent('sticky_cta_clicked', { primary_action: rec.primaryAction, variant: 'treatment' }); handleTreatmentPrimary(rec); };
+        stickyCtaBtn.onclick = () => { trackEvent('sticky_cta_clicked', { primary_action: rec.primaryAction }); handlePrimaryCta(rec); };
     }
     if (stickyCtaObserver) stickyCtaObserver.disconnect();
     const recBlock = document.getElementById('recBlockT');
@@ -972,7 +510,7 @@ function setupStickyCtaForResults(rec) {
 function updateStickyCtaVisibility() {
     const el = document.getElementById('stickyCta');
     if (!el) return;
-    const show = experimentVariant === 'treatment' && isMobileViewport && !recBlockInView && !treatmentHasSubmitted && !isKeyboardOpen && resultsPanelT && !resultsPanelT.classList.contains('hidden');
+    const show = isMobileViewport && !recBlockInView && !treatmentHasSubmitted && !isKeyboardOpen && resultsPanel && !resultsPanel.classList.contains('hidden');
     el.classList.toggle('sticky-cta-visible', show);
 }
 
