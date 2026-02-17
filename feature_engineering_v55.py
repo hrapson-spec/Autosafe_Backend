@@ -244,10 +244,25 @@ def engineer_features(
         unit = (latest_test.odometer_unit or 'mi').lower()
         if unit == 'km':
             mileage = round(mileage * 0.621371)  # Fix: round instead of truncate
+
+        # Plausibility check against prior test
+        is_anomaly = False
+        if len(tests) >= 2 and tests[1].odometer_value is not None:
+            prev = tests[1].odometer_value
+            if unit == 'km':
+                prev = round(prev * 0.621371)
+            days = (tests[0].test_date - tests[1].test_date).days
+            diff = mileage - prev
+            if days > 0 and diff > 0:
+                annualized = (diff / days) * 365
+                if annualized > 50000:
+                    is_anomaly = True
+                    mileage = prev  # Fall back to previous reading
+
         features['test_mileage'] = mileage
         features['has_prev_mileage'] = 1
-        features['mileage_plausible_flag'] = 1
-        features['mileage_anomaly_flag'] = 0
+        features['mileage_plausible_flag'] = 0 if is_anomaly else 1
+        features['mileage_anomaly_flag'] = 1 if is_anomaly else 0
     else:
         features['test_mileage'] = 0
         features['has_prev_mileage'] = 0
@@ -527,23 +542,27 @@ def engineer_features(
     # Annualized mileage
     # Fix: Distinguish between 0 miles (valid) and None (missing data)
     if len(tests) >= 2 and features['has_prev_mileage']:
-        # Use None-aware comparison: 0 is a valid odometer reading
-        val0 = tests[0].odometer_value if tests[0].odometer_value is not None else None
-        val1 = tests[1].odometer_value if tests[1].odometer_value is not None else None
+        # If mileage anomaly detected, skip annualized calc (use default)
+        if features.get('mileage_anomaly_flag', 0) == 1:
+            features['annualized_mileage_v2'] = 10000  # Default — raw data unreliable
+            features['usage_band_hybrid'] = 'average'
+        else:
+            val0 = tests[0].odometer_value if tests[0].odometer_value is not None else None
+            val1 = tests[1].odometer_value if tests[1].odometer_value is not None else None
 
-        if val0 is not None and val1 is not None:
-            mileage_diff = val0 - val1
-            days_diff = (tests[0].test_date - tests[1].test_date).days
-            if days_diff > 0 and mileage_diff > 0:
-                annualized = (mileage_diff / days_diff) * 365
-                features['annualized_mileage_v2'] = annualized
-                features['usage_band_hybrid'] = get_usage_band(annualized)
+            if val0 is not None and val1 is not None:
+                mileage_diff = val0 - val1
+                days_diff = (tests[0].test_date - tests[1].test_date).days
+                if days_diff > 0 and mileage_diff > 0:
+                    annualized = (mileage_diff / days_diff) * 365
+                    features['annualized_mileage_v2'] = annualized
+                    features['usage_band_hybrid'] = get_usage_band(annualized)
+                else:
+                    features['annualized_mileage_v2'] = 10000  # Default
+                    features['usage_band_hybrid'] = 'average'
             else:
                 features['annualized_mileage_v2'] = 10000  # Default
                 features['usage_band_hybrid'] = 'average'
-        else:
-            features['annualized_mileage_v2'] = 10000  # Default
-            features['usage_band_hybrid'] = 'average'
     else:
         features['annualized_mileage_v2'] = 10000  # Default
         features['usage_band_hybrid'] = 'average'

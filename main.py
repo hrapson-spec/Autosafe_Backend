@@ -925,6 +925,7 @@ async def get_risk_v55(
     # Extract vehicle info
     year = history.manufacture_date.year if history.manufacture_date else None
     last_test = history.mot_tests[0] if history.mot_tests else None
+    display_mileage, mileage_anomaly = _get_display_mileage(history)
 
     # Calculate repair cost estimate
     repair_cost = _estimate_repair_cost(
@@ -941,7 +942,8 @@ async def get_risk_v55(
             "year": year,
             "fuel_type": history.fuel_type,
         },
-        "mileage": last_test.odometer_value if last_test else None,
+        "mileage": display_mileage,
+        "mileage_anomaly": mileage_anomaly,
         "last_mot_date": last_test.test_date.isoformat() if last_test else None,
         "mot_expiry_date": last_test.expiry_date.isoformat() if last_test and last_test.expiry_date else None,
         "last_mot_result": last_test.test_result if last_test else None,
@@ -961,7 +963,7 @@ async def get_risk_v55(
             'vehicle_model': history.model,
             'vehicle_year': year,
             'vehicle_fuel_type': history.fuel_type,
-            'mileage': last_test.odometer_value if last_test else None,
+            'mileage': display_mileage,
             'last_mot_date': last_test.test_date if last_test else None,
             'last_mot_result': last_test.test_result if last_test else None,
             'failure_risk': prediction['failure_risk'],
@@ -1152,6 +1154,27 @@ async def _fallback_prediction(
     except Exception as e:
         logger.warning(f"Failed to log default fallback risk check: {e}")
     return response
+
+
+def _get_display_mileage(history) -> tuple:
+    """Return (mileage, is_anomaly) using plausibility check against prior test."""
+    tests = history.mot_tests
+    if not tests or tests[0].odometer_value is None:
+        return None, False
+
+    latest_mileage = tests[0].odometer_value
+
+    if len(tests) >= 2 and tests[1].odometer_value is not None:
+        prev_mileage = tests[1].odometer_value
+        days_diff = (tests[0].test_date - tests[1].test_date).days
+        mileage_diff = latest_mileage - prev_mileage
+
+        if days_diff > 0 and mileage_diff > 0:
+            annualized = (mileage_diff / days_diff) * 365
+            if annualized > 50000:  # Physically implausible
+                return prev_mileage, True
+
+    return latest_mileage, False
 
 
 def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
