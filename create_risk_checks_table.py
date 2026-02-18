@@ -73,6 +73,7 @@ def main():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_postcode ON risk_checks(postcode)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_created ON risk_checks(created_at DESC)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_make_model ON risk_checks(vehicle_make, vehicle_model)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_risk_checks_utm_source ON risk_checks(utm_source)")
 
     conn.commit()
 

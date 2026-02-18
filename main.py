@@ -2287,6 +2287,44 @@ async def get_stats(request: Request):
     return result
 
 
+# --- Clean URL routes for static content (before static mount) ---
+@app.get("/privacy")
+async def serve_privacy():
+    """Serve privacy page at clean URL."""
+    return FileResponse('static/privacy.html')
+
+
+@app.get("/terms")
+async def serve_terms():
+    """Serve terms page at clean URL."""
+    return FileResponse('static/terms.html')
+
+
+@app.get("/guides/{slug}")
+async def serve_guide(slug: str):
+    """Serve guide pages at clean URLs."""
+    filepath = f'static/guides/{slug}.html'
+    if os.path.isfile(filepath):
+        return FileResponse(filepath)
+    raise HTTPException(status_code=404, detail="Guide not found")
+
+
+# --- 301 redirects from old /static/ paths to clean URLs ---
+@app.get("/static/privacy.html")
+async def redirect_old_privacy():
+    return RedirectResponse(url="/privacy", status_code=301)
+
+
+@app.get("/static/terms.html")
+async def redirect_old_terms():
+    return RedirectResponse(url="/terms", status_code=301)
+
+
+@app.get("/static/guides/{slug}.html")
+async def redirect_old_guide(slug: str):
+    return RedirectResponse(url=f"/guides/{slug}", status_code=301)
+
+
 # Mount static files (only if the folder exists)
 if os.path.isdir("static"):
     # Mount assets at root /assets for React build compatibility
@@ -2343,24 +2381,6 @@ async def ping_indexnow(request: Request):
         return {"success": False, "error": str(e)}
 
 
-# --- Clean URL routes for static content ---
-@app.get("/privacy", response_class=HTMLResponse)
-async def serve_privacy():
-    return FileResponse('static/privacy.html')
-
-@app.get("/terms", response_class=HTMLResponse)
-async def serve_terms():
-    return FileResponse('static/terms.html')
-
-@app.get("/guides/{slug}", response_class=HTMLResponse)
-async def serve_guide(slug: str):
-    filepath = f'static/guides/{slug}.html'
-    if os.path.isfile(filepath):
-        return FileResponse(filepath)
-    return JSONResponse(status_code=404, content={"detail": "Guide not found"})
-
-
-
 
 if os.path.isdir("static"):
     @app.get("/robots.txt")
@@ -2368,16 +2388,14 @@ if os.path.isdir("static"):
         """Serve robots.txt at root URL for search engine crawlers."""
         return FileResponse('static/robots.txt', media_type='text/plain')
 
-    @app.get("/")
-    async def read_index():
-        return FileResponse('static/index.html')
-
     # SPA quarantined under /app/* with noindex
     @app.get("/app/{path:path}")
     async def serve_spa(path: str):
         response = FileResponse('static/spa.html')
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
         return response
+
+    # No more general catch-all — unknown paths will 404
 else:
     @app.get("/")
     def read_root():

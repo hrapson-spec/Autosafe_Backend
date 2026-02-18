@@ -1,0 +1,282 @@
+{% extends "seo_base.html" %}
+
+{% block title %}Free MOT History Check & Failure Risk Predictor | AutoSafe{% endblock %}
+{% block meta_description %}Will your car pass its MOT? Check your vehicle's MOT failure risk instantly using AI trained
+on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, fast, no signup.{% endblock %}
+{% block og_title %}Free MOT Failure Risk Predictor — Will Your Car Pass Its MOT?{% endblock %}
+{% block og_description %}Check your vehicle's MOT failure risk instantly. AI analysis of {{
+"{:,}".format(total_tests_analysed) }}+ official DVSA records. Free, no signup.{% endblock %}
+{% block twitter_title %}Free MOT Failure Risk Predictor — Will Your Car Pass Its MOT?{% endblock %}
+{% block twitter_description %}Check your vehicle's MOT failure risk instantly. AI analysis of {{
+"{:,}".format(total_tests_analysed) }}+ official DVSA records. Free, no signup.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "AutoSafe",
+  "url": "https://www.autosafe.one",
+  "description": "Free MOT history check and failure risk predictor using AI analysis of UK DVSA data",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://www.autosafe.one/app/?reg={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "AutoSafe",
+  "url": "https://www.autosafe.one",
+  "logo": "https://www.autosafe.one/static/logo_clean.png",
+  "description": "Free MOT history check and failure risk predictor using AI analysis of UK DVSA data",
+  "email": "autosafehq@gmail.com"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "AutoSafe MOT Failure Risk Predictor",
+  "url": "https://www.autosafe.one/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "All",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "GBP"
+  },
+  "description": "Free AI-powered MOT failure risk prediction tool. Enter your vehicle registration for an instant personalised risk assessment based on {{ "{:,}".format(total_tests_analysed) }}+ DVSA test records."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Will my car pass its MOT?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Whether your car will pass depends on its age, mileage, make, model, and previous test history. The UK average failure rate is approximately 28%. Use AutoSafe's free prediction tool to check your specific vehicle's risk by entering your registration number."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does AutoSafe predict MOT failures?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "AutoSafe uses a CatBoost machine learning model trained on over {{ "{:,}".format(total_tests_analysed) }} official DVSA MOT test records. The model analyses 104 features including vehicle age, mileage, make/model patterns, previous test results, advisory trends, and regional corrosion factors to predict failure probability."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is AutoSafe free to use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. AutoSafe is completely free. Enter your registration number and postcode to get an instant, personalised MOT failure risk prediction covering seven key failure areas. No signup or payment required."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<h1>Will Your Car Pass Its MOT?</h1>
+
+<p style="text-align: center; font-size: 1.15rem; color: #c0c0c0; margin-bottom: 0.5rem;">Enter your reg. Get your risk
+    score in seconds. <strong>Free, instant, no signup.</strong></p>
+
+<div class="cta-box" style="margin-top: 1rem; margin-bottom: 2rem;">
+    <form class="reg-lookup-form" action="/app/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+                aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk &rarr;</button>
+    </form>
+    <p style="color: #666; font-size: 0.85rem; margin-top: 0.75rem;">AI prediction based on {{
+        "{:,}".format(total_tests_analysed) }}+ official DVSA test records</p>
+</div>
+
+<!-- How it works -->
+<h2>How It Works</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 1.5rem 0;">
+    <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">1. Enter Your Reg</h3>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">Type your vehicle registration number above. We fetch your full
+            MOT history from the DVSA in real time.</p>
+    </div>
+    <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🧠</div>
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">2. AI Analyses Your Car</h3>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">Our model evaluates 104 features — age, mileage, past results,
+            advisories, regional factors — to predict failure risk.</p>
+    </div>
+    <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">3. Get Your Risk Score</h3>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">See your personalised failure probability across 7 key component
+            areas: brakes, suspension, tyres, steering, visibility, lamps, and body.</p>
+    </div>
+</div>
+
+<!-- Key stats -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 2rem 0;">
+    <div class="stat-highlight">
+        <div class="big-number">{{ "{:,}".format(total_tests_analysed // 1000000) }}M+</div>
+        <div class="label">DVSA test records analysed</div>
+    </div>
+    <div class="stat-highlight">
+        <div class="big-number">{{ "%.0f"|format(national_avg_fail_rate * 100) }}%</div>
+        <div class="label">UK average MOT failure rate</div>
+    </div>
+    <div class="stat-highlight">
+        <div class="big-number">7</div>
+        <div class="label">Component risk areas checked</div>
+    </div>
+</div>
+
+<!-- Top models -->
+<h2>MOT Failure Rates by Car</h2>
+<p>See how the UK's most popular cars perform at MOT time. Click any model for a detailed breakdown by age, mileage, and
+    component risk.</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th>Failure Rate</th>
+            <th>Tests</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in top_models %}
+        <tr>
+            <td>{{ m.make_display }} {{ m.model_display }}</td>
+            <td><span class="fail-rate {% if m.fail_rate > 0.30 %}high{% elif m.fail_rate < 0.20 %}low{% endif %}">{{
+                    "%.1f"|format(m.fail_rate * 100) }}%</span></td>
+            <td class="sample-size">{{ "{:,}".format(m.total_tests) }}</td>
+            <td><a href="/mot-check/{{ m.make_slug }}/{{ m.model_slug }}/" style="color: #e5c07b;">View &rarr;</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p><a href="/mot-check/" style="color: #e5c07b;">Browse all makes and models &rarr;</a></p>
+
+<!-- Top failure areas nationally -->
+<h2>Most Common MOT Failure Areas</h2>
+<p>Across {{ "{:,}".format(total_tests_analysed) }} tests, these are the component areas most likely to cause an MOT
+    failure:</p>
+
+{% for comp in top_components %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span>{{ comp.name }}</span>
+        <span>{{ "%.1f"|format(comp.avg_risk * 100) }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if comp.avg_risk > 0.15 %}high{% elif comp.avg_risk > 0.08 %}medium{% else %}low{% endif %}"
+            style="width: {{ (comp.avg_risk * 500)|round|int }}%"></div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Guides section -->
+<h2>MOT Guides</h2>
+<div class="make-grid">
+    <a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT?</a>
+    <a href="/guides/mot-checklist">Pre-MOT Checklist</a>
+    <a href="/guides/common-mot-failures">Top 10 MOT Failures</a>
+    <a href="/guides/when-is-mot-due">When Is My MOT Due?</a>
+    <a href="/guides/mot-failure-rates-by-car">Failure Rates by Car</a>
+    <a href="/guides/mot-rules-2026">MOT Rules 2026</a>
+    <a href="/guides/mot-defect-categories">Defect Categories</a>
+    <a href="/guides/mot-cost">How Much Does an MOT Cost?</a>
+    <a href="/guides/mot-history-check">Check MOT History</a>
+    <a href="/guides/first-mot-guide">Your First MOT</a>
+</div>
+
+<!-- Data insights -->
+{% if insights %}
+<h2>Data Insights</h2>
+<p>Original research from our analysis of {{ "{:,}".format(total_tests_analysed) }} MOT test records:</p>
+<div class="related-links">
+    {% for insight in insights %}
+    <a href="/insights/{{ insight.slug }}/">{{ insight.title }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Browse by make -->
+<h2>Browse by Make</h2>
+<div class="make-grid">
+    {% for make in makes %}
+    <a href="/mot-check/{{ make.slug }}/">{{ make.display_name }}</a>
+    {% endfor %}
+</div>
+
+<!-- FAQ (visible) -->
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-item">
+        <h3>Will my car pass its MOT?</h3>
+        <p>Whether your car will pass depends on its age, mileage, make, model, and previous test history. The UK
+            average failure rate is approximately {{ "%.0f"|format(national_avg_fail_rate * 100) }}%, meaning nearly 1
+            in 3 vehicles fail. <a href="/app/" style="color: #e5c07b;">Enter your registration</a> to check your
+            specific vehicle's risk instantly.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>How does AutoSafe predict MOT failures?</h3>
+        <p>AutoSafe uses a CatBoost machine learning model trained on over <strong>{{
+                "{:,}".format(total_tests_analysed) }} official DVSA MOT test records</strong>. The model analyses 104
+            features — including vehicle age, mileage, make and model patterns, previous test results, advisory trends,
+            and regional corrosion factors — to predict failure probability with calibrated accuracy.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>Is AutoSafe really free?</h3>
+        <p>Yes, completely. Enter your registration number and postcode for an instant, personalised MOT failure risk
+            prediction covering seven key failure areas. No signup, no payment, no catch.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>What is the most common reason for MOT failure?</h3>
+        <p>Lighting and signalling issues are the single biggest cause of MOT failures, including blown bulbs,
+            misaligned headlights, and faulty indicators. Suspension problems and brake defects are the second and third
+            most common reasons. See our <a href="/guides/common-mot-failures" style="color: #e5c07b;">top 10 MOT
+                failures guide</a> for details.</p>
+    </div>
+
+    <div class="faq-item">
+        <h3>How much does an MOT cost?</h3>
+        <p>The maximum MOT fee is £54.85 for cars. Many garages charge less. However, the real cost includes potential
+            repair bills if you fail — averaging £150–£500 depending on defects found. See our <a
+                href="/guides/mot-cost" style="color: #e5c07b;">MOT cost guide</a> for a full breakdown.</p>
+    </div>
+</div>
+
+<div class="methodology">
+    <p><strong>Data methodology:</strong> Analysis based on {{ "{:,}".format(total_tests_analysed) }} MOT test records
+        from the official DVSA database, licensed under the Open Government Licence v3.0. Failure rates are weighted
+        averages across all age and mileage bands. Our AI prediction model (CatBoost v55) uses 104 engineered features
+        and is calibrated for probabilistic accuracy.</p>
+</div>
+
+{% endblock %}
+
+{% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle's
+age, mileage and history.{% endblock %}
