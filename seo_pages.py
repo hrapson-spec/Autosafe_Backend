@@ -601,6 +601,75 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- Phase 3: Top-Level Component Aggregation Hubs ---
+    # NOTE: Must be registered BEFORE /{make_slug}/ to prevent 'problems' matching as a make.
+
+    @app.get("/mot-check/problems/{component_slug}/", response_class=HTMLResponse)
+    def seo_component_hub(component_slug: str):
+        if component_slug not in COMPONENT_SLUGS:
+            return _not_found_html("Component category not found.")
+
+        cache_key = f"seo:component_hub:{component_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        db_col, display_name = COMPONENT_SLUGS[component_slug]
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+
+            query = f"""
+                SELECT model_id,
+                       SUM(Total_Tests) as total_tests,
+                       ROUND(SUM({db_col} * Total_Tests) / SUM(Total_Tests), 4) as comp_risk
+                FROM risks
+                WHERE age_band != 'Unknown'
+                GROUP BY model_id
+                HAVING SUM(Total_Tests) >= 5000
+                ORDER BY comp_risk DESC
+                LIMIT 50
+            """
+            try:
+                rows = conn.execute(query).fetchall()
+            except sqlite3.OperationalError:
+                return _not_found_html("Data unavailable.")
+
+            conn.row_factory = old_factory
+
+        worst_models = []
+        for rank, row in enumerate(rows, 1):
+            model_id = row["model_id"]
+            page_link = None
+            for (ms, mds), info in _model_by_slug.items():
+                if info["model_id"] == model_id:
+                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
+                     break
+                full_constructed = f"{info['make']} {info['model_id']}"
+                if full_constructed == model_id:
+                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
+                     break
+
+            worst_models.append({
+                "rank": rank,
+                "model_id": model_id,
+                "display_name": _display_name(model_id),
+                "total_tests": int(row["total_tests"]),
+                "comp_risk": float(row["comp_risk"]),
+                "page_link": page_link,
+            })
+
+        template = jinja_env.get_template("seo_component_hub.html")
+        html = template.render(
+            component_slug=component_slug,
+            component_name=display_name,
+            worst_models=worst_models
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     @app.get("/mot-check/{make_slug}/", response_class=HTMLResponse)
     def seo_make(make_slug: str):
         if make_slug not in _make_by_slug:
@@ -728,44 +797,52 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
-    # --- Year-specific pages: /mot-check/{make}/{model}/{year}/ ---
+    # --- Year-specific AND age-band pages: /mot-check/{make}/{model}/{detail_slug}/ ---
+    # Unified handler: if detail_slug is a valid year (int), show year page;
+    # if it matches an age-band slug, show age-band page.
 
-    @app.get("/mot-check/{make_slug}/{model_slug}/{year}/", response_class=HTMLResponse)
-    def seo_model_year(make_slug: str, model_slug: str, year: int):
-        # Validate year safety (e.g. 1980-2030)
-        current_year = date.today().year
-        if year < 1980 or year > current_year + 1:
-             return _not_found_html("Invalid year.")
-
-        # Calculate age (e.g. 2024 - 2018 = 6 years old)
-        age = current_year - year
-        
-        # Determine age band
-        # 0-2, 3-5, 6-10, 11-15, 15+
-        from utils import get_age_band
-        target_age_band_raw = get_age_band(age)
-        
-        # Convert to slug (e.g. 6-10 -> 6-10-years)
-        target_age_slug = None
-        for slug, raw in AGE_BAND_SLUGS.items():
-            if raw == target_age_band_raw:
-                target_age_slug = slug
-                break
-        
-        if not target_age_slug:
-             return _not_found_html("Data not available for this vehicle age.")
-
+    @app.get("/mot-check/{make_slug}/{model_slug}/{detail_slug}/", response_class=HTMLResponse)
+    def seo_model_detail(make_slug: str, model_slug: str, detail_slug: str):
         if make_slug not in _make_by_slug:
             return _not_found_html("Make not found.")
         if (make_slug, model_slug) not in _model_by_slug:
             return _not_found_html(
                 f"Model not found for {_make_by_slug[make_slug]['display']}."
             )
-        
         if (make_slug, model_slug) not in _age_band_eligible:
             return _not_found_html("Detailed data not available for this model yet.")
 
-        cache_key = f"seo:year:{make_slug}:{model_slug}:{year}"
+        # --- Determine whether this is a year or age-band request ---
+        specific_year = None
+        age_band_raw = None
+        age_slug = None
+
+        # Try year first (e.g. "2012")
+        try:
+            year = int(detail_slug)
+            current_year = date.today().year
+            if year < 1980 or year > current_year + 1:
+                return _not_found_html("Invalid year.")
+            specific_year = year
+            age = current_year - year
+            from utils import get_age_band
+            age_band_raw = get_age_band(age)
+            # Find the matching slug
+            for slug, raw in AGE_BAND_SLUGS.items():
+                if raw == age_band_raw:
+                    age_slug = slug
+                    break
+            if not age_slug:
+                return _not_found_html("Data not available for this vehicle age.")
+        except ValueError:
+            # Not an int — try age-band slug (e.g. "3-5-years")
+            age_band_raw = AGE_BAND_SLUGS.get(detail_slug)
+            if not age_band_raw:
+                return _not_found_html("Invalid age range or year.")
+            age_slug = detail_slug
+
+        # --- Common logic for both year and age-band pages ---
+        cache_key = f"seo:detail:{make_slug}:{model_slug}:{detail_slug}"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
 
@@ -785,13 +862,14 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         # Find the specific age band data
         current_band = None
         for band in all_age_bands:
-            if band["age_band"] == target_age_band_raw:
+            if band["age_band"] == age_band_raw:
                 current_band = band
                 break
 
         if not current_band:
+            label = str(specific_year) if specific_year else AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw)
             return _not_found_html(
-                f"Not enough test data for {year} {make_info['display']} {model_info['display']}."
+                f"Not enough test data for {label} {make_info['display']} {model_info['display']}."
             )
 
         # Build component list sorted by risk
@@ -802,24 +880,45 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             reverse=True,
         )
 
-        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{year}/"
+        # Get competitor models (for age-band pages)
+        competitors = []
+        if not specific_year:
+            rival_list = COMPETITOR_MODELS.get(model, [])
+            for rival_make, rival_model in rival_list:
+                rival_make_slug = _slugify(rival_make)
+                rival_model_slug = _slugify(rival_model)
+                if (rival_make_slug, rival_model_slug) in _model_by_slug:
+                    rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
+                    competitors.append({
+                        "make_slug": rival_make_slug,
+                        "model_slug": rival_model_slug,
+                        "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
+                        "model_display": rival_info["display"],
+                    })
 
-        template = jinja_env.get_template("seo_model_year.html")
+        if specific_year:
+            canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{specific_year}/"
+            template_name = "seo_model_year.html"
+        else:
+            canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{age_slug}/"
+            template_name = "seo_model_age.html"
+
+        template = jinja_env.get_template(template_name)
         html = template.render(
             make_display=make_info["display"],
             make_slug=make_slug,
             model_display=model_info["display"],
             model_slug=model_slug,
-            age_band_display=AGE_BAND_DISPLAY.get(target_age_band_raw, target_age_band_raw),
-            age_band_raw=target_age_band_raw,
-            age_slug=target_age_slug,
-            specific_year=year,
+            age_band_display=AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw),
+            age_band_raw=age_band_raw,
+            age_slug=age_slug,
+            specific_year=specific_year,
             fail_rate=current_band["fail_rate"],
             total_tests=current_band["total_tests"],
             components=components,
             top_components=components[:3],
             all_age_bands=all_age_bands,
-            competitors=[],
+            competitors=competitors,
             canonical_url=canonical_url,
         )
         _seo_cache[cache_key] = html
@@ -928,101 +1027,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         )
         _seo_cache[cache_key] = html
         return _html_response(html)
-
-    # --- Age-band pages: /mot-check/{make}/{model}/{age_slug}/ ---
-
-    @app.get("/mot-check/{make_slug}/{model_slug}/{age_slug}/", response_class=HTMLResponse)
-    def seo_model_age(make_slug: str, model_slug: str, age_slug: str):
-        if make_slug not in _make_by_slug:
-            return _not_found_html("Make not found.")
-        if (make_slug, model_slug) not in _model_by_slug:
-            return _not_found_html(
-                f"Model not found for {_make_by_slug[make_slug]['display']}."
-            )
-        # Only serve age-band pages for eligible models (staged rollout)
-        if (make_slug, model_slug) not in _age_band_eligible:
-            return _not_found_html("Age-band data not available for this model.")
-
-        age_band_raw = AGE_BAND_SLUGS.get(age_slug)
-        if not age_band_raw:
-            return _not_found_html("Invalid age range.")
-
-        cache_key = f"seo:age:{make_slug}:{model_slug}:{age_slug}"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        make_info = _make_by_slug[make_slug]
-        model_info = _model_by_slug[(make_slug, model_slug)]
-        make = make_info["make"]
-        model = model_info["model_id"]
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-            all_age_bands = _query_model_age_bands(conn, make, model)
-            conn.row_factory = old_factory
-
-        # Find the specific age band
-        current_band = None
-        for band in all_age_bands:
-            if band["age_band"] == age_band_raw:
-                current_band = band
-                break
-
-        if not current_band:
-            return _not_found_html(
-                f"Not enough test data for {make_info['display']} {model_info['display']} "
-                f"in the {AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw)} year age range."
-            )
-
-        # Build component list sorted by risk
-        components = sorted(
-            [{"name": name, "risk": current_band["components"].get(name, 0)}
-             for _, name in COMPONENTS],
-            key=lambda c: c["risk"],
-            reverse=True,
-        )
-
-        # Get competitor models
-        competitors = []
-        rival_list = COMPETITOR_MODELS.get(model, [])
-        for rival_make, rival_model in rival_list:
-            rival_make_slug = _slugify(rival_make)
-            rival_model_slug = _slugify(rival_model)
-            if (rival_make_slug, rival_model_slug) in _model_by_slug:
-                rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
-                competitors.append({
-                    "make_slug": rival_make_slug,
-                    "model_slug": rival_model_slug,
-                    "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
-                    "model_display": rival_info["display"],
-                })
-
-        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{age_slug}/"
-
-        template = jinja_env.get_template("seo_model_age.html")
-        html = template.render(
-            make_display=make_info["display"],
-            make_slug=make_slug,
-            model_display=model_info["display"],
-            model_slug=model_slug,
-            age_band_display=AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw),
-            age_band_raw=age_band_raw,
-            age_slug=age_slug,
-            fail_rate=current_band["fail_rate"],
-            total_tests=current_band["total_tests"],
-            components=components,
-            top_components=components[:3],
-            all_age_bands=all_age_bands,
-            competitors=competitors,
-            canonical_url=canonical_url,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
-
-
 
 
     # --- Regional pages: /local-mot/{city_slug}/ ---
@@ -1327,85 +1331,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
-    # --- Phase 3: Top-Level Component Aggregation Hubs ---
-
-    @app.get("/mot-check/problems/{component_slug}/", response_class=HTMLResponse)
-    def seo_component_hub(component_slug: str):
-        if component_slug not in COMPONENT_SLUGS:
-            return _not_found_html("Component category not found.")
-
-        cache_key = f"seo:component_hub:{component_slug}"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        db_col, display_name = COMPONENT_SLUGS[component_slug]
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-            
-            # Query the models with the highest failure rates for this specific component
-            # (Minimum 5000 tests to ensure statistical significance)
-            query = f"""
-                SELECT model_id, 
-                       SUM(Total_Tests) as total_tests,
-                       ROUND(SUM({db_col} * Total_Tests) / SUM(Total_Tests), 4) as comp_risk
-                FROM risks 
-                WHERE age_band != 'Unknown'
-                GROUP BY model_id 
-                HAVING SUM(Total_Tests) >= 5000 
-                ORDER BY comp_risk DESC 
-                LIMIT 50
-            """
-            try:
-                rows = conn.execute(query).fetchall()
-            except sqlite3.OperationalError:
-                # Fallback if 'risks' table structure doesn't match or table missing
-                return _not_found_html("Data unavailable.")
-
-            conn.row_factory = old_factory
-
-        worst_models = []
-        for rank, row in enumerate(rows, 1):
-            model_id = row["model_id"]
-            
-            # Find the slugs to build the link
-            page_link = None
-            # Heuristic match for slugs
-            # This is O(N) but N is small (~400 models)
-            for (ms, mds), info in _model_by_slug.items():
-                # model_id in DB is usually "MAKE MODEL"
-                # _model_by_slug info has "make" and "model_id" (which might be the raw ID)
-                # Let's try exact match on model_id first
-                if info["model_id"] == model_id:
-                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
-                     break
-                # Fallback: if model_id is "FORD FIESTA" and info['make']="FORD" and info['model_id']="FIESTA"
-                full_constructed = f"{info['make']} {info['model_id']}"
-                if full_constructed == model_id:
-                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
-                     break
-
-            worst_models.append({
-                "rank": rank,
-                "model_id": model_id,
-                "display_name": _display_name(model_id),
-                "total_tests": int(row["total_tests"]),
-                "comp_risk": float(row["comp_risk"]),
-                "page_link": page_link,
-            })
-
-        # Render with a new template: seo_component_hub.html
-        template = jinja_env.get_template("seo_component_hub.html")
-        html = template.render(
-            component_slug=component_slug,
-            component_name=display_name,
-            worst_models=worst_models
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
 
     # --- /insights/ routes (Data PR stories) ---
 
