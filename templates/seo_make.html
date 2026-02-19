@@ -109,7 +109,8 @@ DVSA data.{% endblock %}
     best_model.display_name }}</a> with a {{ "%.1f"|format(best_model.fail_rate * 100) }}% failure rate. The
   <strong>highest failure rate</strong> belongs to the <a href="/mot-check/{{ make_slug }}/{{ worst_model.slug }}/"
     style="color: #e5c07b;">{{ make_display }} {{ worst_model.display_name }}</a> at {{
-  "%.1f"|format(worst_model.fail_rate * 100) }}%.</p>
+  "%.1f"|format(worst_model.fail_rate * 100) }}%.
+</p>
 
 <p>These figures are calculated from real DVSA MOT test records and represent weighted averages across all vehicle ages
   and mileage bands. Only models with 100 or more test records are included to ensure statistical reliability.</p>
@@ -185,9 +186,9 @@ DVSA data.{% endblock %}
   <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to get a personalised MOT failure prediction for your
     specific {{ make_display }}.</p>
   <form class="reg-lookup-form" action="/" method="get">
-    <input type="hidden" name="utm_source" value="seo">
+    <input type="hidden" name="utm_source" value="seo_pages">
     <input type="hidden" name="utm_medium" value="organic">
-    <input type="hidden" name="utm_campaign" value="{{ make_slug }}">
+    <input type="hidden" name="utm_campaign" value="{{ make_slug }}_make_hub">
     <input type="hidden" name="utm_content" value="make_overview">
     <div class="reg-plate-wrapper">
       <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required

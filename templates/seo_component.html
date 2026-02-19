@@ -126,7 +126,7 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
   <p style="color: #a0a0a0; margin-bottom: 1rem;">See if your {{ make_display }} {{ model_display }} is likely to have
     {{ component_name|lower }} issues.</p>
   <form class="reg-lookup-form" action="/" method="get">
-    <input type="hidden" name="utm_source" value="seo">
+    <input type="hidden" name="utm_source" value="seo_pages">
     <input type="hidden" name="utm_medium" value="organic">
     <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
     <input type="hidden" name="utm_content" value="component_{{ component_name|lower|replace(' ', '-') }}">
