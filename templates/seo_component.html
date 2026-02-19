@@ -1,0 +1,144 @@
+{% extends "seo_base.html" %}
+
+{% block title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems & Repair Costs | AutoSafe{%
+endblock %}
+{% block meta_description %}Common {{ component_name|lower }} problems with the {{ make_display }} {{ model_display }}.
+Failure risk: {{ "%.1f"|format(risk * 100) }}%. Estimated repair cost: &pound;{{ cost_data.typical if cost_data else
+"TBC" }}. Full reliability breakdown.{% endblock %}
+{% block og_title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems{% endblock %}
+{% block og_description %}Deep dive into {{ component_name|lower }} reliability for the {{ make_display }} {{
+model_display }}. Risk analysis and repair costs.{% endblock %}
+{% block twitter_title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems{% endblock %}
+{% block twitter_description %}Deep dive into {{ component_name|lower }} reliability for the {{ make_display }} {{
+model_display }}. Risk analysis and repair costs.{% endblock %}
+{% block canonical_url %}{{ canonical_url }}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do {{ make_display }} {{ model_display }} cars have {{ component_name|lower }} problems?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Based on {{ "{:,}".format(total_tests) }} MOT tests, the {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(risk * 100) }}% risk of {{ component_name|lower }} failure. This is a {% if risk > 0.10 %}common issue{% else %}standard wear item{% endif %} for this model."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does it cost to fix {{ component_name|lower }} on a {{ make_display }} {{ model_display }}?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "{% if cost_data %}Typical repair costs for {{ component_name|lower }} on this vehicle range from &pound;{{ cost_data.range_low }} to &pound;{{ cost_data.range_high }}, with an average cost of &pound;{{ cost_data.typical }}.{% else %}Repair costs vary significantly depending on the specific fault.{% endif %}"
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumb_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
+    {"@type": "ListItem", "position": 3, "name": "{{ make_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/"},
+    {"@type": "ListItem", "position": 4, "name": "{{ model_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/"},
+    {"@type": "ListItem", "position": 5, "name": "{{ component_name }} Problems"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+    <a href="/mot-check/{{ make_slug }}/">{{ make_display }}</a><span class="sep">/</span>
+    <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/">{{ model_display }}</a><span class="sep">/</span>
+    <span>{{ component_name }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+<h1>{{ make_display }} {{ model_display }} {{ component_name }} Problems</h1>
+
+<div class="stat-highlight">
+    <div class="risk-meter-container" style="margin-bottom: 1rem;">
+        <div class="risk-label">Failure Risk</div>
+        <div class="risk-value {% if risk > 0.10 %}high{% elif risk > 0.05 %}medium{% else %}low{% endif %}">{{
+            "%.1f"|format(risk * 100) }}%</div>
+        <div class="risk-sub">Of MOTs involve {{ component_name|lower }} defects</div>
+    </div>
+
+    {% if cost_data %}
+    <div class="cost-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div class="label">Estimated Repair Cost</div>
+        <div class="big-number" style="font-size: 2.5rem; color: #e5c07b;">&pound;{{ cost_data.typical }}</div>
+        <div class="label">Typically between &pound;{{ cost_data.range_low }} and &pound;{{ cost_data.range_high }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<h2>Is this a common fault?</h2>
+<p>
+    {% if risk > 0.15 %}
+    Yes. <strong>{{ component_name }}</strong> is a major weak point for the {{ make_display }} {{ model_display }}. A
+    failure rate of {{ "%.1f"|format(risk * 100) }}% is significantly high.
+    {% elif risk > 0.08 %}
+    It is a frequent issue. With {{ "%.1f"|format(risk * 100) }}% of MOTs flagging {{ component_name|lower }} issues,
+    effective maintenance is key.
+    {% else %}
+    It is not unusually high, but {{ component_name|lower }} issues still account for {{ "%.1f"|format(risk * 100) }}%
+    of failures.
+    {% endif %}
+    This data is based on {{ "{:,}".format(total_tests) }} real MOT tests.
+</p>
+
+<h2>Comparison to Other Issues</h2>
+<p>How {{ component_name|lower }} compares to other common faults on this {{ model_display }}:</p>
+
+{% for comp in top_components %}
+<div class="risk-bar-container">
+    <div class="risk-bar-label">
+        <span {% if comp.name==component_name %}style="color: #e5c07b; font-weight: bold;" {% endif %}>{{ comp.name
+            }}</span>
+        <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
+    </div>
+    <div class="risk-bar">
+        <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}"
+            style="width: {{ (comp.risk * 500)|round|int }}%; {% if comp.name == component_name %}background-color: #e5c07b;{% endif %}">
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Check Your Specific Vehicle</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">See if your {{ make_display }} {{ model_display }} is likely to have
+        {{ component_name|lower }} issues.</p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+                aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My Risk</button>
+    </form>
+</div>
+
+<p style="margin-top: 1rem;"><a href="/mot-check/{{ make_slug }}/{{ model_slug }}/" style="color: #e5c07b;">&larr; Back
+        to {{ make_display }} {{ model_display }} reliability overview</a></p>
+
+{% endblock %}
+
+{% block cta_heading %}Avoid {{ component_name }} Bills{% endblock %}
+{% block cta_text %}Get a free predictive health check for your {{ make_display }} {{ model_display }} to spot problems
+early.{% endblock %}

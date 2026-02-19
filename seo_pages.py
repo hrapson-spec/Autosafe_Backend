@@ -18,6 +18,7 @@ Plus /insights/ data story pages and a dynamic /sitemap.xml.
 import logging
 import sqlite3
 from datetime import date
+from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
 
 from cachetools import TTLCache
@@ -698,6 +699,215 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+    # --- Year-specific pages: /mot-check/{make}/{model}/{year}/ ---
+
+    @app.get("/mot-check/{make_slug}/{model_slug}/{year}/", response_class=HTMLResponse)
+    async def seo_model_year(make_slug: str, model_slug: str, year: int):
+        # Validate year safety (e.g. 1980-2030)
+        current_year = date.today().year
+        if year < 1980 or year > current_year + 1:
+             return _not_found_html("Invalid year.")
+
+        # Calculate age (e.g. 2024 - 2018 = 6 years old)
+        age = current_year - year
+        
+        # Determine age band
+        # 0-3, 3-5, 6-10, 10-15, 15+
+        from utils import get_age_band
+        target_age_band_raw = get_age_band(age)
+        
+        # Convert to slug (e.g. 6-10 -> 6-10-years)
+        # We need the reverse map of AGE_BAND_SLUGS
+        # Or just iterate since it's small
+        target_age_slug = None
+        for slug, raw in AGE_BAND_SLUGS.items():
+            if raw == target_age_band_raw:
+                target_age_slug = slug
+                break
+        
+        if not target_age_slug:
+             # Fallback if get_age_band returns something unexpected
+             return _not_found_html("Data not available for this vehicle age.")
+
+        # Now reuse the logic from seo_model_age, but inject year-specific context
+        # We can actually just call the internal logic or copy-paste (DRY vs Decoupling)
+        # Given the existing structure, I'll copy the core logic but render with `specific_year`
+        
+        if make_slug not in _make_by_slug:
+            return _not_found_html("Make not found.")
+        if (make_slug, model_slug) not in _model_by_slug:
+            return _not_found_html(
+                f"Model not found for {_make_by_slug[make_slug]['display']}."
+            )
+        
+        # Only check eligibility if we want to restrict strictly (optional, but good for data quality)
+        if (make_slug, model_slug) not in _age_band_eligible:
+            return _not_found_html("Detailed data not available for this model yet.")
+
+        cache_key = f"seo:year:{make_slug}:{model_slug}:{year}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        make_info = _make_by_slug[make_slug]
+        model_info = _model_by_slug[(make_slug, model_slug)]
+        make = make_info["make"]
+        model = model_info["model_id"]
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+            all_age_bands = _query_model_age_bands(conn, make, model)
+            conn.row_factory = old_factory
+
+        # Find the specific age band data
+        current_band = None
+        for band in all_age_bands:
+            if band["age_band"] == target_age_band_raw:
+                current_band = band
+                break
+
+        if not current_band:
+            return _not_found_html(
+                f"Not enough test data for {year} {make_info['display']} {model_info['display']}."
+            )
+
+        # Build component list sorted by risk
+        components = sorted(
+            [{"name": name, "risk": current_band["components"].get(name, 0)}
+             for _, name in COMPONENTS],
+            key=lambda c: c["risk"],
+            reverse=True,
+        )
+
+        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{year}/"
+
+        template = jinja_env.get_template("seo_model_age.html")
+        html = template.render(
+            make_display=make_info["display"],
+            make_slug=make_slug,
+            model_display=model_info["display"],
+            model_slug=model_slug,
+            age_band_display=AGE_BAND_DISPLAY.get(target_age_band_raw, target_age_band_raw),
+            age_band_raw=target_age_band_raw,
+            age_slug=target_age_slug,
+            specific_year=year,  # Trigger year-specific overrides in template
+            fail_rate=current_band["fail_rate"],
+            total_tests=current_band["total_tests"],
+            components=components,
+            top_components=components[:3],
+            all_age_bands=all_age_bands,
+            competitors=[], # Can populate if needed, or leave empty
+            canonical_url=canonical_url,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
+    # --- Component Deep-Dive pages: /mot-check/{make}/{model}/problems/{component}/ ---
+
+    @app.get("/mot-check/{make_slug}/{model_slug}/problems/{component_slug}/", response_class=HTMLResponse)
+    async def seo_model_component(make_slug: str, model_slug: str, component_slug: str):
+        # Resolve component slug to internal name
+        # We need a map from slug (e.g. 'suspension') to display name and internal key
+        # COMPONENTS list has (col, name) e.g. ('Risk_Suspension', 'Suspension')
+        
+        target_component = None
+        target_col = None
+        
+        # Simple slug matching
+        for col, name in COMPONENTS:
+            if _slugify(name) == component_slug:
+                target_component = name
+                target_col = col
+                break
+        
+        if not target_component:
+             return _not_found_html("Component not found.")
+
+        if make_slug not in _make_by_slug:
+            return _not_found_html("Make not found.")
+        if (make_slug, model_slug) not in _model_by_slug:
+            return _not_found_html(
+                f"Model not found for {_make_by_slug[make_slug]['display']}."
+            )
+
+        cache_key = f"seo:comp:{make_slug}:{model_slug}:{component_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        make_info = _make_by_slug[make_slug]
+        model_info = _model_by_slug[(make_slug, model_slug)]
+        make = make_info["make"]
+        model = model_info["model_id"]
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            # Query overall stats to check if this component is actually an issue
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+            overall = _query_model_overall(conn, make, model)
+            conn.row_factory = old_factory
+            
+        if not overall:
+             return _not_found_html("Data not available.")
+
+        # Find the specific component risk
+        comp_risk = 0.0
+        for c in overall["components"]:
+            if c["name"] == target_component:
+                comp_risk = c["risk"]
+                break
+        
+        # Threshold check: Is this actually a problem?
+        # If risk is very low (< 2%), maybe don't index this page to avoid thin content
+        # But for now, let's render it if it matches user intent
+        
+        # Get repair cost data
+        # Normalize name for lookup in REPAIR_COSTS
+        # e.g. "Lamps, Reflectors And Electrical Equipment" -> "Lamps_Reflectors_And_Electrical_Equipment"
+        # Actually our REPAIR_COSTS keys are simplified. 
+        # let's try to match logic in repair_costs.py
+        
+        # COMPONENT_MAP in repair_costs.py maps Risk columns to simple keys
+        # We can replicate that mapping here or reuse it if it was public
+        # It's inside the function. Let's recreate a simple map or modify repair_costs.py (too invasive)
+        # Let's just hardcode the mapping here as it's stable
+        
+        COST_KEY_MAP = {
+            "Risk_Brakes": "Brakes",
+            "Risk_Suspension": "Suspension",
+            "Risk_Tyres": "Tyres",
+            "Risk_Steering": "Steering",
+            "Risk_Visibility": "Visibility",
+            "Risk_Lamps_Reflectors_And_Electrical_Equipment": "Lamps_Reflectors_And_Electrical_Equipment",
+            "Risk_Body_Chassis_Structure": "Body_Chassis_Structure",
+        }
+        
+        cost_key = COST_KEY_MAP.get(target_col)
+        cost_data = REPAIR_COSTS.get(cost_key)
+        
+        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/problems/{component_slug}/"
+
+        template = jinja_env.get_template("seo_component.html")
+        html = template.render(
+            make_display=make_info["display"],
+            make_slug=make_slug,
+            model_display=model_info["display"],
+            model_slug=model_slug,
+            component_name=target_component,
+            component_slug=component_slug,
+            risk=comp_risk,
+            overall_fail_rate=overall["fail_rate"],
+            total_tests=overall["total_tests"],
+            cost_data=cost_data,
+            top_components=overall["components"][:3], # For context
+            canonical_url=canonical_url,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     # --- Age-band pages: /mot-check/{make}/{model}/{age_slug}/ ---
 
     @app.get("/mot-check/{make_slug}/{model_slug}/{age_slug}/", response_class=HTMLResponse)
@@ -790,6 +1000,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         )
         _seo_cache[cache_key] = html
         return _html_response(html)
+
+
 
     # --- SSR Homepage ---
 
