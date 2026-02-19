@@ -393,7 +393,10 @@ class DVSAClient:
 
                 if response.status_code == 401:
                     body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.error(f"DVSA 401 Unauthorized: {body_preview}")
+                    logger.warning(f"DVSA 401 Unauthorized: {body_preview} — invalidating token and retrying")
+                    self._token.expires_at = 0  # Force token refresh on next attempt
+                    if attempt < max_retries - 1:
+                        continue
                     raise DVSAAPIError("DVSA OAuth token invalid or expired")
 
                 if response.status_code == 429:
@@ -410,7 +413,11 @@ class DVSAClient:
                     logger.error(f"DVSA {response.status_code}: {body_preview}")
                     raise DVSAAPIError(f"DVSA API error: {response.status_code}")
 
-                data = response.json()
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error(f"Failed to parse JSON from DVSA for {vrm_hash}")
+                    raise DVSAAPIError("Invalid JSON response from DVSA API")
 
                 # Parse response
                 history = self._parse_response(vrm, data)

@@ -6,13 +6,14 @@ import httpx
 import logging
 from typing import Optional, Tuple, Dict
 from math import radians, sin, cos, sqrt, atan2
+from cachetools import LRUCache
 
 logger = logging.getLogger(__name__)
 
 POSTCODES_IO_BASE = "https://api.postcodes.io"
 
-# In-memory cache to reduce API calls
-_postcode_cache: Dict[str, Tuple[float, float]] = {}
+# Bounded in-memory cache to prevent unbounded memory growth
+_postcode_cache: LRUCache = LRUCache(maxsize=10000)
 
 
 async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float]]:
@@ -96,24 +97,26 @@ async def bulk_lookup_postcodes(postcodes: list) -> Dict[str, Tuple[float, float
     if not uncached:
         return results
 
-    # Bulk API call (max 100)
+    # Bulk API call (max 100 per request)
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{POSTCODES_IO_BASE}/postcodes",
-                json={"postcodes": uncached[:100]},
-                timeout=10.0
-            )
+            for i in range(0, len(uncached), 100):
+                batch = uncached[i:i + 100]
+                response = await client.post(
+                    f"{POSTCODES_IO_BASE}/postcodes",
+                    json={"postcodes": batch},
+                    timeout=10.0
+                )
 
-            if response.status_code == 200:
-                data = response.json()
-                for item in data.get("result", []):
-                    if item.get("result"):
-                        postcode = item["query"].upper().replace(" ", "")
-                        result = item["result"]
-                        coords = (result["latitude"], result["longitude"])
-                        _postcode_cache[postcode] = coords
-                        results[postcode] = coords
+                if response.status_code == 200:
+                    data = response.json()
+                    for item in data.get("result", []):
+                        if item.get("result"):
+                            postcode = item["query"].upper().replace(" ", "")
+                            result = item["result"]
+                            coords = (result["latitude"], result["longitude"])
+                            _postcode_cache[postcode] = coords
+                            results[postcode] = coords
 
     except Exception as e:
         logger.error(f"Bulk postcode lookup failed: {e}")
@@ -146,5 +149,4 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 def clear_cache():
     """Clear the postcode cache (useful for testing)."""
-    global _postcode_cache
-    _postcode_cache = {}
+    _postcode_cache.clear()
