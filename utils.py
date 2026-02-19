@@ -24,7 +24,7 @@ def get_age_band(age: Optional[Union[int, float]]) -> str:
         return 'Unknown'
 
     if age < 3:
-        return '0-3'
+        return '0-2'
     elif age < 6:
         return '3-5'
     elif age < 11:

@@ -17,6 +17,7 @@ Plus /insights/ data story pages and a dynamic /sitemap.xml.
 
 import logging
 import sqlite3
+import re
 from datetime import date
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
@@ -27,6 +28,24 @@ from fastapi.responses import HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
+
+
+def _slugify(text: str) -> str:
+    """Convert e.g. '3 SERIES' -> '3-series', 'LAND ROVER' -> 'land-rover', 'Lamps & Electrics' -> 'lamps-and-electrics'."""
+    text = text.lower()
+    text = text.replace("&", "and")
+    text = re.sub(r'[^a-z0-9\s-]', '', text)
+    text = re.sub(r'[\s]+', '-', text).strip('-')
+    return text
+
+
+def _display_name(text: str) -> str:
+    """Convert e.g. 'FORD' -> 'Ford', 'LAND ROVER' -> 'Land Rover', 'BMW' -> 'BMW'."""
+    # Keep all-uppercase short names (BMW, MG, etc.)
+    if len(text) <= 3 and text.isalpha():
+        return text
+    # Title-case everything else
+    return text.title()
 
 # --- Jinja2 setup ---
 TEMPLATE_DIR = Path(__file__).parent / "templates"
@@ -52,17 +71,17 @@ _data_updated: str = ""
 
 # Age band slug mappings
 AGE_BAND_SLUGS = {
-    "0-3-years": "0-3",
+    "0-2-years": "0-2",
     "3-5-years": "3-5",
     "6-10-years": "6-10",
-    "10-15-years": "10-15",
+    "11-15-years": "11-15",
     "15-plus-years": "15+",
 }
 AGE_BAND_DISPLAY = {
-    "0-3": "0-3",
+    "0-2": "0-2",
     "3-5": "3-5",
     "6-10": "6-10",
-    "10-15": "10-15",
+    "11-15": "11-15",
     "15+": "15+",
 }
 
@@ -139,21 +158,15 @@ CITY_CONFIG = {
     "belfast": {"display": "Belfast", "prefixes": ["BT"]},
 }
 
+# Mapping for component slugs to (db_column, display_name)
+COMPONENT_SLUGS = {
+    _slugify(name): (col, name) for col, name in COMPONENTS
+}
+
 UK_AVERAGE_FAIL_RATE = 0.28
 
 
-def _slugify(text: str) -> str:
-    """Convert e.g. '3 SERIES' -> '3-series', 'LAND ROVER' -> 'land-rover'."""
-    return text.lower().replace(" ", "-")
 
-
-def _display_name(text: str) -> str:
-    """Convert e.g. 'FORD' -> 'Ford', 'LAND ROVER' -> 'Land Rover', 'BMW' -> 'BMW'."""
-    # Keep all-uppercase short names (BMW, MG, etc.)
-    if len(text) <= 3 and text.isalpha():
-        return text
-    # Title-case everything else
-    return text.title()
 
 
 def _model_where_clause(make: str, model: str):
@@ -361,10 +374,10 @@ def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
             GROUP BY age_band
             HAVING SUM(Total_Tests) >= 100
             ORDER BY CASE age_band
-                WHEN '0-3' THEN 1
+                WHEN '0-2' THEN 1
                 WHEN '3-5' THEN 2
                 WHEN '6-10' THEN 3
-                WHEN '10-15' THEN 4
+                WHEN '11-15' THEN 4
                 WHEN '15+' THEN 5
                 ELSE 6
             END""",
@@ -500,7 +513,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- Comparison pages (registered first so /mot-check/compare/ isn't caught by {make_slug}) ---
 
     @app.get("/mot-check/compare/{slug1}-vs-{slug2}/", response_class=HTMLResponse)
-    async def seo_compare(slug1: str, slug2: str):
+    def seo_compare(slug1: str, slug2: str):
         # Find matching pair
         pair_key = f"{slug1}-vs-{slug2}"
         cache_key = f"seo:compare:{pair_key}"
@@ -573,7 +586,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/mot-check/", response_class=HTMLResponse)
-    async def seo_index():
+    def seo_index():
         cache_key = "seo:index"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -589,7 +602,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/mot-check/{make_slug}/", response_class=HTMLResponse)
-    async def seo_make(make_slug: str):
+    def seo_make(make_slug: str):
         if make_slug not in _make_by_slug:
             return _not_found_html(f"Make not found. We don't have data for this manufacturer.")
 
@@ -627,7 +640,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/mot-check/{make_slug}/{model_slug}/", response_class=HTMLResponse)
-    async def seo_model(make_slug: str, model_slug: str):
+    def seo_model(make_slug: str, model_slug: str):
         if make_slug not in _make_by_slug:
             return _not_found_html("Make not found.")
         if (make_slug, model_slug) not in _model_by_slug:
@@ -718,7 +731,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- Year-specific pages: /mot-check/{make}/{model}/{year}/ ---
 
     @app.get("/mot-check/{make_slug}/{model_slug}/{year}/", response_class=HTMLResponse)
-    async def seo_model_year(make_slug: str, model_slug: str, year: int):
+    def seo_model_year(make_slug: str, model_slug: str, year: int):
         # Validate year safety (e.g. 1980-2030)
         current_year = date.today().year
         if year < 1980 or year > current_year + 1:
@@ -728,7 +741,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         age = current_year - year
         
         # Determine age band
-        # 0-3, 3-5, 6-10, 10-15, 15+
+        # 0-2, 3-5, 6-10, 11-15, 15+
         from utils import get_age_band
         target_age_band_raw = get_age_band(age)
         
@@ -799,7 +812,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
         canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{year}/"
 
-        template = jinja_env.get_template("seo_model_age.html")
+        template = jinja_env.get_template("seo_model_year.html")
         html = template.render(
             make_display=make_info["display"],
             make_slug=make_slug,
@@ -823,7 +836,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- Component Deep-Dive pages: /mot-check/{make}/{model}/problems/{component}/ ---
 
     @app.get("/mot-check/{make_slug}/{model_slug}/problems/{component_slug}/", response_class=HTMLResponse)
-    async def seo_model_component(make_slug: str, model_slug: str, component_slug: str):
+    def seo_model_component(make_slug: str, model_slug: str, component_slug: str):
         # Resolve component slug to internal name
         # We need a map from slug (e.g. 'suspension') to display name and internal key
         # COMPONENTS list has (col, name) e.g. ('Risk_Suspension', 'Suspension')
@@ -927,7 +940,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- Age-band pages: /mot-check/{make}/{model}/{age_slug}/ ---
 
     @app.get("/mot-check/{make_slug}/{model_slug}/{age_slug}/", response_class=HTMLResponse)
-    async def seo_model_age(make_slug: str, model_slug: str, age_slug: str):
+    def seo_model_age(make_slug: str, model_slug: str, age_slug: str):
         if make_slug not in _make_by_slug:
             return _not_found_html("Make not found.")
         if (make_slug, model_slug) not in _model_by_slug:
@@ -1023,7 +1036,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- Regional pages: /local-mot/{city_slug}/ ---
 
     @app.get("/local-mot/{city_slug}/", response_class=HTMLResponse)
-    async def seo_local_page(city_slug: str):
+    def seo_local_page(city_slug: str):
         city_slug = city_slug.lower()
         if city_slug not in CITY_CONFIG:
             return _not_found_html("City not found. We currently cover major UK cities.")
@@ -1069,98 +1082,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
 
-    # --- SSR Homepage ---
-
-    @app.get("/", response_class=HTMLResponse)
-    async def seo_homepage():
-        cache_key = "seo:homepage"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-
-            # Top 10 models by test volume
-            top_models = []
-            for (make_slug, model_slug), model_info in _model_by_slug.items():
-                make = model_info["make"]
-                model = model_info["model_id"]
-                overall = _query_model_overall(conn, make, model)
-                if overall:
-                    make_info = _make_by_slug.get(make_slug, {})
-                    top_models.append({
-                        "make_display": make_info.get("display", make),
-                        "model_display": model_info["display"],
-                        "make_slug": make_slug,
-                        "model_slug": model_slug,
-                        "fail_rate": overall["fail_rate"],
-                        "total_tests": overall["total_tests"],
-                    })
-
-            top_models.sort(key=lambda m: m["total_tests"], reverse=True)
-            top_models = top_models[:10]
-
-            # National average component risks
-            comp_cols = ", ".join(
-                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
-                for col, _ in COMPONENTS
-            )
-            row = conn.execute(
-                f"""SELECT SUM(Total_Tests) as total_tests,
-                           {comp_cols}
-                    FROM risks
-                    WHERE age_band != 'Unknown'"""
-            ).fetchone()
-
-            total_tests_analysed = int(row["total_tests"]) if row and row["total_tests"] else 142000000
-
-            top_components = []
-            if row:
-                for col, name in COMPONENTS:
-                    val = row[col] if row[col] else 0
-                    top_components.append({"name": name, "avg_risk": float(val)})
-                top_components.sort(key=lambda c: c["avg_risk"], reverse=True)
-
-            conn.row_factory = old_factory
-
-        # All makes for the browse grid
-        makes = sorted(
-            [{"slug": slug, "display_name": info["display"]} for slug, info in _make_by_slug.items()],
-            key=lambda m: m["display_name"],
-        )
-
-        # Insight slugs (optional)
-        insights = []
-        try:
-            from data_stories.query_engine import STORY_QUERIES
-            for name, query_fn in STORY_QUERIES.items():
-                try:
-                    story = query_fn()
-                    insights.append({"slug": story["slug"], "title": story.get("headline", name)})
-                except Exception:
-                    pass
-        except ImportError:
-            pass
-
-        template = jinja_env.get_template("seo_homepage.html")
-        html = template.render(
-            top_models=top_models,
-            national_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
-            top_components=top_components,
-            total_tests_analysed=total_tests_analysed,
-            makes=makes,
-            insights=insights,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
-
     # --- K7 Pillar Page: "Will My Car Pass Its MOT?" ---
 
     @app.get("/will-my-car-pass-mot/", response_class=HTMLResponse)
-    async def seo_k7_pillar():
+    def seo_k7_pillar():
         cache_key = "seo:k7-pillar"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -1227,7 +1152,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- /insights/ data story: Unreliable 3-year-old cars 2026 ---
 
     @app.get("/insights/unreliable-3-year-old-cars-2026/", response_class=HTMLResponse)
-    async def seo_unreliable_cars():
+    def seo_unreliable_cars():
         cache_key = "seo:unreliable-cars-2026"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -1308,7 +1233,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # --- March 2026 MOT Rush insight page ---
 
     @app.get("/insights/march-mot-rush-2026/", response_class=HTMLResponse)
-    async def seo_march_rush():
+    def seo_march_rush():
         cache_key = "seo:march-rush-2026"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -1407,10 +1332,93 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
+    # --- Phase 3: Top-Level Component Aggregation Hubs ---
+
+    @app.get("/mot-check/problems/{component_slug}/", response_class=HTMLResponse)
+    def seo_component_hub(component_slug: str):
+        if component_slug not in COMPONENT_SLUGS:
+            return _not_found_html("Component category not found.")
+
+        cache_key = f"seo:component_hub:{component_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        db_col, display_name = COMPONENT_SLUGS[component_slug]
+
+        with get_sqlite_connection() as conn:
+            if conn is None:
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            old_factory = conn.row_factory
+            conn.row_factory = sqlite3.Row
+            
+            # Query the models with the highest failure rates for this specific component
+            # (Minimum 5000 tests to ensure statistical significance)
+            query = f"""
+                SELECT model_id, 
+                       SUM(Total_Tests) as total_tests,
+                       ROUND(SUM({db_col} * Total_Tests) / SUM(Total_Tests), 4) as comp_risk
+                FROM risks 
+                WHERE age_band != 'Unknown'
+                GROUP BY model_id 
+                HAVING SUM(Total_Tests) >= 5000 
+                ORDER BY comp_risk DESC 
+                LIMIT 50
+            """
+            try:
+                rows = conn.execute(query).fetchall()
+            except sqlite3.OperationalError:
+                # Fallback if 'risks' table structure doesn't match or table missing
+                return _not_found_html("Data unavailable.")
+
+            conn.row_factory = old_factory
+
+        worst_models = []
+        for rank, row in enumerate(rows, 1):
+            model_id = row["model_id"]
+            
+            # Find the slugs to build the link
+            page_link = None
+            # Heuristic match for slugs
+            # This is O(N) but N is small (~400 models)
+            for (ms, mds), info in _model_by_slug.items():
+                # model_id in DB is usually "MAKE MODEL"
+                # _model_by_slug info has "make" and "model_id" (which might be the raw ID)
+                # Let's try exact match on model_id first
+                if info["model_id"] == model_id:
+                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
+                     break
+                # Fallback: if model_id is "FORD FIESTA" and info['make']="FORD" and info['model_id']="FIESTA"
+                full_constructed = f"{info['make']} {info['model_id']}"
+                if full_constructed == model_id:
+                     page_link = f"/mot-check/{ms}/{mds}/problems/{component_slug}/"
+                     break
+
+            worst_models.append({
+                "rank": rank,
+                "model_id": model_id,
+                "display_name": _display_name(model_id),
+                "total_tests": int(row["total_tests"]),
+                "comp_risk": float(row["comp_risk"]),
+                "page_link": page_link,
+            })
+
+        # Render with a new template: seo_component_hub.html
+        template = jinja_env.get_template("seo_component_hub.html")
+        html = template.render(
+            component_slug=component_slug,
+            component_name=display_name,
+            worst_models=worst_models
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
+
     # --- /insights/ routes (Data PR stories) ---
 
     @app.get("/insights/", response_class=HTMLResponse)
-    async def insights_index():
+    def insights_index():
         cache_key = "seo:insights:index"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -1430,7 +1438,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/insights/{story_slug}/", response_class=HTMLResponse)
-    async def insights_story(story_slug: str):
+    def insights_story(story_slug: str):
         cache_key = f"seo:insights:{story_slug}"
         if cache_key in _seo_cache:
             return _html_response(_seo_cache[cache_key])
@@ -1456,7 +1464,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/sitemap.xml", response_class=Response)
-    async def sitemap():
+    def sitemap():
         cache_key = "sitemap"
         if cache_key in _sitemap_cache:
             return Response(
@@ -1578,6 +1586,22 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 f"    <lastmod>{today}</lastmod>\n"
                 f"    <priority>0.6</priority>\n"
                 f"    <changefreq>monthly</changefreq>\n"
+                f"  </url>"
+            )
+
+
+    # --- Local MOT pages added to sitemap above ---
+
+    # I will ignore this specific tool call for the route update and instead focus on the sitemap update block.
+
+        # Add Local MOT pages to sitemap
+        for city_slug in CITY_CONFIG.keys():
+            urls.append(
+                f"  <url>\n"
+                f"    <loc>{base}/local-mot/{city_slug}/</loc>\n"
+                f"    <lastmod>{today}</lastmod>\n"
+                f"    <priority>0.7</priority>\n"
+                f"    <changefreq>weekly</changefreq>\n"
                 f"  </url>"
             )
 
