@@ -106,13 +106,7 @@ def normalize_registration(reg: str) -> str:
 def validate_registration(reg: str) -> bool:
     """Validate UK registration plate format."""
     normalized = normalize_registration(reg)
-    # Basic length check (2-7 characters without spaces)
-    if len(normalized) < 2 or len(normalized) > 7:
-        return False
-    # Must contain at least one letter and one number
-    has_letter = any(c.isalpha() for c in normalized)
-    has_number = any(c.isdigit() for c in normalized)
-    return has_letter and has_number
+    return bool(UK_REG_PATTERN.match(normalized))
 
 
 class DVLAClient:

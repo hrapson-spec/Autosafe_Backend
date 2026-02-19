@@ -37,7 +37,7 @@ from dvsa_client import (
     DVSAClient, get_dvsa_client, close_dvsa_client,
     VRMValidationError, VehicleNotFoundError, DVSAAPIError
 )
-from feature_engineering_v55 import engineer_features
+from model_v55 import engineer_features_with_stats
 import model_v55
 
 import logging
@@ -235,7 +235,7 @@ async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
     correlation_id = generate_correlation_id()
     # Log only the exception type and correlation ID - NOT the full exception or request data
-    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}")
+    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}", exc_info=exc)
     return JSONResponse(
         status_code=500,
         content={
@@ -278,7 +278,7 @@ def get_real_client_ip(request: Request) -> str:
     if forwarded_for:
         # Take the first IP (leftmost) - this is the original client IP
         # Format: "client, proxy1, proxy2, ..."
-        client_ip = forwarded_for.split(",")[0].strip()
+        client_ip = forwarded_for.split(",")[-1].strip()
         # Basic validation - ensure it looks like an IP
         if client_ip and ("." in client_ip or ":" in client_ip):
             return client_ip
@@ -690,6 +690,50 @@ async def get_risk(
         "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
     }
 
+    # Try PostgreSQL first
+    if DATABASE_URL:
+        # Estimate mileage based on age (UK average ~8000 miles/year)
+        # This allows us to use the more precise PostgreSQL lookup
+        est_mileage = age * 8000
+        mileage_band = get_mileage_band(est_mileage)
+
+        result = await db.get_risk(model_id, age_band, mileage_band)
+        if result and "error" not in result:
+             # Formulate response
+             # Add confidence intervals
+             result = add_confidence_intervals(result)
+             result = add_repair_cost_estimate(result)
+             
+             # Format repair cost
+             repair_cost = result.get('Repair_Cost_Estimate', {})
+             if isinstance(repair_cost, dict):
+                 expected = repair_cost.get('expected', 250)
+                 repair_cost_formatted = {
+                     "expected": f"£{expected}",
+                     "range_low": repair_cost.get('range_low', 100),
+                     "range_high": repair_cost.get('range_high', 500),
+                 }
+             else:
+                 repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
+
+             return {
+                 "vehicle": model_id,
+                 "year": year,
+                 "mileage": None,
+                 "last_mot_date": None,
+                 "last_mot_result": None,
+                 "failure_risk": result.get('Failure_Risk', 0.28),
+                 "confidence_level": result.get('Confidence_Level', "Low"),
+                 "risk_brakes": result.get('Risk_Brakes', 0.05),
+                 "risk_suspension": result.get('Risk_Suspension', 0.04),
+                 "risk_tyres": result.get('Risk_Tyres', 0.03),
+                 "risk_steering": result.get('Risk_Steering', 0.02),
+                 "risk_visibility": result.get('Risk_Visibility', 0.02),
+                 "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
+                 "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
+                 "repair_cost_estimate": repair_cost_formatted,
+             }
+
     # Try SQLite lookup
     with get_sqlite_connection() as conn:
         if not conn:
@@ -892,7 +936,7 @@ async def get_risk_v55(
 
     # Engineer features from MOT history
     try:
-        features = engineer_features(history, validated_postcode)
+        features = engineer_features_with_stats(history, validated_postcode)
         logger.info(f"Engineered {len(features)} features for {vrm_hash}")
     except Exception as e:
         logger.error(f"Feature engineering failed for {vrm_hash}: {e}")
@@ -1169,10 +1213,13 @@ def _get_display_mileage(history) -> tuple:
         days_diff = (tests[0].test_date - tests[1].test_date).days
         mileage_diff = latest_mileage - prev_mileage
 
-        if days_diff > 0 and mileage_diff > 0:
-            annualized = (mileage_diff / days_diff) * 365
-            if annualized > 50000:  # Physically implausible
-                return prev_mileage, True
+        if days_diff > 0:
+            if mileage_diff < 0:
+                return prev_mileage, True  # Flag negative mileage as anomaly
+            if mileage_diff > 0:
+                annualized = (mileage_diff / days_diff) * 365
+                if annualized > 50000:  # Physically implausible
+                    return prev_mileage, True
 
     return latest_mileage, False
 
