@@ -123,6 +123,22 @@ COMPONENTS = [
     ("Risk_Body_Chassis_Structure", "Body & Chassis"),
 ]
 
+
+CITY_CONFIG = {
+    "london": {"display": "London", "prefixes": ["N", "E", "SE", "SW", "W", "NW", "WC", "EC"]},
+    "manchester": {"display": "Manchester", "prefixes": ["M"]},
+    "birmingham": {"display": "Birmingham", "prefixes": ["B"]},
+    "leeds": {"display": "Leeds", "prefixes": ["LS"]},
+    "glasgow": {"display": "Glasgow", "prefixes": ["G"]},
+    "liverpool": {"display": "Liverpool", "prefixes": ["L"]},
+    "bristol": {"display": "Bristol", "prefixes": ["BS"]},
+    "newcastle": {"display": "Newcastle", "prefixes": ["NE"]},
+    "sheffield": {"display": "Sheffield", "prefixes": ["S"]},
+    "edinburgh": {"display": "Edinburgh", "prefixes": ["EH"]},
+    "cardiff": {"display": "Cardiff", "prefixes": ["CF"]},
+    "belfast": {"display": "Belfast", "prefixes": ["BT"]},
+}
+
 UK_AVERAGE_FAIL_RATE = 0.28
 
 
@@ -1001,6 +1017,56 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         _seo_cache[cache_key] = html
         return _html_response(html)
 
+
+
+
+    # --- Regional pages: /local-mot/{city_slug}/ ---
+
+    @app.get("/local-mot/{city_slug}/", response_class=HTMLResponse)
+    async def seo_local_page(city_slug: str):
+        city_slug = city_slug.lower()
+        if city_slug not in CITY_CONFIG:
+            return _not_found_html("City not found. We currently cover major UK cities.")
+
+        city_data = CITY_CONFIG[city_slug]
+        city_display = city_data["display"]
+        prefixes = city_data["prefixes"]
+
+        cache_key = f"seo:local:{city_slug}"
+        if cache_key in _seo_cache:
+            return _html_response(_seo_cache[cache_key])
+
+        garages = []
+        with get_sqlite_connection() as conn:
+            if conn:
+                try:
+                    # Build OR clauses for prefixes
+                    # postcode LIKE 'N%' OR postcode LIKE 'E%' ...
+                    conditions = " OR ".join([f"postcode LIKE '{p}%'" for p in prefixes])
+                    query = f"""
+                        SELECT id, name, postcode, phone, tier, status
+                        FROM garages
+                        WHERE status = 'active' AND ({conditions})
+                        ORDER BY tier DESC, RANDOM()
+                        LIMIT 20
+                    """
+                    conn.row_factory = sqlite3.Row
+                    rows = conn.execute(query).fetchall()
+                    for row in rows:
+                        garages.append(dict(row))
+                except sqlite3.OperationalError:
+                    # If table doesn't exist (e.g. strict sqlite mode without migration), fail gracefully
+                    # Or verify table existence first.
+                    pass
+
+        template = jinja_env.get_template("seo_local.html")
+        html = template.render(
+            city_display=city_display,
+            city_slug=city_slug,
+            garages=garages,
+        )
+        _seo_cache[cache_key] = html
+        return _html_response(html)
 
 
     # --- SSR Homepage ---

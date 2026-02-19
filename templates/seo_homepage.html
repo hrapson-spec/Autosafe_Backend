@@ -95,7 +95,11 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
     score in seconds. <strong>Free, instant, no signup.</strong></p>
 
 <div class="cta-box" style="margin-top: 1rem; margin-bottom: 2rem;">
-    <form class="reg-lookup-form" action="/app/" method="get">
+    <form class="reg-lookup-form" action="/" method="get">
+        <input type="hidden" name="utm_source" value="seo">
+        <input type="hidden" name="utm_medium" value="organic">
+        <input type="hidden" name="utm_campaign" value="seo_home">
+        <input type="hidden" name="utm_content" value="hero">
         <div class="reg-plate-wrapper">
             <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
                 aria-label="Vehicle registration number">

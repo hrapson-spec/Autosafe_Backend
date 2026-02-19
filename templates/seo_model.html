@@ -1,11 +1,15 @@
 {% extends "seo_base.html" %}
 
 {% block title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data) | AutoSafe{% endblock %}
-{% block meta_description %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% MOT failure rate based on {{ "{:,}".format(overall_tests) }} tests. See failure breakdown by age, component risks, and common MOT problems.{% endblock %}
+{% block meta_description %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100)
+}}% MOT failure rate based on {{ "{:,}".format(overall_tests) }} tests. See failure breakdown by age, component risks,
+and common MOT problems.{% endblock %}
 {% block og_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
-{% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{ "{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
+{% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{
+"{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
 {% block twitter_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
-{% block twitter_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{ "{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
+{% block twitter_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{
+"{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
 {% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
 
 {% block structured_data %}
@@ -96,10 +100,10 @@
 
 {% block breadcrumbs %}
 <nav class="breadcrumbs" aria-label="Breadcrumb">
-    <a href="/">Home</a><span class="sep">/</span>
-    <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
-    <a href="/mot-check/{{ make_slug }}/">{{ make_display }}</a><span class="sep">/</span>
-    <span>{{ model_display }}</span>
+  <a href="/">Home</a><span class="sep">/</span>
+  <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
+  <a href="/mot-check/{{ make_slug }}/">{{ make_display }}</a><span class="sep">/</span>
+  <span>{{ model_display }}</span>
 </nav>
 {% endblock %}
 
@@ -108,41 +112,43 @@
 <h1>{{ make_display }} {{ model_display }} MOT Failure Rate</h1>
 
 <div class="stat-highlight">
-    <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
-    <div class="label">MOT failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
-    <div class="label" style="margin-top: 0.5rem;">
-        {% if overall_fail_rate > 0.28 %}
-        <span style="color: #ef4444;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }} percentage points above the UK average (28%)</span>
-        {% elif overall_fail_rate < 0.28 %}
-        <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall_fail_rate) * 100) }} percentage points below the UK average (28%)</span>
-        {% else %}
-        <span>Equal to the UK average (28%)</span>
-        {% endif %}
-    </div>
+  <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
+  <div class="label">MOT failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
+  <div class="label" style="margin-top: 0.5rem;">
+    {% if overall_fail_rate > 0.28 %}
+    <span style="color: #ef4444;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }} percentage points above the UK
+      average (28%)</span>
+    {% elif overall_fail_rate < 0.28 %} <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall_fail_rate) * 100)
+      }} percentage points below the UK average (28%)</span>
+      {% else %}
+      <span>Equal to the UK average (28%)</span>
+      {% endif %}
+  </div>
 </div>
 
 {% if age_bands %}
 <h2>Failure Rate by Vehicle Age</h2>
 <p>How the {{ make_display }} {{ model_display }} MOT failure rate changes with age:</p>
 <table class="data-table">
-    <thead>
-        <tr>
-            <th>Age</th>
-            <th>Failure Rate</th>
-            <th>Tests</th>
-            <th>Worst Area</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for band in age_bands %}
-        <tr>
-            <td>{{ band.age_band }} years</td>
-            <td><span class="fail-rate {% if band.fail_rate > 0.35 %}high{% elif band.fail_rate < 0.20 %}low{% endif %}">{{ "%.1f"|format(band.fail_rate * 100) }}%</span></td>
-            <td class="sample-size">{{ "{:,}".format(band.total_tests) }}</td>
-            <td>{{ band.worst_component }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+  <thead>
+    <tr>
+      <th>Age</th>
+      <th>Failure Rate</th>
+      <th>Tests</th>
+      <th>Worst Area</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for band in age_bands %}
+    <tr>
+      <td>{{ band.age_band }} years</td>
+      <td><span class="fail-rate {% if band.fail_rate > 0.35 %}high{% elif band.fail_rate < 0.20 %}low{% endif %}">{{
+          "%.1f"|format(band.fail_rate * 100) }}%</span></td>
+      <td class="sample-size">{{ "{:,}".format(band.total_tests) }}</td>
+      <td>{{ band.worst_component }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
 {% endif %}
 
@@ -151,13 +157,14 @@
 
 {% for comp in components %}
 <div class="risk-bar-container">
-    <div class="risk-bar-label">
-        <span>{{ comp.name }}</span>
-        <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
-    </div>
-    <div class="risk-bar">
-        <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}" style="width: {{ (comp.risk * 500)|round|int }}%"></div>
-    </div>
+  <div class="risk-bar-label">
+    <span>{{ comp.name }}</span>
+    <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
+  </div>
+  <div class="risk-bar">
+    <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}"
+      style="width: {{ (comp.risk * 500)|round|int }}%"></div>
+  </div>
 </div>
 {% endfor %}
 
@@ -165,133 +172,185 @@
 <h2>{{ make_display }} {{ model_display }} by Age Group</h2>
 <p>See detailed MOT failure data for each age group:</p>
 <div class="related-links">
-    {% for band in age_bands %}
-    <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{ band.age_band }} years &mdash; {{ "%.1f"|format(band.fail_rate * 100) }}%</a>
-    {% endfor %}
+  {% for band in age_bands %}
+  <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{
+    band.age_band }} years &mdash; {{ "%.1f"|format(band.fail_rate * 100) }}%</a>
+  {% endfor %}
 </div>
 {% endif %}
 
 <h2>What {{ make_display }} {{ model_display }} Owners Should Watch For</h2>
-<p>Based on the MOT test data for the {{ make_display }} {{ model_display }}, here are the key areas to pay attention to before your MOT:</p>
+<p>Based on the MOT test data for the {{ make_display }} {{ model_display }}, here are the key areas to pay attention to
+  before your MOT:</p>
 <ul>
-    {% for comp in top_components[:3] %}
-    <li><strong>{{ comp.name }}</strong> ({{ "%.1f"|format(comp.risk * 100) }}% failure risk) &mdash; {% if comp.name == "Brakes" %}Check brake pad thickness, disc condition, and handbrake operation. Listen for grinding or squealing when braking.{% elif comp.name == "Suspension" %}Look for leaking shock absorbers, worn bushes, and damaged springs. A bouncing or uneven ride often signals problems.{% elif comp.name == "Tyres" %}Ensure all tyres have at least 1.6mm tread depth across the central three-quarters. Check for sidewall damage, bulges, and uneven wear.{% elif comp.name == "Steering" %}Check for play in the steering wheel, power steering fluid levels, and worn track rod ends.{% elif comp.name == "Visibility" %}Inspect windscreen for chips larger than 10mm in the driver&rsquo;s line of vision and 40mm elsewhere in the swept area. Check all washers and wipers.{% elif comp.name == "Lamps & Electrics" %}Walk around the car and check every bulb &mdash; headlights, brake lights, indicators, fog lights, and number plate lights. This is one of the cheapest and easiest fixes.{% elif comp.name == "Body & Chassis" %}Inspect the underside and sills for rust holes, particularly around structural mounting points. Corrosion that weakens the structure within 30cm of a mounting point is an automatic fail.{% else %}Inspect this area carefully before your test and address any worn or damaged components.{% endif %}</li>
-    {% endfor %}
+  {% for comp in top_components[:3] %}
+  <li><strong>{{ comp.name }}</strong> ({{ "%.1f"|format(comp.risk * 100) }}% failure risk) &mdash; {% if comp.name ==
+    "Brakes" %}Check brake pad thickness, disc condition, and handbrake operation. Listen for grinding or squealing when
+    braking.{% elif comp.name == "Suspension" %}Look for leaking shock absorbers, worn bushes, and damaged springs. A
+    bouncing or uneven ride often signals problems.{% elif comp.name == "Tyres" %}Ensure all tyres have at least 1.6mm
+    tread depth across the central three-quarters. Check for sidewall damage, bulges, and uneven wear.{% elif comp.name
+    == "Steering" %}Check for play in the steering wheel, power steering fluid levels, and worn track rod ends.{% elif
+    comp.name == "Visibility" %}Inspect windscreen for chips larger than 10mm in the driver&rsquo;s line of vision and
+    40mm elsewhere in the swept area. Check all washers and wipers.{% elif comp.name == "Lamps & Electrics" %}Walk
+    around the car and check every bulb &mdash; headlights, brake lights, indicators, fog lights, and number plate
+    lights. This is one of the cheapest and easiest fixes.{% elif comp.name == "Body & Chassis" %}Inspect the underside
+    and sills for rust holes, particularly around structural mounting points. Corrosion that weakens the structure
+    within 30cm of a mounting point is an automatic fail.{% else %}Inspect this area carefully before your test and
+    address any worn or damaged components.{% endif %}</li>
+  {% endfor %}
 </ul>
-<p>Many of these issues are inexpensive to fix when caught early. A pre-MOT inspection at a local garage typically costs &pound;20&ndash;&pound;40 and can save you the cost of a retest (&pound;15&ndash;&pound;30) plus the inconvenience of a failed MOT.</p>
+<p>Many of these issues are inexpensive to fix when caught early. A pre-MOT inspection at a local garage typically costs
+  &pound;20&ndash;&pound;40 and can save you the cost of a retest (&pound;15&ndash;&pound;30) plus the inconvenience of
+  a failed MOT.</p>
 
 <div class="faq-section">
-    <h2>Frequently Asked Questions</h2>
+  <h2>Frequently Asked Questions</h2>
 
-    <div class="faq-item">
-        <h3>What is the MOT failure rate for a {{ make_display }} {{ model_display }}?</h3>
-        <p>The {{ make_display }} {{ model_display }} has an overall MOT failure rate of <strong>{{ "%.1f"|format(overall_fail_rate * 100) }}%</strong>, based on {{ "{:,}".format(overall_tests) }} MOT tests recorded in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK national average of approximately 28%.</p>
-    </div>
+  <div class="faq-item">
+    <h3>What is the MOT failure rate for a {{ make_display }} {{ model_display }}?</h3>
+    <p>The {{ make_display }} {{ model_display }} has an overall MOT failure rate of <strong>{{
+        "%.1f"|format(overall_fail_rate * 100) }}%</strong>, based on {{ "{:,}".format(overall_tests) }} MOT tests
+      recorded in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK national
+      average of approximately 28%.</p>
+  </div>
 
-    <div class="faq-item">
-        <h3>What are the most common MOT failures on a {{ make_display }} {{ model_display }}?</h3>
-        <p>The most common areas for MOT failure on a {{ make_display }} {{ model_display }} are:</p>
-        <ul>
-            {% for comp in top_components[:3] %}
-            <li><strong>{{ comp.name }}</strong> &mdash; {{ "%.1f"|format(comp.risk * 100) }}% failure risk</li>
-            {% endfor %}
-        </ul>
-        <p>These component risks are weighted averages across all age and mileage bands in the dataset.</p>
-    </div>
+  <div class="faq-item">
+    <h3>What are the most common MOT failures on a {{ make_display }} {{ model_display }}?</h3>
+    <p>The most common areas for MOT failure on a {{ make_display }} {{ model_display }} are:</p>
+    <ul>
+      {% for comp in top_components[:3] %}
+      <li><strong>{{ comp.name }}</strong> &mdash; {{ "%.1f"|format(comp.risk * 100) }}% failure risk</li>
+      {% endfor %}
+    </ul>
+    <p>These component risks are weighted averages across all age and mileage bands in the dataset.</p>
+  </div>
 
-    <div class="faq-item">
-        <h3>Is the {{ make_display }} {{ model_display }} reliable for MOT?</h3>
-        {% if overall_fail_rate < 0.20 %}
-        <p>Yes, the {{ make_display }} {{ model_display }} performs <strong>better than average</strong> in MOT tests. Its {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate is well below the UK average of 28%, making it one of the more reliable options.</p>
-        {% elif overall_fail_rate < 0.30 %}
-        <p>The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate, which is <strong>close to the UK average</strong> of 28%. It's neither particularly unreliable nor exceptionally reliable for MOT purposes.</p>
+  <div class="faq-item">
+    <h3>Is the {{ make_display }} {{ model_display }} reliable for MOT?</h3>
+    {% if overall_fail_rate < 0.20 %} <p>Yes, the {{ make_display }} {{ model_display }} performs <strong>better than
+        average</strong> in MOT tests. Its {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate is well below the
+      UK average of 28%, making it one of the more reliable options.</p>
+      {% elif overall_fail_rate < 0.30 %} <p>The {{ make_display }} {{ model_display }} has a {{
+        "%.1f"|format(overall_fail_rate * 100) }}% failure rate, which is <strong>close to the UK average</strong> of
+        28%. It's neither particularly unreliable nor exceptionally reliable for MOT purposes.</p>
         {% else %}
-        <p>The {{ make_display }} {{ model_display }} has a <strong>higher-than-average</strong> MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}%, compared to the UK average of 28%. Before your MOT, pay extra attention to <strong>{{ top_components[0].name|lower if top_components else "common wear items" }}</strong>, which is the most common failure area for this model.</p>
+        <p>The {{ make_display }} {{ model_display }} has a <strong>higher-than-average</strong> MOT failure rate of {{
+          "%.1f"|format(overall_fail_rate * 100) }}%, compared to the UK average of 28%. Before your MOT, pay extra
+          attention to <strong>{{ top_components[0].name|lower if top_components else "common wear items" }}</strong>,
+          which is the most common failure area for this model.</p>
         {% endif %}
-    </div>
+  </div>
 
-    <div class="faq-item">
-        <h3>How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?</h3>
-        {% if age_bands|length > 1 %}
-        <p>The failure rate increases significantly with vehicle age. {% if age_bands[0].fail_rate < 0.15 %}Newer {{ make_display }} {{ model_display }} models ({{ age_bands[0].age_band }} years) have a relatively low {{ "%.1f"|format(age_bands[0].fail_rate * 100) }}% failure rate{% endif %}{% if age_bands[-1].fail_rate > 0.30 %}, while older examples ({{ age_bands[-1].age_band }} years) see failure rates rise to {{ "%.1f"|format(age_bands[-1].fail_rate * 100) }}%{% endif %}. This pattern is common across most vehicle models and reflects increased wear on mechanical components over time.</p>
-        {% else %}
-        <p>We have limited age-band data for this model. In general, MOT failure rates increase steadily with vehicle age as components wear. Vehicles over 10 years old typically have failure rates above 35%.</p>
-        {% endif %}
-    </div>
+  <div class="faq-item">
+    <h3>How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?</h3>
+    {% if age_bands|length > 1 %}
+    <p>The failure rate increases significantly with vehicle age. {% if age_bands[0].fail_rate < 0.15 %}Newer {{
+        make_display }} {{ model_display }} models ({{ age_bands[0].age_band }} years) have a relatively low {{ "%.1f"
+        |format(age_bands[0].fail_rate * 100) }}% failure rate{% endif %}{% if age_bands[-1].fail_rate> 0.30 %}, while
+        older examples ({{ age_bands[-1].age_band }} years) see failure rates rise to {{
+        "%.1f"|format(age_bands[-1].fail_rate * 100) }}%{% endif %}. This pattern is common across most vehicle models
+        and reflects increased wear on mechanical components over time.</p>
+    {% else %}
+    <p>We have limited age-band data for this model. In general, MOT failure rates increase steadily with vehicle age as
+      components wear. Vehicles over 10 years old typically have failure rates above 35%.</p>
+    {% endif %}
+  </div>
 
-    <div class="faq-item">
-        <h3>How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?</h3>
-        <p>The most effective steps are: (1) Check all lights and bulbs before your test &mdash; lighting failures are the most common and cheapest to fix. (2) Inspect tyre tread depth and condition. (3) Test your windscreen washers and wipers. (4) Listen for unusual noises from brakes or suspension. (5) Consider a pre-MOT check at a local garage. You can also <a href="/" style="color: #e5c07b;">use our free prediction tool</a> to get a personalised risk breakdown for your specific vehicle.</p>
-    </div>
+  <div class="faq-item">
+    <h3>How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?</h3>
+    <p>The most effective steps are: (1) Check all lights and bulbs before your test &mdash; lighting failures are the
+      most common and cheapest to fix. (2) Inspect tyre tread depth and condition. (3) Test your windscreen washers and
+      wipers. (4) Listen for unusual noises from brakes or suspension. (5) Consider a pre-MOT check at a local garage.
+      You can also <a href="/" style="color: #e5c07b;">use our free prediction tool</a> to get a personalised risk
+      breakdown for your specific vehicle.</p>
+  </div>
 
-    <div class="faq-item">
-        <h3>Where can I check the MOT history of a {{ make_display }} {{ model_display }}?</h3>
-        <p>You can check any vehicle's full MOT history for free on the <a href="https://www.gov.uk/check-mot-history" style="color: #e5c07b;" rel="nofollow">official DVSA service</a>. This shows all previous test results, advisory items, and failure reasons. AutoSafe goes further by analysing this data with AI to <a href="/" style="color: #e5c07b;">predict your future MOT outcome</a>.</p>
-    </div>
+  <div class="faq-item">
+    <h3>Where can I check the MOT history of a {{ make_display }} {{ model_display }}?</h3>
+    <p>You can check any vehicle's full MOT history for free on the <a href="https://www.gov.uk/check-mot-history"
+        style="color: #e5c07b;" rel="nofollow">official DVSA service</a>. This shows all previous test results, advisory
+      items, and failure reasons. AutoSafe goes further by analysing this data with AI to <a href="/"
+        style="color: #e5c07b;">predict your future MOT outcome</a>.</p>
+  </div>
 </div>
 
 <div class="cta-box" style="margin-top: 2rem;">
-    <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
-    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display }} {{ model_display }} is at risk.</p>
-    <form class="reg-lookup-form" action="/" method="get">
-        <div class="reg-plate-wrapper">
-            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required aria-label="Vehicle registration number">
-        </div>
-        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
-    </form>
+  <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
+  <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display }} {{
+    model_display }} is at risk.</p>
+  <form class="reg-lookup-form" action="/" method="get">
+    <input type="hidden" name="utm_source" value="seo">
+    <input type="hidden" name="utm_medium" value="organic">
+    <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
+    <input type="hidden" name="utm_content" value="model_overview">
+    <div class="reg-plate-wrapper">
+      <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+        aria-label="Vehicle registration number">
+    </div>
+    <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+  </form>
 </div>
 
 <h2>Other {{ make_display }} Models</h2>
 <p>Compare the {{ make_display }} {{ model_display }} MOT failure rate against other {{ make_display }} models:</p>
 <div class="related-links">
-    {% for sibling in sibling_models %}
-    <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ make_display }} {{ sibling.display_name }}</a>
-    {% endfor %}
+  {% for sibling in sibling_models %}
+  <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ make_display }} {{ sibling.display_name }}</a>
+  {% endfor %}
 </div>
 
 {% if competitors %}
 <h2>How {{ make_display }} {{ model_display }} Compares to Rivals</h2>
 <p>See how the {{ make_display }} {{ model_display }} stacks up against similar models:</p>
 <div class="related-links">
-    {% for comp in competitors %}
-    <a href="/mot-check/{{ comp.make_slug }}/{{ comp.model_slug }}/">{{ comp.make_display }} {{ comp.model_display }}</a>
-    {% endfor %}
+  {% for comp in competitors %}
+  <a href="/mot-check/{{ comp.make_slug }}/{{ comp.model_slug }}/">{{ comp.make_display }} {{ comp.model_display }}</a>
+  {% endfor %}
 </div>
 {% endif %}
 
 {% if comparisons %}
 <h2>{{ make_display }} {{ model_display }} vs. Rivals</h2>
 <div class="related-links">
-    {% for comp in comparisons %}
-    <a href="{{ comp.url }}">{{ comp.title }}</a>
-    {% endfor %}
+  {% for comp in comparisons %}
+  <a href="{{ comp.url }}">{{ comp.title }}</a>
+  {% endfor %}
 </div>
 {% endif %}
 
 {% if similar_models %}
 <h2>Similar Failure Rate Models</h2>
-<p>These models from other manufacturers have a similar MOT failure rate to the {{ make_display }} {{ model_display }}:</p>
+<p>These models from other manufacturers have a similar MOT failure rate to the {{ make_display }} {{ model_display }}:
+</p>
 <div class="related-links">
-    {% for sim in similar_models %}
-    <a href="/mot-check/{{ sim.make_slug }}/{{ sim.model_slug }}/">{{ sim.make_display }} {{ sim.model_display }} ({{ "%.1f"|format(sim.fail_rate * 100) }}%)</a>
-    {% endfor %}
+  {% for sim in similar_models %}
+  <a href="/mot-check/{{ sim.make_slug }}/{{ sim.model_slug }}/">{{ sim.make_display }} {{ sim.model_display }} ({{
+    "%.1f"|format(sim.fail_rate * 100) }}%)</a>
+  {% endfor %}
 </div>
 {% endif %}
 
 <h2>Related Guides</h2>
 <ul>
-    <li><a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid Them</a></li>
-    <li><a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a></li>
-    <li><a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a></li>
-    <li><a href="/guides/mot-history-check" style="color: #e5c07b;">How to Check MOT History</a></li>
+  <li><a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid
+      Them</a></li>
+  <li><a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a>
+  </li>
+  <li><a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a>
+  </li>
+  <li><a href="/guides/mot-history-check" style="color: #e5c07b;">How to Check MOT History</a></li>
 </ul>
 
 <div class="methodology">
-    <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
+  <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from
+    official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks
+    represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
 </div>
 
-<p style="text-align: center; margin-top: 1.5rem;"><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car Pass Its MOT? &rarr; Free AI Prediction Tool</a></p>
+<p style="text-align: center; margin-top: 1.5rem;"><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car
+    Pass Its MOT? &rarr; Free AI Prediction Tool</a></p>
 {% endblock %}
 
 {% block cta_heading %}Check Your Specific {{ make_display }} {{ model_display }}{% endblock %}
-{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle's age, mileage and history.{% endblock %}
+{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle's
+age, mileage and history.{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "seo_base.html" %}
+
+{% block title %}Top Rated MOT Garages in {{ city_display }} | AutoSafe{% endblock %}
+{% block meta_description %}Find the best MOT test centres in {{ city_display }}. Compare local garages, check specific
+vehicle failure rates, and book your MOT online. {{ garages|length }} local centers found.{% endblock %}
+{% block og_title %}Top Rated MOT Garages in {{ city_display }}{% endblock %}
+{% block og_description %}Find trusted MOT test centres in {{ city_display }}. Local garage comparisons and failure rate
+data.{% endblock %}
+{% block twitter_title %}Top Rated MOT Garages in {{ city_display }}{% endblock %}
+{% block twitter_description %}Find trusted MOT test centres in {{ city_display }}. Local garage comparisons and failure
+rate data.{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/local-mot/{{ city_slug }}/{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "AutoSafe MOT Search {{ city_display }}",
+  "description": "Directory of MOT test centres in {{ city_display }}",
+  "url": "https://www.autosafe.one/local-mot/{{ city_slug }}/",
+  "areaServed": "{{ city_display }}"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
+    {"@type": "ListItem", "position": 2, "name": "Local MOT", "item": "https://www.autosafe.one/local-mot/"},
+    {"@type": "ListItem", "position": 3, "name": "{{ city_display }}"}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/local-mot/">Local MOT</a><span class="sep">/</span>
+    <span>{{ city_display }}</span>
+</nav>
+{% endblock %}
+
+{% block content %}
+<h1>Top Rated MOT Garages in {{ city_display }}</h1>
+
+<p class="intro-text">
+    Find and book trusted MOT test centres in <strong>{{ city_display }}</strong>.
+    We've found {{ garages|length }} approved garages in your area.
+</p>
+
+{% if garages %}
+<div class="garage-list">
+    <h2>Recommended Garages in {{ city_display }}</h2>
+    <div class="garage-grid">
+        {% for garage in garages %}
+        <div class="garage-card {% if garage.tier == 'premium' %}premium{% endif %}">
+            <div class="garage-header">
+                <h3>{{ garage.name }}</h3>
+                <span class="badge {% if garage.tier == 'premium' %}premium-badge{% else %}standard-badge{% endif %}">
+                    {% if garage.tier == 'premium' %}Verified Partner{% else %}Approved Centre{% endif %}
+                </span>
+            </div>
+            <p class="garage-address">{{ garage.postcode }} • {{ city_display }}</p>
+            {% if garage.tier == 'premium' %}
+            <p class="garage-features">✅ Instant Booking • ⭐️ Highly Rated</p>
+            {% endif %}
+            <div class="garage-actions">
+                <a href="#book-{{ garage.id }}" class="btn-book">Book MOT</a>
+                <span class="garage-phone">{{ garage.phone or "Contact for details" }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="no-results">
+    <p>We are currently updating our list of garages in {{ city_display }}. Check back soon or search by postcode.</p>
+</div>
+{% endif %}
+
+<div class="local-stats">
+    <h2>MOT Stats for {{ city_display }}</h2>
+    <div class="stat-highlight">
+        <div class="big-number">~28%</div>
+        <div class="label">Average MOT failure rate in {{ city_display }}</div>
+    </div>
+    <p>
+        Drivers in {{ city_display }} face similar MOT risks to the national average.
+        The most common reasons for failure are lighting, suspension, and brakes.
+    </p>
+</div>
+
+<div class="cta-box" style="margin-top: 2rem;">
+    <h3>Check Your Specific Vehicle Risk</h3>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Don't fail your MOT. Check your car's failure risk before you book.
+    </p>
+    <form class="reg-lookup-form" action="/" method="get">
+        <input type="hidden" name="utm_source" value="seo">
+        <input type="hidden" name="utm_medium" value="organic">
+        <input type="hidden" name="utm_campaign" value="local_mot">
+        <input type="hidden" name="utm_content" value="{{ city_slug }}">
+        <div class="reg-plate-wrapper">
+            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+                aria-label="Vehicle registration number">
+        </div>
+        <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
+    </form>
+</div>
+
+<style>
+    .garage-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .garage-card {
+        background: #2a2a2a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: transform 0.2s;
+    }
+
+    .garage-card:hover {
+        transform: translateY(-2px);
+        border-color: #e5c07b;
+    }
+
+    .garage-card.premium {
+        border: 1px solid #e5c07b;
+        background: linear-gradient(135deg, #2a2a2a, #25221b);
+    }
+
+    .garage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.5rem;
+    }
+
+    .garage-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #fff;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .premium-badge {
+        background: #e5c07b;
+        color: #1a1a1a;
+    }
+
+    .standard-badge {
+        background: #444;
+        color: #ccc;
+    }
+
+    .garage-address {
+        color: #a0a0a0;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .garage-features {
+        color: #22c55e;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .garage-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+    }
+
+    .btn-book {
+        background: #e5c07b;
+        color: #1a1a1a;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .btn-book:hover {
+        background: #d4a85a;
+    }
+
+    .garage-phone {
+        font-size: 0.9rem;
+        color: #a0a0a0;
+    }
+</style>
+{% endblock %}
+
+{% block cta_heading %}Book Your MOT in {{ city_display }}{% endblock %}
+{% block cta_text %}Compare prices and book trusted MOT test centres in {{ city_display }}.{% endblock %}

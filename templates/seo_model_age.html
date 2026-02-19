@@ -175,6 +175,11 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
                 <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display
                     }} {{ model_display }} is at risk.</p>
                 <form class="reg-lookup-form" action="/" method="get">
+                    <input type="hidden" name="utm_source" value="seo">
+                    <input type="hidden" name="utm_medium" value="organic">
+                    <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
+                    <input type="hidden" name="utm_content"
+                        value="age_{{ specific_year if specific_year else age_band_display|replace(' ', '-') }}">
                     <div class="reg-plate-wrapper">
                         <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8"
                             required aria-label="Vehicle registration number">
@@ -200,7 +205,8 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
                             <p>{{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles have a
                                 <strong>{{ "%.1f"|format(fail_rate * 100) }}%</strong> failure rate, which is above
                                 average. Consider a pre-MOT inspection, particularly checking {{
-                                top_components[0].name|lower if top_components else "common wear items" }}.</p>
+                                top_components[0].name|lower if top_components else "common wear items" }}.
+                            </p>
                             {% endif %}
                 </div>
 

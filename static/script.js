@@ -123,6 +123,23 @@ function init() {
     initLeadForm();
     initStickyCta();
     initAccordionTracking();
+
+    // Check for URL params to pre-fill
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('reg') && registrationInput) {
+        registrationInput.value = params.get('reg');
+        // Trigger input event to format
+        registrationInput.dispatchEvent(new Event('input'));
+    }
+    if (params.has('postcode') && postcodeInput) {
+        postcodeInput.value = params.get('postcode');
+        postcodeInput.dispatchEvent(new Event('input'));
+    }
+
+    // Auto-submit if both are present
+    if (params.has('reg') && params.has('postcode') && params.get('reg') && params.get('postcode')) {
+        form.dispatchEvent(new Event('submit'));
+    }
 }
 
 /**
