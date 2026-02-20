@@ -2435,10 +2435,14 @@ if os.path.isdir("static"):
         """Serve robots.txt at root URL for search engine crawlers."""
         return FileResponse('static/robots.txt', media_type='text/plain')
 
-    # SPA catch-all (serves the React app for all unmatched routes)
+    # SPA catch-all — only serve React app for /app/ paths; return 404 for unknown routes
     @app.get("/{path:path}")
     async def serve_spa(path: str):
-        return FileResponse('static/index.html')
+        if path == "" or path.startswith("app"):
+            return FileResponse('static/index.html')
+        # Unknown path — return proper HTTP 404 instead of soft-404
+        from seo_pages import _not_found_html
+        return _not_found_html("The page you're looking for doesn't exist.")
 else:
     @app.get("/")
     def read_root():
