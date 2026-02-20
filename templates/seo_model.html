@@ -1,9 +1,14 @@
 {% extends "seo_base.html" %}
 
-{% block title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data) | AutoSafe{% endblock %}
-{% block meta_description %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100)
+{% block title %}{% if model_slug|length % 2 == 0 %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data)
+| AutoSafe{% else %}{{ "%.1f"|format(overall_fail_rate * 100) }}% Failure Rate: {{ make_display }} {{ model_display }}
+MOT Problems & Tips | AutoSafe{% endif %}{% endblock %}
+{% block meta_description %}{% if model_slug|length % 2 == 0 %}The {{ make_display }} {{ model_display }} has a {{
+"%.1f"|format(overall_fail_rate * 100)
 }}% MOT failure rate based on {{ "{:,}".format(overall_tests) }} tests. See failure breakdown by age, component risks,
-and common MOT problems.{% endblock %}
+and common MOT problems.{% else %}{{ make_display }} {{ model_display }}: {{ "%.1f"|format(overall_fail_rate * 100) }}%
+of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_components[0].risk * 100) }}%). Data from
+{{ "{:,}".format(overall_tests) }} official DVSA tests. Free risk check.{% endif %}{% endblock %}
 {% block og_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
 {% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{
 "{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
@@ -124,6 +129,27 @@ and common MOT problems.{% endblock %}
       <span>Equal to the UK average (28%)</span>
       {% endif %}
   </div>
+</div>
+
+<div class="key-findings"
+  style="background: rgba(229, 192, 123, 0.08); border: 1px solid rgba(229, 192, 123, 0.2); border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0;">
+  <h2 style="margin-top: 0; font-size: 1.1rem;">Key Findings for the {{ make_display }} {{ model_display }}</h2>
+  <ul style="margin: 0; padding-left: 1.2rem;">
+    <li>Overall MOT failure rate: <strong>{{ "%.1f"|format(overall_fail_rate * 100) }}%</strong> — {{
+      "%.1f"|format(((overall_fail_rate - uk_avg_fail_rate) * 100)|abs) }}pp {{ "above" if overall_fail_rate >
+      uk_avg_fail_rate else "below" }} the UK average ({{ "%.0f"|format(uk_avg_fail_rate * 100) }}%)</li>
+    <li>Highest-risk component: <strong>{{ top_components[0].name }}</strong> ({{ "%.1f"|format(top_components[0].risk *
+      100) }}% failure risk)</li>
+    {% if best_age_band %}
+    <li>Most reliable age group: <strong>{{ best_age_band.age_band }} years</strong> ({{
+      "%.1f"|format(best_age_band.fail_rate * 100) }}% failure rate)</li>
+    {% endif %}
+    {% if worst_age_band %}
+    <li>Highest-risk age group: <strong>{{ worst_age_band.age_band }} years</strong> ({{
+      "%.1f"|format(worst_age_band.fail_rate * 100) }}% failure rate)</li>
+    {% endif %}
+    <li>Based on <strong>{{ "{:,}".format(overall_tests) }}</strong> official DVSA MOT tests</li>
+  </ul>
 </div>
 
 {% if age_bands %}
@@ -345,6 +371,14 @@ and common MOT problems.{% endblock %}
   <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from
     official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks
     represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
+  <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
+    <strong>Trust signals:</strong> Risk model: CatBoost v55 &bull;
+    Data source: <a
+      href="https://www.data.gov.uk/dataset/e3939ef8-30c7-4ca8-9c7c-ad9475cc9b2f/anonymised-mot-tests-and-results"
+      style="color: #e5c07b;" rel="nofollow">DVSA Open Data (OGL v3)</a> &bull;
+    {% if data_updated %}Last updated: {{ data_updated }} &bull; {% endif %}
+    <em>Limitation: population averages; individual vehicle condition, service history and mileage may vary.</em>
+  </p>
 </div>
 
 <p style="text-align: center; margin-top: 1.5rem;"><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car

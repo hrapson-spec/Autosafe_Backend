@@ -24,7 +24,7 @@ from pathlib import Path
 
 from cachetools import TTLCache
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
@@ -866,6 +866,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         # Data-driven similar models (supplements hardcoded competitors)
         similar_models = _get_similar_models(make_slug, model_slug)
 
+        # Step 6: Compute Key Findings context for distinctiveness
+        best_age = min(age_bands, key=lambda b: b["fail_rate"]) if age_bands else None
+        worst_age = max(age_bands, key=lambda b: b["fail_rate"]) if age_bands else None
+
         template = jinja_env.get_template("seo_model.html")
         html = template.render(
             make_display=make_info["display"],
@@ -881,6 +885,9 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             competitors=competitors,
             comparisons=comparisons,
             similar_models=similar_models,
+            uk_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
+            best_age_band=best_age,
+            worst_age_band=worst_age,
         )
         _seo_cache[cache_key] = html
         return _html_response(html)
@@ -889,8 +896,22 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # Unified handler: if detail_slug is a valid year (int), show year page;
     # if it matches an age-band slug, show age-band page.
 
+    # Legacy age-band slugs that were renamed — 301 redirect to current slug
+    LEGACY_AGE_SLUGS = {
+        "0-3-years": "0-2-years",
+        "10-15-years": "11-15-years",
+    }
+
     @app.get("/mot-check/{make_slug}/{model_slug}/{detail_slug}/", response_class=HTMLResponse)
     def seo_model_detail(make_slug: str, model_slug: str, detail_slug: str):
+        # --- Step 4: Redirect legacy age-band slugs ---
+        if detail_slug in LEGACY_AGE_SLUGS:
+            new_slug = LEGACY_AGE_SLUGS[detail_slug]
+            return RedirectResponse(
+                url=f"/mot-check/{make_slug}/{model_slug}/{new_slug}/",
+                status_code=301,
+            )
+
         if make_slug not in _make_by_slug:
             return _not_found_html("Make not found.")
         if (make_slug, model_slug) not in _model_by_slug:
@@ -1469,8 +1490,9 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         return _html_response(html)
 
     @app.get("/sitemap.xml", response_class=Response)
-    def sitemap():
-        cache_key = "sitemap"
+    def sitemap_index():
+        """Sitemap index pointing to segmented sub-sitemaps."""
+        cache_key = "sitemap:index"
         if cache_key in _sitemap_cache:
             return Response(
                 content=_sitemap_cache[cache_key],
@@ -1480,11 +1502,71 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
         today = date.today().isoformat()
         base = "https://www.autosafe.one"
+        sitemaps = [
+            f"{base}/sitemap-content.xml",
+            f"{base}/sitemap-makes.xml",
+            f"{base}/sitemap-models.xml",
+            f"{base}/sitemap-comparisons.xml",
+            f"{base}/sitemap-local.xml",
+        ]
 
+        entries = []
+        for loc in sitemaps:
+            entries.append(
+                f"  <sitemap>\n"
+                f"    <loc>{loc}</loc>\n"
+                f"    <lastmod>{today}</lastmod>\n"
+                f"  </sitemap>"
+            )
+
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "\n".join(entries)
+            + "\n</sitemapindex>\n"
+        )
+
+        _sitemap_cache[cache_key] = xml
+        return Response(
+            content=xml,
+            media_type="application/xml",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    def _build_urlset(urls: list[str]) -> str:
+        """Build a <urlset> XML string from a list of <url> entries."""
+        return (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "\n".join(urls)
+            + "\n</urlset>\n"
+        )
+
+    def _url_entry(loc: str, lastmod: str, priority: str, changefreq: str) -> str:
+        return (
+            f"  <url>\n"
+            f"    <loc>{loc}</loc>\n"
+            f"    <lastmod>{lastmod}</lastmod>\n"
+            f"    <priority>{priority}</priority>\n"
+            f"    <changefreq>{changefreq}</changefreq>\n"
+            f"  </url>"
+        )
+
+    @app.get("/sitemap-content.xml", response_class=Response)
+    def sitemap_content():
+        """Sub-sitemap: homepage, pillar, guides, insights, legal pages."""
+        cache_key = "sitemap:content"
+        if cache_key in _sitemap_cache:
+            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+        today = date.today().isoformat()
+        base = "https://www.autosafe.one"
         urls = []
-        # Static pages
+
         static_pages = [
             ("/", "1.0", "weekly"),
+            ("/mot-check/", "0.9", "weekly"),
             ("/will-my-car-pass-mot/", "0.95", "weekly"),
             ("/guides/mot-checklist", "0.8", "monthly"),
             ("/guides/common-mot-failures", "0.8", "monthly"),
@@ -1501,127 +1583,107 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             ("/insights/march-mot-rush-2026/", "0.7", "monthly"),
         ]
         for path, priority, freq in static_pages:
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>{base}{path}</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
-                f"    <priority>{priority}</priority>\n"
-                f"    <changefreq>{freq}</changefreq>\n"
-                f"  </url>"
-            )
+            urls.append(_url_entry(f"{base}{path}", today, priority, freq))
 
-        # Insights pages
-        urls.append(
-            f"  <url>\n"
-            f"    <loc>{base}/insights/</loc>\n"
-            f"    <lastmod>{today}</lastmod>\n"
-            f"    <priority>0.8</priority>\n"
-            f"    <changefreq>weekly</changefreq>\n"
-            f"  </url>"
-        )
+        # Insights hub
+        urls.append(_url_entry(f"{base}/insights/", today, "0.8", "weekly"))
         try:
             from data_stories.query_engine import STORY_QUERIES
             for name, query_fn in STORY_QUERIES.items():
                 try:
                     story = query_fn()
-                    urls.append(
-                        f"  <url>\n"
-                        f"    <loc>{base}/insights/{story['slug']}/</loc>\n"
-                        f"    <lastmod>{today}</lastmod>\n"
-                        f"    <priority>0.7</priority>\n"
-                        f"    <changefreq>monthly</changefreq>\n"
-                        f"  </url>"
-                    )
+                    urls.append(_url_entry(f"{base}/insights/{story['slug']}/", today, "0.7", "monthly"))
                 except Exception:
                     pass
         except ImportError:
             pass
 
-        # SEO index page
-        urls.append(
-            f"  <url>\n"
-            f"    <loc>{base}/mot-check/</loc>\n"
-            f"    <lastmod>{today}</lastmod>\n"
-            f"    <priority>0.9</priority>\n"
-            f"    <changefreq>weekly</changefreq>\n"
-            f"  </url>"
-        )
+        # Component hubs (top-level aggregation — indexable)
+        for comp_slug in COMPONENT_SLUGS:
+            urls.append(_url_entry(f"{base}/mot-check/problems/{comp_slug}/", today, "0.7", "monthly"))
 
-        # Make pages
+        xml = _build_urlset(urls)
+        _sitemap_cache[cache_key] = xml
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+    @app.get("/sitemap-makes.xml", response_class=Response)
+    def sitemap_makes():
+        """Sub-sitemap: all make hub pages."""
+        cache_key = "sitemap:makes"
+        if cache_key in _sitemap_cache:
+            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+        today = date.today().isoformat()
+        base = "https://www.autosafe.one"
+        urls = []
         for make_slug in sorted(_make_by_slug.keys()):
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>{base}/mot-check/{make_slug}/</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
-                f"    <priority>0.8</priority>\n"
-                f"    <changefreq>monthly</changefreq>\n"
-                f"  </url>"
-            )
+            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/", today, "0.8", "monthly"))
 
-        # Model pages
+        xml = _build_urlset(urls)
+        _sitemap_cache[cache_key] = xml
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+    @app.get("/sitemap-models.xml", response_class=Response)
+    def sitemap_models():
+        """Sub-sitemap: all model detail pages (the core money pages)."""
+        cache_key = "sitemap:models"
+        if cache_key in _sitemap_cache:
+            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+        today = date.today().isoformat()
+        base = "https://www.autosafe.one"
+        urls = []
         for (make_slug, model_slug) in sorted(_model_by_slug.keys()):
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>{base}/mot-check/{make_slug}/{model_slug}/</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
-                f"    <priority>0.7</priority>\n"
-                f"    <changefreq>monthly</changefreq>\n"
-                f"  </url>"
-            )
+            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/{model_slug}/", today, "0.7", "monthly"))
 
-        # Age-band pages (only for eligible models)
-        for (make_slug, model_slug) in sorted(_age_band_eligible):
-            for age_slug in AGE_BAND_SLUGS:
-                urls.append(
-                    f"  <url>\n"
-                    f"    <loc>{base}/mot-check/{make_slug}/{model_slug}/{age_slug}/</loc>\n"
-                    f"    <lastmod>{today}</lastmod>\n"
-                    f"    <priority>0.6</priority>\n"
-                    f"    <changefreq>monthly</changefreq>\n"
-                    f"  </url>"
-                )
+        xml = _build_urlset(urls)
+        _sitemap_cache[cache_key] = xml
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
 
-        # Comparison pages
+    @app.get("/sitemap-comparisons.xml", response_class=Response)
+    def sitemap_comparisons():
+        """Sub-sitemap: comparison pages."""
+        cache_key = "sitemap:comparisons"
+        if cache_key in _sitemap_cache:
+            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+        today = date.today().isoformat()
+        base = "https://www.autosafe.one"
+        urls = []
         for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
             s1 = f"{_slugify(make1)}-{_slugify(model1)}"
             s2 = f"{_slugify(make2)}-{_slugify(model2)}"
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>{base}/mot-check/compare/{s1}-vs-{s2}/</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
-                f"    <priority>0.6</priority>\n"
-                f"    <changefreq>monthly</changefreq>\n"
-                f"  </url>"
-            )
+            urls.append(_url_entry(f"{base}/mot-check/compare/{s1}-vs-{s2}/", today, "0.6", "monthly"))
 
-
-    # --- Local MOT pages added to sitemap above ---
-
-    # I will ignore this specific tool call for the route update and instead focus on the sitemap update block.
-
-        # Add Local MOT pages to sitemap
-        for city_slug in CITY_CONFIG.keys():
-            urls.append(
-                f"  <url>\n"
-                f"    <loc>{base}/local-mot/{city_slug}/</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
-                f"    <priority>0.7</priority>\n"
-                f"    <changefreq>weekly</changefreq>\n"
-                f"  </url>"
-            )
-
-        xml = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-            + "\n".join(urls)
-            + "\n</urlset>\n"
-        )
-
+        xml = _build_urlset(urls)
         _sitemap_cache[cache_key] = xml
-        return Response(
-            content=xml,
-            media_type="application/xml",
-            headers={"Cache-Control": "public, max-age=3600"},
-        )
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
 
-    logger.info("SEO: Routes registered (/mot-check/, /mot-check/{make}/{model}/{age}/, /sitemap.xml)")
+    @app.get("/sitemap-local.xml", response_class=Response)
+    def sitemap_local():
+        """Sub-sitemap: local MOT pages."""
+        cache_key = "sitemap:local"
+        if cache_key in _sitemap_cache:
+            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
+                            headers={"Cache-Control": "public, max-age=3600"})
+
+        today = date.today().isoformat()
+        base = "https://www.autosafe.one"
+        urls = []
+        for city_slug in CITY_CONFIG.keys():
+            urls.append(_url_entry(f"{base}/local-mot/{city_slug}/", today, "0.7", "weekly"))
+
+        xml = _build_urlset(urls)
+        _sitemap_cache[cache_key] = xml
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+    logger.info("SEO: Routes registered (/mot-check/, /mot-check/{make}/{model}/{age}/, /sitemap.xml index)")
+

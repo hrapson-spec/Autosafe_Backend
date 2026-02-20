@@ -11,7 +11,9 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
 {% block twitter_title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems{% endblock %}
 {% block twitter_description %}Deep dive into {{ component_name|lower }} reliability for the {{ make_display }} {{
 model_display }}. Risk analysis and repair costs.{% endblock %}
-{% block canonical_url %}{{ canonical_url }}{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
+{% block robots_meta %}
+<meta name="robots" content="noindex, follow">{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">

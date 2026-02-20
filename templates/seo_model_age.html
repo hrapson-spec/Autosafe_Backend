@@ -19,7 +19,9 @@ else %}{{ make_display }} {{ model_display }} MOT Risk ({{ age_band_display }} Y
 {% block twitter_description %}{% if specific_year %}{{ "%.1f"|format(fail_rate * 100) }}% failure rate for the {{
 specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|format(fail_rate * 100) }}% failure rate for
 {{ age_band_display }}-year-old {{ make_display }} {{ model_display }} vehicles.{% endif %}{% endblock %}
-{% block canonical_url %}{{ canonical_url }}{% endblock %}
+{% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
+{% block robots_meta %}
+<meta name="robots" content="noindex, follow">{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">
