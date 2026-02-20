@@ -195,14 +195,14 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
     const COLORS = report.reliabilityScore > 75
       ? ['#16a34a', '#e2e8f0']
       : report.reliabilityScore > 50
-      ? ['#ca8a04', '#e2e8f0']
-      : ['#dc2626', '#e2e8f0'];
+        ? ['#ca8a04', '#e2e8f0']
+        : ['#dc2626', '#e2e8f0'];
 
     const controlScoreLabel = report.reliabilityScore > 75
       ? 'Good'
       : report.reliabilityScore > 50
-      ? 'Fair'
-      : 'Poor';
+        ? 'Fair'
+        : 'Poor';
 
     const getGarageCtaText = () => {
       if (failureRisk > 0.5) return 'Reduce your failure risk';
@@ -260,11 +260,10 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pt-10" aria-hidden="true">
-                <span className={`text-4xl font-semibold ${
-                  report.reliabilityScore > 75 ? 'text-green-600'
-                  : report.reliabilityScore > 50 ? 'text-yellow-600'
-                  : 'text-red-600'
-                }`}>
+                <span className={`text-4xl font-semibold ${report.reliabilityScore > 75 ? 'text-green-600'
+                    : report.reliabilityScore > 50 ? 'text-yellow-600'
+                      : 'text-red-600'
+                  }`}>
                   {report.reliabilityScore}/100
                 </span>
                 <span className="text-slate-500 text-xs mt-1">AutoSafe Index</span>
@@ -335,7 +334,15 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
         </div>
 
         {/* MOT Reminder + Email Report */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          ref={(node) => {
+            // @ts-ignore - assigning to readonly ref for visibility hook
+            motReminderRef.current = node;
+            // @ts-ignore
+            blockRef.current = node;
+          }}
+        >
           <MotReminderCapture report={report} selection={selection} postcode={postcode} />
           {renderEmailReport()}
         </div>
@@ -366,11 +373,10 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
                     className="flex gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
                   >
                     <div
-                      className={`mt-1.5 h-3 w-3 rounded-full flex-shrink-0 ${
-                        fault.riskLevel === 'High' ? 'bg-red-500'
-                        : fault.riskLevel === 'Medium' ? 'bg-yellow-500'
-                        : 'bg-blue-500'
-                      }`}
+                      className={`mt-1.5 h-3 w-3 rounded-full flex-shrink-0 ${fault.riskLevel === 'High' ? 'bg-red-500'
+                          : fault.riskLevel === 'Medium' ? 'bg-yellow-500'
+                            : 'bg-blue-500'
+                        }`}
                       aria-hidden="true"
                     />
                     <div className="flex-1 min-w-0">
@@ -379,11 +385,10 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
                     </div>
                     <div className="flex-shrink-0">
                       <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          fault.riskLevel === 'High' ? 'bg-red-100 text-red-700'
-                          : fault.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-blue-100 text-blue-700'
-                        }`}
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${fault.riskLevel === 'High' ? 'bg-red-100 text-red-700'
+                            : fault.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
                       >
                         {fault.riskLevel} Risk
                       </span>
@@ -438,6 +443,25 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
           report={report}
           initialPostcode={postcode}
         />
+
+        {/* Sticky CTA (P1 - mobile only) */}
+        <StickyCta
+          visible={showStickyCta}
+          ctaText="Get this report & reminders"
+          primaryAction="SET_REMINDER"
+          onClick={() => {
+            trackFunnel('sticky_cta_clicked', { variant: 'control' });
+            motReminderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Allow scroll to complete before focusing
+            setTimeout(() => {
+              const emailInput = motReminderRef.current?.querySelector('input[type="email"]') as HTMLInputElement | null;
+              if (emailInput) {
+                emailInput.focus();
+              }
+            }, 500);
+          }}
+        />
       </div>
     );
   }
@@ -450,14 +474,14 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
   const riskColorClass = recommendation.failureRiskPercent >= 50
     ? 'text-red-600'
     : recommendation.failureRiskPercent >= 30
-    ? 'text-amber-600'
-    : 'text-green-600';
+      ? 'text-amber-600'
+      : 'text-green-600';
 
   const riskBarColor = recommendation.failureRiskPercent >= 50
     ? 'bg-red-500'
     : recommendation.failureRiskPercent >= 30
-    ? 'bg-amber-500'
-    : 'bg-green-500';
+      ? 'bg-amber-500'
+      : 'bg-green-500';
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in">
@@ -551,11 +575,10 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
                     className="flex gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
                   >
                     <div
-                      className={`mt-1.5 h-3 w-3 rounded-full flex-shrink-0 ${
-                        fault.riskLevel === 'High' ? 'bg-red-500'
-                        : fault.riskLevel === 'Medium' ? 'bg-yellow-500'
-                        : 'bg-blue-500'
-                      }`}
+                      className={`mt-1.5 h-3 w-3 rounded-full flex-shrink-0 ${fault.riskLevel === 'High' ? 'bg-red-500'
+                          : fault.riskLevel === 'Medium' ? 'bg-yellow-500'
+                            : 'bg-blue-500'
+                        }`}
                       aria-hidden="true"
                     />
                     <div className="flex-1 min-w-0">
@@ -564,11 +587,10 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
                     </div>
                     <div className="flex-shrink-0">
                       <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          fault.riskLevel === 'High' ? 'bg-red-100 text-red-700'
-                          : fault.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-blue-100 text-blue-700'
-                        }`}
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${fault.riskLevel === 'High' ? 'bg-red-100 text-red-700'
+                            : fault.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
                       >
                         {fault.riskLevel} Risk
                       </span>

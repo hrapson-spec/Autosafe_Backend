@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<PublicStats | null>(null);
 
   useEffect(() => {
-    getPublicStats().then(setStats).catch(() => {});
+    getPublicStats().then(setStats).catch(() => { });
   }, []);
 
   const handleCarCheck = async (data: RegistrationQuery) => {
@@ -53,7 +53,6 @@ const App: React.FC = () => {
   const handleReset = () => {
     setReport(null);
     setSelection(null);
-    setPostcode('');
     setRegistration('');
     setError(null);
   };
@@ -91,7 +90,7 @@ const App: React.FC = () => {
       <main id="main-content" className="flex-grow flex flex-col">
         {report && selection ? (
           <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" /></div>}>
-          <ReportDashboard report={report} selection={selection} postcode={postcode} registration={registration} onReset={handleReset} />
+            <ReportDashboard report={report} selection={selection} postcode={postcode} registration={registration} onReset={handleReset} />
           </Suspense>
         ) : (
           /* Landing Hero Section - Centered Layout */
@@ -144,18 +143,18 @@ const App: React.FC = () => {
 
               {/* Feature 2: Personalization */}
               <div className="flex flex-col items-center text-center space-y-4 group">
-                 <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
+                <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                   <Database className="w-8 h-8 stroke-[1.5]" />
                 </div>
                 <h3 className="font-serif text-2xl text-slate-900 font-medium">Tailored Insight</h3>
                 <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                   Your car has its own story. We synthesize end-to-end data—from manufacturing logs to specific MOT history—to deliver a report personalized to your vehicle's unique DNA.
+                  Your car has its own story. We synthesize end-to-end data—from manufacturing logs to specific MOT history—to deliver a report personalized to your vehicle's unique DNA.
                 </p>
               </div>
 
               {/* Feature 3: Actionable */}
               <div className="flex flex-col items-center text-center space-y-4 group">
-                 <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
+                <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                   <Route className="w-8 h-8 stroke-[1.5]" />
                 </div>
                 <h3 className="font-serif text-2xl text-slate-900 font-medium">The Road Ahead</h3>
@@ -178,16 +177,16 @@ const App: React.FC = () => {
 
             {/* Footer Links in bottom area */}
             <div className="mt-auto pt-16 text-center space-y-8 opacity-80">
-               <div className="text-[10px] md:text-xs text-slate-400 max-w-md mx-auto leading-relaxed uppercase tracking-widest font-medium">
-                  Contains public sector information licensed under the Open Government Licence v3.0.
-                  <br/>
-                  Data from UK DVSA • Not official government advice.
-               </div>
-               <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
-                  <Link to="/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
-                  <Link to="/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
-                  <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
-               </div>
+              <div className="text-[10px] md:text-xs text-slate-400 max-w-md mx-auto leading-relaxed uppercase tracking-widest font-medium">
+                Contains public sector information licensed under the Open Government Licence v3.0.
+                <br />
+                Data from UK DVSA • Not official government advice.
+              </div>
+              <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
+                <Link to="/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
+                <Link to="/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
+                <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
+              </div>
             </div>
 
           </div>
