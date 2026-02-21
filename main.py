@@ -278,7 +278,7 @@ def get_real_client_ip(request: Request) -> str:
     if forwarded_for:
         # Take the first IP (leftmost) - this is the original client IP
         # Format: "client, proxy1, proxy2, ..."
-        client_ip = forwarded_for.split(",")[-1].strip()
+        client_ip = forwarded_for.split(",")[0].strip()
         # Basic validation - ensure it looks like an IP
         if client_ip and ("." in client_ip or ":" in client_ip):
             return client_ip
@@ -1200,16 +1200,23 @@ async def _fallback_prediction(
     return response
 
 
+def _convert_to_miles(value: int, unit: str) -> int:
+    """Convert odometer value to miles if reported in km."""
+    if unit and unit.lower() == 'km':
+        return int(value * 0.621371)
+    return value
+
+
 def _get_display_mileage(history) -> tuple:
-    """Return (mileage, is_anomaly) using plausibility check against prior test."""
+    """Return (mileage_in_miles, is_anomaly) using plausibility check against prior test."""
     tests = history.mot_tests
     if not tests or tests[0].odometer_value is None:
         return None, False
 
-    latest_mileage = tests[0].odometer_value
+    latest_mileage = _convert_to_miles(tests[0].odometer_value, tests[0].odometer_unit)
 
     if len(tests) >= 2 and tests[1].odometer_value is not None:
-        prev_mileage = tests[1].odometer_value
+        prev_mileage = _convert_to_miles(tests[1].odometer_value, tests[1].odometer_unit)
         days_diff = (tests[0].test_date - tests[1].test_date).days
         mileage_diff = latest_mileage - prev_mileage
 
@@ -1868,7 +1875,8 @@ async def test_dvsa_connection(
 # ============================================================================
 
 @app.get("/api/garage/outcome/{assignment_id}")
-async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
+@limiter.limit("20/minute")
+async def get_outcome_page(request: Request, assignment_id: str, result: Optional[str] = None):
     """
     Handle outcome reporting from email links.
 
@@ -1907,6 +1915,7 @@ async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
 
 
 @app.post("/api/garage/outcome/{assignment_id}")
+@limiter.limit("10/minute")
 async def report_outcome(assignment_id: str, request: Request):
     """
     Report outcome for a lead assignment.
@@ -2028,8 +2037,9 @@ async def export_risk_checks(
             )
 
     except Exception as e:
-        logger.error(f"Export risk checks failed: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        correlation_id = generate_correlation_id()
+        logger.error(f"Export risk checks failed error_id={correlation_id}: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Export failed. Error ID: {correlation_id}")
 
 
 # Debug endpoint for testing risk_checks save (admin-only)
@@ -2356,21 +2366,8 @@ async def serve_guide(slug: str):
     raise HTTPException(status_code=404, detail="Guide not found")
 
 
-# --- 301 redirects from old /static/ paths to clean URLs ---
-@app.get("/static/privacy.html")
-async def redirect_old_privacy():
-    return RedirectResponse(url="/privacy", status_code=301)
-
-
-@app.get("/static/terms.html")
-async def redirect_old_terms():
-    return RedirectResponse(url="/terms", status_code=301)
-
-
-@app.get("/static/guides/{slug}.html")
-async def redirect_old_guide(slug: str):
-    return RedirectResponse(url=f"/guides/{slug}", status_code=301)
-
+# NOTE: 301 redirects from old /static/ paths are handled by the
+# redirect_non_www middleware (lines 179-188), so no route handlers needed here.
 
 # Mount static files (only if the folder exists)
 if os.path.isdir("static"):
