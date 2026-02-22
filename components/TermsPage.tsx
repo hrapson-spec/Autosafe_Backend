@@ -15,12 +15,12 @@ const TermsPage: React.FC = () => {
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/app/" className="flex items-center gap-3 group">
             <Logo className="text-slate-900 w-8 h-8" />
             <span className="font-serif font-bold text-2xl text-slate-900">AutoSafe</span>
           </Link>
           <Link
-            to="/"
+            to="/app/"
             className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -210,7 +210,7 @@ const TermsPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">13. Entire agreement</h2>
             <p className="text-slate-600 leading-relaxed">
-              These terms, together with our <Link to="/privacy" className="text-blue-600 hover:underline">Privacy Notice</Link>, constitute the entire agreement between you and us regarding your use of the service.
+              These terms, together with our <Link to="/app/privacy" className="text-blue-600 hover:underline">Privacy Notice</Link>, constitute the entire agreement between you and us regarding your use of the service.
             </p>
           </section>
 
@@ -228,7 +228,7 @@ const TermsPage: React.FC = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <Link to="/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
+          <Link to="/app/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
             &larr; Back to AutoSafe
           </Link>
         </div>

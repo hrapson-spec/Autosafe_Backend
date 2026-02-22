@@ -187,7 +187,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         )}
         <p className="text-[11px] text-slate-400 mt-2">
           Confirmation now. Reminder 4 weeks before your MOT due date. Unsubscribe any time.{' '}
-          <a href="/privacy" className="underline hover:text-slate-500">Privacy</a>
+          <a href="/app/privacy" className="underline hover:text-slate-500">Privacy</a>
         </p>
       </div>
     );

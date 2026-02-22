@@ -465,7 +465,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
                   <span className="text-sm text-slate-600">
                     I agree AutoSafe may share my details with selected local garages so they can contact me about this request.{' '}
                     <a
-                      href="/privacy"
+                      href="/app/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"

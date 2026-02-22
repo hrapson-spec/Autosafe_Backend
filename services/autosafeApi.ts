@@ -332,11 +332,12 @@ export async function getReportByRegistration(registration: string): Promise<{
   // Step 1: Lookup vehicle
   const vehicle = await lookupVehicle(registration);
 
-  // Step 2: Get risk assessment
+  // Step 2: Get risk assessment (guard against null year from DVLA)
+  const year = vehicle.year ?? new Date().getFullYear();
   const riskData = await getRiskAssessment(
     vehicle.make,
     vehicle.model,
-    vehicle.year,
+    year,
     50000 // Default mileage estimate
   );
 
@@ -344,7 +345,7 @@ export async function getReportByRegistration(registration: string): Promise<{
   const selection: CarSelection = {
     make: vehicle.make,
     model: vehicle.model,
-    year: vehicle.year,
+    year,
     mileage: 50000
   };
 

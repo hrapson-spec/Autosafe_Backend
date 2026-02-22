@@ -15,12 +15,12 @@ const PrivacyPage: React.FC = () => {
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/app/" className="flex items-center gap-3 group">
             <Logo className="text-slate-900 w-8 h-8" />
             <span className="font-serif font-bold text-2xl text-slate-900">AutoSafe</span>
           </Link>
           <Link
-            to="/"
+            to="/app/"
             className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -33,7 +33,7 @@ const PrivacyPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 18 January 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 19 February 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -154,14 +154,14 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3">UK</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">Plausible Analytics</td>
+                    <td className="py-3 pr-4">Umami Analytics</td>
                     <td className="py-3 pr-4">Aggregated website statistics</td>
-                    <td className="py-3">EU</td>
+                    <td className="py-3">UK (self-hosted)</td>
                   </tr>
                   <tr>
-                    <td className="py-3 pr-4">Sentry</td>
-                    <td className="py-3 pr-4">Error monitoring</td>
-                    <td className="py-3">EU</td>
+                    <td className="py-3 pr-4">Google Ads (gtag)</td>
+                    <td className="py-3 pr-4">Conversion tracking</td>
+                    <td className="py-3">US (Google LLC)</td>
                   </tr>
                 </tbody>
               </table>
@@ -174,7 +174,7 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">International transfers</h2>
             <p className="text-slate-600 leading-relaxed">
-              We do not transfer your personal data outside the UK or EU.
+              Google Ads conversion tracking may transfer limited data (IP address, conversion events) to Google LLC in the United States. Google operates under the EU-US Data Privacy Framework. All other data processing takes place in the UK or EU.
             </p>
           </section>
 
@@ -250,10 +250,10 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Cookies</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              We use Plausible Analytics, which is a privacy-focused analytics service that does not use cookies and does not track you personally. It collects only aggregated, anonymous statistics about how our site is used.
+              We use Umami Analytics, a privacy-focused analytics service that does not use cookies and does not track you personally. It collects only aggregated, anonymous statistics about how our site is used.
             </p>
             <p className="text-slate-600 leading-relaxed">
-              We do not use marketing or advertising cookies.
+              We use Google Ads conversion tracking, which may set cookies to measure advertising effectiveness. These cookies are used solely for conversion measurement and not for personalised advertising.
             </p>
           </section>
 
@@ -278,7 +278,7 @@ const PrivacyPage: React.FC = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <Link to="/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
+          <Link to="/app/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
             &larr; Back to AutoSafe
           </Link>
         </div>

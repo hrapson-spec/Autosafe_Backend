@@ -35,12 +35,12 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
       {/* Header */}
       <nav className="w-full bg-transparent pt-8 pb-4">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/app/" className="flex items-center gap-3 group">
             <Logo className="text-slate-900 w-8 h-8" />
             <span className="font-serif font-bold text-2xl text-slate-900">AutoSafe</span>
           </Link>
           <Link
-            to="/"
+            to="/app/"
             className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
@@ -65,7 +65,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
             <p className="text-slate-300 mb-6 max-w-md mx-auto">
               Use our free MOT history checker to see your vehicle's risk score and get personalized advice.
             </p>
-            <Link to="/">
+            <Link to="/app/">
               <Button variant="secondary" size="lg">
                 Check Your Vehicle Free
               </Button>
@@ -75,7 +75,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <Link to="/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
+          <Link to="/app/" className="text-slate-500 hover:text-slate-900 transition-colors text-sm">
             &larr; Back to AutoSafe
           </Link>
         </div>
