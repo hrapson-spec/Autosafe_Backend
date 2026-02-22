@@ -119,22 +119,24 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
 <div class="stat-highlight">
   <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
   <div class="label">MOT failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
-  <div class="label" style="margin-top: 0.5rem;">
+  <div class="label" style="font-size: 1rem; margin-top: 1rem;">
     {% if overall_fail_rate > 0.28 %}
-    <span style="color: #ef4444;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }} percentage points above the UK
+    <span style="color: var(--danger); font-weight: 700;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }}pp above
+      the UK
       average (28%)</span>
-    {% elif overall_fail_rate < 0.28 %} <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - overall_fail_rate) * 100)
-      }} percentage points below the UK average (28%)</span>
+    {% elif overall_fail_rate < 0.28 %} <span style="color: var(--success); font-weight: 700;">{{ "%.1f"|format((0.28 -
+      overall_fail_rate) * 100)
+      }}pp below the UK average (28%)</span>
       {% else %}
       <span>Equal to the UK average (28%)</span>
       {% endif %}
   </div>
 </div>
 
-<div class="key-findings"
-  style="background: rgba(229, 192, 123, 0.08); border: 1px solid rgba(229, 192, 123, 0.2); border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0;">
-  <h2 style="margin-top: 0; font-size: 1.1rem;">Key Findings for the {{ make_display }} {{ model_display }}</h2>
-  <ul style="margin: 0; padding-left: 1.2rem;">
+<div class="key-findings" style="background: #f1f5f9; border-radius: 12px; padding: 2rem; margin: 2.5rem 0;">
+  <h2 style="margin-top: 0; font-size: 1.5rem; font-family: 'Inter', sans-serif; font-weight: 700;">Key Findings for the
+    {{ make_display }} {{ model_display }}</h2>
+  <ul style="margin: 1.5rem 0 0; padding-left: 1.2rem;">
     <li>Overall MOT failure rate: <strong>{{ "%.1f"|format(overall_fail_rate * 100) }}%</strong> — {{
       "%.1f"|format(((overall_fail_rate - uk_avg_fail_rate) * 100)|abs) }}pp {{ "above" if overall_fail_rate >
       uk_avg_fail_rate else "below" }} the UK average ({{ "%.0f"|format(uk_avg_fail_rate * 100) }}%)</li>
@@ -300,9 +302,9 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
   </div>
 </div>
 
-<div class="cta-box" style="margin-top: 2rem;">
+<div class="cta-box" style="margin-top: 4rem;">
   <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
-  <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display }} {{
+  <p>Enter your reg to see if <em>your</em> {{ make_display }} {{
     model_display }} is at risk.</p>
   <form class="reg-lookup-form" action="/" method="get">
     <input type="hidden" name="utm_source" value="seo">
@@ -310,6 +312,7 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
     <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
     <input type="hidden" name="utm_content" value="model_overview">
     <div class="reg-plate-wrapper">
+      <div class="reg-plate-gb">GB</div>
       <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
         aria-label="Vehicle registration number">
     </div>

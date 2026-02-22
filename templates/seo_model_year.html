@@ -87,10 +87,12 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
     <div class="label">MOT failure rate for {{ age_band_display }}-year-old {{ make_display }} {{ model_display }}
         vehicles</div>
     <div class="label" style="margin-top: 0.25rem;">Based on {{ "{:,}".format(total_tests) }} MOT tests</div>
-    <div class="label" style="margin-top: 0.5rem;">
+    <div class="label" style="font-size: 1rem; margin-top: 1rem;">
         {% if fail_rate > 0.28 %}
-        <span style="color: #ef4444;">{{ "%.1f"|format((fail_rate - 0.28) * 100) }}pp above the UK average (28%)</span>
-        {% elif fail_rate < 0.28 %} <span style="color: #22c55e;">{{ "%.1f"|format((0.28 - fail_rate) * 100) }}pp below
+        <span style="color: var(--danger); font-weight: 700;">{{ "%.1f"|format((fail_rate - 0.28) * 100) }}pp above the
+            UK average (28%)</span>
+        {% elif fail_rate < 0.28 %} <span style="color: var(--success); font-weight: 700;">{{ "%.1f"|format((0.28 -
+            fail_rate) * 100) }}pp below
             the UK average (28%)</span>
             {% else %}
             <span>Equal to the UK average (28%)</span>
@@ -142,7 +144,7 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
                 </thead>
                 <tbody>
                     {% for band in all_age_bands %}
-                    <tr{% if band.age_band==age_band_raw %} style="background: rgba(229, 192, 123, 0.15);" {% endif %}>
+                    <tr{% if band.age_band==age_band_raw %} style="background: #f1f5f9; font-weight: 700;" {% endif %}>
                         <td>
                             {% if band.age_band == age_band_raw %}
                             <strong>{{ band.age_band }} years</strong>
@@ -172,9 +174,9 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
             </div>
             {% endif %}
 
-            <div class="cta-box" style="margin-top: 2rem;">
+            <div class="cta-box" style="margin-top: 4rem;">
                 <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see if <em>your</em> {{ make_display
+                <p>Enter your reg to see if <em>your</em> {{ make_display
                     }} {{ model_display }} is at risk.</p>
                 <form class="reg-lookup-form" action="/" method="get">
                     <input type="hidden" name="utm_source" value="seo_pages">
@@ -183,6 +185,7 @@ specific_year }} {{ make_display }} {{ model_display }}.{% else %}{{ "%.1f"|form
                     <input type="hidden" name="utm_content"
                         value="age_{{ specific_year if specific_year else age_band_display|replace(' ', '-') }}">
                     <div class="reg-plate-wrapper">
+                        <div class="reg-plate-gb">GB</div>
                         <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8"
                             required aria-label="Vehicle registration number">
                     </div>

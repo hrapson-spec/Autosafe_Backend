@@ -39,7 +39,7 @@ component_name|lower }} issues.{% endblock %}
 </p>
 
 <div class="stat-highlight">
-    <div class="big-number">{{ worst_models[0].display_name }}</div>
+    <div class="big-number" style="font-size: 2.5rem;">{{ worst_models[0].display_name }}</div>
     <div class="label">Highest failure rate for {{ component_name|lower }} ({{ "%.1f"|format(worst_models[0].comp_risk *
         100) }}%)</div>
 </div>
@@ -60,7 +60,7 @@ component_name|lower }} issues.{% endblock %}
             <td>#{{ model.rank }}</td>
             <td>
                 {% if model.page_link %}
-                <a href="{{ model.page_link }}" style="color: #e5c07b; text-decoration: none;">{{ model.display_name
+                <a href="{{ model.page_link }}" style="font-weight: 700; text-decoration: none;">{{ model.display_name
                     }}</a>
                 {% else %}
                 {{ model.display_name }}
@@ -73,9 +73,9 @@ component_name|lower }} issues.{% endblock %}
     </tbody>
 </table>
 
-<div class="cta-box" style="margin-top: 2rem;">
+<div class="cta-box" style="margin-top: 4rem;">
     <h3>Check Your Car</h3>
-    <p style="color: #a0a0a0; margin-bottom: 1rem;">Is your car on the list? Enter your reg to check for specific {{
+    <p>Is your car on the list? Enter your reg to check for specific {{
         component_name|lower }} risks.</p>
     <form class="reg-lookup-form" action="/" method="get">
         <input type="hidden" name="utm_source" value="seo_pages">
@@ -83,6 +83,7 @@ component_name|lower }} issues.{% endblock %}
         <input type="hidden" name="utm_campaign" value="component_hub">
         <input type="hidden" name="utm_content" value="{{ component_slug }}">
         <div class="reg-plate-wrapper">
+            <div class="reg-plate-gb">GB</div>
             <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
                 aria-label="Vehicle registration number">
         </div>

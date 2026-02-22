@@ -18,7 +18,7 @@
     <meta name="description"
         content="{% block meta_description %}Check MOT failure rates by car make and model. Data from 142 million UK MOT tests.{% endblock %}">
     {% block robots_meta %}{% endblock %}
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="#f8fafc">
     <meta property="og:title" content="{% block og_title %}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{% endblock %}">
     <meta property="og:type" content="article">
@@ -38,474 +38,484 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Playfair+Display:wght@600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
     <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --text-muted: #94a3b8;
+            --primary-accent: #374151;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
         .guide-content {
             max-width: 800px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 2rem 1.5rem;
         }
 
-        .guide-content h1 {
+        h1,
+        h2,
+        h3 {
             font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        h1 {
             font-size: 2.5rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
         }
 
-        .guide-content h2 {
-            font-size: 1.5rem;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-            color: #e5c07b;
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1.25rem;
         }
 
-        .guide-content h3 {
+        h3 {
             font-size: 1.25rem;
             margin-top: 1.5rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
         }
 
-        .guide-content p {
-            line-height: 1.8;
-            margin-bottom: 1rem;
-            color: #a0a0a0;
+        p {
+            margin-bottom: 1.25rem;
+            color: var(--text-secondary);
         }
 
-        .guide-content ul {
+        ul {
             margin-bottom: 1.5rem;
             padding-left: 1.5rem;
         }
 
-        .guide-content li {
+        li {
             margin-bottom: 0.75rem;
-            line-height: 1.6;
-            color: #a0a0a0;
+            color: var(--text-secondary);
         }
 
         .data-table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 1.5rem 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 2rem 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
         }
 
         .data-table th {
             text-align: left;
-            padding: 0.75rem;
-            border-bottom: 2px solid #e5c07b;
-            color: #fff;
-            font-weight: 600;
+            padding: 1rem;
+            background: #f1f5f9;
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .data-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid #333;
-            color: #a0a0a0;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
         }
 
         .data-table tr:hover {
-            background: rgba(229, 192, 123, 0.05);
+            background: #f8fafc;
         }
 
         .fail-rate {
-            color: #e5c07b;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .fail-rate.high {
-            color: #ef4444;
+            color: var(--danger);
         }
 
         .fail-rate.low {
-            color: #22c55e;
-        }
-
-        .sample-size {
-            font-size: 0.85rem;
-            color: #666;
+            color: var(--success);
         }
 
         .stat-highlight {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            margin: 2.5rem 0;
             text-align: center;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
         }
 
         .stat-highlight .big-number {
-            font-size: 3rem;
-            font-weight: 700;
-            color: #e5c07b;
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1;
         }
 
         .stat-highlight .label {
-            color: #a0a0a0;
-            margin-top: 0.5rem;
+            color: var(--text-secondary);
+            margin-top: 0.75rem;
+            font-weight: 500;
         }
 
         .cta-box {
-            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 2rem;
-            margin: 2rem 0;
+            background: var(--primary-accent);
+            color: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin: 3rem 0;
             text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
 
         .cta-box h3 {
-            color: #fff;
+            color: white;
             margin-bottom: 1rem;
+            font-size: 1.75rem;
+        }
+
+        .cta-box p {
+            color: #d1d5db;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
         }
 
         .cta-box a {
             display: inline-block;
-            background: #e5c07b;
-            color: #1a1a1a;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            background: white;
+            color: var(--primary-accent);
+            padding: 1rem 2rem;
+            border-radius: 100px;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
         }
 
         .cta-box a:hover {
-            background: #d4a85a;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 2rem;
-            color: #e5c07b;
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
         }
 
         .methodology {
-            background: #1f1f1f;
-            border-left: 3px solid #e5c07b;
-            padding: 1rem 1.5rem;
-            margin: 1.5rem 0;
-            font-size: 0.9rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2.5rem 0;
+            font-size: 0.875rem;
         }
 
         .methodology p {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
         }
 
         .risk-bar-container {
-            margin: 0.5rem 0;
+            margin: 1rem 0;
         }
 
         .risk-bar-label {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.25rem;
-            color: #a0a0a0;
-            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
         }
 
         .risk-bar {
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 100px;
             overflow: hidden;
         }
 
         .risk-bar-fill {
             height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
+            border-radius: 100px;
         }
 
         .risk-bar-fill.low {
-            background: #22c55e;
+            background: var(--success);
         }
 
         .risk-bar-fill.medium {
-            background: #e5c07b;
+            background: var(--warning);
         }
 
         .risk-bar-fill.high {
-            background: #ef4444;
-        }
-
-        .faq-section {
-            margin-top: 2rem;
-        }
-
-        .faq-item {
-            margin-bottom: 1.5rem;
-        }
-
-        .faq-item h3 {
-            color: #fff;
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .faq-item p {
-            margin-bottom: 0.5rem;
+            background: var(--danger);
         }
 
         .related-links {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .related-links a {
-            background: #2a2a2a;
-            color: #e5c07b;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .related-links a:hover {
-            background: #333;
-        }
-
-        .make-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 0.75rem;
             margin: 1.5rem 0;
         }
 
-        .make-grid a {
-            background: #2a2a2a;
-            color: #e5c07b;
-            padding: 0.75rem 1rem;
+        .related-links a {
+            background: white;
+            color: var(--text-primary);
+            padding: 0.625rem 1.25rem;
             border-radius: 8px;
             text-decoration: none;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .make-grid a:hover {
-            background: #333;
-        }
-
-        /* Header nav */
-        .site-nav {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .site-nav a {
-            color: #a0a0a0;
-            text-decoration: none;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            transition: color 0.2s;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
         }
 
-        .site-nav a:hover {
-            color: #e5c07b;
+        .related-links a:hover {
+            border-color: var(--text-muted);
+            background: #f8fafc;
         }
 
-        .nav-cta {
-            background: #e5c07b;
-            color: #1a1a1a !important;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-        }
-
-        .nav-cta:hover {
-            background: #d4a85a;
-        }
-
+        /* Header */
         .app-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        @media (max-width: 640px) {
-            .site-nav {
-                gap: 1rem;
-                font-size: 0.85rem;
-            }
+        .logo-image {
+            height: 32px;
+            width: auto;
+        }
 
-            .app-header {
-                flex-direction: column;
-                text-align: center;
-            }
+        .site-nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .site-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .site-nav a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-cta {
+            background: #fcd34d;
+            color: var(--text-primary) !important;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 700 !important;
         }
 
         /* Breadcrumbs */
         .breadcrumbs {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
             align-items: center;
-            margin-bottom: 1.5rem;
-            font-size: 0.85rem;
-            color: #666;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
         }
 
         .breadcrumbs a {
-            color: #e5c07b;
+            color: var(--text-secondary);
             text-decoration: none;
-        }
-
-        .breadcrumbs a:hover {
-            text-decoration: underline;
         }
 
         .breadcrumbs .sep {
-            margin: 0 0.25rem;
-            color: #555;
+            margin: 0 0.5rem;
         }
 
-        /* UK number plate styled reg input */
-        .reg-plate-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-
-        .reg-plate-wrapper::before {
-            content: "GB";
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 28px;
-            background: #003399;
-            color: white;
-            font-size: 0.6rem;
-            font-weight: bold;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            padding-bottom: 4px;
-            border-radius: 4px 0 0 4px;
-            z-index: 1;
-        }
-
-        .reg-plate-input {
-            background-color: #FFD200;
-            color: #000;
-            font-family: 'Courier New', monospace;
-            text-transform: uppercase;
-            font-weight: bold;
-            font-size: 1.25rem;
-            border: 2px solid #333;
-            border-radius: 4px;
-            letter-spacing: 3px;
-            padding: 0.75rem 1rem 0.75rem 2.25rem;
+        /* Footer */
+        .app-footer {
+            padding: 4rem 2rem;
+            background: white;
+            border-top: 1px solid var(--border-color);
             text-align: center;
-            width: 220px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
 
-        .reg-plate-input::placeholder {
-            color: #666;
-            letter-spacing: 2px;
-            font-size: 1rem;
-        }
-
-        .reg-lookup-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-            justify-content: center;
+        .footer-links {
             margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .reg-lookup-btn {
-            background: #e5c07b;
-            color: #1a1a1a;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
+        .footer-links a {
+            color: var(--text-secondary);
             text-decoration: none;
         }
 
+        .footer-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* Reg Plate */
+        .reg-lookup-form {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .reg-plate-wrapper {
+            position: relative;
+            display: flex;
+            height: 56px;
+            border: 2px solid #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fcd34d;
+        }
+
+        .reg-plate-gb {
+            width: 32px;
+            background: #003399;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 6px;
+            font-size: 0.6rem;
+            font-weight: 800;
+        }
+
+        .reg-plate-input {
+            width: 200px;
+            border: none;
+            background: transparent;
+            font-family: 'Courier New', monospace;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 0 0.5rem;
+        }
+
+        .reg-lookup-btn {
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: ALL 0.2s;
+        }
+
         .reg-lookup-btn:hover {
-            background: #d4a85a;
+            background: #374151;
+        }
+
+        @media (max-width: 640px) {
+            .app-header {
+                padding: 1rem;
+            }
+
+            .site-nav {
+                display: none;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .stat-highlight .big-number {
+                font-size: 3rem;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="app-container" style="max-width: 100%;">
-        <header class="app-header" style="padding: 1rem 2rem;">
-            <div class="logo">
-                <a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a>
-            </div>
-            <nav class="site-nav" aria-label="Main navigation">
-                <a href="/mot-check/">MOT Check</a>
-                <a href="/guides/common-mot-failures">Guides</a>
-                <a href="/" class="nav-cta">Free Prediction</a>
-            </nav>
-        </header>
+    <header class="app-header">
+        <div class="logo">
+            <a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a>
+        </div>
+        <nav class="site-nav">
+            <a href="/mot-check/">MOT Check</a>
+            <a href="/guides/common-mot-failures">Guides</a>
+            <a href="/" class="nav-cta">Free Prediction</a>
+        </nav>
+    </header>
 
-        <main class="guide-content">
-            {% block breadcrumbs %}{% endblock %}
-            {% block content %}{% endblock %}
+    <main class="guide-content">
+        {% block breadcrumbs %}{% endblock %}
+        {% block content %}{% endblock %}
 
-            <div class="cta-box">
-                <h3>{% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1rem;">{% block cta_text %}Get a personalised failure
-                    prediction based on your car's age, mileage and history.{% endblock %}</p>
-                <a href="/">Check Your MOT Risk Free</a>
-            </div>
+        <div class="cta-box">
+            <h3>{% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}</h3>
+            <p>{% block cta_text %}Get a personalised failure prediction based on your car's age, mileage and history.{%
+                endblock %}</p>
+            <a href="/">Check Your MOT Risk Free</a>
+        </div>
 
-            <h2>Related Guides</h2>
-            <ul>
-                <li><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car Pass Its MOT? Free AI
-                        Prediction</a></li>
-                <li><a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check</a>
-                </li>
-                <li><a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT Failure Points</a></li>
-                <li><a href="/guides/when-is-mot-due" style="color: #e5c07b;">When Is My MOT Due?</a></li>
-                <li><a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure Rates by Car</a></li>
-                <li><a href="/guides/mot-rules-2026" style="color: #e5c07b;">New MOT Rules 2026</a></li>
-                <li><a href="/guides/mot-defect-categories" style="color: #e5c07b;">MOT Defect Categories Explained</a>
-                </li>
-                <li><a href="/guides/mot-cost" style="color: #e5c07b;">How Much Does an MOT Cost?</a></li>
-                <li><a href="/guides/mot-history-check" style="color: #e5c07b;">How to Check MOT History</a></li>
-                <li><a href="/guides/first-mot-guide" style="color: #e5c07b;">Your First MOT Guide</a></li>
-                <li><a href="/mot-check/" style="color: #e5c07b;">Browse All Makes &amp; Models</a></li>
-            </ul>
-        </main>
+        <h2>Related Guides</h2>
+        <div class="related-links">
+            <a href="/will-my-car-pass-mot/">Will My Car Pass?</a>
+            <a href="/guides/mot-checklist">MOT Checklist</a>
+            <a href="/guides/common-mot-failures">Top Failures</a>
+            <a href="/guides/when-is-mot-due">When Is MOT Due?</a>
+            <a href="/guides/mot-failure-rates-by-car">Rates by Car</a>
+            <a href="/guides/mot-rules-2026">2026 Rules</a>
+            <a href="/guides/mot-cost">MOT Cost</a>
+            <a href="/mot-check/">Browse All</a>
+        </div>
+    </main>
 
-        <footer class="app-footer">
-            <p>Contains public sector information licensed under the <a
-                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-                    target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA MOT records &bull; For informational purposes only &bull; Not official government
-                advice or endorsement.{% if data_updated %} &bull; Data last updated: {{ data_updated }}{% endif %}</p>
-            <div class="footer-links">
-                <a href="/will-my-car-pass-mot/">MOT Prediction</a> &bull;
-                <a href="/guides/mot-checklist">MOT Checklist</a> &bull;
-                <a href="/guides/common-mot-failures">Common Failures</a> &bull;
-                <a href="/guides/when-is-mot-due">When Is MOT Due?</a> &bull;
-                <a href="/guides/mot-failure-rates-by-car">Failure Rates by Car</a> &bull;
-                <a href="/guides/mot-rules-2026">MOT Rules 2026</a> &bull;
-                <a href="/guides/mot-cost">MOT Costs</a> &bull;
-                <a href="/guides/mot-history-check">MOT History</a>
-            </div>
-            <div class="footer-links" style="margin-top: 0.5rem;">
-                <a href="/static/terms.html">Terms</a> &bull; <a href="/static/privacy.html">Privacy</a> &bull; <a
-                    href="mailto:autosafehq@gmail.com">Send Feedback</a>
-            </div>
-        </footer>
-    </div>
+    <footer class="app-footer">
+        <p>Contains public sector information licensed under the <a
+                href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank">Open
+                Government Licence v3.0</a></p>
+        <p>Data from UK DVSA MOT records &bull; For informational purposes only.{% if data_updated %} &bull; Data last
+            updated: {{ data_updated }}{% endif %}</p>
+        <div class="footer-links">
+            <a href="/static/terms.html">Terms</a>
+            <a href="/static/privacy.html">Privacy</a>
+            <a href="mailto:autosafehq@gmail.com">Contact</a>
+        </div>
+        <p style="margin-top: 2rem; font-weight: 700; color: var(--text-primary);">AutoSafe &copy; 2026</p>
+    </footer>
 </body>
 
 </html>

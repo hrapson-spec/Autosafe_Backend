@@ -157,11 +157,11 @@ class TestSeoFreshnessSignals(unittest.TestCase):
 
     def test_footer_contains_data_updated(self):
         r = client.get("/mot-check/ford/fiesta/")
-        self.assertIn("Data last updated:", r.text)
+        self.assertTrue(re.search(r"Data last\s*updated:", r.text) is not None, "'Data last updated:' not found in footer")
 
     def test_data_updated_is_valid_date(self):
         r = client.get("/mot-check/ford/fiesta/")
-        match = re.search(r"Data last updated: (\d{4}-\d{2}-\d{2})", r.text)
+        match = re.search(r"Data last\s*updated:\s*(\d{4}-\d{2}-\d{2})", r.text)
         self.assertIsNotNone(match, "Data updated date should be in YYYY-MM-DD format")
 
 
