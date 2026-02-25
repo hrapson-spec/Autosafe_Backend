@@ -29,7 +29,7 @@
     <meta name="twitter:description"
         content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data.">
     <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
-    <link rel="canonical" href="https://www.autosafe.one/app/">
+    <link rel="canonical" href="https://www.autosafe.one/">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <script type="application/ld+json">
@@ -63,7 +63,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=7">
+    <link rel="stylesheet" href="/static/style.css?v=8">
     <!-- Umami Analytics -->
     <script defer src="https://umami-production-cb51.up.railway.app/script.js"
         data-website-id="0dead4c2-42a2-456c-abc1-42f93e1a991b" data-domains="autosafe.one,www.autosafe.one"></script>
@@ -76,8 +76,9 @@
             <div class="logo">
                 <img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image">
             </div>
-            <h1 class="headline">Fix it before they find it.</h1>
-            <p class="tagline">Predict your next MOT result and avoid costly surprises.</p>
+            <h1 class="headline">Will your car pass its MOT?</h1>
+            <p class="tagline">Enter your reg. Get your risk score in seconds.</p>
+            <p class="trust-line">Free · Instant · No signup · Uses official DVSA data</p>
         </header>
 
         <!-- Search Panel -->
@@ -104,121 +105,83 @@
             </section>
 
             <!-- Results Panel (hidden until search) -->
-            <section class="results-card hidden" id="resultsPanelTreatment">
+            <section class="results-card hidden" id="resultsPanel">
                 <div class="results-header">
-                    <h2 id="vehicleTagT">Vehicle</h2>
-                    <span class="reg-badge" id="vehicleDetailsT"></span>
+                    <h2 id="vehicleTag">Vehicle</h2>
+                    <span class="reg-badge" id="vehicleDetails"></span>
                 </div>
 
                 <div class="stats-row">
                     <div class="stat">
                         <span class="stat-label">Last MOT</span>
-                        <span class="stat-value" id="lastMOTDateT">-</span>
+                        <span class="stat-value" id="lastMOTDate">-</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Result</span>
-                        <span class="stat-value" id="lastMOTResultT">-</span>
+                        <span class="stat-value" id="lastMOTResult">-</span>
                     </div>
                     <div class="stat">
                         <span class="stat-label">Mileage</span>
-                        <span class="stat-value" id="mileageT">-</span>
+                        <span class="stat-value" id="mileage">-</span>
                     </div>
                 </div>
 
-                <!-- Score + Motivator -->
-                <div class="treatment-score-row">
-                    <div class="failure-score-card">
-                        <div class="failure-score-label" id="scoreLabelT">Estimated chance of failing your next MOT
-                        </div>
-                        <div class="failure-score-value" id="failureScoreT">-</div>
-                        <div class="failure-score-bar">
-                            <div class="failure-score-bar-fill" id="failureBarT" style="width: 0%"></div>
-                        </div>
-                        <div class="failure-score-verdict" id="verdictT"></div>
+                <div class="risk-display">
+                    <div class="risk-main">
+                        <span class="risk-percentage" id="riskValue">-</span>
+                        <span class="risk-label" id="riskText">Failure Risk</span>
                     </div>
-                    <div class="motivator-card" id="motivatorCardT">
-                        <div class="motivator-icon" id="motivatorIconT"></div>
-                        <div class="motivator-content">
-                            <div class="motivator-headline" id="motivatorHeadlineT"></div>
-                            <div class="motivator-supporting" id="motivatorSupportingT"></div>
-                        </div>
-                    </div>
+                    <span class="confidence-badge" id="confidenceBadge">-</span>
                 </div>
 
-                <div class="mot-countdown hidden" id="motCountdownT"></div>
-
-                <!-- Recommendation Block -->
-                <div class="recommendation-block" id="recBlockT">
-                    <div class="rec-content">
-                        <h3 id="recHeadlineT"></h3>
-                        <p class="rec-supporting" id="recSupportingT"></p>
-                        <button type="button" class="rec-primary-btn" id="recPrimaryBtnT"></button>
-                        <p class="rec-trust-microcopy" id="recTrustT"></p>
-                        <button type="button" class="rec-secondary-link hidden" id="recSecondaryBtnT"></button>
-                        <div class="rec-success-badge hidden" id="recSuccessBadgeT">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            Request received
-                        </div>
-                    </div>
-                    <div class="rec-decorative-circle" aria-hidden="true"></div>
+                <div class="repair-cost">
+                    <span class="repair-label">Estimated Repair Cost</span>
+                    <span class="repair-value" id="repairCostValue">-</span>
+                    <span class="repair-range" id="repairCostRange"></span>
                 </div>
 
-                <!-- Lead Capture (treatment) -->
-                <div class="lead-capture hidden" id="leadCaptureT">
-                    <form id="leadFormT">
-                        <h3 id="leadFormTitleT">Get connected with a local garage</h3>
+                <!-- Lead Capture Section -->
+                <div class="lead-capture" id="leadCapture">
+                    <h3>Want help fixing these issues or booking your MOT?</h3>
+                    <p>Enter your details and we'll connect you with trusted local garages.</p>
+                    <form id="leadForm">
                         <div class="form-group">
-                            <label for="leadNameT">Name</label>
-                            <input type="text" id="leadNameT" placeholder="Your name" required>
+                            <label for="leadName">Name</label>
+                            <input type="text" id="leadName" placeholder="Your name" required>
                         </div>
                         <div class="form-group">
-                            <label for="leadEmailT">Email</label>
-                            <input type="email" id="leadEmailT" placeholder="your@email.com" required>
+                            <label for="leadEmail">Email</label>
+                            <input type="email" id="leadEmail" placeholder="your@email.com" required>
                         </div>
                         <div class="form-group">
-                            <label for="leadPhoneT">Phone (optional)</label>
-                            <input type="tel" id="leadPhoneT" placeholder="07xxx xxxxxx">
+                            <label for="leadPhone">Phone (optional)</label>
+                            <input type="tel" id="leadPhone" placeholder="07xxx xxxxxx">
                         </div>
                         <button type="submit" class="primary-btn lead-btn">
-                            <span class="btn-text" id="leadBtnTextT">Find a Garage</span>
+                            <span class="btn-text">Find a Garage</span>
                             <div class="loader hidden"></div>
                         </button>
                     </form>
                 </div>
-                <div class="lead-success hidden" id="leadSuccessT">
+
+                <!-- Lead Success Message (hidden by default) -->
+                <div class="lead-success hidden" id="leadSuccess">
                     <h3>Thanks! We'll be in touch soon.</h3>
                     <p>A local garage will contact you shortly.</p>
                 </div>
 
-                <!-- Accordion: Component Breakdown -->
-                <details class="treatment-accordion" id="accordionT">
-                    <summary>
-                        Why this result? See your full component breakdown.
-                        <svg class="accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <path d="M6 9l6 6 6-6" />
-                        </svg>
-                    </summary>
-                    <div class="accordion-content">
-                        <div class="components-grid" id="componentsGridT"></div>
-                    </div>
-                </details>
+                <div class="components-section">
+                    <h3>Risk by Component</h3>
+                    <div class="components-grid" id="componentsGrid"></div>
+                </div>
 
-                <p class="source-note" id="sourceNoteT"></p>
+                <p class="source-note" id="sourceNote"></p>
 
-                <button type="button" id="checkAnotherBtnT" class="primary-btn check-another-btn">
+                <button type="button" id="checkAnotherBtn" class="primary-btn check-another-btn">
                     <span class="btn-text">Check Another Car</span>
                 </button>
             </section>
         </main>
-
-        <!-- Sticky CTA (mobile, treatment only) -->
-        <div class="sticky-cta-bar" id="stickyCta">
-            <button type="button" class="sticky-cta-btn" id="stickyCtaBtn"></button>
-        </div>
 
         <!-- Features Section -->
         <section class="features-section" aria-labelledby="features-heading">
@@ -266,106 +229,6 @@
             </article>
         </section>
 
-        <!-- Pre-rendered SEO content (below the fold, visible to crawlers) -->
-        <section style="max-width: 800px; margin: 2rem auto; padding: 0 1.5rem;">
-            <h2
-                style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-bottom: 1rem; text-align: center;">
-                How AutoSafe MOT Prediction Works</h2>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">AutoSafe uses machine learning trained on
-                <strong style="color: #e5c07b;">142 million official DVSA MOT test records</strong> to predict whether
-                your car will pass or fail its next MOT. Simply enter your registration number and postcode to get an
-                instant, personalised risk assessment covering seven key failure areas.
-            </p>
-
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">1</div>
-                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">Enter Your Reg</h3>
-                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Type your vehicle registration
-                        number and postcode. We look up your car's full MOT history from the DVSA database instantly.
-                    </p>
-                </div>
-                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">2</div>
-                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">AI Analyses Your Car</h3>
-                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Our CatBoost model evaluates 104
-                        features from your vehicle's age, mileage, MOT history, previous advisories and failure
-                        patterns.</p>
-                </div>
-                <div style="background: #2a2a2a; border-radius: 12px; padding: 1.5rem; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">3</div>
-                    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">Get Your Risk Score</h3>
-                    <p style="color: #a0a0a0; font-size: 0.9rem; line-height: 1.6;">Receive a clear percentage failure
-                        risk plus a breakdown by component &mdash; brakes, suspension, tyres, lights and more &mdash; so
-                        you know exactly what to check.</p>
-                </div>
-            </div>
-
-            <h2
-                style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">
-                Why Check Your MOT Risk Before Your Test?</h2>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">Every year, around <strong
-                    style="color: #e5c07b;">28% of vehicles fail their MOT</strong> in the UK &mdash; that's roughly 7.5
-                million cars. A failed MOT means unexpected repair bills, wasted time, and potentially being left
-                without a legal vehicle to drive. The average cost of MOT failure repairs is between &pound;150 and
-                &pound;500, depending on the issues found.</p>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">By checking your risk score before your
-                test, you can identify the specific components most likely to cause a failure on <em>your</em> car. This
-                gives you the opportunity to have issues fixed proactively at a garage of your choice &mdash; often
-                cheaper than emergency repairs after a failed MOT. Many common MOT failures, such as worn brake pads,
-                faulty bulbs, or low tyre tread, are inexpensive to fix when caught early.</p>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">AutoSafe's prediction goes beyond generic
-                advice. Because we analyse your car's individual MOT history &mdash; including past advisories, previous
-                failure reasons, mileage patterns and vehicle age &mdash; the risk score is tailored specifically to
-                your vehicle, not just a national average.</p>
-
-            <h2
-                style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">
-                UK MOT Statistics at a Glance</h2>
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
-                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
-                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">142M+</div>
-                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">MOT tests analysed</div>
-                </div>
-                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
-                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">28%</div>
-                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">National failure rate</div>
-                </div>
-                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
-                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">7</div>
-                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">Failure areas checked</div>
-                </div>
-                <div style="background: #2a2a2a; border-radius: 8px; padding: 1.25rem; text-align: center;">
-                    <div style="font-size: 2.2rem; font-weight: 700; color: #e5c07b;">104</div>
-                    <div style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">Prediction features</div>
-                </div>
-            </div>
-
-            <h2
-                style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; text-align: center;">
-                Common MOT Failure Areas</h2>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">MOT testers inspect your vehicle across
-                multiple categories. The most common reasons for MOT failure in the UK include problems with <strong
-                    style="color:#fff;">lighting and signalling</strong> (blown bulbs, misaligned headlamps), <strong
-                    style="color:#fff;">suspension</strong> (worn shock absorbers, damaged springs), <strong
-                    style="color:#fff;">brakes</strong> (worn pads, corroded discs, binding calipers), and <strong
-                    style="color:#fff;">tyres</strong> (insufficient tread depth, sidewall damage, incorrect pressures).
-            </p>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1rem;">Other frequent failure points include
-                windscreen chips in the driver's line of vision, excessive exhaust emissions, worn steering components,
-                and structural corrosion. The risk weighting varies significantly by vehicle make, model, and age
-                &mdash; for example, older vehicles are far more likely to fail on corrosion and suspension, while newer
-                cars more commonly fail on lighting issues.</p>
-            <p style="color: #a0a0a0; line-height: 1.8; margin-bottom: 1.5rem;">Explore our detailed guides for more
-                information: <a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT
-                    Failure Points</a>, <a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT
-                    Checklist</a>, and <a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure
-                    Rates by Car</a>. Or <a href="/mot-check/" style="color: #e5c07b;">browse MOT data by make and
-                    model</a>.</p>
-        </section>
-
         <!-- Footer -->
         <footer class="app-footer">
             <p>Contains public sector information licensed under the <a
@@ -373,37 +236,13 @@
                     target="_blank">Open Government Licence v3.0</a></p>
             <p>Data from UK DVSA • Not official government advice or endorsement.</p>
             <div class="footer-links">
-                <a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT?</a> •
-                <a href="/guides/mot-checklist">MOT Checklist</a> •
-                <a href="/guides/common-mot-failures">Common Failures</a> •
-                <a href="/guides/when-is-mot-due">When Is MOT Due?</a> •
-                <a href="/guides/mot-failure-rates-by-car">Failure Rates by Car</a> •
-                <a href="/guides/mot-rules-2026">MOT Rules 2026</a> •
-                <a href="/guides/mot-cost">MOT Costs</a> •
-                <a href="/guides/first-mot-guide">First MOT Guide</a> •
-                <a href="/guides/mot-history-check">MOT History Check</a>
-            </div>
-            <div class="footer-links" style="margin-top: 0.5rem;">
-                <a href="/mot-check/">Popular MOT Checks</a>:
-                <a href="/mot-check/ford/fiesta/">Ford Fiesta</a> •
-                <a href="/mot-check/vauxhall/corsa/">Vauxhall Corsa</a> •
-                <a href="/mot-check/volkswagen/golf/">VW Golf</a> •
-                <a href="/mot-check/bmw/3-series/">BMW 3 Series</a> •
-                <a href="/mot-check/audi/a3/">Audi A3</a> •
-                <a href="/mot-check/ford/focus/">Ford Focus</a> •
-                <a href="/mot-check/toyota/yaris/">Toyota Yaris</a> •
-                <a href="/mot-check/mercedes-benz/c-class/">Mercedes C-Class</a> •
-                <a href="/mot-check/nissan/qashqai/">Nissan Qashqai</a> •
-                <a href="/mot-check/kia/sportage/">Kia Sportage</a>
-            </div>
-            <div class="footer-links" style="margin-top: 0.5rem;">
                 <a href="/terms">Terms</a> • <a href="/privacy">Privacy</a> • <a href="mailto:autosafehq@gmail.com">Send
                     Feedback</a>
             </div>
         </footer>
     </div>
 
-    <script src="/static/script.js?v=7"></script>
+    <script src="/static/script.js?v=8"></script>
 </body>
 
 </html>
