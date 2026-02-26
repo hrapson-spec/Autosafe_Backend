@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CarReport, CarSelection, ReportEmailSubmission } from '../types';
-import { ShieldCheck, AlertTriangle, Wrench, ArrowRight, Check, Mail } from './Icons';
+import { ShieldCheck, AlertTriangle, Wrench, ArrowRight, Check, Mail, MessageCircle, Link2 } from './Icons';
 import { Button, Card } from './ui';
 import GarageFinderModal from './GarageFinderModal';
 import MotReminderCapture from './MotReminderCapture';
@@ -27,6 +27,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [emailReportEmail, setEmailReportEmail] = useState('');
   const [emailReportState, setEmailReportState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const failureRisk = (100 - report.reliabilityScore) / 100;
 
@@ -116,6 +117,35 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
     }
   };
 
+  const reportUrl = typeof window !== 'undefined' ? window.location.href : 'https://www.autosafe.one';
+  const riskPercent = Math.round(failureRisk * 100);
+
+  const handleWhatsAppShare = () => {
+    const text = `My ${selection.year} ${selection.make} ${selection.model} has a ${riskPercent}% MOT failure risk. Check yours free: ${reportUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    trackFunnel('share_whatsapp', { risk_percent: riskPercent });
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(reportUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      trackFunnel('share_copy_link', { risk_percent: riskPercent });
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement('input');
+      input.value = reportUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      trackFunnel('share_copy_link', { risk_percent: riskPercent });
+    }
+  };
+
   // Shared header + trust signal
   const renderHeader = () => (
     <>
@@ -136,9 +166,43 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
         </Button>
       </div>
 
-      <p className="text-xs text-slate-400 text-center -mt-4">
-        Based on analysis of 142M+ official DVSA MOT test records
-      </p>
+      {/* Share bar */}
+      <div className="flex items-center justify-between -mt-2">
+        <p className="text-xs text-slate-400">
+          Based on analysis of 142M+ official DVSA MOT test records
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleWhatsAppShare}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-full transition-colors"
+            aria-label="Share on WhatsApp"
+          >
+            <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
+            WhatsApp
+          </button>
+          <button
+            onClick={handleCopyLink}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+              linkCopied
+                ? 'text-green-700 bg-green-50'
+                : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+            }`}
+            aria-label="Copy report link"
+          >
+            {linkCopied ? (
+              <>
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Link2 className="w-3.5 h-3.5" aria-hidden="true" />
+                Copy link
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </>
   );
 
@@ -435,6 +499,17 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
           </Card>
         </div>
 
+        {/* Check Another Vehicle CTA */}
+        <div className="text-center py-4">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={onReset}
+          >
+            Check Another Vehicle <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </div>
+
         <GarageFinderModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -610,6 +685,17 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
           </Card>
         </div>
       </details>
+
+      {/* Check Another Vehicle CTA */}
+      <div className="text-center py-4">
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={onReset}
+        >
+          Check Another Vehicle <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        </Button>
+      </div>
 
       {/* Garage Finder Modal */}
       <GarageFinderModal

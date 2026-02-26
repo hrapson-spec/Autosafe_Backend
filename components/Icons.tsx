@@ -21,7 +21,10 @@ import {
   Heart,
   Phone,
   User,
-  Clock
+  Clock,
+  Share2,
+  Link2,
+  MessageCircle
 } from 'lucide-react';
 
 export {
@@ -46,5 +49,8 @@ export {
   Heart,
   Phone,
   User,
-  Clock
+  Clock,
+  Share2,
+  Link2,
+  MessageCircle
 };

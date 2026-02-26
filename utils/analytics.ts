@@ -61,7 +61,9 @@ type FunnelStep =
   | 'motivator_card_viewed'
   | 'secondary_cta_clicked'
   | 'accordion_opened'
-  | 'sticky_cta_clicked';
+  | 'sticky_cta_clicked'
+  | 'share_whatsapp'
+  | 'share_copy_link';
 
 /**
  * Track a funnel step via Umami custom events.
