@@ -78,7 +78,6 @@
             </div>
             <h1 class="headline">Will your car pass its MOT?</h1>
             <p class="tagline">Enter your reg. Get your risk score in seconds.</p>
-            <p class="trust-line">Free · Instant · No signup · Uses official DVSA data</p>
         </header>
 
         <!-- Search Panel -->
@@ -104,7 +103,7 @@
                 </form>
             </section>
 
-            <!-- Results Panel (hidden until search) -->
+            <!-- Results Panel: CONTROL variant (hidden until search) -->
             <section class="results-card hidden" id="resultsPanel">
                 <div class="results-header">
                     <h2 id="vehicleTag">Vehicle</h2>
@@ -181,7 +180,161 @@
                     <span class="btn-text">Check Another Car</span>
                 </button>
             </section>
+
+            <!-- Results Panel: TREATMENT variant (hidden until search) -->
+            <section class="results-card hidden" id="resultsPanelTreatment">
+                <div class="results-header">
+                    <h2 id="vehicleTagT">Vehicle</h2>
+                    <span class="reg-badge" id="vehicleDetailsT"></span>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat">
+                        <span class="stat-label">Last MOT</span>
+                        <span class="stat-value" id="lastMOTDateT">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Result</span>
+                        <span class="stat-value" id="lastMOTResultT">-</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Mileage</span>
+                        <span class="stat-value" id="mileageT">-</span>
+                    </div>
+                </div>
+
+                <!-- Score + Motivator -->
+                <div class="treatment-score-row">
+                    <div class="failure-score-card">
+                        <div class="failure-score-label" id="scoreLabelT">Estimated chance of failing your next MOT</div>
+                        <div class="failure-score-value" id="failureScoreT">-</div>
+                        <div class="failure-score-bar">
+                            <div class="failure-score-bar-fill" id="failureBarT" style="width: 0%"></div>
+                        </div>
+                        <div class="failure-score-verdict" id="verdictT"></div>
+                    </div>
+                    <div class="motivator-card" id="motivatorCardT">
+                        <div class="motivator-icon" id="motivatorIconT"></div>
+                        <div class="motivator-content">
+                            <div class="motivator-headline" id="motivatorHeadlineT"></div>
+                            <div class="motivator-supporting" id="motivatorSupportingT"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendation Block -->
+                <div class="recommendation-block" id="recBlockT">
+                    <div class="rec-content">
+                        <h3 id="recHeadlineT"></h3>
+                        <p class="rec-supporting" id="recSupportingT"></p>
+                        <button type="button" class="rec-primary-btn" id="recPrimaryBtnT"></button>
+                        <p class="rec-trust-microcopy" id="recTrustT"></p>
+                        <button type="button" class="rec-secondary-link hidden" id="recSecondaryBtnT"></button>
+                        <div class="rec-success-badge hidden" id="recSuccessBadgeT">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Request received
+                        </div>
+                    </div>
+                    <div class="rec-decorative-circle" aria-hidden="true"></div>
+                </div>
+
+                <!-- Accordion: Component Breakdown -->
+                <details class="treatment-accordion" id="accordionT">
+                    <summary>
+                        Full Component Breakdown
+                        <svg class="accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </summary>
+                    <div class="accordion-content">
+                        <div class="components-grid" id="componentsGridT"></div>
+                    </div>
+                </details>
+
+                <p class="source-note" id="sourceNoteT"></p>
+
+                <button type="button" id="checkAnotherBtnT" class="primary-btn check-another-btn">
+                    <span class="btn-text">Check Another Car</span>
+                </button>
+
+                <!-- Lead Capture (reuse same forms, shown via JS) -->
+                <div class="lead-capture hidden" id="leadCaptureT">
+                    <h3>Want help fixing these issues or booking your MOT?</h3>
+                    <p>Select what you need and we'll connect you with trusted local garages.</p>
+                    <div id="serviceSelectionT" class="service-selection">
+                        <p class="service-prompt">What would you like help with?</p>
+                        <div class="service-options">
+                            <label class="service-option">
+                                <input type="checkbox" name="serviceT" value="repair">
+                                <span class="service-card">
+                                    <span class="service-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="service-title">Repairs</span>
+                                    <span class="service-desc">Fix issues before your MOT</span>
+                                </span>
+                            </label>
+                            <label class="service-option">
+                                <input type="checkbox" name="serviceT" value="mot">
+                                <span class="service-card">
+                                    <span class="service-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                        </svg>
+                                    </span>
+                                    <span class="service-title">Book MOT</span>
+                                    <span class="service-desc">Schedule your MOT test</span>
+                                </span>
+                            </label>
+                            <label class="service-option">
+                                <input type="checkbox" name="serviceT" value="reminder">
+                                <span class="service-card">
+                                    <span class="service-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="service-title">MOT Reminder</span>
+                                    <span class="service-desc">Get reminded before it expires</span>
+                                </span>
+                            </label>
+                        </div>
+                        <button type="button" id="serviceContinueBtnT" class="primary-btn" disabled>
+                            <span class="btn-text">Continue</span>
+                        </button>
+                    </div>
+                    <form id="leadFormT" class="hidden">
+                        <div class="form-group">
+                            <label for="leadNameT">Name</label>
+                            <input type="text" id="leadNameT" placeholder="Your name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="leadEmailT">Email</label>
+                            <input type="email" id="leadEmailT" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="leadPhoneT">Phone (optional)</label>
+                            <input type="tel" id="leadPhoneT" placeholder="07xxx xxxxxx">
+                        </div>
+                        <button type="submit" class="primary-btn lead-btn">
+                            <span class="btn-text" id="leadBtnTextT">Find a Garage</span>
+                            <div class="loader hidden"></div>
+                        </button>
+                    </form>
+                </div>
+                <div class="lead-success hidden" id="leadSuccessT">
+                    <h3>Thanks! We'll be in touch soon.</h3>
+                    <p>A local garage will contact you shortly.</p>
+                </div>
+            </section>
         </main>
+
+        <!-- Sticky CTA (mobile, treatment only) -->
+        <div class="sticky-cta-bar" id="stickyCta">
+            <button type="button" class="sticky-cta-btn" id="stickyCtaBtn"></button>
+        </div>
 
         <!-- Features Section -->
         <section class="features-section" aria-labelledby="features-heading">
