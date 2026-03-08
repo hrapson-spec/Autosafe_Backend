@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RegistrationQuery } from '../types';
 import { Input, Button } from './ui';
 
 interface HeroFormProps {
   onSubmit: (data: RegistrationQuery) => void;
   isLoading: boolean;
+  initialRegistration?: string;
 }
 
 // UK registration plate pattern: 2-8 alphanumeric characters (backend handles detailed format checking)
@@ -31,10 +32,14 @@ const validatePostcode = (value: string): string | undefined => {
   return undefined;
 };
 
-const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading }) => {
-  const [registration, setRegistration] = useState('');
+const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistration = '' }) => {
+  const [registration, setRegistration] = useState(initialRegistration);
   const [postcode, setPostcode] = useState('');
   const [touched, setTouched] = useState({ registration: false, postcode: false });
+
+  useEffect(() => {
+    setRegistration(initialRegistration);
+  }, [initialRegistration]);
 
   const registrationError = touched.registration ? validateRegistration(registration) : undefined;
   const postcodeError = touched.postcode ? validatePostcode(postcode) : undefined;
