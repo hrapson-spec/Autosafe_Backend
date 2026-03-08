@@ -24,7 +24,7 @@ from pathlib import Path
 
 from cachetools import TTLCache
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, Response, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
@@ -514,89 +514,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     @app.get("/", response_class=HTMLResponse)
     def seo_homepage():
-        cache_key = "seo:homepage"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-
-            # Top 20 models by test volume
-            top_models = []
-            for (make_slug, model_slug), model_info in _model_by_slug.items():
-                make = model_info["make"]
-                model = model_info["model_id"]
-                overall = _query_model_overall(conn, make, model)
-                if overall:
-                    make_info = _make_by_slug.get(make_slug, {})
-                    top_models.append({
-                        "make_display": make_info.get("display", make),
-                        "model_display": model_info["display"],
-                        "make_slug": make_slug,
-                        "model_slug": model_slug,
-                        "fail_rate": overall["fail_rate"],
-                        "total_tests": overall["total_tests"],
-                    })
-
-            top_models.sort(key=lambda m: m["total_tests"], reverse=True)
-            top_models = top_models[:20]
-
-            # National average component risks
-            comp_cols = ", ".join(
-                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
-                for col, _ in COMPONENTS
-            )
-            row = conn.execute(
-                f"""SELECT SUM(Total_Tests) as total_tests,
-                           {comp_cols}
-                    FROM risks
-                    WHERE age_band != 'Unknown'"""
-            ).fetchone()
-
-            total_tests_analysed = int(row["total_tests"]) if row and row["total_tests"] else 142000000
-
-            top_components = []
-            if row:
-                for col, name in COMPONENTS:
-                    val = row[col] if row[col] else 0
-                    top_components.append({"name": name, "avg_risk": float(val)})
-                top_components.sort(key=lambda c: c["avg_risk"], reverse=True)
-
-            conn.row_factory = old_factory
-
-        # Makes list for "Browse by Make" section
-        makes = sorted(
-            [{"slug": slug, "display_name": info["display"]} for slug, info in _make_by_slug.items()],
-            key=lambda m: m["display_name"],
-        )
-
-        # Insights for data stories section
-        insights = []
-        try:
-            from data_stories.query_engine import STORY_QUERIES
-            for name, query_fn in STORY_QUERIES.items():
-                try:
-                    story = query_fn()
-                    insights.append({"slug": story["slug"], "title": story["title"]})
-                except Exception:
-                    pass
-        except ImportError:
-            pass
-
-        template = jinja_env.get_template("seo_homepage.html")
-        html = template.render(
-            top_models=top_models,
-            national_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
-            top_components=top_components,
-            total_tests_analysed=total_tests_analysed,
-            makes=makes,
-            insights=insights,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
+        # The product homepage is the React app again; keep the SEO routes below intact.
+        return FileResponse("static/index.html")
 
     # --- Comparison pages (registered first so /mot-check/compare/ isn't caught by {make_slug}) ---
 
@@ -1686,4 +1605,3 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                         headers={"Cache-Control": "public, max-age=3600"})
 
     logger.info("SEO: Routes registered (/mot-check/, /mot-check/{make}/{model}/{age}/, /sitemap.xml index)")
-

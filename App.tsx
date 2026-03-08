@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route as RouterRoute, Link } from 'react-router-dom';
+import { Routes, Route as RouterRoute, Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
 
@@ -16,6 +16,7 @@ import { Logo } from './components/Logo';
 import { trackConversion, trackFunnel, trackReportView } from './utils/analytics';
 
 const App: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [selection, setSelection] = useState<CarSelection | null>(null);
   const [report, setReport] = useState<CarReport | null>(null);
   const [postcode, setPostcode] = useState<string>('');
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PublicStats | null>(null);
+  const queryRegistration = (searchParams.get('reg') || '').trim().toUpperCase();
 
   useEffect(() => {
     getPublicStats().then(setStats).catch(() => { });
@@ -114,6 +116,7 @@ const App: React.FC = () => {
                 <HeroForm
                   onSubmit={handleCarCheck}
                   isLoading={loading}
+                  initialRegistration={queryRegistration}
                 />
               </div>
 
@@ -198,6 +201,7 @@ const App: React.FC = () => {
   return (
     <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" /></div>}>
       <Routes>
+        <RouterRoute path="/" element={<HomePage />} />
         <RouterRoute path="/app" element={<HomePage />} />
         <RouterRoute path="/app/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/app/terms" element={<TermsPage />} />

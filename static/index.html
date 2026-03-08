@@ -1,37 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'AW-17896487388');
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="4vUVgVy4a6yed0TmE46yMECs6vcSH3m0VmL4dJZNv7k" />
     <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
-    <meta name="description"
-        content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple.">
-    <meta name="theme-color" content="#1a1a1a">
-    <meta property="og:title" content="Will your car pass its MOT? Check your risk score.">
-    <meta property="og:description"
-        content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data.">
-    <meta property="og:type" content="website">
-    <meta property="og:image" content="https://www.autosafe.one/static/og-image.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Will your car pass its MOT? Check your risk score.">
-    <meta name="twitter:description"
-        content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data.">
-    <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
-    <link rel="canonical" href="https://www.autosafe.one/">
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple." />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
+    <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://www.autosafe.one/static/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Will your car pass its MOT? Check your risk score." />
+    <meta name="twitter:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
+    <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png" />
+    <link rel="canonical" href="https://www.autosafe.one/" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon-eXzNSuE-.png" />
+    <link rel="icon" type="image/png" href="/assets/favicon-Be30ucx5.png" />
+
+    <!-- Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -58,344 +48,73 @@
       "sameAs": []
     }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css?v=8">
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-17896487388');
+      gtag('config', 'G-8PV2HG1QDC');
+    </script>
+
     <!-- Umami Analytics -->
-    <script defer src="https://umami-production-cb51.up.railway.app/script.js"
-        data-website-id="0dead4c2-42a2-456c-abc1-42f93e1a991b" data-domains="autosafe.one,www.autosafe.one"></script>
-</head>
+    <script defer src="https://umami-production-cb51.up.railway.app/script.js" data-website-id="0dead4c2-42a2-456c-abc1-42f93e1a991b" data-domains="autosafe.one,www.autosafe.one"></script>
 
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="logo">
-                <img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image">
-            </div>
-            <h1 class="headline">Will your car pass its MOT?</h1>
-            <p class="tagline">Enter your reg. Get your risk score in seconds.</p>
-        </header>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-        <!-- Search Panel -->
-        <main class="main-content">
-            <section class="search-card" id="searchPanel">
-                <form id="riskForm">
-                    <div class="form-group">
-                        <label for="registration">Car Registration</label>
-                        <input type="text" id="registration" placeholder="e.g. AB12 CDE" required
-                            aria-label="Vehicle registration number" style="text-transform: uppercase;">
-                    </div>
+    <!-- Fonts with display swap for better LCP -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
 
-                    <div class="form-group">
-                        <label for="postcode">Postcode</label>
-                        <input type="text" id="postcode" placeholder="e.g. SW1A 1AA" required
-                            style="text-transform: uppercase;">
-                    </div>
-
-                    <button type="submit" id="analyzeBtn" class="primary-btn">
-                        <span class="btn-text">Check This Car</span>
-                        <div class="loader hidden"></div>
-                    </button>
-                </form>
-            </section>
-
-            <!-- Results Panel: CONTROL variant (hidden until search) -->
-            <section class="results-card hidden" id="resultsPanel">
-                <div class="results-header">
-                    <h2 id="vehicleTag">Vehicle</h2>
-                    <span class="reg-badge" id="vehicleDetails"></span>
-                </div>
-
-                <div class="stats-row">
-                    <div class="stat">
-                        <span class="stat-label">Last MOT</span>
-                        <span class="stat-value" id="lastMOTDate">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Result</span>
-                        <span class="stat-value" id="lastMOTResult">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Mileage</span>
-                        <span class="stat-value" id="mileage">-</span>
-                    </div>
-                </div>
-
-                <div class="risk-display">
-                    <div class="risk-main">
-                        <span class="risk-percentage" id="riskValue">-</span>
-                        <span class="risk-label" id="riskText">Failure Risk</span>
-                    </div>
-                    <span class="confidence-badge" id="confidenceBadge">-</span>
-                </div>
-
-                <div class="repair-cost">
-                    <span class="repair-label">Estimated Repair Cost</span>
-                    <span class="repair-value" id="repairCostValue">-</span>
-                    <span class="repair-range" id="repairCostRange"></span>
-                </div>
-
-                <!-- Lead Capture Section -->
-                <div class="lead-capture" id="leadCapture">
-                    <h3>Want help fixing these issues or booking your MOT?</h3>
-                    <p>Enter your details and we'll connect you with trusted local garages.</p>
-                    <form id="leadForm">
-                        <div class="form-group">
-                            <label for="leadName">Name</label>
-                            <input type="text" id="leadName" placeholder="Your name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadEmail">Email</label>
-                            <input type="email" id="leadEmail" placeholder="your@email.com" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadPhone">Phone (optional)</label>
-                            <input type="tel" id="leadPhone" placeholder="07xxx xxxxxx">
-                        </div>
-                        <button type="submit" class="primary-btn lead-btn">
-                            <span class="btn-text">Find a Garage</span>
-                            <div class="loader hidden"></div>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Lead Success Message (hidden by default) -->
-                <div class="lead-success hidden" id="leadSuccess">
-                    <h3>Thanks! We'll be in touch soon.</h3>
-                    <p>A local garage will contact you shortly.</p>
-                </div>
-
-                <div class="components-section">
-                    <h3>Risk by Component</h3>
-                    <div class="components-grid" id="componentsGrid"></div>
-                </div>
-
-                <p class="source-note" id="sourceNote"></p>
-
-                <button type="button" id="checkAnotherBtn" class="primary-btn check-another-btn">
-                    <span class="btn-text">Check Another Car</span>
-                </button>
-            </section>
-
-            <!-- Results Panel: TREATMENT variant (hidden until search) -->
-            <section class="results-card hidden" id="resultsPanelTreatment">
-                <div class="results-header">
-                    <h2 id="vehicleTagT">Vehicle</h2>
-                    <span class="reg-badge" id="vehicleDetailsT"></span>
-                </div>
-
-                <div class="stats-row">
-                    <div class="stat">
-                        <span class="stat-label">Last MOT</span>
-                        <span class="stat-value" id="lastMOTDateT">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Result</span>
-                        <span class="stat-value" id="lastMOTResultT">-</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Mileage</span>
-                        <span class="stat-value" id="mileageT">-</span>
-                    </div>
-                </div>
-
-                <!-- Score + Motivator -->
-                <div class="treatment-score-row">
-                    <div class="failure-score-card">
-                        <div class="failure-score-label" id="scoreLabelT">Estimated chance of failing your next MOT</div>
-                        <div class="failure-score-value" id="failureScoreT">-</div>
-                        <div class="failure-score-bar">
-                            <div class="failure-score-bar-fill" id="failureBarT" style="width: 0%"></div>
-                        </div>
-                        <div class="failure-score-verdict" id="verdictT"></div>
-                    </div>
-                    <div class="motivator-card" id="motivatorCardT">
-                        <div class="motivator-icon" id="motivatorIconT"></div>
-                        <div class="motivator-content">
-                            <div class="motivator-headline" id="motivatorHeadlineT"></div>
-                            <div class="motivator-supporting" id="motivatorSupportingT"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recommendation Block -->
-                <div class="recommendation-block" id="recBlockT">
-                    <div class="rec-content">
-                        <h3 id="recHeadlineT"></h3>
-                        <p class="rec-supporting" id="recSupportingT"></p>
-                        <button type="button" class="rec-primary-btn" id="recPrimaryBtnT"></button>
-                        <p class="rec-trust-microcopy" id="recTrustT"></p>
-                        <button type="button" class="rec-secondary-link hidden" id="recSecondaryBtnT"></button>
-                        <div class="rec-success-badge hidden" id="recSuccessBadgeT">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            Request received
-                        </div>
-                    </div>
-                    <div class="rec-decorative-circle" aria-hidden="true"></div>
-                </div>
-
-                <!-- Accordion: Component Breakdown -->
-                <details class="treatment-accordion" id="accordionT">
-                    <summary>
-                        Full Component Breakdown
-                        <svg class="accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </summary>
-                    <div class="accordion-content">
-                        <div class="components-grid" id="componentsGridT"></div>
-                    </div>
-                </details>
-
-                <p class="source-note" id="sourceNoteT"></p>
-
-                <button type="button" id="checkAnotherBtnT" class="primary-btn check-another-btn">
-                    <span class="btn-text">Check Another Car</span>
-                </button>
-
-                <!-- Lead Capture (reuse same forms, shown via JS) -->
-                <div class="lead-capture hidden" id="leadCaptureT">
-                    <h3>Want help fixing these issues or booking your MOT?</h3>
-                    <p>Select what you need and we'll connect you with trusted local garages.</p>
-                    <div id="serviceSelectionT" class="service-selection">
-                        <p class="service-prompt">What would you like help with?</p>
-                        <div class="service-options">
-                            <label class="service-option">
-                                <input type="checkbox" name="serviceT" value="repair">
-                                <span class="service-card">
-                                    <span class="service-icon">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                                        </svg>
-                                    </span>
-                                    <span class="service-title">Repairs</span>
-                                    <span class="service-desc">Fix issues before your MOT</span>
-                                </span>
-                            </label>
-                            <label class="service-option">
-                                <input type="checkbox" name="serviceT" value="mot">
-                                <span class="service-card">
-                                    <span class="service-icon">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                        </svg>
-                                    </span>
-                                    <span class="service-title">Book MOT</span>
-                                    <span class="service-desc">Schedule your MOT test</span>
-                                </span>
-                            </label>
-                            <label class="service-option">
-                                <input type="checkbox" name="serviceT" value="reminder">
-                                <span class="service-card">
-                                    <span class="service-icon">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                                        </svg>
-                                    </span>
-                                    <span class="service-title">MOT Reminder</span>
-                                    <span class="service-desc">Get reminded before it expires</span>
-                                </span>
-                            </label>
-                        </div>
-                        <button type="button" id="serviceContinueBtnT" class="primary-btn" disabled>
-                            <span class="btn-text">Continue</span>
-                        </button>
-                    </div>
-                    <form id="leadFormT" class="hidden">
-                        <div class="form-group">
-                            <label for="leadNameT">Name</label>
-                            <input type="text" id="leadNameT" placeholder="Your name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadEmailT">Email</label>
-                            <input type="email" id="leadEmailT" placeholder="your@email.com" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="leadPhoneT">Phone (optional)</label>
-                            <input type="tel" id="leadPhoneT" placeholder="07xxx xxxxxx">
-                        </div>
-                        <button type="submit" class="primary-btn lead-btn">
-                            <span class="btn-text" id="leadBtnTextT">Find a Garage</span>
-                            <div class="loader hidden"></div>
-                        </button>
-                    </form>
-                </div>
-                <div class="lead-success hidden" id="leadSuccessT">
-                    <h3>Thanks! We'll be in touch soon.</h3>
-                    <p>A local garage will contact you shortly.</p>
-                </div>
-            </section>
-        </main>
-
-        <!-- Sticky CTA (mobile, treatment only) -->
-        <div class="sticky-cta-bar" id="stickyCta">
-            <button type="button" class="sticky-cta-btn" id="stickyCtaBtn"></button>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #1e293b;
+        color: white;
+        padding: 8px 16px;
+        z-index: 100;
+        text-decoration: none;
+        border-radius: 0 0 4px 0;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-Dn7ODKQS.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CLJafMNW.css">
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <div id="root">
+      <!-- Pre-rendered content for SEO crawlers (replaced by React on load) -->
+      <noscript>
+        <div style="max-width:800px;margin:2rem auto;padding:0 1.5rem;color:#334155;">
+          <h1 style="font-family:'Playfair Display',serif;font-size:2rem;text-align:center;margin-bottom:1rem;">Will your car pass its MOT?</h1>
+          <p style="text-align:center;margin-bottom:2rem;">Enter your reg. Get your risk score in seconds. Free, instant, no signup required.</p>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">How AutoSafe MOT Prediction Works</h2>
+          <p>AutoSafe uses machine learning trained on <strong>142 million official DVSA MOT test records</strong> to predict whether your car will pass or fail its next MOT. Simply enter your registration number and postcode to get an instant, personalised risk assessment covering seven key failure areas.</p>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">Why Check Your MOT Risk Before Your Test?</h2>
+          <p>Every year, around <strong>28% of vehicles fail their MOT</strong> in the UK. A failed MOT means unexpected repair bills, wasted time, and potentially being left without a legal vehicle. By checking your risk score before your test, you can identify the specific components most likely to cause a failure on your car.</p>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">Common MOT Failure Areas</h2>
+          <p>The most common reasons for MOT failure include problems with lighting and signalling, suspension, brakes, and tyres. AutoSafe analyses your car's individual MOT history to give a risk score tailored specifically to your vehicle.</p>
+          <p style="margin-top:1rem;">Explore our guides: <a href="/guides/common-mot-failures">Top 10 MOT Failure Points</a> | <a href="/guides/mot-checklist">Pre-MOT Checklist</a> | <a href="/guides/mot-failure-rates-by-car">MOT Failure Rates by Car</a></p>
+          <footer style="margin-top:3rem;padding-top:1rem;border-top:1px solid #e2e8f0;font-size:0.875rem;color:#64748b;">
+            <p>Contains public sector information licensed under the Open Government Licence v3.0. Data from UK DVSA.</p>
+            <p><a href="/terms">Terms</a> | <a href="/privacy">Privacy</a> | <a href="mailto:autosafehq@gmail.com">Send Feedback</a></p>
+          </footer>
         </div>
-
-        <!-- Features Section -->
-        <section class="features-section" aria-labelledby="features-heading">
-            <h2 id="features-heading" class="visually-hidden">Key Features</h2>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="6"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                    </svg>
-                </div>
-                <h3>Unrivaled Accuracy</h3>
-                <p>Built on millions of historical data points, our world-class predictive engine spots patterns others
-                    miss.</p>
-            </article>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                    </svg>
-                </div>
-                <h3>Always Free</h3>
-                <p>Peace of mind shouldn't come with a price tag. We are committed to keeping our core tools free for
-                    every driver.</p>
-            </article>
-
-            <article class="feature-card">
-                <div class="icon-wrapper">
-                    <svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z">
-                        </path>
-                    </svg>
-                </div>
-                <h3>Stress-Free Solutions</h3>
-                <p>We help you navigate the whole journey. From predicting failure to booking trusted repairs, we handle
-                    it all.</p>
-            </article>
-        </section>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <p>Contains public sector information licensed under the <a
-                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-                    target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA • Not official government advice or endorsement.</p>
-            <div class="footer-links">
-                <a href="/terms">Terms</a> • <a href="/privacy">Privacy</a> • <a href="mailto:autosafehq@gmail.com">Send
-                    Feedback</a>
-            </div>
-        </footer>
+      </noscript>
     </div>
-
-    <script src="/static/script.js?v=8"></script>
-</body>
-
+  </body>
 </html>
