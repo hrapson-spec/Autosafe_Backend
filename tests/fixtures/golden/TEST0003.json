@@ -1,0 +1,136 @@
+{
+ "registration": "TEST0003",
+ "firstUsedDate": "2021-06-26",
+ "registrationDate": "2021-06-26",
+ "manufactureDate": "2021-06-26",
+ "primaryColour": "Pink",
+ "secondaryColour": "Not Stated",
+ "engineSize": "999",
+ "model": "500 STAR MHEV",
+ "make": "FIAT",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T06:24:58.000Z",
+ "motTests": [
+  {
+   "completedDate": "2024-05-14T09:05:34.000Z",
+   "motTestNumber": 668098096958,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "FAILED",
+   "odometerValue": "27258",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre slightly damaged (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": true,
+     "text": "Offside Front Tyre has a bulge, caused by separation or partial failure of its structure (5.2.3 (d) (ii))",
+     "type": "DANGEROUS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-05-19T16:11:04.000Z",
+   "motTestNumber": 879111106635,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-05-18",
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "PASSED",
+   "odometerValue": "27260",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2025-05-12T11:43:33.000Z",
+   "motTestNumber": 774481421734,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-05-18",
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "PASSED",
+   "odometerValue": "29283",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-04-21T15:28:14.000Z",
+   "motTestNumber": 711237276707,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-05-18",
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "PASSED",
+   "odometerValue": "29616",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-05-20T20:24:03.000Z",
+   "motTestNumber": 810683713324,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "FAILED",
+   "odometerValue": "29696",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust Lambda reading after 2nd fast idle outside specified limits (8.2.1.2 (c))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Exhaust Lambda reading after 2nd fast idle outside specified limits (8.2.1.2 (c))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Exhaust carbon monoxide content after 2nd fast idle exceeds default limits (8.2.1.2 (b))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Exhaust carbon monoxide content after 2nd fast idle exceeds default limits (8.2.1.2 (b))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Road wheel badly distorted (5.2.2 (c) (i))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T06:24:58.000Z",
+   "motTestNumber": 853959563881,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "AU21HDZ",
+   "testResult": "FAILED",
+   "odometerValue": "29701",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre has a cut in excess of the requirements deep enough to reach the ply or cords (5.2.3 (d) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre slightly damaged/cracking or perishing (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

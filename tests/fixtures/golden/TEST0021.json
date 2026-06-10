@@ -1,0 +1,542 @@
+{
+ "registration": "TEST0021",
+ "firstUsedDate": "1989-08-05",
+ "registrationDate": "1989-08-05",
+ "manufactureDate": "1989-12-31",
+ "primaryColour": "White",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1971",
+ "model": "EXPRESS",
+ "make": "TALBOT",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T12:23:05.000Z",
+ "motTests": [
+  {
+   "completedDate": "2005-07-19T11:08:27.000Z",
+   "motTestNumber": 243300205216,
+   "dataSource": "DVSA",
+   "expiryDate": "2006-08-03",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "62024",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear wheel bearing (2.6.1)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2006-07-27T10:33:32.000Z",
+   "motTestNumber": 300308706238,
+   "dataSource": "DVSA",
+   "expiryDate": "2007-08-03",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "64810",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2007-07-30T16:36:37.000Z",
+   "motTestNumber": 451121817237,
+   "dataSource": "DVSA",
+   "expiryDate": "2008-08-03",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "68621",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2008-08-18T09:59:54.000Z",
+   "motTestNumber": 122241438214,
+   "dataSource": "DVSA",
+   "expiryDate": "2009-08-17",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "69973",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake hose slightly deteriorated (3.6.B.4d)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "centre exhaust rubber perishing",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2008-08-18T09:59:54.000Z",
+   "motTestNumber": 362411538238,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "FAILED",
+   "odometerValue": "69973",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Direction indicator not working (1.4.A.2c)",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Headlamp aim too high (1.8)",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Headlamp aim too high (1.8)",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake hose slightly deteriorated (3.6.B.4d)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "centre exhaust rubber perishing",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2010-05-17T15:02:20.000Z",
+   "motTestNumber": 532277830168,
+   "dataSource": "DVSA",
+   "expiryDate": "2011-05-16",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "72596",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front brake disc slightly pitted (3.5.1h)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front brake disc slightly pitted (3.5.1h)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front constant velocity joint gaiter deteriorated (2.5.C.1a)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2011-07-11T12:32:04.000Z",
+   "motTestNumber": 497212891173,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-07-10",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "73500",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2012-07-12T12:31:32.000Z",
+   "motTestNumber": 926024592106,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "FAILED",
+   "odometerValue": "74014",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside rear brake binding (3.7.B.1)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorber has a light misting of oil (2.7.3)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Parking brake: efficiency below requirements (3.7.B.7)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "rear brakes release unevenly (3.7.B.4)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2012-07-16T16:04:47.000Z",
+   "motTestNumber": 268068092199,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-07-15",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "74018",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-07-09T16:09:35.000Z",
+   "motTestNumber": 695710593137,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-07-15",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "74469",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2014-07-22T11:36:02.000Z",
+   "motTestNumber": 889543604225,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-07-21",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "74738",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2016-07-06T13:34:46.000Z",
+   "motTestNumber": 618522693280,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-07-05",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "75405",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp deteriorated but light output not reduced (1.7.5a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Front constant velocity joint gaiter deteriorated, but preventing the ingress of dirt (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Front constant velocity joint gaiter deteriorated, but preventing the ingress of dirt (2.5.C.1a)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorber has a light misting of oil (2.7.3)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2017-07-04T15:07:10.000Z",
+   "motTestNumber": 991851850008,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-07-05",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "76072",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-07-28T08:42:08.000Z",
+   "motTestNumber": 703105884620,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "FAILED",
+   "odometerValue": "77583",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Headlamp not working on dipped beam (4.1.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake hose slightly damaged to axle slight perishing (1.1.12 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "exhaust rubbers in poor condition",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "front discs surface corrosion",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-07-28T08:42:09.000Z",
+   "motTestNumber": 837919829439,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-07-27",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "77583",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear Brake hose slightly damaged to axle slight perishing (1.1.12 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "exhaust rubbers in poor condition",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "front discs surface corrosion",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2020-09-08T10:40:37.000Z",
+   "motTestNumber": 496350315314,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "FAILED",
+   "odometerValue": "78671",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust has a minor leak of exhaust gases Centre box (6.1.2 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Exhaust system insecure Rubber split,others cracking (6.1.2 (a))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Headlamp aim too high (4.1.2 (a))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Windscreen wiper does not clear the windscreen effectively (3.4 (b) (ii))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorbers has a serious fluid leak (5.3.2 (b))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Windscreen wiper does not clear the windscreen effectively (3.4 (b) (ii))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Registration plate lamp does not illuminate simultaneously with the position lamps (4.7.2 (a))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": true,
+     "text": "Rear Brake hose damaged and likely to fail Split outer (1.1.12 (a))",
+     "type": "DANGEROUS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2020-09-16T10:59:28.000Z",
+   "motTestNumber": 603701181904,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-09-15",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "78679",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust has a minor leak of exhaust gases Centre box (6.1.2 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-05-31T14:04:10.000Z",
+   "motTestNumber": 998850717015,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-05-30",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "78834",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Slight corrosion front discs",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-05-16T09:18:42.000Z",
+   "motTestNumber": 749266721215,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "FAILED",
+   "odometerValue": "79137",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Brake disc worn, pitted or scored, but not seriously weakened front (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Exhaust emissions carbon monoxide content excessive (8.2.1.2 (b))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-05-16T09:18:43.000Z",
+   "motTestNumber": 724569324747,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-05-15",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "79137",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Brake disc worn, pitted or scored, but not seriously weakened front (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T12:23:05.000Z",
+   "motTestNumber": 912000198240,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "G962NRA",
+   "testResult": "PASSED",
+   "odometerValue": "79686",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Brake disc worn, but not excessively (1.1.14 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Wheel bearing has slight play (5.1.3 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, but not excessively (1.1.14 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Wheel bearing has slight play (5.1.3 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

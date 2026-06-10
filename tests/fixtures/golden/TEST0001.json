@@ -1,0 +1,28 @@
+{
+ "registration": "TEST0001",
+ "firstUsedDate": "2023-05-23",
+ "registrationDate": "2023-05-23",
+ "manufactureDate": "2023-05-23",
+ "primaryColour": "Blue",
+ "secondaryColour": "Not Stated",
+ "engineSize": null,
+ "model": "4 TROPHY",
+ "make": "MG",
+ "fuelType": "Electric",
+ "lastMotTestDate": "2026-06-07T15:53:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2026-06-07T15:53:00.000Z",
+   "motTestNumber": 220063143793,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "PJ23VNE",
+   "testResult": "PASSED",
+   "odometerValue": "20386",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  }
+ ],
+ "modification": "UPDATED"
+}
