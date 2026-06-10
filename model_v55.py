@@ -214,18 +214,17 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     # Apply Platt calibration if available
     if _calibrator is not None:
         try:
-            # Platt calibrator expects log-odds transformed input
-            log_odds = np.log(raw_prob / (1 - raw_prob))
-            # Guard against NaN/Inf from calibrator
-            if not np.isfinite(log_odds):
-                logger.warning(f"Non-finite log-odds: {log_odds}, using raw probability")
+            # The calibrator was fitted on raw probabilities
+            # (train_catboost_production_v55.py:
+            #  calibrator.fit(y_pred_train.reshape(-1, 1), y_train)),
+            # so it must receive raw probabilities here. Transforming to
+            # log-odds first puts the input outside the fitted domain and
+            # collapses the calibrated output toward 0/1.
+            calibrated_prob = _calibrator.predict_proba([[raw_prob]])[0][1]
+            # Ensure calibrated output is valid
+            if not np.isfinite(calibrated_prob):
+                logger.warning("Non-finite calibrated prob, using raw probability")
                 calibrated_prob = raw_prob
-            else:
-                calibrated_prob = _calibrator.predict_proba([[log_odds]])[0][1]
-                # Ensure calibrated output is valid
-                if not np.isfinite(calibrated_prob):
-                    logger.warning("Non-finite calibrated prob, using raw probability")
-                    calibrated_prob = raw_prob
         except Exception as e:
             logger.warning(f"Calibration failed, using raw probability: {e}")
             calibrated_prob = raw_prob
