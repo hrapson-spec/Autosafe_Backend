@@ -35,6 +35,7 @@ from feature_engineering_v55 import (
     FEATURE_NAMES
 )
 from dvsa_client import VehicleHistory
+from vocab_shim import apply_vocab_shim
 
 logger = logging.getLogger(__name__)
 
@@ -201,8 +202,10 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     if _model is None:
         raise RuntimeError("V55 model not loaded. Call load_model() first.")
 
-    # Convert features to array
-    feature_array = features_to_array(features)
+    # GF-17 Phase A2: map serving categorical emissions onto the deployed
+    # model's training vocabulary at the model boundary only (vocab_shim.py).
+    # `features` itself is left unshimmed for confidence/component consumers.
+    feature_array = features_to_array(apply_vocab_shim(features))
 
     # Get raw prediction
     raw_prob = _model.predict_proba([feature_array])[0][1]  # Probability of class 1 (failure)

@@ -613,7 +613,12 @@ def engineer_features(
         features['mileage_cohort_ratio'] = 1.0
         features['advisory_cohort_delta'] = 0.0
 
-    features['days_since_pass_ratio'] = 1.0  # Neutral (not in cohort_stats)
+    # GF-17 Phase A1: real value (training definition: days_since_last_test/365,
+    # train_catboost_production_v55.py add_cohort_residuals). Was hardcoded 1.0.
+    # Single-test vehicles get 0.0 (days_since_last_test=0) vs the training
+    # missing-history fill 730/365=2.0 — that residual default mismatch is
+    # documented in the GF-17 default contract and closes with v57.
+    features['days_since_pass_ratio'] = features['days_since_last_test'] / 365.0
 
     # =========================================================================
     # HIERARCHICAL/EB FEATURES
