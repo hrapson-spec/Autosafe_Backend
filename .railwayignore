@@ -8,6 +8,7 @@
 *.npy
 *.json
 !package.json
+!catboost_production_v55/calibrator.json
 *.zip
 
 # Large directories
