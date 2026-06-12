@@ -132,6 +132,60 @@ python3.13 gf17_train_serve_parity.py --expect-fixed \
   --cbm models/v57/model.cbm --fixtures v2     # run twice, byte-identical
 ```
 
+## AUC root-cause analysis (added 2026-06-12 evening; evidence: models/v57/rca/)
+
+**Question:** why is OOT AUC 0.7135 vs matrix-space comparators ~0.748-0.750?
+
+**Attribution experiments** (single-mechanism seed-0 refits @1233 iters from
+rebuilt matrices; baseline 0.7133 reproduces the shipped bundle):
+
+| Mechanism tested | ΔAUC | Verdict |
+|---|---:|---|
+| Drop `window_days_available` (E1) | −0.0001 | not the cause (still a serving-hygiene defect: constant at any fixed date, all-OOT out of train range) |
+| Clip it to train range (E1b) | 0.0000 | confirms E1 |
+| Restore real v48 OOF prior (E2) | −0.0009 | legacy signal NOT better |
+| Restore v46 EB negligence (E3) | −0.0020 | legacy signal NOT better |
+| Restore own-frame mileage/gap (E4, quasi-leak diagnostic) | **+0.0064** | the parity price of two features; not a legitimate change |
+
+**Gate-0 frame (decision-grade, serving path end-to-end, frozen prereg row
+construction, join coverage 100%):**
+
+| | capture@20% | ratio vs H | veterans AUC | first-MOT AUC | pooled AUC |
+|---|---:|---:|---:|---:|---:|
+| v57 (this bundle) | **0.3311** | **1.139** [CI 1.120, 1.160] | **0.6953** | 0.5921 | 0.6957 |
+| v55 (saved deployed scores) | 0.3233 | 1.112 [CI 1.092, 1.133] | 0.6895 | 0.5801 | 0.6906 |
+| Heuristic H | 0.2907 | 1.000 | 0.6105 | — | — |
+
+**Root cause of the "low" 0.7135 — three parts, evidence-backed:**
+1. **The comparators were inflated, not v57 deflated.** v55's matrix 0.7479
+   collapsed to 0.6895 when served (a 5.8pp train/serve fiction, the GF-17
+   disease). v57's matrix 0.7135 carries to ~0.695 on the fresh serving
+   frame (~1.8pp, mostly population drift) — the parity program worked, and
+   v57 beats v55 on every fresh-frame slice (+0.58pp veterans AUC, +1.2pp
+   first-MOT, +0.78pp absolute fail-capture@20%).
+2. **The residual matrix-space gap is distributed, not a single defect:**
+   every restore-legacy-signal hypothesis tested null-or-negative; ~0.6pp
+   is the own-frame quasi-leak price (E4); the rest spreads across the ~45
+   honest window/frame redefinitions and evaluation-frame composition
+   (the 16.6% first-MOT-like slice at AUC 0.59 — a v55-inherited weakness,
+   0.58 in gate0).
+3. **`window_days_available` is mis-designed but AUC-neutral** — remove in
+   v57.1 for serving hygiene (constant at fixed dates), without expecting
+   AUC recovery.
+
+**Gate 0 with v57: FAIL by the pre-registered point rule (1.139 < 1.15), but
+the CI now straddles the bar** (v55's CI sat entirely below it). The v57.1
+path to close the remaining 1.1 ratio-points is NOT legacy-feature
+restoration (falsified above) — it is the factor-coverage gaps already
+logged by the audit (raw vehicle age, lamps/electrical, powertrain, vehicle
+class: all serving-computable) plus the weak first-MOT slice, and the Platt
+recalibration (residual 7b).
+
+**Naming caution:** `~/autosafe/work/catboost_production_v57/` (legacy-
+feature survivorship-fix verification, matrix AUC 0.7503) and this bundle
+share the name "v57" but are different lineages — disambiguate before any
+promotion paperwork.
+
 ## Promotion recommendation
 Promote v57: **not yet — ready for the two remaining program gates.**
 Reason: everything THIS task gates on passed (SC-10 floor 0.7135 ≥ 0.7000;
