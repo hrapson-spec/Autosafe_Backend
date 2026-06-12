@@ -9,6 +9,7 @@
 *.json
 !package.json
 !catboost_production_v55/calibrator.json
+!models/v57/*.json
 *.zip
 
 # Large directories
