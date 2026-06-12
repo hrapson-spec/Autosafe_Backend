@@ -156,6 +156,7 @@ def build_history_features(
     *,
     label: str,
     window_start: date = WINDOW_START,
+    n_chunks: int = 1,
 ) -> pd.DataFrame:
     """Recompute serving-frame history features for every target row.
 
@@ -174,6 +175,23 @@ def build_history_features(
     missing = need - set(targets.columns)
     if missing:
         raise ValueError(f"targets missing required columns: {sorted(missing)}")
+
+    if n_chunks > 1:
+        # bound peak memory: process disjoint vehicle shards and concat
+        shard = pd.util.hash_array(targets["vehicle_id"].to_numpy()) % n_chunks
+        parts = []
+        for i in range(n_chunks):
+            part = targets[shard == i]
+            if len(part):
+                parts.append(build_history_features(
+                    conn, part, label=f"{label}#{i + 1}/{n_chunks}"))
+        out = pd.concat(parts, ignore_index=True)
+        cov: Dict[str, int] = {}
+        for p in parts:
+            for k, v in p.attrs.get("coverage", {}).items():
+                cov[k] = cov.get(k, 0) + v
+        out.attrs["coverage"] = cov
+        return out
 
     print(f"  [{label}] recompute: registering {len(targets):,} targets...")
     conn.register("v57_targets_df", targets[sorted(need)])
