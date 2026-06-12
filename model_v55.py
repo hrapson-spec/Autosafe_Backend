@@ -27,6 +27,8 @@ from typing import Dict, Any, Optional, List
 import numpy as np
 from catboost import CatBoostClassifier
 
+from calibrator import PlattCalibrator
+
 from feature_engineering_v55 import (
     features_to_array,
     get_feature_names,
@@ -44,7 +46,7 @@ MODEL_DIR = Path(__file__).parent / "catboost_production_v55"
 
 # Global model instances
 _model: Optional[CatBoostClassifier] = None
-_calibrator: Optional[Any] = None  # Platt calibrator (sklearn LogisticRegression)
+_calibrator: Optional[Any] = None  # Platt calibrator (pickle-free PlattCalibrator)
 _cohort_stats: Optional[Dict] = None
 _model_hierarchical: Optional[Any] = None  # ModelHierarchicalFeatures for EB priors
 _segment_hierarchical: Optional[Any] = None  # Segment-level rates (make, age_band, mileage_band)
@@ -74,15 +76,20 @@ def load_model() -> bool:
         logger.info(f"Loaded CatBoost model from {model_path}")
         logger.info(f"Model has {len(_model.feature_names_)} features")
 
-        # Load Platt calibrator
-        calibrator_path = MODEL_DIR / "platt_calibrator.pkl"
-        if calibrator_path.exists():
-            with open(calibrator_path, 'rb') as f:
-                _calibrator = pickle.load(f)
-            logger.info("Loaded Platt calibrator")
-        else:
-            logger.warning("Platt calibrator not found - using raw probabilities")
-            _calibrator = None
+        # Load Platt calibrator (pickle-free: sigmoid constants from JSON).
+        # The legacy platt_calibrator.pkl is kept on disk for provenance only —
+        # it was pickled under scikit-learn 1.8.0 and raises at predict time on
+        # the sklearn <=1.6 that python:3.9 production can install, which made
+        # the calibrator silently inert (audit P0 gf2b). The JSON artifact is
+        # REQUIRED: failing to load it fails load_model() loudly rather than
+        # silently serving raw probabilities.
+        calibrator_path = MODEL_DIR / "calibrator.json"
+        _calibrator = PlattCalibrator.from_json(calibrator_path)
+        _calibrator.self_check()
+        logger.info(
+            "Loaded pickle-free Platt calibrator (A=%.6f, B=%.6f) and passed self-check",
+            _calibrator.A, _calibrator.B,
+        )
 
         # Load cohort stats (for survivorship adjustments)
         cohort_path = MODEL_DIR / "cohort_stats.pkl"
@@ -134,6 +141,22 @@ def load_model() -> bool:
 def is_model_loaded() -> bool:
     """Check if the model is loaded."""
     return _model is not None
+
+
+def calibrator_state() -> Dict[str, Any]:
+    """Operational calibrator state for /health diagnostics (audit gf2b rec).
+
+    Surfaces whether predictions are being calibrated and with which constants,
+    so a silently-inert calibrator can never again go unnoticed.
+    """
+    if _calibrator is None:
+        return {"status": "not_loaded", "serving": "raw_probabilities"}
+    return {
+        "status": "loaded",
+        "type": "platt_sigmoid_pickle_free",
+        "A": _calibrator.A,
+        "B": _calibrator.B,
+    }
 
 
 def get_cohort_stats() -> Optional[Dict]:
