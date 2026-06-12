@@ -103,63 +103,75 @@ COMPONENTS = ("brakes", "tyres", "suspension")
 _NEVER = 999  # serving sentinel: no prior advisory/failure observed
 
 
-def _events_sql() -> str:
-    """Unified, deduplicated per-test event table for the prior scan.
-
-    Source priority lake > spine > extension (lake rows carry the lagged
-    advisory columns; spine rows carry a real outcome; extension rows are
-    OOT targets themselves and only matter as chain anchors).
-    """
-    return f"""
-    SELECT * EXCLUDE (src_rank) FROM (
-        SELECT *, ROW_NUMBER() OVER (PARTITION BY test_id ORDER BY src_rank) AS rn
-        FROM (
-            SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
-                   outcome,
-                   prev_advisory_total, prev_advisory_known,
-                   prev_advisory_brakes, prev_advisory_tyres, prev_advisory_suspension,
-                   1 AS src_rank
-            FROM read_parquet('{LAKE}')
-            WHERE test_date >= DATE '{WINDOW_START.isoformat()}'
-            UNION ALL
-            SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
-                   CASE WHEN is_failure THEN 'FAIL' ELSE 'PASS' END AS outcome,
-                   NULL, 0, NULL, NULL, NULL,
-                   2 AS src_rank
-            FROM {_spine_sql()}
-            WHERE test_date >= DATE '{WINDOW_START.isoformat()}'
-            UNION ALL
-            SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
-                   NULL AS outcome,
-                   prev_advisory_total, prev_advisory_known,
-                   prev_advisory_brakes, prev_advisory_tyres, prev_advisory_suspension,
-                   3 AS src_rank
-            FROM read_parquet('{HISTORY_EXTENSION_2024}')
-            WHERE test_date >= DATE '{WINDOW_START.isoformat()}'
-        )
-    ) WHERE rn = 1
-    """
-
-
 def _prepare_events_sql(targets_table: str) -> str:
     """Materialize ONE reduced per-vehicle event table for all targets.
 
-    Every heavy join happens here exactly once (lake/spine/extension union,
-    component-failure flags, spine odometers); the per-chunk ranked query
-    then reads only this small temp table. Run in a spill-enabled session.
+    Memory discipline (8GB machine; the naive form OOM'd twice):
+    - the vehicle restriction is pushed INTO every union branch, so the
+      dedupe window function runs over ~targets×5 rows, never the 158M-row
+      union,
+    - the 53M-row component-failure table and the spine GROUP BY are
+      semi-reduced to relevant rows before their joins,
+    - source priority for duplicate test_ids: lake > spine > extension
+      (lake rows carry the lagged advisory columns; spine rows carry a
+      real outcome; extension rows are chain anchors only).
     """
+    w = WINDOW_START.isoformat()
     return f"""
     CREATE OR REPLACE TEMP TABLE v57_events AS
-    WITH events AS ({_events_sql()})
+    WITH veh AS (
+        SELECT DISTINCT vehicle_id FROM {targets_table}
+    ),
+    raw_events AS (
+        SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
+               outcome,
+               prev_advisory_total, prev_advisory_known,
+               prev_advisory_brakes, prev_advisory_tyres, prev_advisory_suspension,
+               1 AS src_rank
+        FROM read_parquet('{LAKE}')
+        SEMI JOIN veh USING (vehicle_id)
+        WHERE test_date >= DATE '{w}'
+        UNION ALL
+        SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
+               CASE WHEN is_failure THEN 'FAIL' ELSE 'PASS' END AS outcome,
+               NULL, 0, NULL, NULL, NULL,
+               2 AS src_rank
+        FROM {_spine_sql()}
+        SEMI JOIN veh USING (vehicle_id)
+        WHERE test_date >= DATE '{w}'
+        UNION ALL
+        SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
+               NULL AS outcome,
+               prev_advisory_total, prev_advisory_known,
+               prev_advisory_brakes, prev_advisory_tyres, prev_advisory_suspension,
+               3 AS src_rank
+        FROM read_parquet('{HISTORY_EXTENSION_2024}')
+        SEMI JOIN veh USING (vehicle_id)
+        WHERE test_date >= DATE '{w}'
+    ),
+    events AS (
+        SELECT * EXCLUDE (src_rank, rn) FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY test_id ORDER BY src_rank) AS rn
+            FROM raw_events
+        ) WHERE rn = 1
+    ),
+    cf AS (
+        SELECT c.test_id, c.fail_brakes, c.fail_tyres, c.fail_suspension
+        FROM read_parquet('{COMPONENT_FAILURES}') c
+        SEMI JOIN events e ON c.test_id = e.test_id
+    ),
+    sp AS (
+        SELECT s.test_id, MAX(s.test_mileage) AS test_mileage
+        FROM {_spine_sql()} s
+        SEMI JOIN veh USING (vehicle_id)
+        WHERE s.test_date >= DATE '{w}'
+        GROUP BY s.test_id
+    )
     SELECT e.*, cf.fail_brakes, cf.fail_tyres, cf.fail_suspension,
            sp.test_mileage AS prior_odometer
     FROM events e
-    SEMI JOIN {targets_table} t ON e.vehicle_id = t.vehicle_id
-    LEFT JOIN read_parquet('{COMPONENT_FAILURES}') cf ON cf.test_id = e.test_id
-    LEFT JOIN (
-        SELECT test_id, MAX(test_mileage) AS test_mileage
-        FROM {_spine_sql()} GROUP BY test_id
-    ) sp ON sp.test_id = e.test_id
+    LEFT JOIN cf USING (test_id)
+    LEFT JOIN sp USING (test_id)
     """
 
 
