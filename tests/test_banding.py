@@ -13,8 +13,10 @@ class TestBanding(unittest.TestCase):
     def test_get_age_band(self):
         self.assertEqual(get_age_band(pd.NA), 'Unknown')
         self.assertEqual(get_age_band(float('nan')), 'Unknown')
-        self.assertEqual(get_age_band(0), '0-3')
-        self.assertEqual(get_age_band(2.9), '0-3')
+        # '0-2' is the canonical label: utils.get_age_band returns it and the
+        # production risks table contains '0-2' (no '0-3' rows exist).
+        self.assertEqual(get_age_band(0), '0-2')
+        self.assertEqual(get_age_band(2.9), '0-2')
         self.assertEqual(get_age_band(3), '3-5')
         self.assertEqual(get_age_band(11), '11-15')
         self.assertEqual(get_age_band(15.9), '11-15')
