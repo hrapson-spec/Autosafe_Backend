@@ -4,8 +4,16 @@ import os
 import sys
 from io import StringIO
 
+import pytest
+
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# process_defects was never committed to the repo (GF-17 audit: stale test —
+# same never-committed-module defect as station_priors). Skip instead of
+# aborting collection of the entire suite; restore or delete alongside the
+# defects-pipeline decision in the v57 program.
+pytest.importorskip("process_defects")
 
 from process_defects import load_rfr_mapping, DefectConfig
 
