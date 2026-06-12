@@ -193,6 +193,9 @@ def build_target_query(dataset_path: Path, train_years=None) -> str:
         COALESCE(d.prev_advisory_suspension, 0) AS prev_advisory_suspension
     FROM read_parquet('{dataset_path}') d
     WHERE {' AND '.join(where)}
+    -- the *_with_advisory builds carry a handful of duplicated test_ids
+    -- (advisory-join inflation; 76 in the OOT file) — keep one row each
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY d.test_id ORDER BY d.test_date, d.vehicle_id) = 1
     """
 
 

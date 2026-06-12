@@ -245,6 +245,11 @@ def build_history_features(
     missing = need - set(targets.columns)
     if missing:
         raise ValueError(f"targets missing required columns: {sorted(missing)}")
+    if not targets["test_id"].is_unique:
+        n_dupes = int(targets["test_id"].duplicated().sum())
+        raise ValueError(
+            f"targets contain {n_dupes} duplicated test_id rows — dedupe "
+            f"upstream (QUALIFY in the target query) before the recompute")
 
     # spill-enabled, bounded session (the lake union peaked >5.5GB in-memory)
     spill_dir = Path.home() / "autosafe_work/duckdb_tmp"
