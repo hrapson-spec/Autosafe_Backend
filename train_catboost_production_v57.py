@@ -257,6 +257,10 @@ def add_v45_model_age(df: pd.DataFrame, dataset: str) -> pd.DataFrame:
     if not f.exists():
         raise FileNotFoundError(f"V45 features missing: {f}")
     v45 = pd.read_parquet(f)
+    # upstream per-test feature files can carry duplicated test_ids (same
+    # advisory-join inflation as the OOT set); values are deterministic per
+    # test so keep the first
+    v45 = v45.drop_duplicates(subset="test_id", keep="first")
     n = len(df)
     df = df.merge(v45[["test_id", "model_age_fail_rate_eb", "make_age_fail_rate_eb"]],
                   on="test_id", how="left")
@@ -283,6 +287,7 @@ def add_v52_text(df: pd.DataFrame) -> pd.DataFrame:
             "has_corrosion_history", "has_wear_history", "has_leak_history",
             "has_damage_history", "mechanism_count", "dominant_mechanism"]
     text = pd.read_parquet(TEXT_MINING_FEATURES)[cols]
+    text = text.drop_duplicates(subset="test_id", keep="first")
     n = len(df)
     df = df.merge(text, on="test_id", how="left")
     assert len(df) == n, "V52 join inflated rows"
