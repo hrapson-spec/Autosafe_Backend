@@ -1,0 +1,7 @@
+{
+  "type": "platt_sigmoid",
+  "A": 6.218488441499742,
+  "B": -2.823827428368929,
+  "formula": "p_cal = 1/(1+exp(-(A*p_raw+B)))",
+  "fitted_on": "summed-ensemble train predictions"
+}
