@@ -1,0 +1,8 @@
+{
+  "type": "platt_sigmoid",
+  "A": 6.781078410783767,
+  "B": -3.0256923848070487,
+  "mapping": "calibrated = sigmoid(A * raw_prob + B)",
+  "source": "coef_/intercept_ extracted from platt_calibrator.pkl (LogisticRegression pickled under scikit-learn 1.8.0); equivalence verified exactly: max |predict_proba - sigmoid| = 0.0",
+  "extracted": "2026-06-12"
+}
