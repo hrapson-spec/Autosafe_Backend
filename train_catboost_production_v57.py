@@ -441,18 +441,35 @@ def main() -> int:
     print(f"\n[5] training {N_SEEDS}-seed ensemble on FULL dev @ {best_iter} iterations...")
     full_pool = Pool(X_train_full, y_train_full, cat_features=cat_idx, weight=weights_full)
     ensemble_params = dict(PARAMS, iterations=best_iter)
+    seed_dir = Path.home() / "autosafe_work/v57_seed_models"
+    seed_dir.mkdir(parents=True, exist_ok=True)
     models = []
     for seed in range(N_SEEDS):
+        ckpt = seed_dir / f"seed_{seed}_it{best_iter}.cbm"
         m = CatBoostClassifier(random_seed=seed, verbose=0, cat_features=cat_idx,
                                **ensemble_params)
-        m.fit(full_pool)
+        if ckpt.exists():
+            # deterministic resume: same data, params, and probe-chosen
+            # iteration count -> checkpoint is the identical model
+            m.load_model(str(ckpt))
+            print(f"  seed {seed}: resumed from checkpoint")
+        else:
+            m.fit(full_pool)
+            m.save_model(str(ckpt))
         models.append(m)
         print(f"  seed {seed}: OOT AUC={roc_auc_score(y_test, m.predict_proba(X_test)[:, 1]):.4f}")
 
     print("\n[6] merging seeds (sum_models) — deployed artifact == evaluated artifact...")
     merged = sum_models(models, weights=[1.0 / N_SEEDS] * N_SEEDS)
-    raw_train = merged.predict_proba(X_train_full)[:, 1]
-    raw_test = merged.predict_proba(X_test)[:, 1]
+    # sum_models returns a base CatBoost object (no predict_proba). Persist
+    # it and reload through CatBoostClassifier — the EXACT path the serving
+    # loader (model_v57) uses — so the metrics below describe precisely what
+    # production will execute.
+    merged.save_model(str(MODEL_FILE))
+    deployed = CatBoostClassifier()
+    deployed.load_model(str(MODEL_FILE))
+    raw_train = deployed.predict_proba(X_train_full)[:, 1]
+    raw_test = deployed.predict_proba(X_test)[:, 1]
 
     print("\n[7] Platt calibration (fit on train predictions, v55 protocol)...")
     calib = LogisticRegression()
@@ -491,7 +508,8 @@ def main() -> int:
             print(f"  {k_}: {v_:.4f}")
 
     print("\n[9] writing bundle...")
-    merged.save_model(str(MODEL_FILE))
+    # model.cbm already persisted at the merge step (and reloaded from disk
+    # for evaluation — the file on disk IS the evaluated artifact)
     with open(CALIBRATOR_FILE, "w") as f:
         json.dump({"type": "platt_sigmoid", "A": A, "B": B,
                    "formula": "p_cal = 1/(1+exp(-(A*p_raw+B)))",
