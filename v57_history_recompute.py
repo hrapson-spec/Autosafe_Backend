@@ -141,21 +141,39 @@ def _events_sql() -> str:
     """
 
 
+def _prepare_events_sql(targets_table: str) -> str:
+    """Materialize ONE reduced per-vehicle event table for all targets.
+
+    Every heavy join happens here exactly once (lake/spine/extension union,
+    component-failure flags, spine odometers); the per-chunk ranked query
+    then reads only this small temp table. Run in a spill-enabled session.
+    """
+    return f"""
+    CREATE OR REPLACE TEMP TABLE v57_events AS
+    WITH events AS ({_events_sql()})
+    SELECT e.*, cf.fail_brakes, cf.fail_tyres, cf.fail_suspension,
+           sp.test_mileage AS prior_odometer
+    FROM events e
+    SEMI JOIN {targets_table} t ON e.vehicle_id = t.vehicle_id
+    LEFT JOIN read_parquet('{COMPONENT_FAILURES}') cf ON cf.test_id = e.test_id
+    LEFT JOIN (
+        SELECT test_id, MAX(test_mileage) AS test_mileage
+        FROM {_spine_sql()} GROUP BY test_id
+    ) sp ON sp.test_id = e.test_id
+    """
+
+
 def _ranked_priors_sql(targets_table: str) -> str:
     """One row per (target, in-window prior), newest prior first (rnk=1).
 
     advisory counts AT each prior come from the lagged-column chain:
     advisories_at(prior rnk=k) = prev_advisory_* of the chain element one
     step newer (rnk=k-1), seeded with the target's own prev_advisory_*
-    (supplied by the targets table from its h/e-join).
+    (supplied by the targets table from its h/e-join). Reads the
+    pre-materialized v57_events temp table.
     """
     return f"""
-    WITH events AS ({_events_sql()}),
-    veh_events AS (
-        SELECT e.* FROM events e
-        SEMI JOIN {targets_table} t ON e.vehicle_id = t.vehicle_id
-    ),
-    ranked AS (
+    WITH ranked AS (
         SELECT
             t.test_id AS target_id,
             t.test_date AS target_date,
@@ -167,20 +185,15 @@ def _ranked_priors_sql(targets_table: str) -> str:
             e.prev_advisory_brakes AS prior_lag_adv_brakes,
             e.prev_advisory_tyres AS prior_lag_adv_tyres,
             e.prev_advisory_suspension AS prior_lag_adv_suspension,
-            cf.fail_brakes, cf.fail_tyres, cf.fail_suspension,
-            sp.test_mileage AS prior_odometer,
+            e.fail_brakes, e.fail_tyres, e.fail_suspension,
+            e.prior_odometer,
             ROW_NUMBER() OVER (
                 PARTITION BY t.test_id ORDER BY e.test_date DESC, e.test_id DESC
             ) AS rnk
         FROM {targets_table} t
-        JOIN veh_events e
+        JOIN v57_events e
           ON e.vehicle_id = t.vehicle_id
          AND e.test_date < CAST(t.test_date AS DATE)
-        LEFT JOIN read_parquet('{COMPONENT_FAILURES}') cf ON cf.test_id = e.test_id
-        LEFT JOIN (
-            SELECT test_id, MAX(test_mileage) AS test_mileage
-            FROM {_spine_sql()} GROUP BY test_id
-        ) sp ON sp.test_id = e.test_id
     )
     SELECT r.*,
         -- advisories AT this prior = lagged columns of the next-newer chain
@@ -221,38 +234,49 @@ def build_history_features(
     if missing:
         raise ValueError(f"targets missing required columns: {sorted(missing)}")
 
-    if n_chunks > 1:
-        # bound peak memory: process disjoint vehicle shards and concat
-        shard = pd.util.hash_array(targets["vehicle_id"].to_numpy()) % n_chunks
-        parts = []
-        for i in range(n_chunks):
-            part = targets[shard == i]
-            if len(part):
-                parts.append(build_history_features(
-                    conn, part, label=f"{label}#{i + 1}/{n_chunks}"))
-        out = pd.concat(parts, ignore_index=True)
-        cov: Dict[str, int] = {}
-        for p in parts:
-            for k, v in p.attrs.get("coverage", {}).items():
-                cov[k] = cov.get(k, 0) + v
-        out.attrs["coverage"] = cov
-        return out
+    # spill-enabled, bounded session (the lake union peaked >5.5GB in-memory)
+    spill_dir = Path.home() / "autosafe_work/duckdb_tmp"
+    spill_dir.mkdir(parents=True, exist_ok=True)
+    conn.execute(f"SET temp_directory='{spill_dir}'")
+    conn.execute("SET preserve_insertion_order=false")
+    conn.execute("SET threads=4")
 
-    print(f"  [{label}] recompute: registering {len(targets):,} targets...")
-    conn.register("v57_targets_df", targets[sorted(need)])
-    conn.execute("CREATE OR REPLACE TEMP TABLE v57_targets AS SELECT * FROM v57_targets_df")
+    print(f"  [{label}] recompute: registering {len(targets):,} targets...", flush=True)
+    conn.register("v57_targets_all_df", targets[sorted(need)])
+    conn.execute(
+        "CREATE OR REPLACE TEMP TABLE v57_targets_all AS SELECT * FROM v57_targets_all_df")
 
-    ranked = conn.execute(_ranked_priors_sql("v57_targets")).fetchdf()
-    print(f"  [{label}] recompute: {len(ranked):,} (target, prior) pairs")
+    print(f"  [{label}] recompute: materializing per-vehicle events (one pass)...",
+          flush=True)
+    conn.execute(_prepare_events_sql("v57_targets_all"))
+    n_events = conn.execute("SELECT COUNT(*) FROM v57_events").fetchone()[0]
+    print(f"  [{label}] recompute: {n_events:,} in-window events", flush=True)
 
-    out = _aggregate(targets, ranked)
-    coverage = {
-        "targets": int(len(targets)),
-        "targets_with_priors": int((out["n_prior_tests_observed"] > 0).sum()),
-        "prior_pairs": int(len(ranked)),
-        "priors_with_known_outcome": int(ranked["prior_outcome"].notna().sum()),
-        "priors_with_odometer": int(ranked["prior_odometer"].notna().sum()),
-    }
+    shard = pd.util.hash_array(targets["vehicle_id"].to_numpy()) % max(1, n_chunks)
+    parts = []
+    coverage: Dict[str, int] = {"targets": int(len(targets))}
+    for i in range(max(1, n_chunks)):
+        chunk = targets[shard == i] if n_chunks > 1 else targets
+        if not len(chunk):
+            continue
+        conn.register("v57_targets_df", chunk[sorted(need)])
+        conn.execute(
+            "CREATE OR REPLACE TEMP TABLE v57_targets AS SELECT * FROM v57_targets_df")
+        ranked = conn.execute(_ranked_priors_sql("v57_targets")).fetchdf()
+        part = _aggregate(chunk, ranked)
+        parts.append(part)
+        for key, val in (
+            ("targets_with_priors", int((part["n_prior_tests_observed"] > 0).sum())),
+            ("prior_pairs", int(len(ranked))),
+            ("priors_with_known_outcome", int(ranked["prior_outcome"].notna().sum()) if len(ranked) else 0),
+            ("priors_with_odometer", int(ranked["prior_odometer"].notna().sum()) if len(ranked) else 0),
+        ):
+            coverage[key] = coverage.get(key, 0) + val
+        print(f"  [{label}] chunk {i + 1}/{max(1, n_chunks)}: "
+              f"{len(chunk):,} targets, {len(ranked):,} pairs", flush=True)
+
+    conn.execute("DROP TABLE IF EXISTS v57_events")
+    out = pd.concat(parts, ignore_index=True)
     print(f"  [{label}] recompute coverage: {coverage}")
     out.attrs["coverage"] = coverage
     return out
