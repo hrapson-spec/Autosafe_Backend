@@ -38,9 +38,11 @@ Known Stage-1 residuals (documented, accepted by the directive):
   cycle counts while serving counts raw API tests.
 """
 
+import subprocess
+import time
 from datetime import date
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -50,9 +52,52 @@ from model_bundle import FIRST_MOT_AGE_YEARS, WINDOW_START
 
 PROJECT_ROOT = Path("/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe")
 LAKE = PROJECT_ROOT / "cycle_first_with_history.parquet"
-SPINE_GLOB = PROJECT_ROOT / "validation_samples" / "sampled_*.parquet"
+# Canonical per-year spine = the BASE sampled_{year} files only (the
+# directory also holds _with_advisory/_v2/_old variants with different
+# schemas and duplicate test_ids — a bare glob must never be used here).
+SPINE_FILES: List[Path] = [
+    PROJECT_ROOT / "validation_samples" / f"sampled_{year}.parquet"
+    for year in range(WINDOW_START.year, 2025)
+]
 HISTORY_EXTENSION_2024 = Path.home() / "autosafe_work/cycle_history_extension_2024.parquet"
 COMPONENT_FAILURES = PROJECT_ROOT / "component_failures_all_years.parquet"
+
+
+def _spine_sql() -> str:
+    files = ", ".join(f"'{p}'" for p in SPINE_FILES)
+    return f"read_parquet([{files}])"
+
+
+def ensure_materialized(paths: List[Path], timeout_s: int = 2400) -> None:
+    """Force-download evicted iCloud files and verify parquet footers.
+
+    iCloud Drive serves placeholder files (0 allocated bytes) that stall any
+    reader mid-download and can surface as truncated parquet (the
+    all_tests.parquet corruption class). Materialize explicitly, with
+    progress, and fail fast on files that never become valid parquet.
+    """
+    import pyarrow.parquet as pq
+
+    deadline = time.time() + timeout_s
+    for p in paths:
+        if not p.exists():
+            raise FileNotFoundError(f"required input missing: {p}")
+        subprocess.run(["brctl", "download", str(p)],
+                       capture_output=True, check=False)
+        last_err = None
+        while True:
+            try:
+                f = pq.ParquetFile(p)
+                f.metadata  # footer + schema readable
+                print(f"  materialized: {p.name} ({f.metadata.num_rows:,} rows)")
+                break
+            except Exception as e:  # noqa: BLE001 — retry until deadline
+                last_err = e
+                if time.time() > deadline:
+                    raise RuntimeError(
+                        f"input never became readable parquet (evicted or "
+                        f"corrupt iCloud file?): {p}\n{last_err}") from e
+                time.sleep(15)
 
 COMPONENTS = ("brakes", "tyres", "suspension")
 _NEVER = 999  # serving sentinel: no prior advisory/failure observed
@@ -81,7 +126,7 @@ def _events_sql() -> str:
                    CASE WHEN is_failure THEN 'FAIL' ELSE 'PASS' END AS outcome,
                    NULL, 0, NULL, NULL, NULL,
                    2 AS src_rank
-            FROM read_parquet('{SPINE_GLOB}')
+            FROM {_spine_sql()}
             WHERE test_date >= DATE '{WINDOW_START.isoformat()}'
             UNION ALL
             SELECT test_id, vehicle_id, CAST(test_date AS DATE) AS test_date,
@@ -134,7 +179,7 @@ def _ranked_priors_sql(targets_table: str) -> str:
         LEFT JOIN read_parquet('{COMPONENT_FAILURES}') cf ON cf.test_id = e.test_id
         LEFT JOIN (
             SELECT test_id, MAX(test_mileage) AS test_mileage
-            FROM read_parquet('{SPINE_GLOB}') GROUP BY test_id
+            FROM {_spine_sql()} GROUP BY test_id
         ) sp ON sp.test_id = e.test_id
     )
     SELECT r.*,

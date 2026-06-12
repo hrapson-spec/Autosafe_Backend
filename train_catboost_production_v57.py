@@ -59,6 +59,7 @@ from model_contract_v57 import (
     contract_as_dict,
 )
 from regional_defaults import get_corrosion_index
+import v57_history_recompute as recompute
 from v57_history_recompute import build_history_features
 from feature_engineering_v55 import HIGH_RISK_MODELS_SET
 
@@ -124,6 +125,45 @@ HIGH_MASS_LEVELS = {
     "mech_risk_driver": {"CLEAN", "BRAKE", "SUSP"},
     "dominant_mechanism": {"NO_HISTORY", "CLEAN"},
 }
+
+
+STAGING_DIR = Path.home() / "autosafe_work/v57_staged_inputs"
+
+
+def stage_inputs() -> dict:
+    """Copy heavy iCloud-hosted inputs to local APFS and rebind paths.
+
+    Training does hours of random I/O; the iCloud volume serves evicted
+    placeholders and stalls under load (observed 2026-06-12: Errno 60
+    timeouts + a corrupt half-materialized parquet). One sequential copy
+    per input makes the run immune. Local copies are footer-validated and
+    are the files the manifest hashes; original paths are recorded.
+    """
+    import shutil
+
+    import pyarrow.parquet as pq
+
+    global DEV_SET, OOT_SET
+    STAGING_DIR.mkdir(parents=True, exist_ok=True)
+    mapping = {}
+
+    def stage(src: Path) -> Path:
+        dst = STAGING_DIR / src.name
+        if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+            print(f"  staging {src.name} ({src.stat().st_size / 1e6:,.0f} MB)...",
+                  flush=True)
+            shutil.copy2(src, dst)
+        pq.ParquetFile(dst).metadata  # local footer validation
+        mapping[str(src)] = str(dst)
+        return dst
+
+    DEV_SET = stage(DEV_SET)
+    OOT_SET = stage(OOT_SET)
+    recompute.LAKE = stage(recompute.LAKE)
+    recompute.COMPONENT_FAILURES = stage(recompute.COMPONENT_FAILURES)
+    recompute.SPINE_FILES = [stage(p) for p in recompute.SPINE_FILES]
+    # TEXT_MINING_FEATURES / V45 / extension already live on local APFS
+    return mapping
 
 
 def build_target_query(dataset_path: Path, train_years=None) -> str:
@@ -327,6 +367,10 @@ def main() -> int:
     conn = duckdb.connect()
     conn.execute("SET memory_limit='6GB'")
 
+    print("\n[0] staging inputs to local disk...", flush=True)
+    staged = stage_inputs()
+    print(f"  staged {len(staged)} inputs under {STAGING_DIR}")
+
     dev, dev_coverage = build_matrix(conn, DEV_SET, "DEV", TRAIN_YEARS)
     oot, oot_coverage = build_matrix(conn, OOT_SET, "OOT")
 
@@ -500,11 +544,12 @@ def main() -> int:
                      "train_weights": weights_full}, f)
 
     print("\n[10] training manifest...")
-    inputs = [DEV_SET, OOT_SET, LAKE, COMPONENT_FAILURES, TEXT_MINING_FEATURES,
+    inputs = [DEV_SET, OOT_SET, recompute.LAKE, recompute.COMPONENT_FAILURES,
+              TEXT_MINING_FEATURES,
               V45_FEATURES_DIR / "model_age_features_dev.parquet",
               V45_FEATURES_DIR / "model_age_features_oot.parquet"]
-    inputs += sorted((PROJECT_ROOT / "validation_samples").glob("sampled_*.parquet"))
-    inputs += [Path.home() / "autosafe_work/cycle_history_extension_2024.parquet"]
+    inputs += list(recompute.SPINE_FILES)
+    inputs += [recompute.HISTORY_EXTENSION_2024]
     git_sha = subprocess.run(["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
                              capture_output=True, text=True).stdout.strip()
     manifest = {
@@ -527,6 +572,7 @@ def main() -> int:
         "oot_date_range": [str(pd.to_datetime(oot['test_date']).min().date()),
                            str(pd.to_datetime(oot['test_date']).max().date())],
         "recompute_coverage": {"dev": dev_coverage, "oot": oot_coverage},
+        "staged_inputs": staged,
         "vocab_report": vocab_report,
         "prepared_data": str(PREPARED_DATA),
         "input_files": [

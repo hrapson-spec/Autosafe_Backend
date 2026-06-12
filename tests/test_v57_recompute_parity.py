@@ -251,16 +251,16 @@ def recomputed(tmp_path_factory, monkeypatch_module=None):
     targets["test_date"] = pd.to_datetime(targets["test_date"])
     targets["first_use_date"] = pd.to_datetime(targets["first_use_date"])
 
-    real = (rec.LAKE, rec.SPINE_GLOB, rec.HISTORY_EXTENSION_2024, rec.COMPONENT_FAILURES)
+    real = (rec.LAKE, rec.SPINE_FILES, rec.HISTORY_EXTENSION_2024, rec.COMPONENT_FAILURES)
     rec.LAKE = tmp / "lake.parquet"
-    rec.SPINE_GLOB = tmp / "sampled_fixture.parquet"
+    rec.SPINE_FILES = [tmp / "sampled_fixture.parquet"]
     rec.HISTORY_EXTENSION_2024 = tmp / "extension.parquet"
     rec.COMPONENT_FAILURES = tmp / "component_failures.parquet"
     try:
         conn = duckdb.connect()
         out = rec.build_history_features(conn, targets, label="fixture")
     finally:
-        rec.LAKE, rec.SPINE_GLOB, rec.HISTORY_EXTENSION_2024, rec.COMPONENT_FAILURES = real
+        rec.LAKE, rec.SPINE_FILES, rec.HISTORY_EXTENSION_2024, rec.COMPONENT_FAILURES = real
     return out.set_index("test_id")
 
 
