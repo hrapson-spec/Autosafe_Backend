@@ -56,3 +56,4 @@ lerna-debug.log*
 !models/v57/*.json
 models/v57/oot_eval_frame.parquet
 models/v57/train.log
+!models/v57/rca/*.json
