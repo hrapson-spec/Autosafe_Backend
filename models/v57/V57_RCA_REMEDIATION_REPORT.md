@@ -179,17 +179,30 @@ The expected-vs-actual gap is the comparator, not v57.
   more — X1 cannot settle that; it is a separate hypothesis.
   - **C-B′ Within-substrate (X4 permutation importance, fixed model, OOT):**
     of the 63, **0 subtract** (none beyond the ±0.00017 noise band — no
-    overfit-noise members hurting OOT), **51 are redundant** (no unique
-    contribution given the rest), and only **12 add unique signal**, dominated
-    by `dominant_mechanism` **+0.0104** and `advisory_trend` **+0.0044** (the
-    rest ≤0.0015 each). Family gross sums: text_mining **+0.0123**,
-    advisory_recency +0.0028, advisory_counts +0.0012, failure_recency +0.0010,
-    negligence +0.0003, mech_decay **−0.0001** (≈0, consistent with the
-    trained-dead steering/structure members). The perm sum (~**+0.022** gross,
-    as-used by the fixed model) exceeds the X1b refit-net (**+0.0059**) because
-    retraining without the substrate recovers most of its signal from
-    correlated priors/mileage — the substrate's *irreplaceable* value is the
-    smaller refit-net number. Evidence: `rca_results.json` tier2.X4.
+    overfit-noise members hurting OOT), and only **12 add unique signal**,
+    dominated by `dominant_mechanism` **+0.0104** and `advisory_trend`
+    **+0.0044** (the rest ≤0.0015 each). Family gross sums: text_mining
+    **+0.0123**, advisory_recency +0.0028, advisory_counts +0.0012,
+    failure_recency +0.0010, negligence +0.0003, mech_decay **−0.0001** (≈0,
+    consistent with the trained-dead steering/structure members). The perm
+    sum (~**+0.022** gross, as-used by the fixed model) exceeds the X1b
+    refit-net (**+0.0059**) because retraining without the substrate recovers
+    most of its signal from correlated priors/mileage — the substrate's
+    *irreplaceable* value is the smaller refit-net number. Evidence:
+    `rca_results.json` tier2.X4.
+  - **C-B″ Of the 51 with no unique contribution: 48 redundant + 3 INERT, not
+    "51 redundant" (X5).** Permutation ≈0 has two causes it cannot separate;
+    splitting by matrix near-constancy: **3 are inert/dead** — `prev_adv_steering`,
+    `mech_decay_structure`, `mech_decay_steering` (1 distinct value across the
+    matrix, all on the GF-17 trained-dead list — *no signal to be redundant
+    with*); the other **48 vary** (modal fraction 0.23–0.69) but are covered by
+    correlated features. Grouped permutation of all 51: **+0.0014** joint
+    (inert subset exactly 0.0000 — a constant can't contribute; the 48 jointly
+    +0.0015), confirming the no-unique set adds ~0.15pp even together. The
+    48/3 split is **constancy-driven and model-independent**; the grouped-perm
+    magnitudes here ran on the **v57.1 working-tree model (0.7207)** after a
+    retrain overwrote the artifacts mid-analysis (see tier2.X5
+    PROVENANCE_CORRECTION). Evidence: `rca_results.json` tier2.X5.
 - **C-C Honest-frame cost (E4, measured):** restoring own-frame
   `test_mileage`/`days_since_last_test` = **+0.0064** (0.7133→0.7197). This is
   the one serving-legitimate lever (the owner/garage knows current mileage at

@@ -877,6 +877,432 @@
         }
       ],
       "caveat": "permutation gives UNIQUE marginal contribution; correlated features share signal so both can read ~0 (= redundant, not signal-free). Net family value = X1-style drop-refit, not this. perm_importance>noise=ADDS unique; <-noise=SUBTRACTS (overfit)."
+    },
+    "X5_redundant_vs_inert": {
+      "baseline_oot_auc": 0.72066,
+      "n_no_unique": 51,
+      "const_threshold": 0.99,
+      "n_inert_near_constant": 3,
+      "n_redundant_varies": 48,
+      "grouped_perm_all_no_unique": 0.00145,
+      "grouped_perm_inert_subset": 0.0,
+      "grouped_perm_redundant_subset": 0.00147,
+      "inert_features": [
+        "prev_adv_steering",
+        "mech_decay_structure",
+        "mech_decay_steering"
+      ],
+      "redundant_features": [
+        "advisory_streak_len_suspension_observed",
+        "tests_since_last_failure_tyres_observed",
+        "tests_since_last_advisory_brakes_observed",
+        "tests_since_last_advisory_suspension_observed",
+        "has_observed_failure_suspension",
+        "advisory_in_last_1_brakes_observed",
+        "multi_system_advisory_count",
+        "has_observed_failure_brakes",
+        "has_prior_failure_brakes_observed",
+        "has_prior_failure_suspension_observed",
+        "miles_since_last_advisory_tyres_observed",
+        "advisory_in_last_2_tyres_observed",
+        "has_prior_failure_tyres_observed",
+        "has_observed_failure_tyres",
+        "prev_adv_suspension",
+        "advisory_in_last_1_suspension_observed",
+        "has_advisory_history",
+        "has_prior_advisory_brakes_observed",
+        "advisory_in_last_2_brakes_observed",
+        "miles_since_last_advisory_suspension_observed",
+        "advisory_in_last_2_suspension_observed",
+        "mech_decay_suspension",
+        "mech_risk_driver",
+        "text_wear_index",
+        "text_leak_index",
+        "has_corrosion_history",
+        "has_wear_history",
+        "has_leak_history",
+        "severity_escalation_flag",
+        "has_prior_advisory_tyres_observed",
+        "has_prior_advisory_suspension_observed",
+        "text_corrosion_index",
+        "text_corrosion_index_log",
+        "text_leak_index_log",
+        "has_damage_history",
+        "prev_adv_tyres",
+        "mech_decay_index",
+        "text_wear_index_log",
+        "prev_adv_brakes",
+        "mech_decay_brake",
+        "text_damage_index",
+        "prior_advisory_count_observed",
+        "mech_decay_index_normalized",
+        "text_damage_index_log",
+        "front_end_advisory_intensity",
+        "raw_behavioral_count",
+        "brake_system_stress",
+        "historic_negligence_ratio_smoothed"
+      ],
+      "detail": [
+        {
+          "feature": "advisory_streak_len_suspension_observed",
+          "modal_fraction": 0.9694,
+          "n_distinct": 6,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "tests_since_last_failure_tyres_observed",
+          "modal_fraction": 0.8589,
+          "n_distinct": 14,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "tests_since_last_advisory_brakes_observed",
+          "modal_fraction": 0.7524,
+          "n_distinct": 10,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "tests_since_last_advisory_suspension_observed",
+          "modal_fraction": 0.8372,
+          "n_distinct": 10,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "has_observed_failure_suspension",
+          "modal_fraction": 0.8277,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "advisory_in_last_1_brakes_observed",
+          "modal_fraction": 0.9588,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "multi_system_advisory_count",
+          "modal_fraction": 0.5382,
+          "n_distinct": 4,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_observed_failure_brakes",
+          "modal_fraction": 0.8684,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_prior_failure_brakes_observed",
+          "modal_fraction": 0.8684,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_prior_failure_suspension_observed",
+          "modal_fraction": 0.8277,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "miles_since_last_advisory_tyres_observed",
+          "modal_fraction": 0.9054,
+          "n_distinct": 1584,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "advisory_in_last_2_tyres_observed",
+          "modal_fraction": 0.7936,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_prior_failure_tyres_observed",
+          "modal_fraction": 0.8589,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_observed_failure_tyres",
+          "modal_fraction": 0.8589,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "prev_adv_suspension",
+          "modal_fraction": 0.8372,
+          "n_distinct": 23,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "advisory_in_last_1_suspension_observed",
+          "modal_fraction": 0.9694,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "has_advisory_history",
+          "modal_fraction": 0.5215,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "prev_adv_steering",
+          "modal_fraction": 1.0,
+          "n_distinct": 1,
+          "classification": "inert_near_constant",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "has_prior_advisory_brakes_observed",
+          "modal_fraction": 0.7524,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "advisory_in_last_2_brakes_observed",
+          "modal_fraction": 0.8331,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "miles_since_last_advisory_suspension_observed",
+          "modal_fraction": 0.9514,
+          "n_distinct": 442,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "advisory_in_last_2_suspension_observed",
+          "modal_fraction": 0.8829,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "mech_decay_suspension",
+          "modal_fraction": 0.8372,
+          "n_distinct": 6,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "mech_decay_structure",
+          "modal_fraction": 1.0,
+          "n_distinct": 1,
+          "classification": "inert_near_constant",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "mech_decay_steering",
+          "modal_fraction": 1.0,
+          "n_distinct": 1,
+          "classification": "inert_near_constant",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "mech_risk_driver",
+          "modal_fraction": 0.6746,
+          "n_distinct": 3,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_wear_index",
+          "modal_fraction": 0.8951,
+          "n_distinct": 10597,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_leak_index",
+          "modal_fraction": 0.971,
+          "n_distinct": 2673,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_corrosion_history",
+          "modal_fraction": 0.9525,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_wear_history",
+          "modal_fraction": 0.8951,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_leak_history",
+          "modal_fraction": 0.971,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "severity_escalation_flag",
+          "modal_fraction": 0.812,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_prior_advisory_tyres_observed",
+          "modal_fraction": 0.6872,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_prior_advisory_suspension_observed",
+          "modal_fraction": 0.8372,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": true
+        },
+        {
+          "feature": "text_corrosion_index",
+          "modal_fraction": 0.9525,
+          "n_distinct": 4927,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_corrosion_index_log",
+          "modal_fraction": 0.9525,
+          "n_distinct": 4927,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_leak_index_log",
+          "modal_fraction": 0.971,
+          "n_distinct": 2673,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "has_damage_history",
+          "modal_fraction": 0.9201,
+          "n_distinct": 2,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "prev_adv_tyres",
+          "modal_fraction": 0.6872,
+          "n_distinct": 14,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "mech_decay_index",
+          "modal_fraction": 0.6746,
+          "n_distinct": 6,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_wear_index_log",
+          "modal_fraction": 0.8951,
+          "n_distinct": 10597,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "prev_adv_brakes",
+          "modal_fraction": 0.7524,
+          "n_distinct": 20,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "mech_decay_brake",
+          "modal_fraction": 0.7524,
+          "n_distinct": 6,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_damage_index",
+          "modal_fraction": 0.9201,
+          "n_distinct": 7886,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "prior_advisory_count_observed",
+          "modal_fraction": 0.5215,
+          "n_distinct": 37,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "mech_decay_index_normalized",
+          "modal_fraction": 0.6746,
+          "n_distinct": 6,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "text_damage_index_log",
+          "modal_fraction": 0.9201,
+          "n_distinct": 7886,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "front_end_advisory_intensity",
+          "modal_fraction": 0.6151,
+          "n_distinct": 28,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "raw_behavioral_count",
+          "modal_fraction": 0.5215,
+          "n_distinct": 37,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "brake_system_stress",
+          "modal_fraction": 0.2332,
+          "n_distinct": 132,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        },
+        {
+          "feature": "historic_negligence_ratio_smoothed",
+          "modal_fraction": 0.5215,
+          "n_distinct": 49,
+          "classification": "redundant_varies_but_covered",
+          "in_gf17_trained_dead": false
+        }
+      ],
+      "reading": "grouped_perm_all ~0 => the no-unique set adds nothing even jointly to the fixed model (signal absent or fully held by retained features). near-constant members are INERT (no signal); varying members are REDUNDANT (covered).",
+      "PROVENANCE_CORRECTION": "Ran against the v57.1 working-tree model (baseline_oot_auc 0.7207, 104 feat, uncommitted) \u2014 NOT committed v57.0 (0.7135) \u2014 because a v57.1 retrain overwrote model.cbm + prepared_data.pkl at 09:22 on 2026-06-13, between the X4 (v57.0) and X5 runs. The 48-redundant / 3-inert split is constancy-driven (modal_fraction is a matrix property, ~identical v57.0/v57.1 for the unchanged substrate features) and is therefore model-independent; the 3 inert (prev_adv_steering, mech_decay_structure, mech_decay_steering) are distinct=1 (constant) in both. Grouped-permutation MAGNITUDES here are v57.1. The '51' no-unique partition was taken from X4 (v57.0). Henri chose relabel-not-rerun."
     }
   }
 }
