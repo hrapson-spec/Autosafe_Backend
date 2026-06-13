@@ -1,1 +1,3 @@
 timestamp	candidate_id	arm	hypothesis	feature_names	val_auc_mean	oot_auc_mean	within_seg_slices_passed	ece_worst_slice	leakage_drop_pp	verdict	commit_sha	comparison_count	notes
+2026-06-13T12:08:54+00:00	vehicle_age_years	1_age	raw vehicle age	age_anchor_is_fallback,vehicle_age_years,vehicle_age_years_missing		0.708	4	0.016	-0.288	dead			within_segment
+2026-06-13T12:16:43+00:00	vehicle_age_years	1_age	raw vehicle age	age_anchor_is_fallback,vehicle_age_years,vehicle_age_years_missing		0.689	11	0.0073	0.068	dead			within_segment
