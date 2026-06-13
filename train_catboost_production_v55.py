@@ -176,6 +176,22 @@ V48_UNIFIED_PRIOR_COLS = [
     'eb_unified_prior',  # Single unified feature (OOF-encoded for DEV, frozen for OOT)
 ]
 
+# Chronos-2 forward-looking forecast features (offline producer:
+# forecast_segment_rates.py). Overall segment fail-rate forecast + per-component.
+# NOTE: names/order MUST match feature_engineering_v55.CHRONOS_FEATURE_NAMES
+# (asserted by tests/test_chronos_forecast.py). Numeric → NOT added to CAT_FEATURES.
+CHRONOS_COMPONENTS = ['brakes', 'suspension', 'tyres', 'steering', 'visibility', 'lamps', 'body']
+CHRONOS_FORECAST_COLS = ['chronos_seg_fail_forecast'] + [
+    f'chronos_seg_{c}_forecast' for c in CHRONOS_COMPONENTS
+]
+# As-of forecast panels (rolling-origin; keyed by the month each forecast is valid FOR).
+CHRONOS_FEATURES_DIR = Path.home() / "autosafe_work/chronos_features"
+CHRONOS_ASOF_PANEL = CHRONOS_FEATURES_DIR / "chronos_asof_forecast.parquet"          # segment grain
+CHRONOS_ASOF_PANEL_MAKE = CHRONOS_FEATURES_DIR / "chronos_asof_forecast_make.parquet"   # make grain
+CHRONOS_ASOF_PANEL_GLOBAL = CHRONOS_FEATURES_DIR / "chronos_asof_forecast_global.parquet"  # global grain
+CHRONOS_SERVING_PKL_SRC = CHRONOS_FEATURES_DIR / "chronos_segment_forecast.pkl"
+CHRONOS_SERVING_PKL = WORK_DIR / "chronos_segment_forecast.pkl"
+
 # V51 NEW: Mechanical Decay Features (systemic deterioration)
 # Captures "about to fail" signals from brake/suspension/structure/steering advisories
 V51_MECHANICAL_DECAY_COLS = [
@@ -398,7 +414,7 @@ FEATURE_COLS = (V12D_FEATURE_COLS + EB_FEATURE_COLS + STATION_FEATURE_COLS +
                 V47_MILEAGE_INDICATORS +
                 V43_GEO_COLS + V44_MODEL_RISK_COLS + V45_MODEL_AGE_COLS + V46_NEGLIGENCE_COLS +
                 V48_UNIFIED_PRIOR_COLS + V51_MECHANICAL_DECAY_COLS + V52_TEXT_MINING_COLS +
-                V55_TEMPORAL_COLS)
+                V55_TEMPORAL_COLS + CHRONOS_FORECAST_COLS)
 
 print(f"V55 mode: {ABLATION_MODE} ({len(FEATURE_COLS)} features)")
 
@@ -1045,6 +1061,112 @@ def add_v48_unified_prior(df: pd.DataFrame, dataset: str) -> pd.DataFrame:
     print(f"    eb_unified_prior range: [{df['eb_unified_prior'].min():.4f}, {df['eb_unified_prior'].max():.4f}]")
     print(f"    eb_unified_prior mean: {df['eb_unified_prior'].mean():.4f}")
 
+    return df
+
+
+# ============================================================================
+# Chronos-2: Forward-Looking Segment-Rate Forecast Features
+# ============================================================================
+
+def add_chronos_forecast(df: pd.DataFrame, max_asof_str: str) -> pd.DataFrame:
+    """Add Chronos-2 forward-looking forecast features (overall + per component).
+
+    Mirrors add_eb_features' as-of monthly join, with a segment -> make -> global
+    -> 0.28 fold-down IDENTICAL to the serving fallback
+    (feature_engineering_v55.lookup_chronos_forecasts), so train == serve.
+
+    The panels are rolling-origin: each forecast is stored under
+    asof_month = the month it is valid FOR (produced from data <= the prior
+    month), so joining on a row's own test month is point-in-time honest.
+
+    Offline producer: forecast_segment_rates.py. Chronos-2 is a frozen pretrained
+    model => no per-run fitting, so there is no DEV/OOT leakage vector (unlike the
+    OOF-encoded priors); the only leakage control is the rolling-origin
+    construction in the producer.
+    """
+    print("  Adding Chronos-2 forecast features...")
+    df = df.copy()
+
+    if not CHRONOS_ASOF_PANEL.exists():
+        print(f"    WARNING: {CHRONOS_ASOF_PANEL} not found - filling base-rate (0.28) defaults")
+        for col in CHRONOS_FORECAST_COLS:
+            df[col] = 0.28
+        return df
+
+    # Banding identical to add_eb_features (canonical youngest band '0-2').
+    def compute_age_band_key(row):
+        if pd.isna(row.get('age_band')) or row['age_band'] == 'UNKNOWN':
+            return 'Unknown'
+        ab = str(row['age_band'])
+        if ab in ['0-2', '0-1', '1-2', '2-3', '0-3']:
+            return '0-2'
+        elif ab in ['3-5', '3-4', '4-5']:
+            return '3-5'
+        elif ab in ['6-10', '5-6', '6-7', '7-8', '8-9', '9-10', '5-10']:
+            return '6-10'
+        elif ab in ['11-15', '10-11', '11-12', '12-13', '13-14', '14-15', '10-15']:
+            return '11-15'
+        else:
+            return '15+'
+
+    def compute_mileage_band_key(mileage):
+        if pd.isna(mileage) or mileage < 0:
+            return 'Unknown'
+        elif mileage < 30000:
+            return '0-30k'
+        elif mileage < 60000:
+            return '30k-60k'
+        elif mileage < 100000:
+            return '60k-100k'
+        else:
+            return '100k+'
+
+    df['join_month'] = pd.to_datetime(df['test_date']).dt.to_period('M').dt.to_timestamp()
+    df['join_month'] = df['join_month'].clip(upper=pd.Timestamp(max_asof_str))
+    df['age_band_key'] = df.apply(compute_age_band_key, axis=1)
+    df['mileage_band_key'] = df['test_mileage'].apply(compute_mileage_band_key)
+
+    # Segment-grain forecast.
+    seg = pd.read_parquet(CHRONOS_ASOF_PANEL).rename(columns={
+        'asof_month': 'join_month', 'age_band': 'age_band_key', 'mileage_band': 'mileage_band_key',
+    })
+    seg['join_month'] = pd.to_datetime(seg['join_month'])
+    seg_cols = ['join_month', 'model_id', 'age_band_key', 'mileage_band_key'] + CHRONOS_FORECAST_COLS
+    df = df.merge(seg[seg_cols], on=['join_month', 'model_id', 'age_band_key', 'mileage_band_key'],
+                  how='left')
+
+    # Make-grain fold-down.
+    if CHRONOS_ASOF_PANEL_MAKE.exists():
+        mk = pd.read_parquet(CHRONOS_ASOF_PANEL_MAKE).rename(columns={'asof_month': 'join_month'})
+        mk['join_month'] = pd.to_datetime(mk['join_month'])
+        mk = mk.rename(columns={c: f'{c}__make' for c in CHRONOS_FORECAST_COLS})
+        df = df.merge(mk[['join_month', 'make'] + [f'{c}__make' for c in CHRONOS_FORECAST_COLS]],
+                      on=['join_month', 'make'], how='left')
+
+    # Global-grain fold-down.
+    if CHRONOS_ASOF_PANEL_GLOBAL.exists():
+        gl = pd.read_parquet(CHRONOS_ASOF_PANEL_GLOBAL).rename(columns={'asof_month': 'join_month'})
+        gl['join_month'] = pd.to_datetime(gl['join_month'])
+        gl = gl.rename(columns={c: f'{c}__global' for c in CHRONOS_FORECAST_COLS})
+        df = df.merge(gl[['join_month'] + [f'{c}__global' for c in CHRONOS_FORECAST_COLS]],
+                      on=['join_month'], how='left')
+
+    # Coalesce segment -> make -> global -> 0.28 (matches serving fold-down).
+    for col in CHRONOS_FORECAST_COLS:
+        series = df[col] if col in df.columns else pd.Series(np.nan, index=df.index)
+        if f'{col}__make' in df.columns:
+            series = series.fillna(df[f'{col}__make'])
+        if f'{col}__global' in df.columns:
+            series = series.fillna(df[f'{col}__global'])
+        df[col] = series.fillna(0.28)
+
+    drop_cols = (['join_month', 'age_band_key', 'mileage_band_key']
+                 + [f'{c}__make' for c in CHRONOS_FORECAST_COLS]
+                 + [f'{c}__global' for c in CHRONOS_FORECAST_COLS])
+    df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
+
+    cov = (df[CHRONOS_FORECAST_COLS[0]] != 0.28).mean() * 100
+    print(f"    Coverage (non-default overall forecast): {cov:.1f}%")
     return df
 
 
@@ -2340,6 +2462,13 @@ def main():
     oot_raw = add_eb_features(oot_raw, conn, max_asof_str)
 
     # ========================================================================
+    # Chronos-2 Forward-Looking Forecast Features
+    # ========================================================================
+    print("\n[2c] Adding Chronos-2 forecast features...")
+    dev_raw = add_chronos_forecast(dev_raw, max_asof_str)
+    oot_raw = add_chronos_forecast(oot_raw, max_asof_str)
+
+    # ========================================================================
     # Cohort Residuals
     # ========================================================================
     print("\n[3] Computing cohort residuals...")
@@ -2765,6 +2894,16 @@ def main():
     with open(COHORT_STATS_FILE, 'wb') as f:
         pickle.dump(cohort_stats, f)
 
+    # Chronos-2 serving lookup: copy the offline-built pkl into the bundle so the
+    # out-of-band WORK_DIR -> catboost_production_v55/ copy step ships it. pkl is
+    # NOT excluded by .railwayignore (unlike *.parquet / *.json).
+    import shutil
+    if CHRONOS_SERVING_PKL_SRC.exists():
+        shutil.copy(CHRONOS_SERVING_PKL_SRC, CHRONOS_SERVING_PKL)
+        print(f"  Copied Chronos serving lookup -> {CHRONOS_SERVING_PKL}")
+    else:
+        print(f"  WARNING: {CHRONOS_SERVING_PKL_SRC} missing - serving will use base-rate fallback")
+
     results = {
         'version': 'V40',
         'ablation_mode': ABLATION_MODE,
@@ -2787,6 +2926,7 @@ def main():
         'v43_importance': sum(feature_importance.get(f, 0) for f in V43_GEO_COLS),
         'v44_importance': sum(feature_importance.get(f, 0) for f in V44_MODEL_RISK_COLS),
         'v45_importance': sum(feature_importance.get(f, 0) for f in V45_MODEL_AGE_COLS),
+        'chronos_importance': sum(feature_importance.get(f, 0) for f in CHRONOS_FORECAST_COLS),
         'target_model_auc': {k: v['auc'] for k, v in target_auc_results.items()},
         'v27_baselines': v27_baselines,
         'hyperparameters': PARAMS,

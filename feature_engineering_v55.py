@@ -83,6 +83,17 @@ FEATURE_NAMES = [
 # Categorical feature indices
 CATEGORICAL_INDICES = [0, 1, 2, 3, 32, 74, 83, 100, 101, 103]
 
+# Chronos-2 forward-looking forecast features (offline job: forecast_segment_rates.py).
+# These are NOT part of the base FEATURE_NAMES (the deployed v55 model has 104
+# features and would break if the served vector grew). They are computed into the
+# feature dict unconditionally but only enter the model vector once a retrained
+# model whose feature_names_ include them is loaded (predict_risk serialises in the
+# loaded model's own feature order). Component set = the seven the app surfaces.
+CHRONOS_COMPONENTS = ['brakes', 'suspension', 'tyres', 'steering', 'visibility', 'lamps', 'body']
+CHRONOS_FEATURE_NAMES = ['chronos_seg_fail_forecast'] + [
+    f'chronos_seg_{c}_forecast' for c in CHRONOS_COMPONENTS
+]
+
 # Component categories for defect classification
 COMPONENT_CATEGORIES = {
     'brakes': ['brake', 'braking', 'disc', 'pad', 'caliper', 'abs'],
@@ -159,6 +170,110 @@ def get_age_band(vehicle_age: int) -> str:
         return '15+'
 
 
+def normalize_age_band(label: Optional[str]) -> str:
+    """Normalise an age-band label to the canonical banding used by the
+    Chronos/EB as-of panels.
+
+    PARITY-CRITICAL: this is a verbatim copy of compute_age_band_key() in
+    train_catboost_production_v55.py. Serving's get_age_band() emits '0-3' for
+    the youngest band, but the training join (and therefore the forecast panel)
+    keys the youngest band as '0-2'. Any Chronos/segment lookup at serving MUST
+    pass the band through this normaliser, or every young-vehicle lookup misses
+    the panel and silently degrades to the fallback (train/serve parity break).
+    """
+    if label is None:
+        return 'Unknown'
+    ab = str(label)
+    if ab in ('0-2', '0-1', '1-2', '2-3', '0-3'):
+        return '0-2'
+    elif ab in ('3-5', '3-4', '4-5'):
+        return '3-5'
+    elif ab in ('6-10', '5-6', '6-7', '7-8', '8-9', '9-10', '5-10'):
+        return '6-10'
+    elif ab in ('11-15', '10-11', '11-12', '12-13', '13-14', '14-15', '10-15'):
+        return '11-15'
+    elif ab in ('UNKNOWN', 'Unknown'):
+        return 'Unknown'
+    else:
+        return '15+'
+
+
+def mileage_to_band(mileage: float) -> str:
+    """Canonical mileage banding shared by the Chronos lookup and the EB join."""
+    if mileage is None or (isinstance(mileage, float) and math.isnan(mileage)) or mileage < 0:
+        return 'Unknown'
+    if mileage < 30000:
+        return '0-30k'
+    elif mileage < 60000:
+        return '30k-60k'
+    elif mileage < 100000:
+        return '60k-100k'
+    else:
+        return '100k+'
+
+
+def lookup_chronos_forecasts(
+    chronos_forecast: Optional[Dict[str, Any]],
+    model_id: str,
+    make: str,
+    age_band: str,
+    mileage_band: str,
+    month_str: str,
+    base_rate: float = 0.28,
+) -> Dict[str, float]:
+    """Resolve the Chronos forward-looking forecast for every Chronos feature.
+
+    Fallback chain (identical to the training fold-down so train==serve):
+        segment (model_id, age_band, mileage_band, month)
+        -> make (make, month)
+        -> global (month)
+        -> same keys at the lookup's latest_asof_month (graceful when the
+           monthly refresh lags the current month)
+        -> default_rate / base_rate.
+
+    Returns {feature_name: value} for all CHRONOS_FEATURE_NAMES. Safe when
+    chronos_forecast is None (every value falls back to base_rate).
+    """
+    cf = chronos_forecast if isinstance(chronos_forecast, dict) else {}
+    default_rate = float(cf.get('default_rate', base_rate)) if cf else base_rate
+    latest = cf.get('latest_asof_month') if cf else None
+
+    def _resolve(seg_map, make_map, global_map):
+        if not cf:
+            return base_rate
+        seg_key = (model_id, age_band, mileage_band, month_str)
+        for month in (month_str, latest):
+            if month is None:
+                continue
+            if seg_map:
+                v = seg_map.get((model_id, age_band, mileage_band, month) if month == month_str
+                                else (model_id, age_band, mileage_band, latest))
+                if v is not None:
+                    return float(v)
+            if make_map:
+                v = make_map.get((make, month))
+                if v is not None:
+                    return float(v)
+            if global_map:
+                v = global_map.get(month)
+                if v is not None:
+                    return float(v)
+        return default_rate
+
+    out: Dict[str, float] = {}
+    out['chronos_seg_fail_forecast'] = _resolve(
+        cf.get('overall'), cf.get('make'), cf.get('global')
+    )
+    comp_seg = cf.get('components') or {}
+    comp_make = cf.get('make_components') or {}
+    comp_global = cf.get('global_components') or {}
+    for comp in CHRONOS_COMPONENTS:
+        out[f'chronos_seg_{comp}_forecast'] = _resolve(
+            comp_seg.get(comp), comp_make.get(comp), comp_global.get(comp)
+        )
+    return out
+
+
 def engineer_features(
     history: VehicleHistory,
     postcode: str,
@@ -167,6 +282,7 @@ def engineer_features(
     model_hierarchical: Optional[Any] = None,
     model_age_hierarchical: Optional[Dict[str, Any]] = None,
     segment_hierarchical: Optional[Any] = None,
+    chronos_forecast: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Engineer all 104 features from DVSA vehicle history.
@@ -789,36 +905,72 @@ def engineer_features(
     features['high_risk_model_flag'] = 1 if model_id in HIGH_RISK_MODELS_SET else 0
     features['suspension_risk_profile'] = 0.0  # TODO: load from model artifacts
 
+    # =========================================================================
+    # CHRONOS-2 FORWARD-LOOKING FORECAST FEATURES
+    # =========================================================================
+    # Forward-looking segment failure-rate forecast (overall + per component),
+    # produced offline by forecast_segment_rates.py and served via a pkl lookup.
+    # Keyed identically to the training as-of join: (model_id, normalised
+    # age_band, mileage_band, month). normalize_age_band() is mandatory here (the
+    # panel keys the youngest band '0-2', serving's get_age_band emits '0-3').
+    # Always written to the feature dict; only reaches the model if the loaded
+    # model expects these names (see model_v55.predict_risk).
+    _chronos_model_id = f"{history.make} {history.model}" if history.model else history.make
+    _chronos_age_band = normalize_age_band(get_age_band(vehicle_age_for_cohort))
+    _chronos_mileage_band = mileage_to_band(features.get('test_mileage', 0))
+    _chronos_month = prediction_date.strftime('%Y-%m-01')
+    features.update(lookup_chronos_forecasts(
+        chronos_forecast,
+        model_id=_chronos_model_id,
+        make=history.make,
+        age_band=_chronos_age_band,
+        mileage_band=_chronos_mileage_band,
+        month_str=_chronos_month,
+        base_rate=base_rate,
+    ))
+
     return features
 
 
-def features_to_array(features: Dict[str, Any], validate: bool = True) -> List[Any]:
+def features_to_array(
+    features: Dict[str, Any],
+    validate: bool = True,
+    feature_names: Optional[List[str]] = None,
+) -> List[Any]:
     """
-    Convert features dict to array in exact order expected by model.
+    Convert features dict to array in exact order expected by the model.
 
     Args:
         features: Dict mapping feature names to values
         validate: If True, raise error for missing features (P0-4 fix)
+        feature_names: Order to serialise in. Defaults to the base v55
+            FEATURE_NAMES (104). Serving passes the loaded model's own
+            feature_names_ so the vector tracks the deployed model exactly —
+            this lets new features (e.g. Chronos forecasts) stay dormant until
+            a retrained model that expects them is loaded, with no edit here.
 
     Returns:
-        List of feature values in model's expected order
+        List of feature values in the requested order
 
     Raises:
         ValueError: If validate=True and required features are missing
     """
+    names = list(feature_names) if feature_names is not None else FEATURE_NAMES
+
     if validate:
-        missing = [name for name in FEATURE_NAMES if name not in features]
+        missing = [name for name in names if name not in features]
         if missing:
             raise ValueError(
                 f"Missing {len(missing)} required features: {missing[:5]}"
                 + (f"... and {len(missing)-5} more" if len(missing) > 5 else "")
             )
 
-    # Validate expected feature count matches model expectations
-    if len(FEATURE_NAMES) != 104:
+    # Self-check the base contract only on the default path. When an explicit
+    # order is supplied (the model's own), its length is authoritative.
+    if feature_names is None and len(FEATURE_NAMES) != 104:
         raise ValueError(f"FEATURE_NAMES has {len(FEATURE_NAMES)} entries, expected 104")
 
-    return [features.get(name, 0) for name in FEATURE_NAMES]
+    return [features.get(name, 0) for name in names]
 
 
 def get_feature_names() -> List[str]:

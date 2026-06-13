@@ -51,6 +51,7 @@ _cohort_stats: Optional[Dict] = None
 _model_hierarchical: Optional[Any] = None  # ModelHierarchicalFeatures for EB priors
 _segment_hierarchical: Optional[Any] = None  # Segment-level rates (make, age_band, mileage_band)
 _model_age_hierarchical: Optional[Dict] = None  # V45: Model-age EB rates (13.4% importance)
+_chronos_forecast: Optional[Dict] = None  # Chronos-2 forward-looking segment-rate forecasts
 
 
 def load_model() -> bool:
@@ -62,7 +63,7 @@ def load_model() -> bool:
     Returns:
         True if loaded successfully, False otherwise
     """
-    global _model, _calibrator, _cohort_stats, _model_hierarchical, _segment_hierarchical, _model_age_hierarchical
+    global _model, _calibrator, _cohort_stats, _model_hierarchical, _segment_hierarchical, _model_age_hierarchical, _chronos_forecast
 
     try:
         # Load CatBoost model
@@ -130,6 +131,24 @@ def load_model() -> bool:
         else:
             logger.warning("Model-age hierarchical not found - model_age_fail_rate_eb will use defaults")
             _model_age_hierarchical = None
+
+        # Load Chronos-2 forward-looking forecast lookup (offline-built; pkl so it
+        # ships through .railwayignore). Pure pickle.load of a dict — NO torch import
+        # here, so the serving image stays torch-free. Absent until the offline job
+        # has run + a retrained model expects the features; serving degrades to the
+        # base-rate fallback when missing (graceful, never fatal).
+        chronos_path = MODEL_DIR / "chronos_segment_forecast.pkl"
+        if chronos_path.exists():
+            with open(chronos_path, 'rb') as f:
+                _chronos_forecast = pickle.load(f)
+            logger.info(
+                "Loaded Chronos-2 forecast lookup (%d segment entries, latest_asof_month=%s)",
+                len(_chronos_forecast.get('overall', {})),
+                _chronos_forecast.get('latest_asof_month'),
+            )
+        else:
+            logger.warning("Chronos forecast lookup not found - chronos_* features will use base-rate defaults")
+            _chronos_forecast = None
 
         return True
 
@@ -205,6 +224,7 @@ def engineer_features_with_stats(
         model_hierarchical=_model_hierarchical,
         model_age_hierarchical=_model_age_hierarchical,
         segment_hierarchical=_segment_hierarchical,
+        chronos_forecast=_chronos_forecast,
     )
 
 
@@ -228,7 +248,15 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     # GF-17 Phase A2: map serving categorical emissions onto the deployed
     # model's training vocabulary at the model boundary only (vocab_shim.py).
     # `features` itself is left unshimmed for confidence/component consumers.
-    feature_array = features_to_array(apply_vocab_shim(features))
+    #
+    # Serialise in the loaded model's OWN feature order (feature_names_) rather
+    # than the static FEATURE_NAMES. For the current 104-feature model this is
+    # byte-identical to FEATURE_NAMES; for a retrained model that adds the
+    # chronos_* features it activates them with no edit here (they are already
+    # present in `features`). This is the dormant-until-retrain mechanism.
+    feature_array = features_to_array(
+        apply_vocab_shim(features), feature_names=list(_model.feature_names_)
+    )
 
     # Get raw prediction
     raw_prob = _model.predict_proba([feature_array])[0][1]  # Probability of class 1 (failure)

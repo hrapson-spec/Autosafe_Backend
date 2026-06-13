@@ -1,0 +1,11 @@
+# OFFLINE-ONLY dependencies for forecast_segment_rates.py (Chronos-2 job).
+# These are intentionally NOT in requirements.txt: the serving image must stay
+# torch-free (python:3.9, milliseconds-per-request). Install on the host that
+# runs the monthly forecast refresh.
+#
+# Pin the chronos-forecasting version that ships Chronos-2 and verify the
+# predict_df/future_df/quantile API against it before the first run (plan risk #3).
+torch>=2.2
+chronos-forecasting>=1.5
+pandas>=2.2
+pyarrow>=15

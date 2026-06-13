@@ -63,6 +63,9 @@ diagnose_*.py
 ablation_*.py
 evaluate_*.py
 audit_*.py
+# Offline Chronos-2 forecast job + its torch deps must NOT enter the serving image
+forecast_*.py
+requirements-forecast.txt
 
 # Notebooks
 *.ipynb
