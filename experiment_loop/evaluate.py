@@ -168,9 +168,14 @@ def main():
         oot, oot["y"].values, np.mean(cand_p, 0), np.mean(base_p, 0))
     keep, why = arm0_harness.verdict(report, referee_config.PROMOTION)
     drop = leakage_drop_pp(last[0], oot, last[1], cand_cols, seeds[0])
-    dead = drop < referee_config.PROMOTION["leakage_min_auc_drop_pp"]
-
-    final = "dead" if dead else ("keep" if (keep and seed_stable) else "discard")
+    # A promoting feature (within-segment/pooled win, seed-stable, ECE ok) is KEPT
+    # regardless of permutation importance: under feature correlation, permuting one
+    # correlated feature understates its value (raw age vs the EB age features). The
+    # 'dead' auto-revert therefore fires only when the feature ALSO fails to promote
+    # (the advisory_trend case: ~0 drop AND no promotion). Ratified fix, eval_proposals.md.
+    promotes = keep and seed_stable
+    low_use = drop < referee_config.PROMOTION["leakage_min_auc_drop_pp"]
+    final = "keep" if promotes else ("dead" if low_use else "discard")
     worst_ece = max((v.get("d_ece", 0.0) for v in report["slices"].values()
                      if isinstance(v, dict) and "d_ece" in v), default=0.0)
     n = append_ledger({

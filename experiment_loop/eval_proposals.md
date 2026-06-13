@@ -16,4 +16,16 @@ Expected effect: <what promotes/stops promoting if ratified; any risk>
 Status: PROPOSED            # human sets -> RATIFIED / REJECTED
 ```
 
-(Empty until the agent runs.)
+## 2026-06-13 — leakage veto must not override a clear promotion
+Target: evaluate.py (verdict logic)
+Change: the `dead` auto-revert fires only when the feature ALSO fails to promote —
+        `promotes = keep and seed_stable;
+         final = "keep" if promotes else ("dead" if drop < threshold else "discard")`
+Why:    the positive control (vehicle_age_years, 30k/2-seed) won 11/12 slices + pooled
+        (+0.545pp), seed-stable, no ECE breach — yet was vetoed `dead` because its
+        permutation drop was only 0.068pp (< 0.10). Permutation importance understates a
+        feature correlated with existing ones (raw age vs the EB age-rate features); it
+        must not override a clear within-segment + pooled win. advisory_trend stays caught
+        (it won't promote AND has ~0 drop).
+Expected effect: vehicle_age_years now promotes (`keep`); advisory_trend still → `dead`.
+Status: RATIFIED (Henri, 2026-06-13)
