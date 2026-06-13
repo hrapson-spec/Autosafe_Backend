@@ -177,6 +177,19 @@ The expected-vs-actual gap is the comparator, not v57.
   ≫ unique contribution); it is **not inert** but contributes ~0.6pp unique.
   This does **NOT** establish that a live/re-ingested substrate (v58) would add
   more — X1 cannot settle that; it is a separate hypothesis.
+  - **C-B′ Within-substrate (X4 permutation importance, fixed model, OOT):**
+    of the 63, **0 subtract** (none beyond the ±0.00017 noise band — no
+    overfit-noise members hurting OOT), **51 are redundant** (no unique
+    contribution given the rest), and only **12 add unique signal**, dominated
+    by `dominant_mechanism` **+0.0104** and `advisory_trend` **+0.0044** (the
+    rest ≤0.0015 each). Family gross sums: text_mining **+0.0123**,
+    advisory_recency +0.0028, advisory_counts +0.0012, failure_recency +0.0010,
+    negligence +0.0003, mech_decay **−0.0001** (≈0, consistent with the
+    trained-dead steering/structure members). The perm sum (~**+0.022** gross,
+    as-used by the fixed model) exceeds the X1b refit-net (**+0.0059**) because
+    retraining without the substrate recovers most of its signal from
+    correlated priors/mileage — the substrate's *irreplaceable* value is the
+    smaller refit-net number. Evidence: `rca_results.json` tier2.X4.
 - **C-C Honest-frame cost (E4, measured):** restoring own-frame
   `test_mileage`/`days_since_last_test` = **+0.0064** (0.7133→0.7197). This is
   the one serving-legitimate lever (the owner/garage knows current mileage at

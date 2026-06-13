@@ -253,6 +253,630 @@
         "dominant_mechanism": 3.6753
       },
       "claim": "null delta => substrate is INERT in the v57.0 training matrix (model does not use it); does NOT establish that a live substrate would add AUC (separate v58 hypothesis)."
+    },
+    "X4_substrate_permutation": {
+      "baseline_oot_auc": 0.71353,
+      "n_repeats": 3,
+      "noise_band_auc": 0.00017,
+      "n_features": 63,
+      "n_adds": 12,
+      "n_inert": 51,
+      "n_subtracts": 0,
+      "family_perm_importance_sum": {
+        "text_mining": 0.01226,
+        "other": 0.00442,
+        "advisory_recency": 0.00279,
+        "advisory_counts": 0.00124,
+        "failure_recency": 0.00096,
+        "negligence": 0.00034,
+        "mech_decay": -0.0001
+      },
+      "adds_top": [
+        {
+          "feature": "dominant_mechanism",
+          "family": "text_mining",
+          "is_categorical": true,
+          "perm_importance": 0.01045,
+          "perm_auc_mean": 0.70308,
+          "perm_auc_std": 0.00014
+        },
+        {
+          "feature": "advisory_trend",
+          "family": "other",
+          "is_categorical": true,
+          "perm_importance": 0.00442,
+          "perm_auc_mean": 0.70911,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "advisory_cohort_delta",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": 0.00146,
+          "perm_auc_mean": 0.71208,
+          "perm_auc_std": 0.00017
+        },
+        {
+          "feature": "advisory_streak_len_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00135,
+          "perm_auc_mean": 0.71218,
+          "perm_auc_std": 8e-05
+        },
+        {
+          "feature": "max_severity_score",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 0.00114,
+          "perm_auc_mean": 0.71239,
+          "perm_auc_std": 6e-05
+        },
+        {
+          "feature": "mechanism_count",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 0.00081,
+          "perm_auc_mean": 0.71272,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "negligence_band",
+          "family": "negligence",
+          "is_categorical": true,
+          "perm_importance": 0.0006,
+          "perm_auc_mean": 0.71293,
+          "perm_auc_std": 9e-05
+        },
+        {
+          "feature": "tests_since_last_advisory_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00055,
+          "perm_auc_mean": 0.71299,
+          "perm_auc_std": 4e-05
+        },
+        {
+          "feature": "advisory_in_last_1_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00036,
+          "perm_auc_mean": 0.71317,
+          "perm_auc_std": 3e-05
+        },
+        {
+          "feature": "tests_since_last_failure_suspension_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00035,
+          "perm_auc_mean": 0.71319,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "tests_since_last_failure_brakes_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00027,
+          "perm_auc_mean": 0.71326,
+          "perm_auc_std": 3e-05
+        },
+        {
+          "feature": "advisory_streak_len_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00023,
+          "perm_auc_mean": 0.7133,
+          "perm_auc_std": 5e-05
+        }
+      ],
+      "subtracts": [],
+      "per_feature_sorted": [
+        {
+          "feature": "dominant_mechanism",
+          "family": "text_mining",
+          "is_categorical": true,
+          "perm_importance": 0.01045,
+          "perm_auc_mean": 0.70308,
+          "perm_auc_std": 0.00014
+        },
+        {
+          "feature": "advisory_trend",
+          "family": "other",
+          "is_categorical": true,
+          "perm_importance": 0.00442,
+          "perm_auc_mean": 0.70911,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "advisory_cohort_delta",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": 0.00146,
+          "perm_auc_mean": 0.71208,
+          "perm_auc_std": 0.00017
+        },
+        {
+          "feature": "advisory_streak_len_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00135,
+          "perm_auc_mean": 0.71218,
+          "perm_auc_std": 8e-05
+        },
+        {
+          "feature": "max_severity_score",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 0.00114,
+          "perm_auc_mean": 0.71239,
+          "perm_auc_std": 6e-05
+        },
+        {
+          "feature": "mechanism_count",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 0.00081,
+          "perm_auc_mean": 0.71272,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "negligence_band",
+          "family": "negligence",
+          "is_categorical": true,
+          "perm_importance": 0.0006,
+          "perm_auc_mean": 0.71293,
+          "perm_auc_std": 9e-05
+        },
+        {
+          "feature": "tests_since_last_advisory_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00055,
+          "perm_auc_mean": 0.71299,
+          "perm_auc_std": 4e-05
+        },
+        {
+          "feature": "advisory_in_last_1_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00036,
+          "perm_auc_mean": 0.71317,
+          "perm_auc_std": 3e-05
+        },
+        {
+          "feature": "tests_since_last_failure_suspension_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00035,
+          "perm_auc_mean": 0.71319,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "tests_since_last_failure_brakes_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00027,
+          "perm_auc_mean": 0.71326,
+          "perm_auc_std": 3e-05
+        },
+        {
+          "feature": "advisory_streak_len_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00023,
+          "perm_auc_mean": 0.7133,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "advisory_streak_len_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00013,
+          "perm_auc_mean": 0.7134,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "tests_since_last_failure_tyres_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 0.00013,
+          "perm_auc_mean": 0.7134,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "tests_since_last_advisory_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 7e-05,
+          "perm_auc_mean": 0.71347,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "tests_since_last_advisory_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 7e-05,
+          "perm_auc_mean": 0.71346,
+          "perm_auc_std": 6e-05
+        },
+        {
+          "feature": "has_observed_failure_suspension",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 7e-05,
+          "perm_auc_mean": 0.71346,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "advisory_in_last_1_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 5e-05,
+          "perm_auc_mean": 0.71349,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "multi_system_advisory_count",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": 4e-05,
+          "perm_auc_mean": 0.7135,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "has_observed_failure_brakes",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 4e-05,
+          "perm_auc_mean": 0.71349,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "has_prior_failure_brakes_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 3e-05,
+          "perm_auc_mean": 0.7135,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "has_prior_failure_suspension_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 3e-05,
+          "perm_auc_mean": 0.7135,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "miles_since_last_advisory_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 2e-05,
+          "perm_auc_mean": 0.71352,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "advisory_in_last_2_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 2e-05,
+          "perm_auc_mean": 0.71351,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "has_prior_failure_tyres_observed",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 2e-05,
+          "perm_auc_mean": 0.71352,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_observed_failure_tyres",
+          "family": "failure_recency",
+          "is_categorical": false,
+          "perm_importance": 2e-05,
+          "perm_auc_mean": 0.71351,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "prev_adv_suspension",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": 1e-05,
+          "perm_auc_mean": 0.71352,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "advisory_in_last_1_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 1e-05,
+          "perm_auc_mean": 0.71352,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_advisory_history",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 1e-05,
+          "perm_auc_mean": 0.71352,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "prev_adv_steering",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_prior_advisory_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "advisory_in_last_2_brakes_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "miles_since_last_advisory_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "advisory_in_last_2_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "mech_decay_suspension",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "mech_decay_structure",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "mech_decay_steering",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "mech_risk_driver",
+          "family": "mech_decay",
+          "is_categorical": true,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "text_wear_index",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "text_leak_index",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_corrosion_history",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_wear_history",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_leak_history",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "severity_escalation_flag",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": 0.0,
+          "perm_auc_mean": 0.71353,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_prior_advisory_tyres_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "has_prior_advisory_suspension_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "text_corrosion_index",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "text_corrosion_index_log",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "text_leak_index_log",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "has_damage_history",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -1e-05,
+          "perm_auc_mean": 0.71354,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "prev_adv_tyres",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": -2e-05,
+          "perm_auc_mean": 0.71355,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "mech_decay_index",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": -2e-05,
+          "perm_auc_mean": 0.71355,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "text_wear_index_log",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -2e-05,
+          "perm_auc_mean": 0.71355,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "prev_adv_brakes",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": -3e-05,
+          "perm_auc_mean": 0.71356,
+          "perm_auc_std": 0.0
+        },
+        {
+          "feature": "mech_decay_brake",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": -3e-05,
+          "perm_auc_mean": 0.71356,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "text_damage_index",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -4e-05,
+          "perm_auc_mean": 0.71357,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "prior_advisory_count_observed",
+          "family": "advisory_recency",
+          "is_categorical": false,
+          "perm_importance": -5e-05,
+          "perm_auc_mean": 0.71358,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "mech_decay_index_normalized",
+          "family": "mech_decay",
+          "is_categorical": false,
+          "perm_importance": -5e-05,
+          "perm_auc_mean": 0.71358,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "text_damage_index_log",
+          "family": "text_mining",
+          "is_categorical": false,
+          "perm_importance": -5e-05,
+          "perm_auc_mean": 0.71358,
+          "perm_auc_std": 2e-05
+        },
+        {
+          "feature": "front_end_advisory_intensity",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": -8e-05,
+          "perm_auc_mean": 0.71361,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "raw_behavioral_count",
+          "family": "negligence",
+          "is_categorical": false,
+          "perm_importance": -0.0001,
+          "perm_auc_mean": 0.71363,
+          "perm_auc_std": 5e-05
+        },
+        {
+          "feature": "brake_system_stress",
+          "family": "advisory_counts",
+          "is_categorical": false,
+          "perm_importance": -0.00014,
+          "perm_auc_mean": 0.71368,
+          "perm_auc_std": 1e-05
+        },
+        {
+          "feature": "historic_negligence_ratio_smoothed",
+          "family": "negligence",
+          "is_categorical": false,
+          "perm_importance": -0.00016,
+          "perm_auc_mean": 0.71369,
+          "perm_auc_std": 1e-05
+        }
+      ],
+      "caveat": "permutation gives UNIQUE marginal contribution; correlated features share signal so both can read ~0 (= redundant, not signal-free). Net family value = X1-style drop-refit, not this. perm_importance>noise=ADDS unique; <-noise=SUBTRACTS (overfit)."
     }
   }
 }
