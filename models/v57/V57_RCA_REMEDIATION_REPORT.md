@@ -132,59 +132,108 @@ python3.13 gf17_train_serve_parity.py --expect-fixed \
   --cbm models/v57/model.cbm --fixtures v2     # run twice, byte-identical
 ```
 
-## AUC root-cause analysis (added 2026-06-12 evening; evidence: models/v57/rca/)
+## AUC root-cause analysis (v2, 2026-06-13; evidence: models/v57/rca/)
 
-**Question:** why is OOT AUC 0.7135 vs matrix-space comparators ~0.748-0.750?
+*Rebuilt at Henri's instruction to separate comparator reconciliation from
+root-cause diagnosis and to label every cause proven / ruled-out / hypothesis.
+All numbers trace to `rca_results.json` (tier0/tier1/tier2.X1) or
+`gate0_x3_decomposition.json`. Diagnoses committed **v57.0** (0.7135);
+single-change refits are standalone seed-0 @1233 and are **not additive**
+(no combined run executed → no orthogonality claimed).*
 
-**Attribution experiments** (single-mechanism seed-0 refits @1233 iters from
-rebuilt matrices; baseline 0.7133 reproduces the shipped bundle):
+**Lead answer — why 0.7135 (not the "0.748" everyone expected):** the 0.748
+was never a serving-real number (Q1). Against honest features, v57's matrix
+ceiling is ~**0.7197**, reachable with current-frame mileage (E4, measured,
++0.64pp — adopted by v57.1); v57.0 sits 0.64pp below it only because it used
+prior-cycle mileage. Below that ceiling the limits are **measured and few**:
+the advisory/condition substrate is ~tapped (removing all 63 of its features,
+19.8% importance, costs only **−0.59pp** — X1b), and a **16.6% first-MOT-like
+sub-population at AUC 0.59** structurally drags the pooled figure (C-A, exact).
+The irreducible/label-noise ceiling is **unmeasured** (not estimable here). No
+large recoverable matrix-AUC reservoir was found — so 0.7135 is close to this
+honest feature set's ceiling, and the route up is current-frame mileage
+(v57.1) + new factors (audit coverage gaps) + the v58 lake, not tuning.
 
-| Mechanism tested | ΔAUC | Verdict |
-|---|---:|---|
-| Drop `window_days_available` (E1) | −0.0001 | not the cause (still a serving-hygiene defect: constant at any fixed date, all-OOT out of train range) |
-| Clip it to train range (E1b) | 0.0000 | confirms E1 |
-| Restore real v48 OOF prior (E2) | −0.0009 | legacy signal NOT better |
-| Restore v46 EB negligence (E3) | −0.0020 | legacy signal NOT better |
-| Restore own-frame mileage/gap (E4, quasi-leak diagnostic) | **+0.0064** | the parity price of two features; not a legitimate change |
+### Q1 — Was the old comparator inflated? PROVEN, yes.
+v55 matrix **0.7479** → served **0.6895** on the gate0 fresh panel: a 5.8pp
+train/serve fiction (the GF-17 disease, 42/104 features). v57 matrix **0.7135**
+→ served **0.6953** (gate0_frame_v57.json): ~1.8pp, mostly population drift.
+So "v57 is 3.5pp below 0.748" compares v57's honest matrix to v55's leaky one;
+on the frame production actually runs, **v57 > v55 on every slice** (veterans
+AUC 0.6953 vs 0.6895; first-MOT 0.592 vs 0.580; capture@20% 0.3311 vs 0.3233).
+The expected-vs-actual gap is the comparator, not v57.
 
-**Gate-0 frame (decision-grade, serving path end-to-end, frozen prereg row
-construction, join coverage 100%):**
+### Q2 — Why does v57 land at 0.7135 in matrix-space? (standalone single-changes; not summed)
+- **C-A Composition (exact partition):** pooled 0.7135 (n=228,328) =
+  veterans-observed **0.7082** (n=190,412, rate 0.284) and first-MOT-like
+  **0.5898** (n=37,916, rate 0.133). Pooled > veterans is between-population
+  ranking, not within-population skill. The 0.59 slice is a hard structural
+  floor (v55 scores 0.58 on the same population — inherited, not a regression).
+- **C-B Condition substrate (X1, measured):** dropping the full 63-feature
+  advisory/text/mech/negligence channel — **19.79% of CatBoost importance** —
+  costs only **−0.0059** (0.7132→0.7074); the strict GF-17 trained-dead subset
+  (10 features) costs **−0.0005**. Reading (bounded): the substrate is
+  **heavily redundant with priors/mileage in the current matrix** (importance
+  ≫ unique contribution); it is **not inert** but contributes ~0.6pp unique.
+  This does **NOT** establish that a live/re-ingested substrate (v58) would add
+  more — X1 cannot settle that; it is a separate hypothesis.
+- **C-C Honest-frame cost (E4, measured):** restoring own-frame
+  `test_mileage`/`days_since_last_test` = **+0.0064** (0.7133→0.7197). This is
+  the one serving-legitimate lever (the owner/garage knows current mileage at
+  scoring); v57.1 adopts it via `apply_current_frame_override`.
+- **C-D Achievable bound (E4 = 0.7197):** the highest measured AUC from
+  serving-legitimate features. This is an **empirical feature-set/model-class
+  bound, NOT a Bayes or noise ceiling** — the irreducible floor is unmeasured
+  and not estimable here. Legacy-signal restorations were ruled out: real v48
+  OOF prior **−0.0009** (E2), v46 EB negligence **−0.0020** (E3).
+- **Additivity:** C-B and C-C touch disjoint feature families (condition vs
+  mileage) so interaction is *plausibly* small, but a combined refit was not
+  run, so additivity is **not claimed** and no decomposition is summed.
 
-| | capture@20% | ratio vs H | veterans AUC | first-MOT AUC | pooled AUC |
+### Q3 — Why does v57 still miss Gate 0? (X3, frozen panel, per-row, gate0_x3_decomposition.json)
+Veterans slice n=58,372, 19,739 fails; top-20% captures: v57 **6,535** fails
+(0.3311), H **5,770** (0.2907) → ratio **1.139**; the 1.15 bar needs 6,599
+(**short by ~64 fails**). v57 is **not weak — it beats H by +765 captured
+fails overall**; it misses only the demanding 1.15× *ratio*. Localized by
+`last_fail × walked`:
+
+| cell | n | fails | v57 caps | H caps | v57 − H |
 |---|---:|---:|---:|---:|---:|
-| v57 (this bundle) | **0.3311** | **1.139** [CI 1.120, 1.160] | **0.6953** | 0.5921 | 0.6957 |
-| v55 (saved deployed scores) | 0.3233 | 1.112 [CI 1.092, 1.133] | 0.6895 | 0.5801 | 0.6906 |
-| Heuristic H | 0.2907 | 1.000 | 0.6105 | — | — |
+| last_fail=1, walked=0 | 65 | 21 | 16 | 21 | **−5** |
+| last_fail=1, walked=1 | 21 | 21 | 16 | 21 | **−5** |
+| last_fail=0, walked=0 (hard fresh) | 44,164 | 6,404 | 2,355 | 2,014 | **+341** |
+| last_fail=0, walked=1 (retest, 94% fail) | 14,122 | 13,293 | 4,148 | 3,714 | **+434** |
 
-**Root cause of the "low" 0.7135 — three parts, evidence-backed:**
-1. **The comparators were inflated, not v57 deflated.** v55's matrix 0.7479
-   collapsed to 0.6895 when served (a 5.8pp train/serve fiction, the GF-17
-   disease). v57's matrix 0.7135 carries to ~0.695 on the fresh serving
-   frame (~1.8pp, mostly population drift) — the parity program worked, and
-   v57 beats v55 on every fresh-frame slice (+0.58pp veterans AUC, +1.2pp
-   first-MOT, +0.78pp absolute fail-capture@20%).
-2. **The residual matrix-space gap is distributed, not a single defect:**
-   every restore-legacy-signal hypothesis tested null-or-negative; ~0.6pp
-   is the own-frame quasi-leak price (E4); the rest spreads across the ~45
-   honest window/frame redefinitions and evaluation-frame composition
-   (the 16.6% first-MOT-like slice at AUC 0.59 — a v55-inherited weakness,
-   0.58 in gate0).
-3. **`window_days_available` is mis-designed but AUC-neutral** — remove in
-   v57.1 for serving hygiene (constant at fixed dates), without expecting
-   AUC recovery.
+Two mechanisms, both tying to Q2:
+1. **−10 fails forfeited on the 86 confirmed repeat-failers** (last_fail=1):
+   H's lexicographic `100·last_fail` captures all 42; v57's continuous score
+   ranks 10 of them below non-failers. A `last_fail` priority override is a
+   cheap recovery (~+0.05pp capture) — a *ranking-policy* fix, not a model gap.
+2. **The reservoir of uncaptured fails (4,049) sits in the large fresh
+   last_fail=0/walked=0 slice** — exactly the population the tapped substrate
+   (C-B) and the 0.59 first-MOT weakness (C-A) limit. The gate miss is the
+   same ceiling as Q2, not a separate defect.
+Note: X3 used the v57.0 model (prior-frame mileage). Whether v57.1's
+current-frame mileage (+0.64 matrix) moves the gate ratio is **unmeasured**
+until a v57.1 model is trained and re-scored on this panel.
 
-**Gate 0 with v57: FAIL by the pre-registered point rule (1.139 < 1.15), but
-the CI now straddles the bar** (v55's CI sat entirely below it). The v57.1
-path to close the remaining 1.1 ratio-points is NOT legacy-feature
-restoration (falsified above) — it is the factor-coverage gaps already
-logged by the audit (raw vehicle age, lamps/electrical, powertrain, vehicle
-class: all serving-computable) plus the weak first-MOT slice, and the Platt
-recalibration (residual 7b).
+### Q4 — Epistemic status
+| Cause | Status | Evidence |
+|---|---|---|
+| Old comparator train/serve-inflated | **PROVEN** | Q1: 0.7479→0.6895 served |
+| `window_days_available` an AUC cause | **RULED OUT** (hygiene only) | E1 −0.0001, E1b 0.0 |
+| Legacy v48-OOF / v46-EB signal loss | **RULED OUT** | E2 −0.0009, E3 −0.0020 |
+| 2024 temporal drift | **RULED OUT** | O3 monthly 0.703–0.729, flat |
+| Composition drag (first-MOT 0.59 @16.6%) | **PROVEN** | O1 partition (exact) |
+| Condition substrate redundant (≈0.6pp unique vs 19.8% imp) | **PROVEN (in-matrix)** | X1b −0.0059 |
+| Live/re-ingested substrate would recover AUC (v58) | **HYPOTHESIS** (X1 cannot test) | deferred to v58 |
+| Current-frame mileage recovers +0.64pp | **PROVEN** | E4; v57.1 adopts |
+| Gate miss = ranking-policy (−10 fails) + hard-slice ceiling | **PROVEN (v57.0)** | X3 cells |
+| Irreducible label-noise ceiling | **UNMEASURED** (not estimable) | — (E4 is a feature-set bound, not a noise floor) |
 
-**Naming caution:** `~/autosafe/work/catboost_production_v57/` (legacy-
-feature survivorship-fix verification, matrix AUC 0.7503) and this bundle
-share the name "v57" but are different lineages — disambiguate before any
-promotion paperwork.
+**Naming caution:** `~/autosafe/work/catboost_production_v57/` (legacy-feature
+survivorship-fix verification, matrix AUC 0.7503) and this bundle share the
+name "v57" but are different lineages — disambiguate before promotion paperwork.
 
 ## Promotion recommendation
 Promote v57: **not yet — ready for the two remaining program gates.**

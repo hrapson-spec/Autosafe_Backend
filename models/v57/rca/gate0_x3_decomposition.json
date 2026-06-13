@@ -1,0 +1,60 @@
+{
+  "vet_n": 58372,
+  "vet_fails": 19739,
+  "pooled": {
+    "capture20_v57": 0.33107046962865394,
+    "capture20_H": 0.2906885067522473,
+    "ratio": 1.1389183333306812,
+    "gate_ratio": 1.15,
+    "capfrac_needed_for_gate": 0.33429178276508437,
+    "shortfall_in_fails": 63.58550000000018
+  },
+  "cells_last_fail_x_walked": [
+    {
+      "last_fail": 1,
+      "walked": 0,
+      "n": 65,
+      "n_fails": 21,
+      "v57_fails_in_top20": 16,
+      "h_fails_in_top20": 21,
+      "v57_selected": 47,
+      "h_selected": 65
+    },
+    {
+      "last_fail": 1,
+      "walked": 1,
+      "n": 21,
+      "n_fails": 21,
+      "v57_fails_in_top20": 16,
+      "h_fails_in_top20": 21,
+      "v57_selected": 16,
+      "h_selected": 21
+    },
+    {
+      "last_fail": 0,
+      "walked": 0,
+      "n": 44164,
+      "n_fails": 6404,
+      "v57_fails_in_top20": 2355,
+      "h_fails_in_top20": 2014,
+      "v57_selected": 7409,
+      "h_selected": 7788
+    },
+    {
+      "last_fail": 0,
+      "walked": 1,
+      "n": 14122,
+      "n_fails": 13293,
+      "v57_fails_in_top20": 4148,
+      "h_fails_in_top20": 3714,
+      "v57_selected": 4202,
+      "h_selected": 3800
+    }
+  ],
+  "consistency": {
+    "sum_cell_v57_fails_in_top20": 6535,
+    "pooled_v57_fails_in_top20_approx": 6535,
+    "sum_cell_h_fails_in_top20": 5770
+  },
+  "note": "cells use the GLOBAL top-20% selection (gate operates on the whole veterans slice); a cell's v57_fails vs h_fails shows where v57's selected-fail mass exceeds or trails H. Shortfall to gate is small in absolute fails; localize which cell it sits in."
+}
