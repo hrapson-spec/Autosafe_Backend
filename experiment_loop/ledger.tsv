@@ -1,0 +1,1 @@
+timestamp	candidate_id	arm	hypothesis	feature_names	val_auc_mean	oot_auc_mean	within_seg_slices_passed	ece_worst_slice	leakage_drop_pp	verdict	commit_sha	comparison_count	notes
