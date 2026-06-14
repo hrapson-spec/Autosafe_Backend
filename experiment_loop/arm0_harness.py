@@ -99,18 +99,9 @@ def segmented_report(df, y, p_cand, p_base=None, min_n: int = 200) -> dict:
     return out
 
 
-def verdict(report: dict, promotion: dict) -> tuple[bool, dict]:
-    """Apply referee_config.PROMOTION to a segmented_report. (Seed-stability is
-    enforced by the caller, which passes a seed-mean report only if stable.)"""
-    scored = {k: v for k, v in report.get("slices", {}).items() if "d_auc_pp" in v}
-    wins = sorted(k for k, v in scored.items() if v["d_auc_pp"] > 0)
-    ece_breaches = sorted(k for k, v in scored.items()
-                          if v.get("d_ece", 0.0) > promotion["ece_worsen_max_per_slice"])
-    within = len(wins) >= promotion["within_segment_min_slices"]
-    pooled = report.get("pooled", {})
-    pooled_ok = pooled.get("d_auc_pp", 0.0) >= promotion["pooled_d_auc_pp_min"]
-    keep = (within or pooled_ok) and not ece_breaches
-    why = {"decision_basis": "within_segment" if within else ("pooled" if pooled_ok else "none"),
-           "within_segment_wins": wins, "n_scored_slices": len(scored),
-           "ece_breaches": ece_breaches, "pooled_d_auc_pp": pooled.get("d_auc_pp")}
-    return bool(keep), why
+# verdict() was RETIRED in the evaluator-reliability work. Its keep = (within OR pooled)
+# rule was a GF-8 gradient-gaming hole — a pooled-only gain with flat within-segment slices
+# would promote. The promotion decision now lives in decision.py: summarize_report (the
+# NaN/missing/flat-safe reduction of this report) + decide (which REQUIRES within-segment
+# wins AND pooled AND median AND stable_positive AND no ECE breach). This module now only
+# produces the segmented report.

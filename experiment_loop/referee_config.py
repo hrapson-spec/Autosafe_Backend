@@ -38,14 +38,18 @@ SLICES = [
 ]
 
 # --- the keep/revert criterion (zero agent discretion at scoring time) -------
+# Units are named explicitly: *_pp = percentage points of AUC (+0.30pp == +0.0030 AUC),
+# *_abs = absolute ECE. All keys are read by decision.decide / decision.summarize_report
+# (arm0_harness.verdict, which read the old un-suffixed keys, has been retired).
 PROMOTION = {
-    "within_segment_min_slices": 2,      # within-segment AUC gain in >= 2 slices (NOT pooled)
-    "ece_worsen_max_per_slice": 0.01,    # calibration veto: ECE not worse by >0.01 in ANY slice
-    "require_2seed_stable": True,        # paired-bootstrap CI on the delta excludes 0
-    "pooled_d_auc_pp_min": 0.30,         # alt pooled bar: ΔAUC >= +0.3pp CI>0
-    "pooled_d_prec10_pp_min": 1.00,      # OR Δprec@10 >= +1.0pp CI>0
-    "leakage_min_auc_drop_pp": 0.10,     # shuffle-within-fold must drop AUC; 0-drop => dead
-    "ece_red_line": 0.10,                # work/ red line
+    "seed_dead_zone_pp": 0.05,           # |per-seed ΔAUC| <= this counts as "flat" (pp)
+    "pooled_d_auc_min_pp": 0.30,         # required pooled ΔAUC (pp)
+    "median_seed_d_auc_min_pp": 0.10,    # required median per-seed ΔAUC (pp)
+    "within_segment_min_slices": 2,      # required # within-segment AUC wins (GF-8 defense)
+    "leakage_min_auc_drop_pp": 0.10,     # shuffle-within-fold must drop AUC; < this => dead (pp)
+    "ece_worsen_max_abs": 0.01,          # calibration veto: ΔECE > this in ANY slice (absolute)
+    "ece_red_line_abs": 0.10,            # work/ red line (absolute ECE)
+    "promotion_min_seeds": 5,            # promotion-grade requires >= this many seeds
 }
 
 # --- the single-shot honest number ------------------------------------------

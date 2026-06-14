@@ -1,20 +1,16 @@
-"""evaluate.py — the runtime scorer (dev-grade). PROTECTED referee file.
+"""evaluate.py — the runtime DEV-GRADE scorer. PROTECTED referee file.
 
-Trains base vs base+candidate on the v57.1 frames (mirrors work/bakeoff_2026/
-r4_bench.py exactly for the training path), scores via arm0_harness, runs a leakage
-ablation, applies referee_config.PROMOTION, writes a ledger row. Keep/revert is the
-runner's job; this prints + returns the verdict.
+Trains base vs base+candidate on the v57.1 frames via the shared `score_core` path,
+scores per-slice via `arm0_harness`, runs a leakage ablation, and applies the
+`decision.py` promotion rule. The F3 fix lives in decision.py: seed direction is a
+4-way classification (not `all(d>0) or all(d<0)`), promotion requires `stable_positive`
+AND within-segment wins (not a pooled-only gain). Keep/revert is the runner's job;
+this prints + returns the verdict.
 
-⚠ DEV-GRADE + EXECUTION-GATED:
-  * Provisional comparator = the base arm's OWN OOT AUC in this run (a within-run
-    base-vs-base+feature ablation), NOT the RCA-settled absolute baseline.
-  * Arm-0 slices limited to those the current v57.1 frame supports.
-  * The candidate is injected by actually CALLING candidate_feature.compute_candidate_
-    features per target over a minimal VehicleHistory shim built from v57_packets
-    (so the agent's editable surface is genuinely exercised). The full faithful path
-    re-runs the serving FE (r2b stage-3) — heavier, the integration upgrade.
-  * NOT YET RUN. Authored at load~30 / 118MB free RAM; a full train would OOM.
-    First execution must be a small --sample smoke once the machine has headroom.
+Grade: DEV — within-run base-vs-base+feature comparator (NOT the RCA-settled baseline),
+the (reservoir,42)-seeded dev sample, and the `mot_tests=[]` candidate shim. Promotion-
+grade (faithful injection, fixed test_id cohort, >=5 seeds, durable manifest, control
+battery) is the separate validate_promotion_grade path.
 
 Usage: evaluate.py --candidate vehicle_age_years [--sample N] [--seeds 0,1]
 """
@@ -37,6 +33,9 @@ import config            # noqa: E402
 import referee_config    # noqa: E402
 import arm0_harness      # noqa: E402
 import candidate_feature as cf  # noqa: E402
+import score_core        # noqa: E402
+import decision          # noqa: E402
+import manifest          # noqa: E402
 
 # contract loader, per r4_bench.py:63-64 (model_bundle lives off-repo)
 for _p in config.BUNDLE_IMPORT_PATHS:
@@ -50,7 +49,9 @@ def load_frames(sample):
     con = duckdb.connect()
     con.execute("SET memory_limit='3GB'")
     con.execute("SET enable_progress_bar=false")
-    samp = f"USING SAMPLE {int(sample)} ROWS" if sample else ""
+    # Seeded reservoir => deterministic dev cohort within a fixed snapshot. (F1: a bare
+    # 'USING SAMPLE N ROWS' is nondeterministic and silently flipped keep/dead verdicts.)
+    samp = f"USING SAMPLE {int(sample)} ROWS (reservoir, 42)" if sample else ""
     dev = con.execute(f"SELECT * FROM read_parquet('{referee_config.DEV_FRAME}') {samp}").df()
     oot = con.execute(f"SELECT * FROM read_parquet('{referee_config.OOT_FRAME}') {samp}").df()
     con.close()
@@ -63,9 +64,10 @@ def base_feature_cols():
 
 
 def inject_candidate(dev, oot):
-    """Exercise candidate_feature.compute_candidate_features over a VehicleHistory
-    shim built from v57_packets (registration_date := first-use date). Returns the
-    frames with new columns + the list of candidate column names."""
+    """DEV-GRADE shim: exercise candidate_feature.compute_candidate_features over a
+    minimal VehicleHistory (mot_tests=[]) built from v57_packets (registration_date :=
+    first-use date). Promotion-grade uses faithful_inject instead. Returns the frames
+    with new columns + the list of candidate column names."""
     import duckdb
     ids = pd.concat([dev["test_id"], oot["test_id"]]).unique().tolist()
     con = duckdb.connect()
@@ -100,42 +102,6 @@ def inject_candidate(dev, oot):
     return out[0], out[1], cand_cols
 
 
-def train(dev, cols, seed):
-    from catboost import CatBoostClassifier, Pool
-    from sklearn.model_selection import train_test_split
-    cat_idx = [cols.index(c) for c in config.CAT_FEATURES if c in cols]
-    tr, va = train_test_split(dev, test_size=config.SPLIT["test_size"],
-                              random_state=config.SPLIT["random_state"], stratify=dev["y"])
-    m = CatBoostClassifier(**config.PARAMS, random_seed=seed, verbose=0,
-                           cat_features=cat_idx, eval_metric="AUC")
-    m.fit(Pool(tr[cols], tr["y"], cat_features=cat_idx),
-          eval_set=Pool(va[cols], va["y"], cat_features=cat_idx),
-          early_stopping_rounds=150)
-    return m
-
-
-def leakage_drop_pp(model, oot, cols, cand_cols, seed):
-    from sklearn.metrics import roc_auc_score
-    y = oot["y"].values
-    base = roc_auc_score(y, model.predict_proba(oot[cols])[:, 1])
-    rng = np.random.default_rng(seed)
-    shuf = oot.copy()
-    for c in cand_cols:
-        shuf[c] = rng.permutation(shuf[c].values)
-    perm = roc_auc_score(y, model.predict_proba(shuf[cols])[:, 1])
-    return (base - perm) * 100.0
-
-
-def append_ledger(row: dict):
-    led = HERE / "ledger.tsv"
-    header = led.read_text().splitlines()[0].split("\t")
-    n_prior = max(0, len(led.read_text().splitlines()) - 1)
-    line = "\t".join(str(row.get(h, "")) for h in header)
-    with led.open("a") as f:
-        f.write(line + "\n")
-    return n_prior + 1
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidate", default="vehicle_age_years")
@@ -145,51 +111,60 @@ def main():
     seeds = [int(s) for s in a.seeds.split(",")]
     RUN_DIR.mkdir(exist_ok=True)
     t0 = time.time()
+    P = referee_config.PROMOTION
+    LBL = referee_config.LABEL_COL
 
     dev, oot = load_frames(a.sample)
     base_cols = base_feature_cols()
     dev, oot, cand_cols = inject_candidate(dev, oot)
-    full_cols = base_cols + cand_cols
     print(f"loaded dev={len(dev):,} oot={len(oot):,}; candidate cols={cand_cols}", flush=True)
 
-    from sklearn.metrics import roc_auc_score
-    base_p, cand_p, deltas, last = [], [], [], None
-    for s in seeds:
-        mb = train(dev, base_cols, s)
-        mc = train(dev, full_cols, s)
-        pb = mb.predict_proba(oot[base_cols])[:, 1]
-        pc = mc.predict_proba(oot[full_cols])[:, 1]
-        base_p.append(pb); cand_p.append(pc); last = (mc, full_cols)
-        deltas.append(roc_auc_score(oot["y"], pc) - roc_auc_score(oot["y"], pb))
-        print(f"  seed {s}: d_oot_auc={deltas[-1]*100:+.3f}pp", flush=True)
+    sc = score_core.score_candidate(
+        dev, oot, base_cols, cand_cols, seeds=seeds, params=config.PARAMS,
+        cat_features=config.CAT_FEATURES, split=config.SPLIT, label_col=LBL)
+    for s, d in zip(seeds, sc.deltas_pp):
+        print(f"  seed {s}: d_oot_auc={d:+.3f}pp", flush=True)
 
-    seed_stable = all(d > 0 for d in deltas) or all(d < 0 for d in deltas)
-    report = arm0_harness.segmented_report(
-        oot, oot["y"].values, np.mean(cand_p, 0), np.mean(base_p, 0))
-    keep, why = arm0_harness.verdict(report, referee_config.PROMOTION)
-    drop = leakage_drop_pp(last[0], oot, last[1], cand_cols, seeds[0])
-    # A promoting feature (within-segment/pooled win, seed-stable, ECE ok) is KEPT
-    # regardless of permutation importance: under feature correlation, permuting one
-    # correlated feature understates its value (raw age vs the EB age features). The
-    # 'dead' auto-revert therefore fires only when the feature ALSO fails to promote
-    # (the advisory_trend case: ~0 drop AND no promotion). Ratified fix, eval_proposals.md.
-    promotes = keep and seed_stable
-    low_use = drop < referee_config.PROMOTION["leakage_min_auc_drop_pp"]
-    final = "keep" if promotes else ("dead" if low_use else "discard")
-    worst_ece = max((v.get("d_ece", 0.0) for v in report["slices"].values()
-                     if isinstance(v, dict) and "d_ece" in v), default=0.0)
-    n = append_ledger({
+    report = arm0_harness.segmented_report(oot, oot[LBL].values, sc.cand_proba, sc.base_proba)
+    summ = decision.summarize_report(report)        # NaN/missing/flat-safe reduction
+    within_wins = summ["within_wins"]
+    worst_ece = summ["worst_d_ece"]
+    pooled_d_auc_pp = summ["pooled_d_auc_pp"]
+    median_seed = float(np.median(sc.deltas_pp))
+    drop = score_core.leakage_drop_pp(sc.last_model, oot, sc.full_cols, cand_cols,
+                                      seeds[0], label_col=LBL)
+
+    seed_direction = decision.classify_seed_direction(sc.deltas_pp, P["seed_dead_zone_pp"])
+    dec = decision.decide(
+        seed_direction=seed_direction, pooled_d_auc_pp=pooled_d_auc_pp,
+        median_seed_d_auc_pp=median_seed, within_segment_wins=len(within_wins),
+        ece_breach=worst_ece > P["ece_worsen_max_abs"], leakage_drop_pp=drop, thresholds=P)
+    final = dec.verdict
+
+    led_path = HERE / "ledger.tsv"   # gitignored dev ledger (diagnostic-only, schema 1)
+    manifest.append_ledger_row(led_path, {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "candidate_id": a.candidate, "arm": "1_age", "hypothesis": "raw vehicle age",
-        "feature_names": ",".join(cand_cols),
-        "oot_auc_mean": round(float(np.mean([roc_auc_score(oot["y"], p) for p in cand_p])), 4),
-        "within_seg_slices_passed": len(why["within_segment_wins"]),
-        "ece_worst_slice": round(worst_ece, 4), "leakage_drop_pp": round(drop, 3),
-        "verdict": final, "comparison_count": "", "notes": why["decision_basis"]})
+        "grade": "dev", "candidate_id": a.candidate, "feature_names": ",".join(cand_cols),
+        "seed_direction": seed_direction, "pooled_d_auc_pp": round(pooled_d_auc_pp, 4),
+        "median_seed_d_auc_pp": round(median_seed, 4),
+        "within_segment_wins": len(within_wins), "worst_d_ece": round(worst_ece, 4),
+        "leakage_drop_pp": round(drop, 3), "n_seeds": len(seeds), "verdict": final,
+        "promotable": dec.promotable, "diagnostic_only": "true", "worktree_clean": "",
+        "ledger_schema_version": manifest.LEDGER_SCHEMA_VERSION,
+        "evaluator_version": manifest.EVALUATOR_VERSION,
+        "control_battery_version": manifest.CONTROL_BATTERY_VERSION,
+        "sample_fingerprint": "", "data_snapshot_id": "", "manifest_id": "",
+        "notes": "dev-grade shim; within-run baseline"})
+    n = len(manifest.read_ledger(led_path, include_diagnostic=True))
 
-    out = {"verdict": final, "seed_stable": seed_stable, "leakage_drop_pp": round(drop, 3),
-           "why": why, "report": report, "minutes": round((time.time() - t0) / 60, 1),
-           "comparison_count": n, "DEV_GRADE": True,
+    out = {"verdict": final, "promotable": dec.promotable, "seed_direction": seed_direction,
+           "seed_deltas_pp": [round(d, 4) for d in sc.deltas_pp],
+           "pooled_d_auc_pp": round(pooled_d_auc_pp, 4),
+           "median_seed_d_auc_pp": round(median_seed, 4),
+           "within_segment_wins": within_wins, "worst_d_ece": round(worst_ece, 4),
+           "leakage_drop_pp": round(drop, 3), "reasons": dec.reasons, "report": report,
+           "minutes": round((time.time() - t0) / 60, 1), "comparison_count": n,
+           "DEV_GRADE": True,
            "baseline_note": "within-run base-vs-base+feature; NOT the RCA-settled baseline"}
     (RUN_DIR / f"{a.candidate}.json").write_text(json.dumps(out, indent=2, default=str))
     print(json.dumps(out, indent=2, default=str))

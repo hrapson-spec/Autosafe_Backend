@@ -27,15 +27,42 @@ leakage), and any **web-sourced *number*** used as a feature is treated as outco
 + parity + quarantine) — web *mechanisms* are free, web *quantities* are not (the `local_corrosion_index`
 pathology).
 
-## Status — SCAFFOLD ONLY, not runnable yet (gated)
+## Status — evaluator hardened; dev-grade runs; promotion-grade gated
 
-This directory holds the **human-authored** half of `autoresearch` (the part that does not depend on the
-gated runtime): the charter (`program.md`), the agent's primary surface (`candidate_feature.py`), the
-**protected referee** (`referee_config.py` + `referee_guard.py`), the proposal/substrate/research channels,
-the mutable plumbing (`config.py`), and the adversarial-control specs. The **runtime** (`evaluate.py` + the
-Arm-0 segmented harness) is deferred — blocked on the preconditions below.
+The runtime executes. The 2026-06-14 dev smoke surfaced three evaluator defects (F1
+nondeterministic sampling, F2 the positive control fails, F3 a referee logic bug that kept
+consistently-harmful features). The `evaluator-reliability` work fixes and locks all three
+before any promotable-path work — see `EVALUATOR_RELIABILITY.md`.
 
-### Preconditions before the loop can run
+**Two grades** (one shared score path — `score_core.py`):
+- **dev** (`evaluate.py`): seeded `(reservoir,42)` sample, `mot_tests=[]` shim, within-run
+  comparator. Every dev row is `diagnostic_only=true`. Use for screening, never for claims.
+- **promotion** (`validate_promotion_grade.py`): clean source tree, deterministic `test_id`
+  cohort, **faithful injection**, ≥5 seeds, a green required **control battery**, and a
+  durable content-addressed manifest. The runtime invariant:
+
+  > No canonical promotion-grade ledger row is written unless it has a durable
+  > content-addressed manifest, clean pre-run git state, a cohort matching the config spec
+  > under the recorded `data_snapshot_id`, candidate-faithful injection, ≥5 seeds,
+  > `seed_direction == stable_positive` past predeclared thresholds, and a green required
+  > control battery.
+
+**Verdict vocabulary:** the decision emits `promote` / `dead` / `discard` plus a machine-
+readable `promotable` boolean and `seed_direction` (replacing the old `keep`; schema bumped
+0→1 so readers key off `promotable`/`grade`, not the verdict word). The promotion decision
+lives in `decision.py` (`arm0_harness.verdict` is retired).
+
+**Commands:** `make test-evaluator-gates` (machinery, must pass for the PR) ·
+`make validate-promotion-authority` (real-frame run; may exit "locked" if the domain
+positive is genuinely redundant — the correct safe state).
+
+This directory also holds the charter (`program.md`), the agent surface
+(`candidate_feature.py`), the **protected referee** (`referee_config.py`, `decision.py`,
+`score_core.py`, `arm0_harness.py`, guarded by `referee_guard.py`), the control battery
+(`controls.py`), the run gate (`run_guard.py`), provenance (`manifest.py`), and the
+deterministic sampler (`sampling.py`).
+
+### Promotable-path preconditions (still open — out of scope for evaluator-reliability)
 1. **R4 finishes + a stable v57 baseline.** `work/bakeoff_2026/v57_auc_rca.py` is open on rebuilt OOT
    **0.7133** vs v55-frame **0.7273**. `program.md`'s baseline-to-beat is a placeholder until it settles.
 2. **Stage P — v58 results-lake re-ingest** (full-depth history + fuel/engine/class, MISSING-with-flag,
