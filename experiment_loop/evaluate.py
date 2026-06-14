@@ -35,6 +35,7 @@ import arm0_harness      # noqa: E402
 import candidate_feature as cf  # noqa: E402
 import score_core        # noqa: E402
 import decision          # noqa: E402
+import manifest          # noqa: E402
 
 # contract loader, per r4_bench.py:63-64 (model_bundle lives off-repo)
 for _p in config.BUNDLE_IMPORT_PATHS:
@@ -101,16 +102,6 @@ def inject_candidate(dev, oot):
     return out[0], out[1], cand_cols
 
 
-def append_ledger(row: dict):
-    led = HERE / "ledger.tsv"
-    header = led.read_text().splitlines()[0].split("\t")
-    n_prior = max(0, len(led.read_text().splitlines()) - 1)
-    line = "\t".join(str(row.get(h, "")) for h in header)
-    with led.open("a") as f:
-        f.write(line + "\n")
-    return n_prior + 1
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--candidate", default="vehicle_age_years")
@@ -151,15 +142,21 @@ def main():
         ece_breach=worst_ece > P["ece_worsen_max_abs"], leakage_drop_pp=drop, thresholds=P)
     final = dec.verdict
 
-    n = append_ledger({
+    led_path = HERE / "ledger.tsv"   # gitignored dev ledger (diagnostic-only, schema 1)
+    manifest.append_ledger_row(led_path, {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "candidate_id": a.candidate, "arm": "1_age", "hypothesis": "raw vehicle age",
-        "feature_names": ",".join(cand_cols),
-        "oot_auc_mean": round(float(report.get("pooled", {}).get("auc_cand", float("nan"))), 4),
-        "within_seg_slices_passed": len(within_wins),
-        "ece_worst_slice": round(worst_ece, 4), "leakage_drop_pp": round(drop, 3),
-        "verdict": final, "comparison_count": "",
-        "notes": f"{seed_direction};promotable={dec.promotable}"})
+        "grade": "dev", "candidate_id": a.candidate, "feature_names": ",".join(cand_cols),
+        "seed_direction": seed_direction, "pooled_d_auc_pp": round(pooled_d_auc_pp, 4),
+        "median_seed_d_auc_pp": round(median_seed, 4),
+        "within_segment_wins": len(within_wins), "worst_d_ece": round(worst_ece, 4),
+        "leakage_drop_pp": round(drop, 3), "n_seeds": len(seeds), "verdict": final,
+        "promotable": dec.promotable, "diagnostic_only": "true", "worktree_clean": "",
+        "ledger_schema_version": manifest.LEDGER_SCHEMA_VERSION,
+        "evaluator_version": manifest.EVALUATOR_VERSION,
+        "control_battery_version": manifest.CONTROL_BATTERY_VERSION,
+        "sample_fingerprint": "", "data_snapshot_id": "", "manifest_id": "",
+        "notes": "dev-grade shim; within-run baseline"})
+    n = len(manifest.read_ledger(led_path, include_diagnostic=True))
 
     out = {"verdict": final, "promotable": dec.promotable, "seed_direction": seed_direction,
            "seed_deltas_pp": [round(d, 4) for d in sc.deltas_pp],

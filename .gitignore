@@ -37,6 +37,11 @@ performance_audit*.json
 # ExperimentLoop scratch (CatBoost training logs from score_core tests/runs)
 catboost_info/
 
+# ExperimentLoop dev-grade run artifacts (the canonical evidence is the TRACKED
+# promotion_manifests/ + promotions.tsv; dev runs are diagnostic-only and not tracked)
+experiment_loop/runs/
+experiment_loop/ledger.tsv
+
 # Reference documents (PDFs)
 *.pdf
 
