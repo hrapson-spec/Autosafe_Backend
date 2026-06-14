@@ -13,7 +13,7 @@ import math
 
 import pytest
 
-from decision import classify_seed_direction, decide
+from decision import classify_seed_direction, decide, summarize_report
 
 DZ = 0.05  # seed_dead_zone_pp
 THRESH = {
@@ -118,3 +118,34 @@ def test_not_promotable_with_real_leakage_drop_is_discard():
     d = _decide(seed_direction="mixed_unstable", pooled_d_auc_pp=0.0,
                 median_seed_d_auc_pp=0.0, within_segment_wins=0, leakage_drop_pp=0.5)
     assert d.verdict == "discard"
+
+
+# --- summarize_report: safe reduction of a segmented report to decide()'s scalars -----
+def test_summarize_ignores_unavailable_and_too_small_slices():
+    report = {"slices": {"a": {"d_auc_pp": 0.5, "d_ece": 0.0},
+                         "u": {"status": "unavailable_on_frame"},
+                         "t": {"status": "too_small", "n": 10}},
+              "pooled": {"d_auc_pp": 0.4}}
+    s = summarize_report(report)
+    assert s["within_wins"] == ["a"] and s["worst_d_ece"] == 0.0 and s["pooled_d_auc_pp"] == 0.4
+
+
+def test_summarize_flat_slice_is_not_a_win():
+    report = {"slices": {"a": {"d_auc_pp": 0.0, "d_ece": 0.0}}, "pooled": {}}
+    assert summarize_report(report)["within_wins"] == []
+
+
+def test_summarize_nan_auc_delta_is_not_a_win():
+    report = {"slices": {"a": {"d_auc_pp": float("nan"), "d_ece": 0.0},
+                         "b": {"d_auc_pp": 0.3, "d_ece": 0.0}}, "pooled": {}}
+    assert summarize_report(report)["within_wins"] == ["b"]
+
+
+def test_summarize_nan_ece_forces_a_breach_fail_safe():
+    report = {"slices": {"a": {"d_auc_pp": 0.5, "d_ece": float("nan")}}, "pooled": {}}
+    assert summarize_report(report)["worst_d_ece"] == float("inf")
+
+
+def test_summarize_missing_or_nan_pooled_is_zero():
+    assert summarize_report({"slices": {}})["pooled_d_auc_pp"] == 0.0
+    assert summarize_report({"slices": {}, "pooled": {"d_auc_pp": float("nan")}})["pooled_d_auc_pp"] == 0.0

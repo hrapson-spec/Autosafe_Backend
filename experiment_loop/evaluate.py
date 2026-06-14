@@ -126,11 +126,10 @@ def main():
         print(f"  seed {s}: d_oot_auc={d:+.3f}pp", flush=True)
 
     report = arm0_harness.segmented_report(oot, oot[LBL].values, sc.cand_proba, sc.base_proba)
-    scored = {k: v for k, v in report.get("slices", {}).items()
-              if isinstance(v, dict) and "d_auc_pp" in v}
-    within_wins = sorted(k for k, v in scored.items() if v["d_auc_pp"] > 0)
-    worst_ece = max((v.get("d_ece", 0.0) for v in scored.values()), default=0.0)
-    pooled_d_auc_pp = report.get("pooled", {}).get("d_auc_pp", 0.0)
+    summ = decision.summarize_report(report)        # NaN/missing/flat-safe reduction
+    within_wins = summ["within_wins"]
+    worst_ece = summ["worst_d_ece"]
+    pooled_d_auc_pp = summ["pooled_d_auc_pp"]
     median_seed = float(np.median(sc.deltas_pp))
     drop = score_core.leakage_drop_pp(sc.last_model, oot, sc.full_cols, cand_cols,
                                       seeds[0], label_col=LBL)

@@ -90,3 +90,34 @@ def decide(*, seed_direction: str, pooled_d_auc_pp: float,
         verdict = "discard"
     return Decision(verdict=verdict, promotable=promotable,
                     seed_direction=seed_direction, reasons=checks)
+
+
+def _is_nan(x) -> bool:
+    return isinstance(x, float) and math.isnan(x)
+
+
+def summarize_report(report) -> dict:
+    """Reduce an arm0_harness segmented report to the scalars decide() needs, safely.
+
+    A slice with no `d_auc_pp` (status unavailable_on_frame / too_small) is ignored. A
+    flat slice (d_auc_pp == 0) is not a win. A NaN d_auc_pp is never a win. A NaN/missing
+    d_ece is treated as a calibration breach (worst_d_ece := +inf) so it cannot be
+    certified clean; a missing/NaN pooled delta is treated as 0 (no gain). Fail-safe by
+    construction: ambiguity never counts toward promotion.
+    """
+    slices = report.get("slices", {})
+    scored = {k: v for k, v in slices.items() if isinstance(v, dict) and "d_auc_pp" in v}
+    within_wins = sorted(
+        k for k, v in scored.items()
+        if isinstance(v["d_auc_pp"], (int, float)) and not _is_nan(v["d_auc_pp"])
+        and v["d_auc_pp"] > 0)
+    d_eces = [v.get("d_ece") for v in scored.values() if "d_ece" in v]
+    if any(e is None or _is_nan(e) for e in d_eces):
+        worst_d_ece = math.inf
+    else:
+        worst_d_ece = max(d_eces, default=0.0)
+    pooled = report.get("pooled", {}).get("d_auc_pp", 0.0)
+    if pooled is None or _is_nan(pooled):
+        pooled = 0.0
+    return {"within_wins": within_wins, "worst_d_ece": worst_d_ece,
+            "pooled_d_auc_pp": pooled}
