@@ -1,0 +1,541 @@
+{
+ "registration": "TEST0011",
+ "firstUsedDate": "2007-09-15",
+ "registrationDate": "2007-09-15",
+ "manufactureDate": "2007-09-15",
+ "primaryColour": "Blue",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1798",
+ "model": "FOCUS",
+ "make": "FORD",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T10:03:16.000Z",
+ "motTests": [
+  {
+   "completedDate": "2010-09-16T13:06:12.000Z",
+   "motTestNumber": 802809850279,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "FAILED",
+   "odometerValue": "34037",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake pad(s) less than 1.5 mm thick (3.5.1g)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2010-09-16T15:08:21.000Z",
+   "motTestNumber": 180919150299,
+   "dataSource": "DVSA",
+   "expiryDate": "2011-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "34037",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2011-08-30T15:50:29.000Z",
+   "motTestNumber": 645882241286,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "37355",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nail in offside rear tyre",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "nsr shock absorber damp",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2012-09-11T11:49:57.000Z",
+   "motTestNumber": 938445052222,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "40167",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-09-02T11:15:07.000Z",
+   "motTestNumber": 538255543255,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "42978",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Shock absorber has a light misting of oil (2.7.3)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2014-08-27T10:11:45.000Z",
+   "motTestNumber": 645909434235,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "48846",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Offside Front Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "nail in nearside rear tyre and wearing down low",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2015-09-08T08:24:44.000Z",
+   "motTestNumber": 249038742601,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "56917",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2016-09-14T11:24:16.000Z",
+   "motTestNumber": 103416165548,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "61540",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2017-08-31T09:53:28.000Z",
+   "motTestNumber": 821715375276,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "64592",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear tyre starting to perish on outer sidewall",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Inner Disc face corroding",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Child Seat fitted not allowing full inspection of adult belt ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-09-07T08:56:21.000Z",
+   "motTestNumber": 174335730258,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "FAILED",
+   "odometerValue": "67752",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre slightly damaged/cracking or perishing (5.2.3 (d) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Nail in tyre ",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Windscreen washer provides insufficient washer liquid (3.5 (a))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-09-07T08:56:22.000Z",
+   "motTestNumber": 598037613626,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-09-15",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "67752",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre slightly damaged/cracking or perishing (5.2.3 (d) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Nail in tyre ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2019-09-26T09:40:49.000Z",
+   "motTestNumber": 833401351532,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-09-25",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "71317",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake disc worn, pitted or scored, but not seriously weakened inner faces (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge Slightly perished (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Lower Anti-roll bar ball joint has slight play (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Child Seat fitted not allowing full inspection of adult belt ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2020-09-11T10:10:44.000Z",
+   "motTestNumber": 418187568989,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "FAILED",
+   "odometerValue": "73897",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, but not excessively (1.1.14 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Anti-roll bar linkage ball joint excessively worn (5.3.4 (a) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Nail in tyre ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2020-09-11T11:23:25.000Z",
+   "motTestNumber": 358650426416,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-09-25",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "73897",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, but not excessively (1.1.14 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-09-17T08:45:28.000Z",
+   "motTestNumber": 233018730326,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-09-25",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "77291",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear All direction indicators slightly discoloured (4.4.3 (a))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-09-02T08:48:17.000Z",
+   "motTestNumber": 628740323904,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "FAILED",
+   "odometerValue": "80926",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Windscreen washer not working (3.5 (a))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-09-02T11:57:15.000Z",
+   "motTestNumber": 746865492735,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-09-25",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "80926",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-06-07T13:50:03.000Z",
+   "motTestNumber": 815226088365,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-06-06",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "83984",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-05-11T08:47:42.000Z",
+   "motTestNumber": 703493485470,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-06-06",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "87338",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Suspension arm pin or bush worn but not resulting in excessive movement rear bush (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Suspension arm pin or bush worn but not resulting in excessive movement rear bush (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Coil spring corroded both sides (5.3.1 (b) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "clutch worn",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-05-14T11:24:27.000Z",
+   "motTestNumber": 530180335538,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-06",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "91434",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Inner Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Inner Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T10:03:15.000Z",
+   "motTestNumber": 201547600814,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "FAILED",
+   "odometerValue": "94633",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Position lamp not working (4.2.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Coil spring corroded both (5.3.1 (b) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Subframe mounting prescribed area is corroded but not considered excessive (5.3.6 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Suspension component corroded but not seriously weakened (5.3.3 (b) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T10:03:16.000Z",
+   "motTestNumber": 967870309371,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "EY57HBG",
+   "testResult": "PASSED",
+   "odometerValue": "94633",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Coil spring corroded both (5.3.1 (b) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Subframe mounting prescribed area is corroded but not considered excessive (5.3.6 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Suspension component corroded but not seriously weakened (5.3.3 (b) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

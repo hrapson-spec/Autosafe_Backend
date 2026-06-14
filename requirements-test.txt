@@ -1,0 +1,5 @@
+# Test-only dependencies (not needed at runtime).
+# Install:  pip install -r requirements-test.txt
+pytest==9.0.2
+pytest-asyncio==0.24.0
+httpx==0.26.0        # FastAPI TestClient transport (matches runtime pin)

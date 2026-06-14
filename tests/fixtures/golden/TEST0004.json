@@ -1,0 +1,170 @@
+{
+ "registration": "TEST0004",
+ "firstUsedDate": "2013-03-18",
+ "registrationDate": "2013-03-18",
+ "manufactureDate": "2013-03-18",
+ "primaryColour": "Black",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1395",
+ "model": "GOLF",
+ "make": "VOLKSWAGEN",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T10:55:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2016-02-29T12:09:59.000Z",
+   "motTestNumber": 547590889892,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-03-17",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "28184",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brakes imbalanced requirements only just met. It would appear that the braking system requires adjustment or repair. (3.7.B.5b)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Shock absorber has a light misting of oil (2.7.3)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "front tyres worn on inner shoulder",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2017-02-22T15:56:45.000Z",
+   "motTestNumber": 640543106962,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-03-17",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "32931",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-02-13T14:56:31.000Z",
+   "motTestNumber": 747556447089,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "37956",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-02-05T12:40:11.000Z",
+   "motTestNumber": 604628944351,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "42503",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-02-04T11:36:47.000Z",
+   "motTestNumber": 418650718291,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "44919",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Shock absorbers light misting of oil or has limited damping effect (5.3.2 (b))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-02-01T10:41:05.000Z",
+   "motTestNumber": 959960312503,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "51048",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-02-04T14:51:48.000Z",
+   "motTestNumber": 218965311673,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "58537",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-02-07T10:58:41.000Z",
+   "motTestNumber": 739875274277,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-02-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "64799",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-05-20T11:00:00.000Z",
+   "motTestNumber": 3143790,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-05-19",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "68849",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-06-13T19:10:00.000Z",
+   "motTestNumber": 4449139,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-06-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "72867",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T10:55:00.000Z",
+   "motTestNumber": 5614811,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2027-06-12",
+   "regMarkTimeOfTest": "BX13TJV",
+   "testResult": "PASSED",
+   "odometerValue": "76967",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

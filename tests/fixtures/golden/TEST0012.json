@@ -1,0 +1,514 @@
+{
+ "registration": "TEST0012",
+ "firstUsedDate": "2007-01-17",
+ "registrationDate": "2007-01-17",
+ "manufactureDate": "2007-01-17",
+ "primaryColour": "Grey",
+ "secondaryColour": "Not Stated",
+ "engineSize": "2967",
+ "model": "Q7",
+ "make": "AUDI",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T14:00:14.000Z",
+ "motTests": [
+  {
+   "completedDate": "2010-01-11T19:06:07.000Z",
+   "motTestNumber": 514931310041,
+   "dataSource": "DVSA",
+   "expiryDate": "2011-01-17",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "37449",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2011-02-11T12:11:03.000Z",
+   "motTestNumber": 277122741038,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "FAILED",
+   "odometerValue": "49823",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Centre Front Windscreen has a sticker or other obstruction encroaching into the swept area by more than 40mm outside zone 'A' (8.3.1e)",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Registration plate lamp not working (1.1.C.1d)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Registration plate lamp not working (1.1.C.1d)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "engine mil lamp on.",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "lower engine/gearbox covers fitted.",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2011-02-11T15:08:13.000Z",
+   "motTestNumber": 426732341059,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-02-10",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "49823",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "engine mil lamp on.",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "lower engine/gearbox covers fitted.",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2011-10-14T11:20:15.000Z",
+   "motTestNumber": 675027881264,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-10-13",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "53211",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake pad(s) wearing thin (3.5.1g)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2012-10-12T13:11:21.000Z",
+   "motTestNumber": 618326382207,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-10-13",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "60907",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-11-20T13:12:06.000Z",
+   "motTestNumber": 206114923352,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-11-19",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "67941",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear Parking brake: parking brake efficiency only just met. It would appear that the braking system requires adjustment or repair. (3.7.B.7)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Suspension arm rubber bush deteriorated but not resulting in excessive movement (2.4.G.2)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2014-11-21T15:51:21.000Z",
+   "motTestNumber": 777195324311,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-11-20",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "76900",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2016-06-21T13:01:07.000Z",
+   "motTestNumber": 980372548110,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-06-20",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "87194",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Non obligatory mirror damaged ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2019-02-14T15:59:00.000Z",
+   "motTestNumber": 596184312715,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-02-13",
+   "regMarkTimeOfTest": "YB56HZU",
+   "testResult": "PASSED",
+   "odometerValue": "89919",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-02-06T10:33:02.000Z",
+   "motTestNumber": 187955909366,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-02-13",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "97489",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Registration plate lamp inoperative in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+     "type": "MINOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-02-08T14:04:34.000Z",
+   "motTestNumber": 560072285469,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-02-13",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "105174",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear Position lamp with a multiple light source up to 1/2 not functioning (4.2.1 (a) (i))",
+     "type": "MINOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-02-09T15:15:23.000Z",
+   "motTestNumber": 650286271137,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-02-13",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "111460",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2023-03-13T18:30:26.000Z",
+   "motTestNumber": 978945535801,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-03-12",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "120580",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "parking brake 16% .",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-03-23T13:23:00.000Z",
+   "motTestNumber": 367168665639,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-03-22",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "125360",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Headlamp has a product on the lens but not seriously reducing light output both sides (4.1.4 (b))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "front wipers smeary",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "parking brake 16%",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-06-28T14:49:02.000Z",
+   "motTestNumber": 735669434285,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "FAILED",
+   "odometerValue": "134733",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Position lamp not working (4.2.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Position lamp not working (4.2.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Registration plate lamp does not illuminate simultaneously with the position lamps (4.7.2 (a))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Position lamp not working (4.2.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Registration plate lamp missing in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+     "type": "MINOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-06-28T14:49:03.000Z",
+   "motTestNumber": 642414320170,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-27",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "134733",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Registration plate lamp missing in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+     "type": "MINOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-03-31T16:23:58.000Z",
+   "motTestNumber": 600527693912,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "FAILED",
+   "odometerValue": "139224",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Tyre worn close to legal limit/worn on edge both (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp not working on dipped beam (4.1.1 (a) (ii))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Lower Suspension arm pin or bush excessively worn front bush (5.3.4 (a) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Lower Suspension arm pin or bush excessively worn front bush (5.3.4 (a) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Registration plate lamp does not illuminate simultaneously with the position lamps (4.7.2 (a))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T14:00:13.000Z",
+   "motTestNumber": 599842568598,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "FAILED",
+   "odometerValue": "139531",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Tyre worn close to legal limit/worn on edge both (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Windscreen washer provides insufficient washer liquid (3.5 (a))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Registration plate lamp inoperative in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Parking brake efficiency only just met. It would appear that the braking system requires adjustment or repair. both pass and advice (1.4.2 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T14:00:14.000Z",
+   "motTestNumber": 162368421142,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-27",
+   "regMarkTimeOfTest": "L66PCR",
+   "testResult": "PASSED",
+   "odometerValue": "139531",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Tyre worn close to legal limit/worn on edge both (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Registration plate lamp inoperative in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Parking brake efficiency only just met. It would appear that the braking system requires adjustment or repair. both pass and advice (1.4.2 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

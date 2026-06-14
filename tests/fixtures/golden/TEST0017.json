@@ -1,0 +1,40 @@
+{
+ "registration": "TEST0017",
+ "firstUsedDate": "2022-06-11",
+ "registrationDate": "2022-06-11",
+ "manufactureDate": "2022-06-11",
+ "primaryColour": "Grey",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1598",
+ "model": "SPORTAGE GT-LINE ISG MHEV S-A",
+ "make": "KIA",
+ "fuelType": "Hybrid Electric (Clean)",
+ "lastMotTestDate": "2026-06-07T10:20:24.000Z",
+ "motTests": [
+  {
+   "completedDate": "2025-06-15T14:31:15.000Z",
+   "motTestNumber": 475987952866,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-14",
+   "regMarkTimeOfTest": "DA22YXO",
+   "testResult": "PASSED",
+   "odometerValue": "18287",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-06-07T10:20:24.000Z",
+   "motTestNumber": 231804013978,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-14",
+   "regMarkTimeOfTest": "DA22YXO",
+   "testResult": "PASSED",
+   "odometerValue": "23722",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  }
+ ],
+ "modification": "UPDATED"
+}
