@@ -73,11 +73,16 @@ def synthetic_feature(name: str, y, rng) -> np.ndarray:
     """Generate a fenced, label-derived control feature. NEVER deployable — harness only."""
     y = np.asarray(y, dtype=float)
     if name == "positive_synthetic_obvious":
-        # clear lift (AUC ~0.80) but calibratable — NOT a near-perfect leak, which would
-        # blow up ECE and be (correctly) vetoed, proving nothing (review pt 3).
-        return 0.60 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))
+        # Calibrated by INCREMENTAL effect on the real base (n=30K): coef 0.30 -> ~+4.8pp
+        # pooled ΔAUC, reliably stable across 5 seeds. Standalone AUC is NOT the calibration
+        # target — coef 0.60 added +13pp and broke calibration (review pt 3 / the run).
+        return 0.30 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))
     if name == "positive_synthetic_nearthreshold":
-        return 0.30 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))  # subtle but real
+        # coef 0.20 -> ~+2.4pp: the SMALLEST lift reliably detectable at n=30K (the detection
+        # FLOOR). This is near the threshold of DETECTABILITY, not the 0.30pp promotion bar —
+        # a true near-bar control is unbuildable here: the per-seed noise floor is ~±0.67pp,
+        # 2x the bar (see EVALUATOR_RELIABILITY.md "Statistical power").
+        return 0.20 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))
     if name == "noop":
         return np.zeros(len(y))                                        # constant -> dead
     raise ValueError(f"no synthetic generator for control {name!r}")

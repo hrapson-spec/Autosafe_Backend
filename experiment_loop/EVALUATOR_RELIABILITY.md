@@ -48,6 +48,36 @@ committed content-addressed under `promotion_manifests/<id>.json`, so a `promoti
 resolves in any fresh clone. Dev artifacts stay in the gitignored `runs/`. The pre-hardening
 ledger is preserved as a tracked diagnostic archive under `legacy/`.
 
+## Statistical power — the marginal regime (the binding limit)
+Measured at n=30K (base AUC 0.696), sweeping a synthetic feature's strength and reading the
+**incremental** pooled ΔAUC across 5 seeds:
+
+| feature | mean ΔAUC | per-seed spread | all seeds > +0.05pp? |
+|---|---|---|---|
+| **pure noise** | −0.14pp | **std 0.67pp** (−1.1 … +0.87) | no |
+| weak (≤ coef 0.10) | ≈ 0 | ±0.4–0.5pp | no |
+| coef 0.20 | **+2.4pp** | ±0.6pp | yes |
+| coef 0.30 | +4.8pp | ±0.6pp | yes |
+
+The **per-seed ΔAUC noise floor is ±0.67pp** — 2× the 0.30pp promotion bar and 3× a real
+candidate (raw age, +0.22pp). There is a cliff: everything ≤ +0.2pp mean is indistinguishable
+from the noise feature, then it jumps to a stable +2.4pp. **The whole marginal band (0.3–2pp),
+where every realistic candidate lives, is below the noise floor.** So at n=30K the evaluator
+cannot discriminate a marginal signal from noise — which is *why* the domain control correctly
+locked, and means the loop is underpowered for its actual job (promoting sub-1pp candidates).
+
+Two consequences:
+1. `seed_direction == stable_positive` requires **every** seed to clear the dead-zone, so adding
+   seeds makes a marginal signal *harder* to promote, not easier. It is the wrong statistic for
+   this regime — a paired-bootstrap CI on the **mean** (excludes the bar) would benefit from more
+   seeds/data and is the recommended replacement before the loop runs marginal candidates.
+2. The floor scales ≈ 1/√N, so reaching ~0.1pp (to detect +0.4pp) needs ~45× the data (~1.3M
+   rows), or reduced training stochasticity (fixed `thread_count`, more iterations), or both.
+
+The synthetic positives are therefore calibrated to the **detection floor** (+2.4 / +4.8pp), not
+to the promotion bar; a true near-bar (+0.4pp) control is **not constructible** at this sample —
+that unbuildability is itself the finding.
+
 ## Scope
 Out of scope (promotable path): P1 stable R4 baseline, P2 v58 frame + `gf17 --expect-fixed`
 `n_fail=0`, P3 Arm-0 GF-8 golden ≤1e-6, and full serving-path FE fidelity. The

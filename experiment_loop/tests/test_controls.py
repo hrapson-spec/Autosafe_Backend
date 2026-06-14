@@ -38,21 +38,16 @@ def test_required_controls_have_required_status():
         assert get_control(n).status == "required_pass"
 
 
-def test_planted_obvious_signal_is_clear_but_calibratable_not_a_leak():
-    # review pt 3: clearly positive, NOT absurdly strong. A near-perfect leak (AUC~1)
-    # blows up calibration (ECE) and is correctly vetoed — that proves nothing. The
-    # obvious control must be a clear lift the evaluator promotes through ALL gates.
+def test_synthetic_positives_are_ordered_real_signals_not_leaks():
+    # Calibrated by INCREMENTAL ΔAUC on the real base (~+4.8pp / ~+2.4pp at n=30K), NOT by
+    # standalone AUC. Here we only assert the generators are ordered, real, and not
+    # near-perfect leaks (which break calibration); the incremental magnitudes are measured
+    # separately and documented in EVALUATOR_RELIABILITY.md.
     rng = np.random.default_rng(0)
-    y = rng.integers(0, 2, size=4000)
-    auc = roc_auc_score(y, synthetic_feature("positive_synthetic_obvious", y, rng))
-    assert 0.72 < auc < 0.88
-
-
-def test_planted_nearthreshold_is_weak_but_real_signal():
-    rng = np.random.default_rng(0)
-    y = rng.integers(0, 2, size=6000)
-    auc = roc_auc_score(y, synthetic_feature("positive_synthetic_nearthreshold", y, rng))
-    assert 0.52 < auc < 0.72   # real lift, not a sledgehammer
+    y = rng.integers(0, 2, size=8000)
+    auc_ob = roc_auc_score(y, synthetic_feature("positive_synthetic_obvious", y, rng))
+    auc_nt = roc_auc_score(y, synthetic_feature("positive_synthetic_nearthreshold", y, rng))
+    assert 0.5 < auc_nt < auc_ob < 0.80
 
 
 def test_noop_feature_is_constant():
