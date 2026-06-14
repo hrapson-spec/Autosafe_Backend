@@ -73,9 +73,11 @@ def synthetic_feature(name: str, y, rng) -> np.ndarray:
     """Generate a fenced, label-derived control feature. NEVER deployable — harness only."""
     y = np.asarray(y, dtype=float)
     if name == "positive_synthetic_obvious":
-        return y + rng.normal(0.0, 0.05, size=len(y))                  # AUC ~ 1
+        # clear lift (AUC ~0.80) but calibratable — NOT a near-perfect leak, which would
+        # blow up ECE and be (correctly) vetoed, proving nothing (review pt 3).
+        return 0.60 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))
     if name == "positive_synthetic_nearthreshold":
-        return 0.30 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))  # weak but real
+        return 0.30 * (2 * y - 1) + rng.normal(0.0, 1.0, size=len(y))  # subtle but real
     if name == "noop":
         return np.zeros(len(y))                                        # constant -> dead
     raise ValueError(f"no synthetic generator for control {name!r}")

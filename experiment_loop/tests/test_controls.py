@@ -38,11 +38,14 @@ def test_required_controls_have_required_status():
         assert get_control(n).status == "required_pass"
 
 
-def test_planted_obvious_signal_strongly_separates_label():
+def test_planted_obvious_signal_is_clear_but_calibratable_not_a_leak():
+    # review pt 3: clearly positive, NOT absurdly strong. A near-perfect leak (AUC~1)
+    # blows up calibration (ECE) and is correctly vetoed — that proves nothing. The
+    # obvious control must be a clear lift the evaluator promotes through ALL gates.
     rng = np.random.default_rng(0)
-    y = rng.integers(0, 2, size=2000)
-    f = synthetic_feature("positive_synthetic_obvious", y, rng)
-    assert roc_auc_score(y, f) > 0.95
+    y = rng.integers(0, 2, size=4000)
+    auc = roc_auc_score(y, synthetic_feature("positive_synthetic_obvious", y, rng))
+    assert 0.72 < auc < 0.88
 
 
 def test_planted_nearthreshold_is_weak_but_real_signal():
