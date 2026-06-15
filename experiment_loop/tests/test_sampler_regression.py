@@ -26,4 +26,4 @@ def test_old_f3_seed_stable_boolean_is_gone():
 def test_evaluate_imports_and_uses_shared_modules():
     import evaluate
     assert hasattr(evaluate, "load_frames") and hasattr(evaluate, "main")
-    assert "score_core" in SRC and "decision.classify_seed_direction" in SRC
+    assert "score_core" in SRC and "decision.decide" in SRC

@@ -15,6 +15,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
+
 STABLE_POSITIVE = "stable_positive"
 STABLE_NEGATIVE = "stable_negative"
 MIXED_UNSTABLE = "mixed_unstable"
@@ -60,24 +62,39 @@ class Decision:
     reasons: dict
 
 
-def decide(*, seed_direction: str, pooled_d_auc_pp: float,
-           median_seed_d_auc_pp: float, within_segment_wins: int, ece_breach: bool,
-           leakage_drop_pp: float, thresholds) -> Decision:
-    """Pure promotion decision over scalar summaries.
+def mean_delta_ci(deltas, alpha, n_boot=10000, rng_seed=0):
+    """Percentile bootstrap CI on the MEAN of the per-seed ΔAUC deltas (pp). Returns
+    (lo, mean, hi). Deterministic given the deltas (fixed rng_seed) so a manifest replay
+    reproduces it. The CI captures the dominant uncertainty — seed-to-seed model
+    sensitivity — and tightens as ~1/sqrt(n_seeds), so MORE seeds help (unlike the old
+    all-seeds rule). Raises on empty/non-finite input."""
+    a = [float(d) for d in deltas]
+    if not a or any(not math.isfinite(v) for v in a):
+        raise ValueError("mean_delta_ci: empty or non-finite deltas")
+    arr = np.asarray(a, dtype=float)
+    rng = np.random.default_rng(rng_seed)
+    boots = rng.choice(arr, size=(int(n_boot), len(arr)), replace=True).mean(axis=1)
+    lo, hi = np.percentile(boots, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    return float(lo), float(arr.mean()), float(hi)
 
-    Promotable iff `stable_positive` AND pooled >= pooled_d_auc_min_pp AND
-    median-seed >= median_seed_d_auc_min_pp AND within_segment_wins >=
-    within_segment_min_slices AND no ECE breach. The within-segment requirement is an
-    AND (not an OR with pooled): a pooled-only gain with flat within-segment slices is
-    gradient-gaming and must NOT promote (GF-8 defense). Controls, faithful injection,
-    clean worktree and a durable manifest are orchestrator-level gates, not decided
-    here. A non-promotable candidate is `dead` when the leakage shuffle barely moves
-    AUC (feature unused), else `discard`.
+
+def decide(*, deltas_pp, within_segment_wins: int, ece_breach: bool,
+           leakage_drop_pp: float, thresholds) -> Decision:
+    """Pure promotion decision.
+
+    Promotable iff the bootstrap CI LOWER bound on the mean per-seed ΔAUC clears the bar
+    (confident the mean improvement exceeds pooled_d_auc_min_pp) AND within_segment_wins >=
+    within_segment_min_slices (GF-8: not a pooled-only gain) AND no ECE breach. This CI
+    rule replaces the all-seeds `stable_positive` rule: it benefits from more seeds/data,
+    rejects a chance-positive noise feature (wide CI), and still rejects consistently-
+    harmful features (negative mean => CI lower far below the bar, so F3 holds). Controls,
+    faithful injection, clean worktree and a durable manifest are orchestrator-level gates.
+    A non-promotable candidate is `dead` when the leakage shuffle barely moves AUC, else
+    `discard`. `seed_direction` is recorded as a diagnostic, not a gate.
     """
+    ci_lo, mean_delta, ci_hi = mean_delta_ci(deltas_pp, thresholds["ci_alpha"])
     checks = {
-        "is_stable_positive": seed_direction == STABLE_POSITIVE,
-        "pooled_ok": pooled_d_auc_pp >= thresholds["pooled_d_auc_min_pp"],
-        "median_ok": median_seed_d_auc_pp >= thresholds["median_seed_d_auc_min_pp"],
+        "mean_ci_lower_above_bar": ci_lo > thresholds["pooled_d_auc_min_pp"],
         "within_segment_ok": within_segment_wins >= thresholds["within_segment_min_slices"],
         "no_ece_breach": not ece_breach,
     }
@@ -88,8 +105,11 @@ def decide(*, seed_direction: str, pooled_d_auc_pp: float,
         verdict = "dead"
     else:
         verdict = "discard"
-    return Decision(verdict=verdict, promotable=promotable,
-                    seed_direction=seed_direction, reasons=checks)
+    seed_dir = classify_seed_direction(deltas_pp, thresholds["seed_dead_zone_pp"])
+    reasons = {**checks, "mean_delta_pp": round(mean_delta, 6),
+               "ci_lo_pp": round(ci_lo, 6), "ci_hi_pp": round(ci_hi, 6)}
+    return Decision(verdict=verdict, promotable=promotable, seed_direction=seed_dir,
+                    reasons=reasons)
 
 
 def _is_nan(x) -> bool:

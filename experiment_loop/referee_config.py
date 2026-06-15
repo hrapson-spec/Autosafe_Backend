@@ -42,9 +42,9 @@ SLICES = [
 # *_abs = absolute ECE. All keys are read by decision.decide / decision.summarize_report
 # (arm0_harness.verdict, which read the old un-suffixed keys, has been retired).
 PROMOTION = {
-    "seed_dead_zone_pp": 0.05,           # |per-seed ΔAUC| <= this counts as "flat" (pp)
-    "pooled_d_auc_min_pp": 0.30,         # required pooled ΔAUC (pp)
-    "median_seed_d_auc_min_pp": 0.10,    # required median per-seed ΔAUC (pp)
+    "seed_dead_zone_pp": 0.05,           # diagnostic only: |per-seed ΔAUC| <= this is "flat" (pp)
+    "pooled_d_auc_min_pp": 0.30,         # the bar the mean-ΔAUC CI LOWER bound must clear (pp)
+    "ci_alpha": 0.05,                    # bootstrap CI on the mean per-seed ΔAUC (95%)
     "within_segment_min_slices": 2,      # required # within-segment AUC wins (GF-8 defense)
     "leakage_min_auc_drop_pp": 0.10,     # shuffle-within-fold must drop AUC; < this => dead (pp)
     "ece_worsen_max_abs": 0.01,          # calibration veto: ΔECE > this in ANY slice (absolute)

@@ -51,7 +51,6 @@ def authority_decision(per_control: dict) -> dict:
 # Heavy on-frame orchestration (not CI-tested; exercised by make validate-promotion-authority)
 # --------------------------------------------------------------------------------------
 def _score_decision(dev, oot, base_cols, cand_cols, seeds, P, cfg, lbl):
-    import numpy as np
     import score_core
     import decision
     sc = score_core.score_candidate(dev, oot, base_cols, cand_cols, seeds=seeds,
@@ -62,15 +61,14 @@ def _score_decision(dev, oot, base_cols, cand_cols, seeds, P, cfg, lbl):
             oot, oot[lbl].values, sc.cand_proba, sc.base_proba))
     drop = score_core.leakage_drop_pp(sc.last_model, oot, sc.full_cols, cand_cols, seeds[0],
                                       label_col=lbl)
-    seed_dir = decision.classify_seed_direction(sc.deltas_pp, P["seed_dead_zone_pp"])
-    dec = decision.decide(seed_direction=seed_dir, pooled_d_auc_pp=summ["pooled_d_auc_pp"],
-                          median_seed_d_auc_pp=float(np.median(sc.deltas_pp)),
-                          within_segment_wins=len(summ["within_wins"]),
+    dec = decision.decide(deltas_pp=sc.deltas_pp, within_segment_wins=len(summ["within_wins"]),
                           ece_breach=summ["worst_d_ece"] > P["ece_worsen_max_abs"],
                           leakage_drop_pp=drop, thresholds=P)
-    metrics = {"seed_direction": seed_dir, "seed_deltas_pp": [round(d, 6) for d in sc.deltas_pp],
+    metrics = {"seed_direction": dec.seed_direction,
+               "seed_deltas_pp": [round(d, 6) for d in sc.deltas_pp],
                "pooled_d_auc_pp": round(summ["pooled_d_auc_pp"], 6),
-               "within_segment_wins": len(summ["within_wins"]),
+               "mean_delta_pp": dec.reasons["mean_delta_pp"], "ci_lo_pp": dec.reasons["ci_lo_pp"],
+               "ci_hi_pp": dec.reasons["ci_hi_pp"], "within_segment_wins": len(summ["within_wins"]),
                "worst_d_ece": round(summ["worst_d_ece"], 6), "leakage_drop_pp": round(drop, 6),
                "verdict": dec.verdict, "promotable": dec.promotable}
     return dec, metrics

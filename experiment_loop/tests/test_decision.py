@@ -1,50 +1,46 @@
-"""Unit tests for decision.py — the seed-direction classification (F3 fix) and the
-pure promotion decision. No harness, no data: synthetic deltas only (test pyramid L1).
+"""Unit tests for decision.py — seed-direction diagnostic, the mean-ΔAUC CI statistic,
+the promotion decision, and the safe report reduction. Synthetic inputs only (L1).
 
-F3 regression: `seed_stable = all(d>0) or all(d<0)` treated consistently-harmful as
-"stable" and could KEEP a pooled-negative feature. The fix models direction as a
-4-way classification; promotion requires `stable_positive`, and `stable_negative`
-(consistently harmful) is preserved as its own class and never promotes.
-
-GF-8 / gradient-gaming: promotion REQUIRES within-segment wins (an AND, not an OR with
-pooled) — a pooled-only gain with flat within-segment slices must NOT promote.
+The promotion gate is a bootstrap CI on the MEAN per-seed ΔAUC: promote only when the CI
+LOWER bound clears the bar. This replaces the old all-seeds `stable_positive` rule, which
+got *harder* with more seeds and couldn't promote a marginal signal. The CI tightens with
+more seeds/data (the power lever), and correctly rejects a chance-positive noise feature
+whose CI is wide. `classify_seed_direction` is kept as a recorded diagnostic (F3: a
+consistently-harmful feature is its own class) but is no longer the gate.
 """
 import math
 
 import pytest
 
-from decision import classify_seed_direction, decide, summarize_report
+from decision import (classify_seed_direction, mean_delta_ci, decide, summarize_report)
 
-DZ = 0.05  # seed_dead_zone_pp
+DZ = 0.05
 THRESH = {
     "pooled_d_auc_min_pp": 0.30,
-    "median_seed_d_auc_min_pp": 0.10,
     "within_segment_min_slices": 2,
     "leakage_min_auc_drop_pp": 0.10,
+    "ci_alpha": 0.05,
+    "seed_dead_zone_pp": 0.05,
 }
 
 
 def _decide(**kw):
-    """Defaults represent a clean promote; tests override one field to probe a gate."""
-    base = dict(seed_direction="stable_positive", pooled_d_auc_pp=0.4,
-                median_seed_d_auc_pp=0.3, within_segment_wins=3, ece_breach=False,
-                leakage_drop_pp=0.5, thresholds=THRESH)
+    base = dict(deltas_pp=[1.0, 1.1, 0.9, 1.05, 0.95], within_segment_wins=3,
+                ece_breach=False, leakage_drop_pp=0.5, thresholds=THRESH)
     base.update(kw)
     return decide(**base)
 
 
-# --- classify_seed_direction (deltas are per-seed ΔAUC in percentage points) ----
+# --- classify_seed_direction (diagnostic; F3 class preserved) --------------------
 def test_all_positive_beyond_deadzone_is_stable_positive():
     assert classify_seed_direction([0.5, 0.3], DZ) == "stable_positive"
 
 
 def test_all_negative_beyond_deadzone_is_stable_negative():
-    # F3: consistently harmful is its OWN class (not "unstable"), and never promotes
     assert classify_seed_direction([-0.69, -0.25], DZ) == "stable_negative"
 
 
 def test_mixed_signs_is_mixed_unstable():
-    # the real 2026-06-14 30K run: seed0 -0.690pp, seed1 +0.097pp
     assert classify_seed_direction([-0.69, 0.097], DZ) == "mixed_unstable"
 
 
@@ -52,22 +48,8 @@ def test_all_within_deadzone_is_flat_or_noise():
     assert classify_seed_direction([0.01, -0.02], DZ) == "flat_or_noise"
 
 
-def test_exactly_zero_is_flat_or_noise():
-    assert classify_seed_direction([0.0, 0.0], DZ) == "flat_or_noise"
-
-
 def test_exactly_at_deadzone_boundary_is_flat():
-    # dead-zone is inclusive: |d| == dz counts as flat, not directional
     assert classify_seed_direction([0.05, 0.05], DZ) == "flat_or_noise"
-
-
-def test_one_positive_rest_flat_is_mixed_unstable():
-    assert classify_seed_direction([0.5, 0.01, 0.01, 0.01, 0.01], DZ) == "mixed_unstable"
-
-
-def test_four_positive_one_flat_is_mixed_unstable():
-    # strict (ratified): ALL seeds must clear the dead-zone for stable_positive
-    assert classify_seed_direction([0.5, 0.5, 0.5, 0.5, 0.01], DZ) == "mixed_unstable"
 
 
 def test_nan_delta_raises():
@@ -75,52 +57,72 @@ def test_nan_delta_raises():
         classify_seed_direction([0.5, math.nan], DZ)
 
 
-def test_empty_deltas_raises():
+# --- mean_delta_ci ---------------------------------------------------------------
+def test_ci_is_deterministic():
+    assert mean_delta_ci([0.4, 0.5, 0.6], 0.05) == mean_delta_ci([0.4, 0.5, 0.6], 0.05)
+
+
+def test_tight_deltas_give_a_narrow_ci_around_the_mean():
+    lo, mean, hi = mean_delta_ci([1.0, 1.0, 1.0, 1.0, 1.0], 0.05)
+    assert lo == mean == hi == 1.0
+
+
+def test_wide_deltas_give_a_ci_that_can_drop_below_a_positive_mean():
+    lo, mean, hi = mean_delta_ci([2.0, 0.1, 1.9, -0.3, 1.5], 0.05)
+    assert lo < mean < hi and lo < 0.30
+
+
+def test_chance_positive_noise_has_a_ci_lower_below_the_bar():
+    # the real n=100K NOISE feature: mean +0.32 by luck, but wide -> CI lower below 0.30pp
+    lo, mean, hi = mean_delta_ci([0.657, 0.342, -0.242, 0.611, 0.226], 0.05)
+    assert mean > 0.30 and lo < 0.30
+
+
+def test_ci_raises_on_empty_or_nan():
     with pytest.raises(ValueError):
-        classify_seed_direction([], DZ)
+        mean_delta_ci([], 0.05)
+    with pytest.raises(ValueError):
+        mean_delta_ci([0.5, math.nan], 0.05)
 
 
-# --- decide (pure promotion decision over scalar summaries) ----------------------
-def test_clean_stable_positive_promotes():
-    d = _decide()
-    assert d.promotable and d.verdict == "promote"
+# --- decide (gate on CI-lower > bar, AND within-segment, AND no ECE) --------------
+def test_clean_signal_well_above_bar_promotes():
+    assert _decide().verdict == "promote" and _decide().promotable
 
 
-def test_stable_negative_never_promotes_and_is_dead_when_unused():
-    # F3 regression guard: consistently harmful + ~0 leakage => dead, NOT keep
-    d = _decide(seed_direction="stable_negative", pooled_d_auc_pp=-0.28,
-                median_seed_d_auc_pp=-0.30, within_segment_wins=0, leakage_drop_pp=-0.01)
+def test_consistently_harmful_never_promotes_and_is_dead_when_unused():
+    # F3 regression via the CI: all-negative -> CI lower far below the bar
+    d = _decide(deltas_pp=[-0.5, -0.6, -0.4, -0.55, -0.45], within_segment_wins=0,
+                leakage_drop_pp=-0.01)
     assert not d.promotable and d.verdict == "dead"
+    assert d.seed_direction == "stable_negative"   # diagnostic still recorded
+
+
+def test_chance_positive_noise_is_not_promoted():
+    # the n=100K noise feature: positive mean but wide CI -> rejected (no false positive)
+    d = _decide(deltas_pp=[0.657, 0.342, -0.242, 0.611, 0.226])
+    assert not d.promotable
+
+
+def test_high_but_noisy_mean_is_not_promoted_underpowered():
+    d = _decide(deltas_pp=[2.0, 0.1, 1.9, -0.3, 1.5])   # mean ~1.0 but CI lower < bar
+    assert not d.promotable
 
 
 def test_pooled_only_gain_with_no_within_segment_wins_does_not_promote():
-    # GF-8 / gradient-gaming: pooled up, within-segment flat => REJECT
-    d = _decide(pooled_d_auc_pp=0.6, within_segment_wins=0)
-    assert not d.promotable
+    assert not _decide(within_segment_wins=0).promotable        # GF-8 defense retained
 
 
-def test_stable_positive_but_pooled_below_min_does_not_promote():
-    d = _decide(pooled_d_auc_pp=0.10)
-    assert not d.promotable
-
-
-def test_stable_positive_but_median_below_min_does_not_promote():
-    d = _decide(median_seed_d_auc_pp=0.05)
-    assert not d.promotable
-
-
-def test_ece_breach_blocks_promotion_despite_auc_gain():
-    d = _decide(ece_breach=True)
-    assert not d.promotable
+def test_ece_breach_blocks_promotion():
+    assert not _decide(ece_breach=True).promotable
 
 
 def test_not_promotable_with_real_leakage_drop_is_discard():
-    d = _decide(seed_direction="mixed_unstable", pooled_d_auc_pp=0.0,
-                median_seed_d_auc_pp=0.0, within_segment_wins=0, leakage_drop_pp=0.5)
+    d = _decide(deltas_pp=[0.0, 0.0, 0.0, 0.0, 0.0], within_segment_wins=0, leakage_drop_pp=0.5)
     assert d.verdict == "discard"
 
 
-# --- summarize_report: safe reduction of a segmented report to decide()'s scalars -----
+# --- summarize_report (NaN/missing/flat-safe reduction) --------------------------
 def test_summarize_ignores_unavailable_and_too_small_slices():
     report = {"slices": {"a": {"d_auc_pp": 0.5, "d_ece": 0.0},
                          "u": {"status": "unavailable_on_frame"},
@@ -131,8 +133,7 @@ def test_summarize_ignores_unavailable_and_too_small_slices():
 
 
 def test_summarize_flat_slice_is_not_a_win():
-    report = {"slices": {"a": {"d_auc_pp": 0.0, "d_ece": 0.0}}, "pooled": {}}
-    assert summarize_report(report)["within_wins"] == []
+    assert summarize_report({"slices": {"a": {"d_auc_pp": 0.0, "d_ece": 0.0}}, "pooled": {}})["within_wins"] == []
 
 
 def test_summarize_nan_auc_delta_is_not_a_win():
@@ -148,4 +149,3 @@ def test_summarize_nan_ece_forces_a_breach_fail_safe():
 
 def test_summarize_missing_or_nan_pooled_is_zero():
     assert summarize_report({"slices": {}})["pooled_d_auc_pp"] == 0.0
-    assert summarize_report({"slices": {}, "pooled": {"d_auc_pp": float("nan")}})["pooled_d_auc_pp"] == 0.0

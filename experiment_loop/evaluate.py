@@ -134,11 +134,10 @@ def main():
     drop = score_core.leakage_drop_pp(sc.last_model, oot, sc.full_cols, cand_cols,
                                       seeds[0], label_col=LBL)
 
-    seed_direction = decision.classify_seed_direction(sc.deltas_pp, P["seed_dead_zone_pp"])
     dec = decision.decide(
-        seed_direction=seed_direction, pooled_d_auc_pp=pooled_d_auc_pp,
-        median_seed_d_auc_pp=median_seed, within_segment_wins=len(within_wins),
+        deltas_pp=sc.deltas_pp, within_segment_wins=len(within_wins),
         ece_breach=worst_ece > P["ece_worsen_max_abs"], leakage_drop_pp=drop, thresholds=P)
+    seed_direction = dec.seed_direction
     final = dec.verdict
 
     led_path = HERE / "ledger.tsv"   # gitignored dev ledger (diagnostic-only, schema 1)
