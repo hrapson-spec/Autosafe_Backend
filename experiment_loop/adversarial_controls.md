@@ -14,9 +14,14 @@ proof, not a passing unit test.
 | 5 | **Replayability** | re-run control #1 at the same seed | identical ledger metrics; manifest reproduces them | determinism / provenance |
 
 ## Acceptance
-All five must pass in one run. Until they do, the loop runs in **dry/observe mode only** — the agent
-may propose and the evaluator may score, but no keep-commit is allowed (the runner withholds the commit
-authority). This mirrors the audit's `--expect-fixed`-must-pass discipline.
+Implemented in `controls.py` (battery + per-control status enum) and run by
+`validate_promotion_grade.py`. Promotion authority activates only when the **required**
+controls are green; until then the loop stays **locked** (the runner withholds promotion
+authority) and verdicts are diagnostic-only. The positive control is now **two-tier** — two
+fenced synthetic planted features (which test the evaluator itself) plus the domain control
+`vehicle_age_years` (which can lock pending a ratified resolution state without meaning the
+evaluator is broken). Control #4 (train-only) is `pending_not_enforced` until the P2
+serving-FE/`gf17` tier. See `EVALUATOR_RELIABILITY.md`.
 
 ## Notes
 - Controls #2/#3/#4 are *planted failures*; the loop is correct iff it **rejects** them. A green run that

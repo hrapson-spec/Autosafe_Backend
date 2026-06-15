@@ -5,7 +5,9 @@ You have **maximal creative and scientific freedom.** Invent, explore, self-dire
 below is your *starting context and your tools* — not a cage. Only three short fixed points at the
 end constrain you, and they exist so your results *mean something*, not to limit your creativity.
 
-The loop: hypothesize → build → evaluate → **keep** if it wins, else **revert** → log → repeat.
+The loop: hypothesize → build → evaluate → **promote** if it wins, else `dead`/`discard` and
+**revert** → log → repeat. (Verdict vocab is `promote`/`dead`/`discard` plus a `promotable`
+boolean and `seed_direction`; the old `keep` is gone — see `EVALUATOR_RELIABILITY.md`.)
 **NEVER STOP** until the human interrupts.
 
 ## You direct your own research
