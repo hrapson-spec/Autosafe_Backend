@@ -71,14 +71,18 @@ Two consequences:
    seeds makes a marginal signal *harder* to promote, not easier. It is the wrong statistic for
    this regime — a paired-bootstrap CI on the **mean** (excludes the bar) would benefit from more
    seeds/data and is the recommended replacement before the loop runs marginal candidates.
-2. **Measured scaling (n=30K → 100K):** the floor falls ~N^0.6 (per-seed 0.67→0.32pp, mean
-   0.30→0.145pp) — slightly faster than 1/√N, and NOT thread jitter (training is reproducible
-   per seed). So more data genuinely helps. Under the current all-seeds `stable_positive` rule
-   the binding quantity is the PER-SEED floor, which would need ~millions of rows to clear a
-   marginal signal — infeasible. Under a paired-bootstrap CI on the MEAN ΔAUC (the recommended
-   statistic; it benefits from seeds AND data) the MEAN floor governs: 0.145pp at 100K, so a
-   +0.4pp candidate is already ~3σ-detectable and an age-sized +0.22pp reaches ~2–3σ near
-   ~250K rows / 10–20 seeds — feasible. **The statistic, not the data, is the lever.**
+2. **Measured scaling (30K → 100K → 500K) — the floor PLATEAUS.** per-seed 0.670 → 0.324 →
+   0.296pp; mean 0.300 → 0.145 → 0.132pp. It is NOT 1/√N: the 30K→100K drop was OOT-sampling
+   noise (data fixes it), but 5× more data (100K→500K) bought only ~9%. The residual ~0.30pp
+   per-seed is **model-seed instability** — different CatBoost random seeds give different trees
+   and so a different spurious interaction with any feature — and that is **data-independent**.
+   So more rows past ~100K are NOT the lever (an earlier N^0.6 extrapolation to "~250K rows"
+   was wrong; the curve bends). The mean-CI floor is `0.30pp / sqrt(n_seeds)`, so the levers are
+   **more seeds** and **model stability** (more iterations / bagging / lower learning rate), not
+   data. Promotability under the 0.30pp bar: a true effect ≥ ~0.6pp clears it with ~5 seeds;
+   +0.4–0.5pp needs ~10–36 seeds; anything below the bar (e.g. age, +0.22pp) is correctly
+   non-promotable regardless of seeds. Each seed is a full retrain, so marginal-regime screening
+   is **compute-bound, not data-bound**.
 
 The synthetic positives are therefore calibrated to the **detection floor** (+2.4 / +4.8pp), not
 to the promotion bar; a true near-bar (+0.4pp) control is **not constructible** at this sample —
