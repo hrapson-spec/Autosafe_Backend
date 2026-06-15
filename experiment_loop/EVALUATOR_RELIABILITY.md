@@ -71,8 +71,14 @@ Two consequences:
    seeds makes a marginal signal *harder* to promote, not easier. It is the wrong statistic for
    this regime — a paired-bootstrap CI on the **mean** (excludes the bar) would benefit from more
    seeds/data and is the recommended replacement before the loop runs marginal candidates.
-2. The floor scales ≈ 1/√N, so reaching ~0.1pp (to detect +0.4pp) needs ~45× the data (~1.3M
-   rows), or reduced training stochasticity (fixed `thread_count`, more iterations), or both.
+2. **Measured scaling (n=30K → 100K):** the floor falls ~N^0.6 (per-seed 0.67→0.32pp, mean
+   0.30→0.145pp) — slightly faster than 1/√N, and NOT thread jitter (training is reproducible
+   per seed). So more data genuinely helps. Under the current all-seeds `stable_positive` rule
+   the binding quantity is the PER-SEED floor, which would need ~millions of rows to clear a
+   marginal signal — infeasible. Under a paired-bootstrap CI on the MEAN ΔAUC (the recommended
+   statistic; it benefits from seeds AND data) the MEAN floor governs: 0.145pp at 100K, so a
+   +0.4pp candidate is already ~3σ-detectable and an age-sized +0.22pp reaches ~2–3σ near
+   ~250K rows / 10–20 seeds — feasible. **The statistic, not the data, is the lever.**
 
 The synthetic positives are therefore calibrated to the **detection floor** (+2.4 / +4.8pp), not
 to the promotion bar; a true near-bar (+0.4pp) control is **not constructible** at this sample —
