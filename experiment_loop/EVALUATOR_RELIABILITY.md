@@ -77,9 +77,11 @@ Two consequences:
    per-seed is **model-seed instability** — different CatBoost random seeds give different trees
    and so a different spurious interaction with any feature — and that is **data-independent**.
    So more rows past ~100K are NOT the lever (an earlier N^0.6 extrapolation to "~250K rows"
-   was wrong; the curve bends). The mean-CI floor is `0.30pp / sqrt(n_seeds)`, so the levers are
-   **more seeds** and **model stability** (more iterations / bagging / lower learning rate), not
-   data. Promotability under the 0.30pp bar: a true effect ≥ ~0.6pp clears it with ~5 seeds;
+   was wrong; the curve bends). The mean-CI floor is `0.30pp / sqrt(n_seeds)`, and the **only**
+   lever is **more seeds** — model-stability/regularization tuning does NOT help (tested at 100K:
+   removing CatBoost randomness made it worse, 0.32→0.65pp; heavy regularization no better,
+   0.32→0.35pp; the ~0.30pp floor is intrinsic to CatBoost on this task, robust to both N past
+   ~100K and to hyperparameters). Promotability under the 0.30pp bar: a true effect ≥ ~0.6pp clears it with ~5 seeds;
    +0.4–0.5pp needs ~10–36 seeds; anything below the bar (e.g. age, +0.22pp) is correctly
    non-promotable regardless of seeds. Each seed is a full retrain, so marginal-regime screening
    is **compute-bound, not data-bound**.
