@@ -2580,8 +2580,27 @@ def main():
     print(f"     lr={PARAMS['learning_rate']}, depth={PARAMS['depth']}, iterations={PARAMS['iterations']}")
 
     cat_indices = [FEATURE_COLS.index(f) for f in CAT_FEATURES if f in FEATURE_COLS]
-    train_pool = Pool(X_train, y_train, cat_features=cat_indices, weight=train_weights)
-    test_pool = Pool(X_test, y_test, cat_features=cat_indices)
+
+    # LEAKAGE FIX (audit #1): early stopping must NOT see the OOT set. Using OOT
+    # as eval_set lets OOT labels pick each seed's iteration count, which biases
+    # the OOT metric reported below ("OOT no longer untouched"). Instead carve
+    # the validation fold from the most-recent slice of DEV by test date; OOT
+    # (X_test/y_test) is now used ONLY for the single final evaluation.
+    from training_utils import time_based_eval_split
+    tr_idx, val_idx = time_based_eval_split(
+        dev_df['test_date'].to_numpy(), val_fraction=0.1
+    )
+    print(f"  Early-stopping split (time-based, from DEV): "
+          f"{len(tr_idx):,} fit / {len(val_idx):,} val "
+          f"(OOT held out for final eval only)")
+    train_pool = Pool(
+        X_train.iloc[tr_idx], y_train.iloc[tr_idx],
+        cat_features=cat_indices, weight=train_weights[tr_idx],
+    )
+    val_pool = Pool(
+        X_train.iloc[val_idx], y_train.iloc[val_idx],
+        cat_features=cat_indices,
+    )
 
     N_SEEDS = 10
     all_preds_train = []
@@ -2604,7 +2623,7 @@ def main():
             cat_features=cat_indices,
             eval_metric=PARAMS['eval_metric'],
         )
-        model.fit(train_pool, eval_set=test_pool, early_stopping_rounds=150)
+        model.fit(train_pool, eval_set=val_pool, early_stopping_rounds=150)
 
         pred_train = model.predict_proba(X_train)[:, 1]
         pred_test = model.predict_proba(X_test)[:, 1]
