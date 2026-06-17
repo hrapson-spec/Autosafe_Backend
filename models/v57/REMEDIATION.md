@@ -16,7 +16,7 @@ the per-test data (off-repo: `~/autosafe_work/`) and the scientific stack.
 | 1 | Stop OOT early-stopping | `training_utils.time_based_eval_split` + trainer patch | Done (code) |
 | 2 | Train/serve parity harness | `gf17_train_serve_parity.py` + `tests/test_train_serve_parity.py` | Done (CI-runnable) |
 | 3 | Quantify mileage skew | `scripts/mileage_skew_replay.py` | Tool done; run on real data |
-| 4 | First-test / no-prior policy | Decision recorded below | Decided |
+| 4 | First-test / no-prior policy | Decision + v57 scaffold (shared transform, serving adapter, contract, trainer) | Decided + scaffolded |
 | 5 | Audit EB temporal safety | `scripts/eb_temporal_safety_check.py` | Tool done; run on real data |
 
 ## #1 — Stop using OOT for early stopping
@@ -91,6 +91,32 @@ Implications for the v57 build:
   no-prior fills with training (the parity harness enforces this once the v57
   contract exists). The documented `days_since_pass_ratio` default mismatch
   (serve `0.0` vs train `2.0`) closes in the same rebuild.
+
+### v57 scaffold (built — realises decision #4)
+
+The framework is in place; producing the trained model needs the off-repo data.
+
+- **`v57_features.py`** — the single source of truth. Derives the 105-feature v57
+  set from the v55 source + the `model_bundle` decision table, and provides BOTH
+  the row-level transform (serving) and `add_v57_columns` (training matrix), so
+  the two paths cannot drift. Includes `compute_coverage_features`. Stdlib-only
+  (reads the v55 list via `ast`), unit-tested in `tests/test_v57_features.py`.
+- **`model_v57.py`** — serving adapter: window-caps the DVSA history, runs the
+  v55 `engineer_features` on it, then applies the v57 transform. No vocab shim
+  (v57 trains on the serving vocabulary, retiring the dead v55 vocabularies).
+- **`models/v57/feature_contract.json`** — emitted (not hand-written) by
+  `models/v57/build_contract.py` from the shared definition; loads via
+  `model_bundle.load_contract` (105 features, 10 categorical, window 2019-01-01).
+- **`train_catboost_v57.py`** — trainer scaffold: `veterans_only=False`, builds
+  the matrix via the shared `add_v57_columns`, time-based early stopping (OOT
+  untouched), emits the bundle (contract + manifest + metrics). The data-load +
+  v55 feature-pipeline step is the marked integration point (`build_v55_frames`).
+- **Parity closure**: `python gf17_train_serve_parity.py --v57` proves the v57
+  serving adapter emits exactly the contract (`tests/test_v57_serving.py`).
+
+Remaining to ship v57: wire `build_v55_frames` to the real data (selecting
+`first_use_date` + `first_observed_test_date`), run the trainer, then clear the
+promotion gates in `models/v57/README.md`.
 
 ## #5 — EB temporal-safety evidence (v57 gate #4)
 

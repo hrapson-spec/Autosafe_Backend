@@ -187,12 +187,14 @@ def build_fixtures() -> List[Tuple[str, VehicleHistory, str]]:
         ]), "NE1 1AA")
     )
 
-    # 9. Old, high-mileage, no postcode.
+    # 9. Old, high-mileage, no postcode; one pre-window test to exercise the
+    #    v57 history-window cap (the 2017 test is dropped in the v57 path).
     fixtures.append(
         ("old_high_mileage", _veh("MERCEDES-BENZ", "E CLASS", [
             _mot(datetime(2025, 6, 1), odo=210000),
             _mot(datetime(2024, 1, 1), odo=198000, defects=[adv_tyre]),
             _mot(datetime(2022, 12, 1), odo=180000),
+            _mot(datetime(2017, 11, 1), odo=150000),
         ], mfd_year=2006), "")
     )
 
@@ -459,6 +461,63 @@ def run_parity(
     return rep
 
 
+def run_v57_serving_parity(
+    contract_path: Path = Path("models/v57/feature_contract.json"),
+) -> Dict[str, Any]:
+    """Prove the v57 SERVING adapter emits exactly the v57 contract.
+
+    Runs the fixture panel through ``model_v57.engineer_features_v57`` and checks
+    the emission against the loaded contract + decision table (RC-3 absent,
+    coverage present, no pre-rename names). This is the v57 closure of gate #2:
+    serving emission == contract, by construction of the shared transform.
+    """
+    from model_bundle import (
+        COVERAGE_FEATURES,
+        OBSERVED_RENAMES,
+        RC3_DROPPED_FEATURES,
+        load_contract,
+    )
+    from model_v57 import engineer_features_v57
+
+    contract = load_contract(contract_path)
+    cset = set(contract.feature_names)
+    pred_date = datetime(2026, 6, 1)
+
+    emitted: set = set()
+    for _name, history, postcode in build_fixtures():
+        feats = engineer_features_v57(history, postcode, prediction_date=pred_date)
+        emitted |= set(feats.keys())
+
+    missing = [n for n in contract.feature_names if n not in emitted]
+    extra = sorted(emitted - cset)
+    rc3_present = [f for f in RC3_DROPPED_FEATURES if f in emitted]
+    coverage_missing = [c for c in COVERAGE_FEATURES if c not in emitted]
+    pre_rename_present = [o for o in OBSERVED_RENAMES if o in emitted]
+
+    violations = []
+    if missing:
+        violations.append(("missing_from_serving", missing[:5]))
+    if rc3_present:
+        violations.append(("rc3_present", rc3_present))
+    if coverage_missing:
+        violations.append(("coverage_missing", coverage_missing))
+    if pre_rename_present:
+        violations.append(("pre_rename_name_present", pre_rename_present))
+
+    return {
+        "contract_version": contract.version,
+        "contract_features": len(contract.feature_names),
+        "emitted_features_in_contract": len(emitted & cset),
+        "missing_from_serving": missing,
+        "extra_emitted_keys_note": extra,  # harmless intermediates, not a failure
+        "rc3_present": rc3_present,
+        "coverage_missing": coverage_missing,
+        "pre_rename_present": pre_rename_present,
+        "violations": violations,
+        "ok": not violations,
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -507,8 +566,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                    help="training matrix parquet/csv to column-check")
     p.add_argument("--expect-fixed", action="store_true",
                    help="v57 gate: fail on ANY violation (no known-broken allowance)")
+    p.add_argument("--v57", action="store_true",
+                   help="check the v57 SERVING adapter emits exactly the v57 contract")
     p.add_argument("--json", action="store_true", help="emit JSON report")
     args = p.parse_args(argv)
+
+    if args.v57:
+        contract = args.contract or Path("models/v57/feature_contract.json")
+        v = run_v57_serving_parity(contract)
+        print(json.dumps(v, indent=2) if args.json else
+              f"v57 serving↔contract ({v['contract_version']}, "
+              f"{v['contract_features']} features): "
+              f"{'OK' if v['ok'] else 'VIOLATIONS: ' + repr(v['violations'])}")
+        return 0 if v["ok"] else 1
 
     rep = run_parity(
         contract_path=args.contract,
