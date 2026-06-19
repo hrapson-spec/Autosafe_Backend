@@ -10,10 +10,10 @@ training?" but: **which prediction-time mileage signal gives the best _honest_
 ranking** — last-MOT mileage, projected mileage, user/current mileage,
 annualised mileage, or cohort-normalised mileage.
 
-## The finding
+## The leak (correct, and the reason for the change)
 
 The raw odometer **level** (`test_mileage`) is the strongest-*looking* signal
-but the least *honest* one:
+but is not point-in-time honest in training:
 
 - In **training**, `test_mileage` is `d.test_mileage` — the odometer recorded
   **at the scored test**, contemporaneous with the label. The training
@@ -24,81 +24,75 @@ but the least *honest* one:
   to the most recent **completed** test (`feature_engineering_v55.py` uses
   `tests[0]`). The trained feature and the served feature are therefore
   different estimands (train/serve skew), and the trained one violates the v57
-  contract's point-in-time rule ("only data available strictly before the
-  target test date").
-- The level is also heavily collinear with vehicle age, which the model already
-  encodes — so most of its apparent strength is an age proxy plus same-event
-  leakage.
+  contract's point-in-time rule.
 
-Because `level ≈ age × usage_rate` and age is already a dominant feature, the
-**usage rate** is the part of mileage that carries genuinely new, age-orthogonal
-information. The strongest **valid** representation is the **cohort-normalised
-usage rate** — "how hard is this car driven for what it is" — which is honest
-(pure past readings, no outcome), age- and model-decontaminated, and robust.
+The honest LEVEL is `test_mileage - miles_since_last_test`: this **algebraically
+cancels** the scored-test reading down to the previous test's odometer, which at
+serving equals `tests[0]` — so train and serve become the same estimand.
 
-`scripts/ablation_mileage_honest.py` demonstrates the mechanism with real
-ROC-AUC on a synthetic generator (the production row-level spine is not in the
-repo clone). Representative run:
+## The finding (real-data ablation overturns the rate hypothesis)
 
-| representation | univariate AUC | AUC given age |
+The original hypothesis was that, since `level ≈ age × usage_rate` and age is
+already dominant, the **cohort-normalised usage rate** would be the strongest
+*valid* signal. A synthetic generator supported that. **It does not hold on real
+MOT data.** `scripts/ablation_mileage_honest.py` (synthetic) was re-run on the
+actual V55 spine — DEV-fit cohort means, evaluated on held-out OOT, with the
+honest rate computed correctly as the as-of-prior (2-hop) rate:
+
+| representation (real OOT, common subset n=28,121) | univariate AUC | AUC given age |
 |---|---|---|
-| contemporaneous odo (`test_mileage`, leaky/unavailable) | 0.595 | 0.599 |
-| last-completed odo (honest level) | 0.589 | 0.594 |
-| projected odo (honest level, forward) | 0.591 | 0.594 |
-| annualised rate (honest, age-orthogonal) | 0.582 | 0.593 |
-| **cohort-normalised rate (honest, decontaminated)** | **0.612** | **0.620** |
-| age only (reference) | 0.546 | 0.546 |
+| contemporaneous odo (`test_mileage`, leaky/unavailable) | 0.642 | 0.652 |
+| **last-completed odo (honest level)** | **0.642** | **0.647** |
+| leaky annualised rate (`annualized_mileage_v2`) | 0.547 | 0.639 |
+| honest as-of-prior rate | 0.500 | 0.614 |
+| cohort-normalised honest rate | 0.500 | 0.614 |
+| age only (reference) | — | 0.613 |
 
-The contemporaneous level carries a "+0.002 leak premium you cannot keep": it
-tops the *level* group only because of same-event leakage that evaporates at
-serving. The cohort-normalised rate wins both univariate and **marginal over
-age** — it is the strongest valid signal.
+Two results:
 
-## What changed
+1. **The honest LEVEL ≈ the leaky contemporaneous level** (0.647 vs 0.652 over
+   age): de-leaking the level removes the train/serve skew at essentially no AUC
+   cost. This is a clean correctness win and is what ships.
+2. **The cohort-normalised RATE carries no real signal**: univariate AUC 0.500,
+   `corr_with_y = +0.006`, and +0.001 over age (vs age-only 0.613). The synthetic
+   0.612 was an artifact of the generator (it *set* a rate→failure coefficient).
+   Separately, the honest rate needs a resolved 2-hop chain whose prev-prev
+   odometer lands in the **10% test-hash spine** only ~4.7% of the time, so it is
+   not even learnable offline. **The rate feature was therefore dropped.**
 
-A single source of truth, `mileage_honest.py`, is imported by both the trainer
-and the serving path so the two cannot drift:
+## What changed (level-only)
 
-- `prior_odometer` — honest LEVEL: the odometer at the test strictly before the
-  target (`test_mileage - miles_since_last_test`).
-- `projected_odometer` — the level carried forward to the target date at the
-  honest rate.
-- `cohort_ratio` — safe-divide normaliser for both the level and the rate
-  cohort ratios.
+`mileage_honest.py` is the single source of truth for the leakage-free level,
+imported by both the trainer and serving so they cannot drift:
 
-**Serving** (`feature_engineering_v55.py`) now additionally emits
-`last_completed_odometer`, `projected_odometer` and
-`annualized_mileage_cohort_ratio`. These are additive — `predict_risk` selects
-only `FEATURE_NAMES`, so the **currently deployed model is unaffected**, and the
-existing `mileage_cohort_ratio` value is unchanged (at serving its numerator was
-already the last completed reading).
+- `prior_odometer` — honest LEVEL: `test_mileage - miles_since_last_test`.
+- `cohort_ratio` — safe-divide normaliser for `mileage_cohort_ratio`.
 
-**Training** (`train_catboost_production_v55.py`):
+**Serving** (`feature_engineering_v55.py`) emits `last_completed_odometer`
+(= `test_mileage`, which at serving already IS the last completed reading).
+Additive — `predict_risk` selects only `FEATURE_NAMES`, so the **deployed model
+is unaffected** until the next retrain.
 
-- `compute_cohort_rate_stats` (DEV-only, leakage-free) builds the cohort mean
-  usage-rate table; `add_cohort_rate_features` (after the V36 mileage block)
-  adds `last_completed_odometer` and `annualized_mileage_cohort_ratio` and
-  re-bases `mileage_cohort_ratio` onto the honest level. The rate table is
-  merged into `cohort_stats` so serving gets it from one pickle.
-- `FEATURE_COLS` now uses `last_completed_odometer` instead of the
-  contemporaneous `test_mileage`, and adds `annualized_mileage_cohort_ratio`.
-  This **defines the next model**.
+**Training** (`train_catboost_production_v55.py`): `add_honest_level_features`
+(after the V36 mileage block) adds `last_completed_odometer` and re-bases
+`mileage_cohort_ratio` onto the honest level. `FEATURE_COLS` uses
+`last_completed_odometer` **instead of** the contemporaneous `test_mileage`.
+This **defines the next model**.
+
+The cohort-normalised rate, `compute_cohort_rate_stats`, `add_cohort_rate_features`,
+`projected_odometer`, and the serving rate emission were all removed.
 
 ## To deploy (must run in the training environment)
 
-The production row-level spine is not in this repo clone, so the retrain has not
-been run here. To ship:
+Level-only swap; expected AUC-neutral (the ablation shows honest ≈ contemporaneous),
+with the train/serve level skew removed.
 
-1. Run `train_catboost_production_v55.py` against the spine. This produces a new
-   `model.cbm` on the honest feature set and a `cohort_stats.pkl` that now
-   carries `cohort_rate` / `global_rate_avg`.
+1. Run `train_catboost_production_v55.py` against the spine → new `model.cbm` on
+   the honest feature set (the `cohort_stats.pkl` is unchanged in shape — no rate
+   table is added).
 2. Regenerate serving's `FEATURE_NAMES` to match the new model's feature order
-   (the v57 `model_bundle.emit_contract` / `validate_feature_columns` path gates
-   this). `tests/test_model_bundle.py` pins the current served count (104); bump
-   it with the version when the honest contract lands.
-3. Confirm the honest test AUC holds (the ablation predicts it does, with the
-   cohort-normalised rate carrying the marginal signal the contemporaneous level
-   only appeared to have).
-
-Until then serving degrades gracefully: with the current `cohort_stats.pkl`
-(no rate table), `annualized_mileage_cohort_ratio` returns the neutral 1.0.
+   (`model_bundle.emit_contract` / `validate_feature_columns` gates this);
+   `tests/test_model_bundle.py` pins the served count (104) — re-pin with the
+   version when the honest contract lands.
+3. Confirm OOT AUC ≥ current and Gate-0 capture not worse (the level swap should
+   be neutral); verify train/serve parity on `last_completed_odometer`.

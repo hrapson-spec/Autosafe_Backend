@@ -12,11 +12,9 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mileage_honest import (
-    DEFAULT_ANNUAL_MILES,
     NEUTRAL_RATIO,
     cohort_ratio,
     prior_odometer,
-    projected_odometer,
 )
 
 
@@ -38,29 +36,6 @@ class TestPriorOdometer(unittest.TestCase):
         # The whole point: the honest level is the PRIOR reading, never the
         # scored-test reading, whenever miles were added since.
         self.assertLess(prior_odometer(62000, 12000), 62000)
-
-
-class TestProjectedOdometer(unittest.TestCase):
-    def test_zero_horizon_returns_last_reading(self):
-        self.assertAlmostEqual(projected_odometer(50000, 9000, 0), 50000)
-
-    def test_projects_forward_at_rate(self):
-        # 50k + 10k/yr for 365 days = 60k.
-        self.assertAlmostEqual(projected_odometer(50000, 10000, 365), 60000)
-
-    def test_never_moves_backwards(self):
-        # Missing/negative rate falls back to the UK default; negative horizon
-        # is clamped to zero. Projection is monotonic non-decreasing.
-        self.assertAlmostEqual(
-            projected_odometer(50000, None, 365), 50000 + DEFAULT_ANNUAL_MILES
-        )
-        self.assertAlmostEqual(projected_odometer(50000, -3, 365), 50000 + DEFAULT_ANNUAL_MILES)
-        self.assertAlmostEqual(projected_odometer(50000, 10000, -10), 50000)
-
-    def test_monotonic_in_horizon_and_rate(self):
-        base = projected_odometer(50000, 8000, 200)
-        self.assertGreater(projected_odometer(50000, 8000, 400), base)
-        self.assertGreater(projected_odometer(50000, 16000, 200), base)
 
 
 class TestCohortRatio(unittest.TestCase):
@@ -95,11 +70,6 @@ class TestTrainServeConsistency(unittest.TestCase):
         # The honest training level must reconstruct the previous 50k reading.
         training_level = prior_odometer(62000, 12000)
         self.assertEqual(training_level, serving_level)
-
-    def test_projection_reduces_to_level_at_serve_instant(self):
-        # If we score exactly on the last completed test date, projected == level.
-        level = prior_odometer(62000, 12000)
-        self.assertAlmostEqual(projected_odometer(level, 9000, 0), level)
 
 
 if __name__ == "__main__":

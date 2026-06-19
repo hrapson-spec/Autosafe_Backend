@@ -164,8 +164,8 @@ V12D_FEATURE_COLS = [
     'days_late', 'prev_adv_brakes', 'prev_adv_suspension',
     'prev_adv_steering', 'prev_adv_tyres',
     # 'annualized_mileage',  # V47: REMOVED - redundant with annualized_mileage_v2
-    # V8: Cohort Residuals (+ cohort-normalised usage RATE = strongest valid signal)
-    'mileage_cohort_ratio', 'annualized_mileage_cohort_ratio',
+    # V8: Cohort Residuals (honest LEVEL cohort ratio; rate feature dropped — no real-data signal)
+    'mileage_cohort_ratio',
     'advisory_cohort_delta', 'days_since_pass_ratio',
     # V16: Mileage percentile - V47: REMOVED (ablation showed +0.06pp AUC without it)
     # 'mileage_percentile_for_age',
@@ -2215,54 +2215,24 @@ def add_cohort_residuals(df: pd.DataFrame, cohort_stats: dict) -> pd.DataFrame:
     return df
 
 
-def compute_cohort_rate_stats(df: pd.DataFrame) -> dict:
-    """Cohort mean usage RATE per (model_id, age_band), fit on TRAIN only.
+def add_honest_level_features(df: pd.DataFrame, cohort_stats: dict) -> pd.DataFrame:
+    """Add the honest point-in-time mileage LEVEL and re-base its cohort ratio.
 
-    Mirrors compute_cohort_stats but for the point-in-time-honest usage rate
-    (annualized_mileage_v2, produced by add_mileage_block_v36). Backs
-    annualized_mileage_cohort_ratio — the age/model-decontaminated "driven hard
-    for what it is" signal. MUST be called on DEV only to stay leakage-free.
-    """
-    print("  Computing cohort RATE statistics (annualized_mileage_v2)...")
-    global_rate_avg = float(df['annualized_mileage_v2'].mean())
+    Must run AFTER add_mileage_block_v36 (needs miles_since_last_test). See
+    mileage_honest.py: the contemporaneous ``test_mileage`` (= d.test_mileage, the
+    odometer read AT the scored test) violates the v57 point-in-time rule, whereas
+    ``test_mileage - miles_since_last_test`` algebraically cancels the scored-test
+    reading to the PRIOR test's odometer (honest, train/serve-aligned).
 
-    grp = df.groupby(['model_id', 'age_band']).agg(
-        rate_avg=('annualized_mileage_v2', 'mean'),
-        cohort_size=('annualized_mileage_v2', 'count'),
-    ).reset_index()
-    model_grp = df.groupby('model_id').agg(
-        model_rate_avg=('annualized_mileage_v2', 'mean'),
-    ).reset_index()
-    grp = grp.merge(model_grp, on='model_id', how='left')
+    The cohort-normalised usage RATE was evaluated on real OOT and DROPPED: it
+    carries no failure signal (corr +0.006; AUC-over-age == age-only) and is
+    resolvable for only ~5% of the 10%-hash spine. See docs/HONEST_MILEAGE.md.
 
-    MIN_COHORT_SIZE = 10
-    small = grp['cohort_size'] < MIN_COHORT_SIZE
-    grp.loc[small, 'rate_avg'] = grp.loc[small, 'model_rate_avg']
-
-    cohort_rate = {
-        (row['model_id'], row['age_band']): row['rate_avg']
-        for _, row in grp.iterrows()
-    }
-    return {'cohort_rate': cohort_rate, 'global_rate_avg': global_rate_avg}
-
-
-def add_cohort_rate_features(df: pd.DataFrame, cohort_stats: dict,
-                             rate_stats: dict) -> pd.DataFrame:
-    """Add the honest mileage LEVEL and the cohort-normalised usage RATE.
-
-    Must run AFTER add_mileage_block_v36 (needs annualized_mileage_v2 and
-    miles_since_last_test). See mileage_honest.py for why the contemporaneous
-    ``test_mileage`` (= d.test_mileage, the odometer read AT the scored test)
-    violates the v57 point-in-time rule.
-
-    * last_completed_odometer: the honest mileage LEVEL — the odometer at the
-      test STRICTLY BEFORE the scored test (= test_mileage - miles_since_last_test,
-      i.e. mileage_honest.prior_odometer), falling back to test_mileage for
-      first-test rows. Replaces the contemporaneous level in the feature set.
-    * annualized_mileage_cohort_ratio: annualized_mileage_v2 / cohort-mean rate.
-    * mileage_cohort_ratio: re-based onto last_completed_odometer so the LEVEL
-      cohort ratio is point-in-time honest too (the numerator was contemporaneous;
-      this overrides the value set in add_cohort_residuals).
+    * last_completed_odometer: honest LEVEL (replaces the contemporaneous
+      test_mileage in FEATURE_COLS); full coverage via the test_mileage fallback
+      for first-test rows, where serving likewise has only the current reading.
+    * mileage_cohort_ratio: re-based onto the honest level (overrides the
+      contemporaneous value set in add_cohort_residuals).
     """
     df = df.copy()
 
@@ -2277,22 +2247,14 @@ def add_cohort_rate_features(df: pd.DataFrame, cohort_stats: dict,
         df['last_completed_odometer'] = df['test_mileage']
     df['last_completed_odometer'] = df['last_completed_odometer'].fillna(df['test_mileage'])
 
-    cohort_rate = rate_stats['cohort_rate']
-    global_rate_avg = rate_stats['global_rate_avg']
     cohort_mileage = cohort_stats['cohort_mileage']
     global_mileage = cohort_stats['global_mileage_avg']
-
-    def _rate_ratio(row):
-        key = (row['model_id'], row['age_band'])
-        return cohort_ratio(row['annualized_mileage_v2'],
-                            cohort_rate.get(key), global_rate_avg)
 
     def _level_ratio(row):
         key = (row['model_id'], row['age_band'])
         return cohort_ratio(row['last_completed_odometer'],
                             cohort_mileage.get(key), global_mileage)
 
-    df['annualized_mileage_cohort_ratio'] = df.apply(_rate_ratio, axis=1)
     df['mileage_cohort_ratio'] = df.apply(_level_ratio, axis=1)
     return df
 
@@ -2485,19 +2447,16 @@ def main():
     oot_raw = add_mileage_block_v36(oot_raw, conn)
 
     # ========================================================================
-    # Honest point-in-time mileage: cohort-normalised RATE + leakage-free LEVEL
+    # Honest point-in-time mileage LEVEL (leakage-free; replaces contemporaneous)
     # ========================================================================
-    # Runs AFTER the mileage block so annualized_mileage_v2 / miles_since_last_test
-    # exist. Fits the cohort RATE table on DEV only (leakage-free), rebases the
+    # Runs AFTER the mileage block so miles_since_last_test exists. Rebases the
     # mileage level onto the odometer of the test STRICTLY BEFORE the scored test
-    # (point-in-time honest, replacing the contemporaneous d.test_mileage), and
-    # merges the rate table into cohort_stats so serving gets it from one pickle.
-    print("\n[6d.55] Adding honest point-in-time mileage features (DEV-fit rate cohort)...")
-    cohort_rate_stats = compute_cohort_rate_stats(dev_raw)  # DEV only — leakage-free
-    dev_raw = add_cohort_rate_features(dev_raw, cohort_stats, cohort_rate_stats)
-    oot_raw = add_cohort_rate_features(oot_raw, cohort_stats, cohort_rate_stats)
-    cohort_stats['cohort_rate'] = cohort_rate_stats['cohort_rate']
-    cohort_stats['global_rate_avg'] = cohort_rate_stats['global_rate_avg']
+    # (point-in-time honest, replacing the contemporaneous d.test_mileage). The
+    # cohort-normalised usage RATE was evaluated on real OOT and dropped (no
+    # signal + ~5% spine coverage) — see docs/HONEST_MILEAGE.md.
+    print("\n[6d.55] Adding honest point-in-time mileage LEVEL (last_completed_odometer)...")
+    dev_raw = add_honest_level_features(dev_raw, cohort_stats)
+    oot_raw = add_honest_level_features(oot_raw, cohort_stats)
 
     # ========================================================================
     # V43 NEW: Local Corrosion Index (Geographic Environmental Risk)

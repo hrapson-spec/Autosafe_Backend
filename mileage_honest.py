@@ -23,24 +23,22 @@ point-in-time honest. The contemporaneous level is also heavily collinear with
 vehicle age, which the model already encodes — so most of its apparent strength
 is an age proxy plus same-event leakage.
 
-The honest representations
---------------------------
-This module is the single definition of the leakage-free mileage features, so
-the trainer and the serving path cannot drift:
+The honest representation (shipped)
+-----------------------------------
+This module is the single definition of the leakage-free mileage level, so the
+trainer and the serving path cannot drift:
 
   * ``prior_odometer``  — the honest mileage LEVEL: the odometer at the most
     recent test **strictly before** the target. In serving this already equals
     ``test_mileage`` (= ``tests[0]`` odometer); in training it is reconstructed
-    as ``test_mileage - miles_since_last_test``.
-  * ``projected_odometer`` — ``prior_odometer`` carried forward to the target
-    date at the honest usage rate; the best point-in-time estimate of the
-    odometer the next test will record.
-  * ``cohort_ratio`` — the safe-divide normaliser used for BOTH the level
-    cohort ratio and the rate cohort ratio. The cohort-normalised usage *rate*
-    (``annualized_mileage_v2 / cohort_rate``) is the age- and model-decontaminated
-    "driven hard for what it is" signal: the strongest *valid* mileage
-    representation, because the rate is largely orthogonal to age whereas the
-    raw level is not.
+    as ``test_mileage - miles_since_last_test`` (the scored-test reading cancels).
+  * ``cohort_ratio`` — safe-divide normaliser for ``mileage_cohort_ratio`` (the
+    LEVEL cohort ratio), re-based onto the honest level.
+
+The cohort-normalised usage RATE was prototyped here too, but a real-OOT ablation
+found it carries no failure signal (corr +0.006; no lift over age) and is
+resolvable for only ~5% of the 10%-hash spine, so it was DROPPED — see
+docs/HONEST_MILEAGE.md. (``projected_odometer`` was removed with it.)
 
 All functions are pure, dependency-free and NaN/None-safe so they can be used
 scalar-wise in the serving path and via ``DataFrame.apply`` in the trainer.
@@ -93,32 +91,6 @@ def prior_odometer(current_odometer: object, miles_since_last_test: object) -> f
     return current - delta
 
 
-def projected_odometer(
-    last_completed_odometer: object,
-    annual_rate: object,
-    days_ahead: object,
-    default_rate: float = DEFAULT_ANNUAL_MILES,
-) -> float:
-    """Project the last completed odometer forward to the target date.
-
-    ``last_completed_odometer + rate * days_ahead / 365`` — the point-in-time
-    estimate of the odometer the upcoming test will record, using only the last
-    completed reading and the honest usage rate. ``days_ahead`` is clamped to be
-    non-negative; a missing/non-positive ``annual_rate`` falls back to
-    ``default_rate`` so the projection never moves the odometer backwards.
-    """
-    last = _as_finite_float(last_completed_odometer)
-    if last is None:
-        return 0.0
-    rate = _as_finite_float(annual_rate)
-    if rate is None or rate <= 0:
-        rate = default_rate
-    days = _as_finite_float(days_ahead)
-    if days is None or days < 0:
-        days = 0.0
-    return last + rate * (days / 365.0)
-
-
 def cohort_ratio(
     value: object,
     cohort_mean: object,
@@ -127,11 +99,10 @@ def cohort_ratio(
 ) -> float:
     """Normalise ``value`` by its cohort mean (with a global-mean fallback).
 
-    Used for both ``mileage_cohort_ratio`` (level / cohort level) and
-    ``annualized_mileage_cohort_ratio`` (rate / cohort rate). Returns ``neutral``
-    when the numerator is missing or no positive denominator is available, so an
-    absent cohort table degrades gracefully to "average for cohort" rather than
-    NaN/inf — matching the existing serving default.
+    Used for ``mileage_cohort_ratio`` (honest level / cohort level). Returns
+    ``neutral`` when the numerator is missing or no positive denominator is
+    available, so an absent cohort table degrades gracefully to "average for
+    cohort" rather than NaN/inf — matching the existing serving default.
     """
     v = _as_finite_float(value)
     if v is None:

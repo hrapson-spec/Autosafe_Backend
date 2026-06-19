@@ -26,7 +26,6 @@ import numpy as np
 
 from dvsa_client import VehicleHistory, MOTTest
 from regional_defaults import get_corrosion_index, get_station_strictness_bias
-from mileage_honest import projected_odometer, cohort_ratio
 
 # V44: Top 20 failing models (fail rate > 28%, from training data analysis)
 # Must match HIGH_RISK_MODELS in train_catboost_production_v55.py
@@ -615,43 +614,18 @@ def engineer_features(
         features['advisory_cohort_delta'] = 0.0
 
     # =========================================================================
-    # HONEST POINT-IN-TIME MILEAGE (shared mileage_honest module)
+    # HONEST POINT-IN-TIME MILEAGE LEVEL (shared mileage_honest module)
     # =========================================================================
-    # v57 point-in-time rule (model_bundle.emit_contract): a feature must use
-    # only data available strictly before the target test. At serving, the next
-    # test has not happened, so test_mileage already IS the odometer of the most
-    # recent COMPLETED test (latest_test) — the honest level. We expose it under
-    # an explicit name, add the forward projection to the prediction date, and
-    # add the cohort-normalised usage RATE. These are additive: predict_risk
-    # selects only FEATURE_NAMES, so the deployed model ignores them until the
-    # next retrain adopts the honest contract.
+    # v57 point-in-time rule: a feature must use only data available strictly
+    # before the target test. At serving the next test has not happened, so
+    # test_mileage already IS the odometer of the most recent COMPLETED test —
+    # the honest level. We expose it under an explicit name so the trained model
+    # (FEATURE_COLS uses last_completed_odometer in place of the contemporaneous
+    # test_mileage) reads the matching estimand. Additive: predict_risk selects
+    # only FEATURE_NAMES, so the deployed model is unaffected until the next
+    # retrain adopts the honest contract. (The cohort-normalised usage RATE was
+    # evaluated on real data and dropped — no signal; see docs/HONEST_MILEAGE.md.)
     features['last_completed_odometer'] = features['test_mileage']
-
-    if latest_test is not None:
-        days_since_last_completed = max(0, (prediction_date - latest_test.test_date).days)
-    else:
-        days_since_last_completed = 0
-    features['projected_odometer'] = projected_odometer(
-        features['last_completed_odometer'],
-        features.get('annualized_mileage_v2'),
-        days_since_last_completed,
-    )
-
-    # Cohort-normalised honest usage rate = annualized_mileage_v2 / peer-mean
-    # rate for this (model_id, age_band): the age- and model-decontaminated
-    # "driven hard for what it is" signal. Neutral (1.0) when no rate table is
-    # present (e.g. a pre-rate cohort_stats.pkl), so it is back-compatible.
-    cohort_rate = (cohort_stats or {}).get('cohort_rate', {})
-    global_rate_avg = (cohort_stats or {}).get('global_rate_avg')
-    rate_cohort_mean = None
-    if cohort_stats:
-        _rate_model_id = f"{history.make} {history.model}" if history.model else history.make
-        rate_cohort_mean = cohort_rate.get((_rate_model_id, get_age_band(vehicle_age_for_cohort)))
-    features['annualized_mileage_cohort_ratio'] = cohort_ratio(
-        features.get('annualized_mileage_v2'),
-        rate_cohort_mean,
-        global_rate_avg,
-    )
 
     # GF-17 Phase A1: real value (training definition: days_since_last_test/365,
     # train_catboost_production_v55.py add_cohort_residuals). Was hardcoded 1.0.
