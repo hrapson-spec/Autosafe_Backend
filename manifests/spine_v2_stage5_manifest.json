@@ -1,0 +1,80 @@
+{
+  "status": "complete",
+  "output_file": "/Users/henrirapson/autosafe_work/canonical_spine.parquet",
+  "file_size_mb": 6991.7,
+  "total_rows": 278136418,
+  "unique_vehicles": 50282388,
+  "cycle_first_count": 225892477,
+  "retest_count": 52243941,
+  "pass_count": 222162132,
+  "fail_count": 54389299,
+  "has_prior_count": 227854030,
+  "has_linked_count": 226460097,
+  "has_mileage_count": 202450154,
+  "year_distribution": [
+    {
+      "year": 2016,
+      "total": 37693378,
+      "prior_pct": 23.6,
+      "linked_pct": 23.2,
+      "mileage_pct": 14.5
+    },
+    {
+      "year": 2017,
+      "total": 30118076,
+      "prior_pct": 88.8,
+      "linked_pct": 88.3,
+      "mileage_pct": 80.5
+    },
+    {
+      "year": 2018,
+      "total": 2617699,
+      "prior_pct": 91.0,
+      "linked_pct": 90.6,
+      "mileage_pct": 82.1
+    },
+    {
+      "year": 2019,
+      "total": 33771366,
+      "prior_pct": 83.1,
+      "linked_pct": 82.6,
+      "mileage_pct": 73.9
+    },
+    {
+      "year": 2020,
+      "total": 38593842,
+      "prior_pct": 89.9,
+      "linked_pct": 89.4,
+      "mileage_pct": 79.3
+    },
+    {
+      "year": 2021,
+      "total": 40380646,
+      "prior_pct": 92.9,
+      "linked_pct": 92.4,
+      "mileage_pct": 83.8
+    },
+    {
+      "year": 2022,
+      "total": 41632878,
+      "prior_pct": 93.4,
+      "linked_pct": 92.9,
+      "mileage_pct": 84.3
+    },
+    {
+      "year": 2023,
+      "total": 42216721,
+      "prior_pct": 95.1,
+      "linked_pct": 94.5,
+      "mileage_pct": 86.4
+    },
+    {
+      "year": 2024,
+      "total": 11111812,
+      "prior_pct": 94.9,
+      "linked_pct": 94.4,
+      "mileage_pct": 86.3
+    }
+  ],
+  "timestamp": "2026-01-13T22:27:22.578002"
+}

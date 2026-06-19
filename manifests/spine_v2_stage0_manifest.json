@@ -1,0 +1,90 @@
+{
+  "status": "complete",
+  "valid_years": [
+    {
+      "year": 2016,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2016/test_result_2016.txt.gz",
+      "files": 1,
+      "size_mb": 1037.0,
+      "delim": "|",
+      "compression": "gzip",
+      "description": "2016 (gzipped)"
+    },
+    {
+      "year": 2017,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2017/test_result_318*.csv",
+      "files": 12,
+      "size_mb": 2516.1,
+      "delim": "|",
+      "compression": null,
+      "description": "2017 (12 CSV files)"
+    },
+    {
+      "year": 2018,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2018/dft_test_result-from-2018-*.csv",
+      "files": 1,
+      "size_mb": 355.1,
+      "delim": ",",
+      "compression": null,
+      "description": "2018 (quarterly CSVs)"
+    },
+    {
+      "year": 2019,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2019/dft_test_result-from-2019-*.csv",
+      "files": 4,
+      "size_mb": 3239.2,
+      "delim": ",",
+      "compression": null,
+      "description": "2019 (quarterly CSVs)"
+    },
+    {
+      "year": 2020,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2020/dft_test_result-from-2020-*.csv",
+      "files": 4,
+      "size_mb": 3166.9,
+      "delim": ",",
+      "compression": null,
+      "description": "2020 (quarterly CSVs)"
+    },
+    {
+      "year": 2021,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2021/test_result_*.csv",
+      "files": 12,
+      "size_mb": 4244.3,
+      "delim": ",",
+      "compression": null,
+      "description": "2021 (12 CSV files)"
+    },
+    {
+      "year": 2022,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2022/test_result_2022.csv",
+      "files": 1,
+      "size_mb": 3427.2,
+      "delim": "|",
+      "compression": null,
+      "description": "2022 (single CSV)"
+    },
+    {
+      "year": 2023,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/2023/test_result.csv",
+      "files": 1,
+      "size_mb": 3491.5,
+      "delim": "|",
+      "compression": null,
+      "description": "2023 (single CSV)"
+    },
+    {
+      "year": 2024,
+      "pattern": "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/MOT Test Results/test_result_2024*.csv",
+      "files": 3,
+      "size_mb": 1869.3,
+      "delim": ",",
+      "compression": null,
+      "description": "2024 (monthly CSVs)"
+    }
+  ],
+  "missing_years": [],
+  "total_size_mb": 23346.6,
+  "disk_free_gb": 39.0,
+  "timestamp": "2026-01-13T22:19:31.198019"
+}

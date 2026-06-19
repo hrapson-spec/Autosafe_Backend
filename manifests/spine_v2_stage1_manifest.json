@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "completed_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "year_stats": [
+    {
+      "year": 2016,
+      "rows": 37693378,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2017,
+      "rows": 30118076,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2018,
+      "rows": 2617699,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2019,
+      "rows": 33771366,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2020,
+      "rows": 38593842,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2021,
+      "rows": 40380646,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2022,
+      "rows": 41632878,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2023,
+      "rows": 42216721,
+      "duplicates_removed": 0
+    },
+    {
+      "year": 2024,
+      "rows": 11111812,
+      "duplicates_removed": 5974830
+    }
+  ],
+  "total_rows": 278136418,
+  "total_duplicates_removed": 5974830,
+  "timestamp": "2026-01-13T22:21:46.880685"
+}
