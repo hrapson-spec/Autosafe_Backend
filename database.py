@@ -831,6 +831,10 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
     try:
         import json
         async with pool.acquire() as conn:
+            # history_json: nullable JSONB — pass None as SQL NULL when absent
+            _history_json = risk_data.get('history_json')
+            _history_json_str = json.dumps(_history_json) if _history_json is not None else None
+
             result = await conn.fetchrow(
                 """INSERT INTO risk_checks (
                     registration, postcode,
@@ -838,29 +842,43 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
                     mileage, last_mot_date, last_mot_result,
                     failure_risk, confidence_level, risk_components, repair_cost_estimate,
                     model_version, prediction_source, is_dvsa_data,
-                    utm_source, utm_medium, utm_campaign, referrer
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19, $20)
+                    utm_source, utm_medium, utm_campaign, referrer,
+                    vehicle_colour, engine_size, registration_date,
+                    latest_test_station, n_dangerous_defects_latest,
+                    odometer_result_type, history_json
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22, $23, $24, $25, $26, $27::jsonb
+                )
                 RETURNING id""",
-                risk_data.get('registration'),
-                risk_data.get('postcode'),
-                risk_data.get('vehicle_make'),
-                risk_data.get('vehicle_model'),
-                risk_data.get('vehicle_year'),
-                risk_data.get('vehicle_fuel_type'),
-                risk_data.get('mileage'),
-                risk_data.get('last_mot_date'),
-                risk_data.get('last_mot_result'),
-                risk_data.get('failure_risk'),
-                risk_data.get('confidence_level'),
-                json.dumps(risk_data.get('risk_components', {})),
-                json.dumps(risk_data.get('repair_cost_estimate', {})),
-                risk_data.get('model_version'),
-                risk_data.get('prediction_source'),
-                risk_data.get('is_dvsa_data', False),
-                risk_data.get('utm_source'),
-                risk_data.get('utm_medium'),
-                risk_data.get('utm_campaign'),
-                risk_data.get('referrer')
+                risk_data.get('registration'),           # $1
+                risk_data.get('postcode'),               # $2
+                risk_data.get('vehicle_make'),           # $3
+                risk_data.get('vehicle_model'),          # $4
+                risk_data.get('vehicle_year'),           # $5
+                risk_data.get('vehicle_fuel_type'),      # $6
+                risk_data.get('mileage'),                # $7
+                risk_data.get('last_mot_date'),          # $8
+                risk_data.get('last_mot_result'),        # $9
+                risk_data.get('failure_risk'),           # $10
+                risk_data.get('confidence_level'),       # $11
+                json.dumps(risk_data.get('risk_components', {})),    # $12
+                json.dumps(risk_data.get('repair_cost_estimate', {})),  # $13
+                risk_data.get('model_version'),          # $14
+                risk_data.get('prediction_source'),      # $15
+                risk_data.get('is_dvsa_data', False),   # $16
+                risk_data.get('utm_source'),             # $17
+                risk_data.get('utm_medium'),             # $18
+                risk_data.get('utm_campaign'),           # $19
+                risk_data.get('referrer'),               # $20
+                risk_data.get('vehicle_colour'),         # $21
+                risk_data.get('engine_size'),            # $22
+                risk_data.get('registration_date'),      # $23
+                risk_data.get('latest_test_station'),    # $24
+                risk_data.get('n_dangerous_defects_latest'),  # $25
+                risk_data.get('odometer_result_type'),   # $26
+                _history_json_str,                       # $27
             )
 
             risk_check_id = str(result['id'])

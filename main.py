@@ -35,7 +35,8 @@ from email_templates import generate_mot_reminder_confirmation, generate_report_
 # V55 imports
 from dvsa_client import (
     DVSAClient, get_dvsa_client, close_dvsa_client,
-    VRMValidationError, VehicleNotFoundError, DVSAAPIError
+    VRMValidationError, VehicleNotFoundError, DVSAAPIError,
+    count_defects_of_severity, count_severity_conflicts,
 )
 from model_v55 import engineer_features_with_stats
 import model_v55
@@ -1018,6 +1019,44 @@ async def get_risk_v55(
             'model_version': 'v55',
             'prediction_source': 'dvsa',
             'is_dvsa_data': True,
+            # Capture-dont-discard: vehicle attributes already in DVSA response
+            'vehicle_colour': history.colour,
+            'engine_size': str(history.engine_size) if history.engine_size is not None else None,
+            'registration_date': (
+                history.registration_date.date().isoformat()
+                if history.registration_date else None
+            ),
+            # Capture-dont-discard: latest test instrumentation.
+            # NULL-vs-0 discipline (see count_defects_of_severity): 0 means
+            # "severity detection fired and found none"; NULL/None means
+            # "detection could not be proven to have fired" OR the test carries
+            # conflicting severity signals — never emit a silent false 0, and
+            # never resolve a signal conflict to either side.
+            'latest_test_station': last_test.test_station if last_test else None,
+            'n_dangerous_defects_latest': (
+                count_defects_of_severity(last_test.defects, 'DANGEROUS')
+                if last_test else None
+            ),
+            'odometer_result_type': last_test.odometer_result_type if last_test else None,
+            # Compact test history for outcome loop and calibration analytics.
+            # n_advisories / n_dangerous are null per-test when severity
+            # detection is unproven or conflicting; n_severity_conflicts
+            # records contradictory-signal defects per test (canary reports
+            # history_json->0->>'n_severity_conflicts' for the latest test).
+            'history_json': [
+                {
+                    'date': t.test_date.isoformat() if t.test_date else None,
+                    'result': t.test_result,
+                    'odometer': t.odometer_value,
+                    'odo_type': t.odometer_result_type,
+                    'station': t.test_station,
+                    'n_defects': len(t.defects),
+                    'n_advisories': count_defects_of_severity(t.defects, 'ADVISORY'),
+                    'n_dangerous': count_defects_of_severity(t.defects, 'DANGEROUS'),
+                    'n_severity_conflicts': count_severity_conflicts(t.defects),
+                }
+                for t in history.mot_tests
+            ] if history.mot_tests else None,
             **utm_data,
         })
     except Exception as e:

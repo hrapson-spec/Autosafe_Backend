@@ -46,6 +46,129 @@ class OAuthToken:
         self.expires_at = time.time() + expires_in
 
 
+# Known defect severity/type values from the DVSA MOT History API domain.
+# Used to prove that severity detection actually fired on a defect record —
+# a count is only trustworthy if at least one defect carried a recognizable
+# severity signal (or the defect list is empty, which is a proven zero).
+KNOWN_DEFECT_TYPES = frozenset({
+    'ADVISORY',
+    'DANGEROUS',
+    'FAIL',
+    'MAJOR',
+    'MINOR',
+    'PRS',
+    'NON SPECIFIC',
+    'SYSTEM GENERATED',
+    'USER ENTERED',
+})
+
+
+def _defect_has_severity_conflict(defect: Dict[str, Any]) -> bool:
+    """
+    True when a single defect carries contradictory severity signals:
+      - `dangerous: True` alongside a recognized NON-dangerous `type`, or
+      - `dangerous: False` alongside `type: DANGEROUS`.
+
+    Neither signal is treated as authoritative — there is no source evidence
+    for which field wins. A conflict means the defect's severity is UNKNOWN.
+    """
+    if 'dangerous' not in defect:
+        return False
+    defect_type = str(defect.get('type', '')).upper()
+    if defect_type not in KNOWN_DEFECT_TYPES:
+        return False  # no second signal present, so nothing to contradict
+    flag = defect.get('dangerous')
+    if flag is True and defect_type != 'DANGEROUS':
+        return True
+    if flag is False and defect_type == 'DANGEROUS':
+        return True
+    return False
+
+
+def count_severity_conflicts(defects: Optional[List[Dict[str, Any]]]) -> int:
+    """
+    Count defects in a test whose severity signals contradict each other
+    (see _defect_has_severity_conflict). 0 when the list is empty/None.
+
+    Recorded per-test in history_json as `n_severity_conflicts` so the
+    post-deploy canary can surface conflicts; nonzero means a live API
+    response must be captured to establish which field is authoritative
+    before dangerous counts can be trusted.
+    """
+    if not defects:
+        return 0
+    return sum(
+        1 for d in defects
+        if isinstance(d, dict) and _defect_has_severity_conflict(d)
+    )
+
+
+def count_defects_of_severity(
+    defects: Optional[List[Dict[str, Any]]],
+    severity: str,
+) -> Optional[int]:
+    """
+    Count defects matching `severity` with NULL-vs-0 discipline.
+
+    Data-honesty contract:
+        0    -> "known none": detection affirmatively fired (empty defect list,
+                OR at least one defect carried a recognizable severity signal),
+                no defect carried conflicting signals, and none matched
+                `severity`.
+        None -> "not detected/parsed/verified": EITHER defects exist but none
+                carried a recognizable severity signal (`dangerous` key or a
+                `type` in the known severity domain), OR any defect in the
+                test carries CONTRADICTORY severity signals. Emitting 0 —
+                or trusting either side of a contradiction — would be a
+                silent false value.
+
+    Conflict rule (2026-07-02 ruling, verbatim): "conflicting severity signals
+    resolve to NULL + conflict counter, never to either signal, until a live
+    API response establishes authority." A conflict in ANY defect poisons the
+    whole test's count for ALL severities: the encoding itself is unproven,
+    so no per-severity count from that test is trustworthy.
+
+    Detection paths per defect (conflict-free tests only):
+        1. A `dangerous` boolean key — answers the DANGEROUS question; its
+           presence proves severity data was parsed. (Conflict-free by the
+           gate above, so where both signals exist they agree.)
+        2. A `type` string in KNOWN_DEFECT_TYPES.
+    """
+    if defects is None:
+        return None
+    if len(defects) == 0:
+        return 0  # proven: no defects at all, so none of any severity
+
+    # Conflict gate: any contradictory defect makes the test's counts UNKNOWN
+    if count_severity_conflicts(defects) > 0:
+        return None
+
+    severity = severity.upper()
+    detection_proven = False
+    count = 0
+
+    for defect in defects:
+        if not isinstance(defect, dict):
+            continue
+
+        # Path 1: explicit `dangerous` boolean (new-API shape)
+        if 'dangerous' in defect:
+            detection_proven = True
+            if severity == 'DANGEROUS':
+                if defect.get('dangerous') is True:
+                    count += 1
+                continue  # boolean answered the DANGEROUS question (conflict-free here)
+
+        # Path 2: `type` string in the known severity domain
+        defect_type = str(defect.get('type', '')).upper()
+        if defect_type in KNOWN_DEFECT_TYPES:
+            detection_proven = True
+            if defect_type == severity:
+                count += 1
+
+    return count if detection_proven else None
+
+
 class VRMValidationError(Exception):
     """Raised when VRM validation fails hard rules."""
     pass
@@ -71,6 +194,9 @@ class MOTTest:
     odometer_unit: str  # 'mi' or 'km'
     test_number: str
     defects: List[Dict[str, Any]]  # Advisory/failure items
+    # Station and odometer quality — parsed defensively; None if absent in API response
+    test_station: Optional[str] = None
+    odometer_result_type: Optional[str] = None
 
 
 @dataclass
@@ -481,6 +607,25 @@ class DVSAClient:
             if defects is None:
                 defects = test_data.get('rfrAndComments', [])
 
+            # Test station: UNVERIFIED capture. The candidate field names below
+            # (testStationId / testStationName / testStation) come from DVSA API
+            # naming conventions — NO live API response has confirmed which (if
+            # any) the production API returns. Until a captured live response
+            # proves the field name, treat this capture as UNVERIFIED:
+            #   - all-NULL latest_test_station after real traffic means the
+            #     feature is NOT CAPTURED (not "sparse") — fix the field name
+            #     against a captured live response before any downstream use.
+            #   - first-week validation is a HARD ACCEPTANCE GATE (see
+            #     scripts/post_deploy_canary.py, station gate).
+            # Also flagged for privacy/licensing review: station identifiers may
+            # be commercially sensitive or require data-sharing agreement
+            # confirmation before external surfacing.
+            test_station = (
+                test_data.get('testStationId')
+                or test_data.get('testStationName')
+                or test_data.get('testStation')
+            ) or None
+
             test = MOTTest(
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
@@ -488,7 +633,9 @@ class DVSAClient:
                 odometer_value=odometer_value,
                 odometer_unit=test_data.get('odometerUnit', 'mi'),
                 test_number=test_data.get('motTestNumber', ''),
-                defects=defects or []
+                defects=defects or [],
+                test_station=test_station,
+                odometer_result_type=test_data.get('odometerResultType'),
             )
             mot_tests.append(test)
 
