@@ -49,14 +49,53 @@
     }
     </script>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
+    <!-- Google tag (gtag.js) — PECR: script loads ONLY after explicit consent; no cookies, no pings before Accept -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'AW-17896487388');
-      gtag('config', 'G-8PV2HG1QDC');
+      gtag('consent', 'default', {
+        ad_storage: 'denied', ad_user_data: 'denied',
+        ad_personalization: 'denied', analytics_storage: 'denied'
+      });
+      function autosafeLoadGtag() {
+        gtag('consent', 'update', {
+          ad_storage: 'granted', ad_user_data: 'granted',
+          ad_personalization: 'denied', analytics_storage: 'granted'
+        });
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-17896487388';
+        document.head.appendChild(s);
+        gtag('config', 'AW-17896487388');
+        gtag('config', 'G-8PV2HG1QDC');
+      }
+      (function () {
+        var choice = null;
+        try { choice = localStorage.getItem('autosafe_consent'); } catch (e) {}
+        if (choice === 'accepted') { autosafeLoadGtag(); return; }
+        if (choice === 'declined') { return; }
+        var show = function () {
+          var b = document.createElement('div');
+          b.id = 'consent-banner';
+          b.setAttribute('role', 'dialog');
+          b.setAttribute('aria-label', 'Cookie consent');
+          b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#f1f5f9;padding:14px 16px;z-index:9999;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font:14px/1.4 system-ui,sans-serif';
+          b.innerHTML = '<span>We use optional cookies to measure advertising conversions. None are set unless you accept. <a href="/privacy" style="color:#93c5fd">Privacy notice</a></span>'
+            + '<button id="consent-accept" style="background:#2563eb;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer">Accept</button>'
+            + '<button id="consent-decline" style="background:transparent;color:#cbd5e1;border:1px solid #475569;border-radius:6px;padding:8px 14px;cursor:pointer">Decline</button>';
+          document.body.appendChild(b);
+          document.getElementById('consent-accept').onclick = function () {
+            try { localStorage.setItem('autosafe_consent', 'accepted'); } catch (e) {}
+            autosafeLoadGtag(); b.remove();
+          };
+          document.getElementById('consent-decline').onclick = function () {
+            try { localStorage.setItem('autosafe_consent', 'declined'); } catch (e) {}
+            b.remove();
+          };
+        };
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', show); } else { show(); }
+      })();
     </script>
 
     <!-- Umami Analytics -->
@@ -91,7 +130,7 @@
         top: 0;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-Dn7ODKQS.js"></script>
+    <script type="module" crossorigin src="/assets/index-BiV5TSvh.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CLJafMNW.css">
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900">
