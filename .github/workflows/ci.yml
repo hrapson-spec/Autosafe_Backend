@@ -33,6 +33,11 @@ jobs:
           # Minimal env vars for testing (no external services)
           PORT: 8000
 
+      # Hard gate: public copy must not claim capabilities the user path
+      # does not deliver (REMEDIATION_PLAN task 1.1). No continue-on-error.
+      - name: Claim sweep
+        run: python scripts/claim_sweep.py
+
       - name: Run linting (optional)
         run: |
           pip install flake8

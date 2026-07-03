@@ -477,7 +477,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, selection, po
               <p className="text-slate-300 mb-6">
                 {hasSubmitted
                   ? 'A local garage will contact you shortly.'
-                  : `Our AI analysis is a great start, but nothing beats a physical check. Book a certified mechanic to inspect this ${selection.make} ${selection.model} today.`
+                  : `This risk overview is a great start, but nothing beats a physical check. Book a certified mechanic to inspect this ${selection.make} ${selection.model} today.`
                 }
               </p>
               {hasSubmitted ? (

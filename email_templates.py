@@ -314,7 +314,7 @@ def generate_lead_email(
                     How We Know This
                 </h3>
                 <p style="margin: 0; font-size: 14px; color: #E2E8F0;">
-                    Our AI model analyzes <strong>10M+ real MOT results</strong> from DVSA to predict failures with <strong>85%+ accuracy</strong>.
+                    Our risk checks draw on <strong>millions of real MOT results</strong> from the official DVSA dataset.
                 </p>
             </td>
         </tr>
@@ -407,8 +407,7 @@ REPORT OUTCOME:
 ----------------------------------------------------------------------
 
 HOW WE KNOW THIS:
-Our AI model analyzes 10M+ real MOT results from DVSA
-to predict failures with 85%+ accuracy.
+Our risk checks draw on millions of real MOT results from the official DVSA dataset.
 
 ----------------------------------------------------------------------
 
