@@ -60,7 +60,7 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
       "name": "How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Check all lights and bulbs, inspect tyre tread depth, test windscreen washers and wipers, listen for brake or suspension noises, and consider a pre-MOT check at a local garage. Use AutoSafe's free prediction tool for a personalised risk assessment."
+        "text": "Check all lights and bulbs, inspect tyre tread depth, test windscreen washers and wipers, listen for brake or suspension noises, and consider a pre-MOT check at a local garage. Use AutoSafe's free tool to see the failure rate for vehicles like yours."
       }
     }
   ]
@@ -375,7 +375,7 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
     official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks
     represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
   <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
-    <strong>Trust signals:</strong> Risk model: CatBoost v55 &bull;
+    <strong>Trust signals:</strong> Method: official DVSA failure rates by make, model and age &bull;
     Data source: <a
       href="https://www.data.gov.uk/dataset/e3939ef8-30c7-4ca8-9c7c-ad9475cc9b2f/anonymised-mot-tests-and-results"
       style="color: #e5c07b;" rel="nofollow">DVSA Open Data (OGL v3)</a> &bull;

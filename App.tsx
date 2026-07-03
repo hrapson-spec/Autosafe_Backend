@@ -64,9 +64,9 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>
         <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
-        <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data. Free, fast, and simple." />
+        <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours. Free, fast, and simple." />
         <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
-        <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and predict failure risk instantly using our AI analysis of UK DVSA data." />
+        <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours." />
         <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}

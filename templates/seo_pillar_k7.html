@@ -1,7 +1,7 @@
 {% extends "seo_base.html" %}
 
 {% block title %}Will My Car Pass Its MOT? Free AI Failure Risk Prediction | AutoSafe{% endblock %}
-{% block meta_description %}Use our free AI tool to predict whether your car will pass its MOT. Based on analysis of 142 million+ DVSA test records. Enter your reg for an instant personalised failure risk score.{% endblock %}
+{% block meta_description %}Use our free tool to check your car's MOT failure risk. Based on analysis of 142 million+ official DVSA test records. Enter your reg for an instant risk estimate.{% endblock %}
 {% block og_title %}Will My Car Pass Its MOT? Free AI Failure Risk Prediction{% endblock %}
 {% block og_description %}Free AI-powered MOT failure prediction based on 142 million+ DVSA test records. Check your vehicle's risk instantly.{% endblock %}
 {% block twitter_title %}Will My Car Pass Its MOT? Free AI Failure Risk Prediction{% endblock %}
@@ -35,7 +35,7 @@
       "name": "Can you predict MOT results?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Our AI model analyses 104 features from your vehicle's history — including age, mileage, make and model patterns, previous test results, advisory trends, and regional corrosion factors — to predict the probability of MOT failure with high accuracy. The model is trained on over 142 million official DVSA test records."
+        "text": "AutoSafe compares your vehicle's make, model and age against the real MOT outcomes of similar vehicles in over 142 million official DVSA test records, and shows the failure rate and most common failure areas for vehicles like yours."
       }
     },
     {
@@ -134,7 +134,7 @@
       "url": "https://www.autosafe.one/static/logo_clean.png"
     }
   },
-  "description": "Comprehensive guide to MOT failure prediction using AI analysis of 142 million+ DVSA test records. Covers failure rates by make and model, common failure reasons, and how to reduce your risk.",
+  "description": "Comprehensive guide to MOT failure risk, based on analysis of 142 million+ official DVSA test records",
   "mainEntityOfPage": "https://www.autosafe.one/will-my-car-pass-mot/"
 }
 </script>
@@ -151,7 +151,7 @@
     "price": "0",
     "priceCurrency": "GBP"
   },
-  "description": "Free AI-powered MOT failure risk prediction tool. Enter your vehicle registration for an instant personalised risk assessment based on 142 million+ DVSA test records."
+  "description": "Free MOT failure-risk checker. Enter your vehicle registration for an instant risk estimate based on 142 million+ official DVSA test records."
 }
 </script>
 {% endblock %}
@@ -176,7 +176,7 @@
 
 <div class="cta-box" style="margin-top: 1rem;">
     <h3>Check Your Vehicle Now</h3>
-    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration number for a free, instant MOT failure risk prediction powered by AI analysis of {{ "{:,}".format(total_tests_analysed) }}+ DVSA test records.</p>
+    <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration number for a free, instant MOT failure-risk estimate based on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records.</p>
     <a href="/">Enter Your Registration &rarr;</a>
 </div>
 
@@ -216,7 +216,7 @@
 <p>Some vehicle models are significantly more reliable than others when it comes to MOT testing. At the extremes, certain models fail at rates above 38%, whilst others pass more than 95% of the time. This variation reflects differences in build quality, component durability, design choices, and the typical owner profile for each model. Japanese manufacturers, for example, tend to have lower failure rates on average than some European brands, though there are notable exceptions in both directions.</p>
 
 <h3>4. Previous MOT History</h3>
-<p>Vehicles that have failed a previous MOT are statistically more likely to fail again, particularly if advisories from prior tests were not addressed. A pattern of repeated advisories in the same area — such as brake wear warnings that go unactioned for multiple test cycles — is a strong indicator of an upcoming failure. Our AI model pays particular attention to advisory trends over time, as these reveal the trajectory of component deterioration.</p>
+<p>Vehicles that have failed a previous MOT are statistically more likely to fail again, particularly if advisories from prior tests were not addressed. A pattern of repeated advisories in the same area — such as brake wear warnings that go unactioned for multiple test cycles — is a strong indicator of an upcoming failure. Repeated advisories that go unactioned are well worth addressing before your next test.</p>
 
 <h3>5. Component Wear Patterns</h3>
 <p>Every vehicle type has characteristic weak points that testers see repeatedly. French cars, for instance, tend to have higher rates of lighting and electrical failures. German vehicles often present with suspension issues, particularly those fitted with complex multi-link rear suspension systems. Understanding your specific vehicle's common failure points allows you to focus your pre-MOT inspection on the areas most likely to cause problems.</p>
@@ -300,16 +300,15 @@
 <h3>Steering</h3>
 <p>Steering failures include worn track rod ends, damaged steering rack gaiters, excessive play in the steering system, and power steering fluid leaks. The tester checks for free play at the steering wheel — excessive movement before the road wheels respond — and for any knocking or looseness in the steering components. Worn steering parts can develop gradually, making them difficult for the driver to notice in day-to-day use, but they are readily apparent during a focused inspection.</p>
 
-<h2>How Our AI MOT Prediction Works</h2>
+<h2>How AutoSafe's MOT Risk Estimates Work</h2>
 
 <p>Our prediction system is built on the most comprehensive dataset available for UK vehicle testing. Here is how it works:</p>
 
 <ul>
     <li><strong>Data foundation:</strong> We have analysed <strong>{{ "{:,}".format(total_tests_analysed) }} MOT test records</strong> from the official DVSA (Driver and Vehicle Standards Agency) database. This covers every MOT test conducted at authorised test centres across the UK.</li>
-    <li><strong>Machine learning model:</strong> Our CatBoost gradient boosting model uses <strong>104 engineered features</strong> to predict failure probability. These features encompass vehicle age, mileage, make and model patterns, previous test results, advisory history and trends, regional corrosion factors, temporal patterns, and neglect indicators.</li>
-    <li><strong>Calibrated probabilities:</strong> The model is calibrated using Platt scaling to ensure that the percentage shown is a true probability — if we say there is a 35% chance of failure, approximately 35 out of 100 vehicles with that score will actually fail. This calibration is validated using expected calibration error (ECE) metrics.</li>
-    <li><strong>Real-time data:</strong> When you enter your registration number, we fetch your vehicle's complete MOT history from the DVSA MOT History API in real time. This means your prediction is based on your actual vehicle's age, mileage trajectory, previous test results, and outstanding advisories — not just a population average.</li>
-    <li><strong>Personalised prediction:</strong> The result you receive is specific to your vehicle. Two identical models of the same age can receive very different risk scores based on their individual histories. A vehicle with a clean history and declining mileage will score differently from one with repeated advisories and increasing annual mileage.</li>
+    <li><strong>Risk estimates:</strong> Your estimate reflects the real pass and fail outcomes of vehicles with the same make, model and age as yours across that dataset, broken down into the most common failure areas (brakes, suspension, tyres, lights and more).</li>
+    <li><strong>Honest numbers:</strong> The percentages shown are observed failure rates from official records — not guarantees or vehicle-specific diagnoses. Many factors a data check cannot see (recent repairs, current condition) affect real outcomes.</li>
+    <li><strong>Official MOT history:</strong> You can also view your vehicle's full MOT test history, retrieved from official DVSA records.</li>
 </ul>
 
 <p>Our approach is fully transparent about the data source. All MOT test data is sourced from the DVSA and used under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color: #e5c07b;">Open Government Licence v3.0</a>. We do not use any proprietary or undisclosed data sources.</p>
@@ -357,7 +356,7 @@
 
     <div class="faq-item">
         <h3>Can you predict MOT results?</h3>
-        <p>Yes. Our AI model analyses 104 features from your vehicle's history — including age, mileage, make and model patterns, previous test results, advisory trends, and regional corrosion factors — to predict the probability of MOT failure with high accuracy. The model is trained on over {{ "{:,}".format(total_tests_analysed) }} official DVSA test records.</p>
+        <p>AutoSafe compares your vehicle's make, model and age against the real MOT outcomes of similar vehicles in over {{ "{:,}".format(total_tests_analysed) }} official DVSA test records, and shows the failure rate and most common failure areas for vehicles like yours.</p>
     </div>
 
     <div class="faq-item">
@@ -407,7 +406,7 @@
 </div>
 
 <div class="methodology">
-    <p><strong>Data methodology:</strong> Analysis based on {{ "{:,}".format(total_tests_analysed) }} MOT test records from the official DVSA database, licensed under the Open Government Licence v3.0. Failure rates are weighted averages across all age and mileage bands. Our AI prediction model (CatBoost v55) uses 104 engineered features and is calibrated for probabilistic accuracy.</p>
+    <p><strong>Data methodology:</strong> Analysis based on {{ "{:,}".format(total_tests_analysed) }} MOT test records from the official DVSA database, licensed under the Open Government Licence v3.0. Failure rates are weighted averages across all age and mileage bands from the official DVSA dataset.</p>
     <p>Data last updated: February 2026</p>
 </div>
 {% endblock %}

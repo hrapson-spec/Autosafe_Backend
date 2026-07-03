@@ -4,10 +4,10 @@
 {% block meta_description %}Will your car pass its MOT? Check your vehicle's MOT failure risk instantly using AI trained
 on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, fast, no signup.{% endblock %}
 {% block og_title %}Free MOT Failure Risk Predictor — Will Your Car Pass Its MOT?{% endblock %}
-{% block og_description %}Check your vehicle's MOT failure risk instantly. AI analysis of {{
+{% block og_description %}Check your vehicle's MOT failure risk instantly. Based on {{
 "{:,}".format(total_tests_analysed) }}+ official DVSA records. Free, no signup.{% endblock %}
 {% block twitter_title %}Free MOT Failure Risk Predictor — Will Your Car Pass Its MOT?{% endblock %}
-{% block twitter_description %}Check your vehicle's MOT failure risk instantly. AI analysis of {{
+{% block twitter_description %}Check your vehicle's MOT failure risk instantly. Based on {{
 "{:,}".format(total_tests_analysed) }}+ official DVSA records. Free, no signup.{% endblock %}
 {% block canonical_url %}https://www.autosafe.one/{% endblock %}
 
@@ -18,7 +18,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
   "@type": "WebSite",
   "name": "AutoSafe",
   "url": "https://www.autosafe.one",
-  "description": "Free MOT history check and failure risk predictor using AI analysis of UK DVSA data",
+  "description": "Free MOT history check and failure risk estimates based on official UK DVSA data",
   "potentialAction": {
     "@type": "SearchAction",
     "target": "https://www.autosafe.one/app/?reg={search_term_string}",
@@ -33,7 +33,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
   "name": "AutoSafe",
   "url": "https://www.autosafe.one",
   "logo": "https://www.autosafe.one/static/logo_clean.png",
-  "description": "Free MOT history check and failure risk predictor using AI analysis of UK DVSA data",
+  "description": "Free MOT history check and failure risk estimates based on official UK DVSA data",
   "email": "autosafehq@gmail.com"
 }
 </script>
@@ -50,7 +50,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
     "price": "0",
     "priceCurrency": "GBP"
   },
-  "description": "Free AI-powered MOT failure risk prediction tool. Enter your vehicle registration for an instant personalised risk assessment based on {{ "{:,}".format(total_tests_analysed) }}+ DVSA test records."
+  "description": "Free MOT failure-risk checker. Enter your vehicle registration for an instant risk estimate based on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records."
 }
 </script>
 <script type="application/ld+json">
@@ -71,7 +71,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
       "name": "How does AutoSafe predict MOT failures?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "AutoSafe uses a CatBoost machine learning model trained on over {{ "{:,}".format(total_tests_analysed) }} official DVSA MOT test records. The model analyses 104 features including vehicle age, mileage, make/model patterns, previous test results, advisory trends, and regional corrosion factors to predict failure probability."
+        "text": "AutoSafe analyses over {{ "{:,}".format(total_tests_analysed) }} official DVSA MOT test records. Risk estimates reflect the real failure rates of vehicles with the same make, model and age, broken down by the most common failure areas."
       }
     },
     {
@@ -121,9 +121,9 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
     </div>
     <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🧠</div>
-        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">2. AI Analyses Your Car</h3>
-        <p style="color: #a0a0a0; font-size: 0.9rem;">Our model evaluates 104 features — age, mileage, past results,
-            advisories, regional factors — to predict failure risk.</p>
+        <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">2. We Look Up Vehicles Like Yours</h3>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">We match your car's make, model and age against real DVSA
+            outcomes to show its failure risk.</p>
     </div>
     <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
@@ -243,11 +243,11 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
     </div>
 
     <div class="faq-item">
-        <h3>How does AutoSafe predict MOT failures?</h3>
-        <p>AutoSafe uses a CatBoost machine learning model trained on over <strong>{{
-                "{:,}".format(total_tests_analysed) }} official DVSA MOT test records</strong>. The model analyses 104
-            features — including vehicle age, mileage, make and model patterns, previous test results, advisory trends,
-            and regional corrosion factors — to predict failure probability with calibrated accuracy.</p>
+        <h3>How does AutoSafe estimate MOT failure risk?</h3>
+        <p>AutoSafe analyses over <strong>{{
+                "{:,}".format(total_tests_analysed) }} official DVSA MOT test records</strong>. Your risk estimate
+            reflects the real failure rates of vehicles with the same make, model and age as yours, broken down by
+            the most common failure areas.</p>
     </div>
 
     <div class="faq-item">
@@ -275,8 +275,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
 <div class="methodology">
     <p><strong>Data methodology:</strong> Analysis based on {{ "{:,}".format(total_tests_analysed) }} MOT test records
         from the official DVSA database, licensed under the Open Government Licence v3.0. Failure rates are weighted
-        averages across all age and mileage bands. Our AI prediction model (CatBoost v55) uses 104 engineered features
-        and is calibrated for probabilistic accuracy.</p>
+        averages across all age and mileage bands from the official DVSA dataset.</p>
 </div>
 
 {% endblock %}

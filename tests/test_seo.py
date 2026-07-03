@@ -262,7 +262,7 @@ class TestModelPageDistinctiveness(unittest.TestCase):
 
     def test_model_page_has_trust_signals(self):
         r = client.get("/mot-check/ford/fiesta/")
-        self.assertIn("CatBoost v55", r.text)
+        self.assertIn("official DVSA failure rates by make, model and age", r.text)
         self.assertIn("DVSA Open Data", r.text)
 
 
