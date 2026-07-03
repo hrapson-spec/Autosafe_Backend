@@ -33,7 +33,7 @@ const PrivacyPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 19 February 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 3 July 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -68,17 +68,17 @@ const PrivacyPage: React.FC = () => {
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Vehicle registration number (VRN)</td>
                     <td className="py-3 pr-4">You enter it</td>
-                    <td className="py-3">No - used only to generate your report</td>
+                    <td className="py-3">Yes - kept with your check record for up to 24 months, then deleted or irreversibly pseudonymised</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Postcode</td>
                     <td className="py-3 pr-4">You enter it</td>
-                    <td className="py-3">No - used only to generate your report</td>
+                    <td className="py-3">Yes - kept with your check record for up to 24 months, then deleted or irreversibly pseudonymised</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">Vehicle details (make, model, MOT history)</td>
-                    <td className="py-3 pr-4">DVSA public records</td>
-                    <td className="py-3">No - retrieved and displayed only</td>
+                    <td className="py-3 pr-4">Vehicle details (make, model, MOT history) and the risk prediction we generated</td>
+                    <td className="py-3 pr-4">DVSA public records + our system</td>
+                    <td className="py-3">Yes - kept with your check record (same retention as above)</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">IP address and access logs</td>
@@ -94,7 +94,7 @@ const PrivacyPage: React.FC = () => {
               </table>
             </div>
             <p className="text-slate-600 mt-4 p-4 bg-slate-50 rounded-lg">
-              <strong>Important:</strong> We do not store your VRN or postcode after generating your report. This data is processed in real-time and then discarded.
+              <strong>Important:</strong> When you run a check, we keep a record of it — including the VRN and postcode you entered, the vehicle's MOT history at that time, and the risk assessment we generated. We use these records to operate the service, to measure and improve the accuracy of our predictions, and to monitor service quality. Records are kept for up to 24 months, after which the VRN and postcode are deleted or irreversibly pseudonymised. You can object to this processing or ask us to erase your records at any time - see "Your rights" below.
             </p>
           </section>
 
@@ -117,9 +117,13 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3 pr-4">Security and fraud prevention</td>
                     <td className="py-3">Legitimate interests - protecting our service</td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Understanding how our site is used</td>
                     <td className="py-3">Legitimate interests - improving our service (aggregated data only)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-4">Measuring and improving the accuracy of our risk predictions (including comparing past predictions with later published MOT results)</td>
+                    <td className="py-3">Legitimate interests - we have documented this in a Legitimate Interests Assessment, available on request</td>
                   </tr>
                 </tbody>
               </table>
@@ -190,8 +194,8 @@ const PrivacyPage: React.FC = () => {
                 </thead>
                 <tbody className="text-slate-600">
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">VRN and postcode</td>
-                    <td className="py-3">Not stored</td>
+                    <td className="py-3 pr-4">Check records: VRN, postcode, vehicle details, MOT history, risk assessment</td>
+                    <td className="py-3">Up to 24 months; the VRN and postcode are then deleted or irreversibly pseudonymised</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Server logs (including IP address)</td>
@@ -237,13 +241,13 @@ const PrivacyPage: React.FC = () => {
               <li><strong>Object</strong> to processing based on legitimate interests</li>
             </ul>
             <p className="text-slate-600 leading-relaxed mb-4">
-              To exercise any of these rights, email us at <a href="mailto:privacy@autosafe.co.uk" className="text-blue-600 hover:underline">privacy@autosafe.co.uk</a>.
+              To exercise any of these rights, email us at <a href="mailto:autosafehq@gmail.com" className="text-blue-600 hover:underline">autosafehq@gmail.com</a>. Include the vehicle registration you checked so we can locate your records.
             </p>
             <p className="text-slate-600 leading-relaxed mb-4">
               We will respond within one calendar month.
             </p>
             <p className="text-slate-600 leading-relaxed p-4 bg-slate-50 rounded-lg">
-              <strong>Note:</strong> Because we don't store your VRN or postcode, we may have very limited data about you (only server logs, if within 30 days). If you haven't contacted us directly, we likely hold no data that identifies you personally.
+              <strong>Objecting to model-improvement use:</strong> if you object, we will erase or irreversibly pseudonymise your check records so they can no longer be linked to you or your vehicle, unless we have a compelling legal ground to retain them. Objection does not affect any report you have already received.
             </p>
           </section>
 
@@ -253,7 +257,7 @@ const PrivacyPage: React.FC = () => {
               We use Umami Analytics, a privacy-focused analytics service that does not use cookies and does not track you personally. It collects only aggregated, anonymous statistics about how our site is used.
             </p>
             <p className="text-slate-600 leading-relaxed">
-              We use Google Ads conversion tracking, which may set cookies to measure advertising effectiveness. These cookies are used solely for conversion measurement and not for personalised advertising.
+              We use Google Ads conversion tracking, which sets cookies to measure advertising effectiveness. <strong>These cookies are only set if you accept them</strong> via the consent banner shown on your first visit; if you decline, no advertising cookies are set and the site works fully. These cookies are used solely for conversion measurement and not for personalised advertising. You can change your choice at any time by clearing the site's data in your browser, which will show the banner again.
             </p>
           </section>
 
