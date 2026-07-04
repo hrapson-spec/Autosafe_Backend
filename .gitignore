@@ -50,3 +50,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Nested research repo — separate git repo (private autosafe-research), NOT part of
+# the product build (already excluded by .dockerignore + .railwayignore). Ignoring it
+# here keeps `git add -A` from staging the private evidence chain into this PUBLIC repo,
+# and keeps product `git status` readable. The 2 files this repo already tracks under
+# work/legacy_v55/ stay tracked (gitignore never untracks). See PROJECT_MAP.md.
+/work/
