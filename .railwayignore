@@ -10,6 +10,7 @@
 !package.json
 !catboost_production_v55/calibrator.json
 !models/v57/*.json
+!models/asof_priors/*.parquet
 *.zip
 
 # Large directories
@@ -73,6 +74,7 @@ audit_*.py
 # Docs (not needed at runtime)
 *.md
 !README.md
+!models/asof_priors/README.md
 
 # Environment
 .venv/

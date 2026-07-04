@@ -2,6 +2,12 @@ fastapi==0.109.0
 uvicorn==0.27.0
 pandas==2.2.0
 numpy==1.26.3
+# Parquet engine for pandas.read_parquet -- required by asof_priors.py
+# (adoption-gate 4, 2026-07-04). Only exercised when AUTOSAFE_ASOF_PRIORS=1;
+# importing asof_priors.py itself never touches this (lazy, inside
+# AsOfPriorStore.load()), but the wheel must be installed regardless so
+# flipping the flag doesn't also require a fresh deploy.
+pyarrow>=14.0.0
 aiofiles==23.2.1
 httpx==0.26.0
 asyncpg==0.29.0

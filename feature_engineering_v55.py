@@ -18,6 +18,7 @@ expected by the trained CatBoost model.
 """
 
 import math
+import os
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
@@ -26,6 +27,13 @@ import numpy as np
 
 from dvsa_client import VehicleHistory, MOTTest
 from regional_defaults import get_corrosion_index, get_station_strictness_bias
+# Adoption-gate 4 (2026-07-04): V2 as-of prior store, feature-flagged behind
+# AUTOSAFE_ASOF_PRIORS (see the HIERARCHICAL/EB FEATURES section below and
+# asof_priors.py's module docstring). Importing this module is always cheap
+# (pandas + stdlib only; the parquet-reading path only runs inside
+# AsOfPriorStore.load(), which is never called when the flag is off), so this
+# import has no cost/risk when the feature is disabled.
+from asof_priors import AsOfPriorStore, canon_make, canon_model_id
 
 # V44: Top 20 failing models (fail rate > 28%, from training data analysis)
 # Must match HIGH_RISK_MODELS in train_catboost_production_v55.py
@@ -167,6 +175,7 @@ def engineer_features(
     model_hierarchical: Optional[Any] = None,
     model_age_hierarchical: Optional[Dict[str, Any]] = None,
     segment_hierarchical: Optional[Any] = None,
+    asof_store: Optional[AsOfPriorStore] = None,
 ) -> Dict[str, Any]:
     """
     Engineer all 104 features from DVSA vehicle history.
@@ -183,6 +192,13 @@ def engineer_features(
             Expected keys: 'model_age_rates', 'make_age_rates', 'global_fail_rate'
         segment_hierarchical: Optional HierarchicalFeatures for segment-level rates
             Expected attributes: 'segment_rates', 'make_rates', 'global_fail_rate'
+        asof_store: Optional AsOfPriorStore (adoption-gate 4). Used ONLY when
+            both this is not None AND env AUTOSAFE_ASOF_PRIORS == '1' (checked
+            again here, independent of whatever gated its construction) --
+            otherwise the legacy cohort_stats/model_hierarchical/
+            model_age_hierarchical/segment_hierarchical pkl-dict path below is
+            used unchanged. See asof_priors.py's module docstring for the
+            lookup semantics (own/parent/global backoff, month clip, canon).
 
     Returns:
         Dict mapping feature names to values
@@ -623,96 +639,28 @@ def engineer_features(
     # =========================================================================
     # HIERARCHICAL/EB FEATURES
     # =========================================================================
-    # Base rate for fallbacks
+    # Base rate for fallbacks (legacy pkl-dict path only; the AsOfPriorStore
+    # path below retires this in favour of each channel's own
+    # `_meta.global_rate_at_max_asof`, per RESULT_FINAL.md Sec Contract).
     base_rate = 0.28  # UK average MOT fail rate
 
-    # Try to look up EB priors from model_hierarchical if provided
-    if model_hierarchical:
-        model_id = f"{history.make} {history.model}" if history.model else history.make
+    # Adoption-gate 4 (2026-07-04): V2 as-of prior store path. Feature-flagged
+    # OFF by default -- both model_v55.load_model() (construction: env
+    # AUTOSAFE_ASOF_PRIORS=1 + artifact-presence check) AND this function (use:
+    # the same flag, re-checked here so a store passed by any other caller can
+    # never activate the new path with the flag off) must agree before the
+    # legacy pkl-dict branches below are skipped. See asof_priors.py's module
+    # docstring for the exact backoff/clip semantics this mirrors (golden-row-
+    # parity reference: own cell -> make-grain parent's raw cell -> per-channel
+    # meta global).
+    use_asof_store = (
+        asof_store is not None and os.environ.get('AUTOSAFE_ASOF_PRIORS') == '1'
+    )
+
+    if use_asof_store:
+        model_id = canon_model_id(history.make, history.model)
+        make_key = canon_make(history.make)
         age_band = get_age_band(vehicle_age_for_cohort)
-
-        # Model-level fail rate
-        model_rates = getattr(model_hierarchical, 'model_rates', {})
-        if isinstance(model_rates, dict) and model_id in model_rates:
-            features['model_fail_rate_smoothed'] = model_rates[model_id]
-        else:
-            features['model_fail_rate_smoothed'] = base_rate
-
-        # Make-level fail rate
-        make_rates = getattr(model_hierarchical, 'make_rates', {})
-        if isinstance(make_rates, dict) and history.make in make_rates:
-            features['make_fail_rate_smoothed'] = make_rates[history.make]
-        else:
-            features['make_fail_rate_smoothed'] = base_rate
-
-        # Model-age EB rate (3-level hierarchy: global -> make+age -> model+age)
-        # Use separate model_age_hierarchical dict if provided (13.4% importance feature!)
-        if model_age_hierarchical:
-            model_age_rates = model_age_hierarchical.get('model_age_rates', {})
-            make_age_rates = model_age_hierarchical.get('make_age_rates', {})
-            global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
-        else:
-            # Fallback to model_hierarchical attributes (likely empty)
-            model_age_rates = getattr(model_hierarchical, 'model_age_rates', {})
-            make_age_rates = getattr(model_hierarchical, 'make_age_rates', {})
-            global_age_rate = getattr(model_hierarchical, 'global_fail_rate', base_rate)
-
-        model_age_key = (model_id, age_band)
-        make_age_key = (history.make, age_band)
-
-        if isinstance(model_age_rates, dict) and model_age_key in model_age_rates:
-            features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
-        elif isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
-            features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
-        else:
-            features['model_age_fail_rate_eb'] = global_age_rate
-
-        # Make-age EB rate
-        if isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
-            features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
-        else:
-            features['make_age_fail_rate_eb'] = global_age_rate
-
-        # Unified EB prior (use model-age as primary)
-        features['eb_unified_prior'] = features['model_age_fail_rate_eb']
-    else:
-        # No model_hierarchical - use base rate defaults for model/make rates
-        features['make_fail_rate_smoothed'] = base_rate
-        features['model_fail_rate_smoothed'] = base_rate
-
-        # But still try model_age_hierarchical for model-age rates (13.4% importance!)
-        if model_age_hierarchical:
-            model_id = f"{history.make} {history.model}" if history.model else history.make
-            age_band = get_age_band(vehicle_age_for_cohort)
-
-            model_age_rates = model_age_hierarchical.get('model_age_rates', {})
-            make_age_rates = model_age_hierarchical.get('make_age_rates', {})
-            global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
-
-            model_age_key = (model_id, age_band)
-            make_age_key = (history.make, age_band)
-
-            if model_age_key in model_age_rates:
-                features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
-            elif make_age_key in make_age_rates:
-                features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
-            else:
-                features['model_age_fail_rate_eb'] = global_age_rate
-
-            if make_age_key in make_age_rates:
-                features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
-            else:
-                features['make_age_fail_rate_eb'] = global_age_rate
-
-            features['eb_unified_prior'] = features['model_age_fail_rate_eb']
-        else:
-            features['model_age_fail_rate_eb'] = base_rate
-            features['make_age_fail_rate_eb'] = base_rate
-            features['eb_unified_prior'] = base_rate
-
-    # Segment-level fail rate from segment_hierarchical (make, age_band, mileage_band)
-    if segment_hierarchical and hasattr(segment_hierarchical, 'segment_rates'):
-        age_band_seg = get_age_band(vehicle_age_for_cohort)
         mileage = features.get('test_mileage', 0)
         if mileage < 30000:
             mileage_band = '0-30k'
@@ -722,15 +670,124 @@ def engineer_features(
             mileage_band = '60k-100k'
         else:
             mileage_band = '100k+'
-        seg_key = (history.make, age_band_seg, mileage_band)
-        seg_rates = segment_hierarchical.segment_rates
-        if isinstance(seg_rates, dict) and seg_key in seg_rates:
-            features['segment_fail_rate_smoothed'] = seg_rates[seg_key]
-        else:
-            make_rates_seg = getattr(segment_hierarchical, 'make_rates', {})
-            features['segment_fail_rate_smoothed'] = make_rates_seg.get(history.make, base_rate)
+        asof_keys = {
+            'make': make_key,
+            'model_id': model_id,
+            'age_band': age_band,
+            'mileage_band': mileage_band,
+        }
+        for _asof_channel in (
+            'make_fail_rate_smoothed', 'segment_fail_rate_smoothed',
+            'model_fail_rate_smoothed', 'make_age_fail_rate_eb',
+            'model_age_fail_rate_eb', 'eb_unified_prior',
+        ):
+            features[_asof_channel] = asof_store.lookup(_asof_channel, asof_keys, prediction_date).value
     else:
-        features['segment_fail_rate_smoothed'] = base_rate
+        # Try to look up EB priors from model_hierarchical if provided
+        if model_hierarchical:
+            model_id = f"{history.make} {history.model}" if history.model else history.make
+            age_band = get_age_band(vehicle_age_for_cohort)
+
+            # Model-level fail rate
+            model_rates = getattr(model_hierarchical, 'model_rates', {})
+            if isinstance(model_rates, dict) and model_id in model_rates:
+                features['model_fail_rate_smoothed'] = model_rates[model_id]
+            else:
+                features['model_fail_rate_smoothed'] = base_rate
+
+            # Make-level fail rate
+            make_rates = getattr(model_hierarchical, 'make_rates', {})
+            if isinstance(make_rates, dict) and history.make in make_rates:
+                features['make_fail_rate_smoothed'] = make_rates[history.make]
+            else:
+                features['make_fail_rate_smoothed'] = base_rate
+
+            # Model-age EB rate (3-level hierarchy: global -> make+age -> model+age)
+            # Use separate model_age_hierarchical dict if provided (13.4% importance feature!)
+            if model_age_hierarchical:
+                model_age_rates = model_age_hierarchical.get('model_age_rates', {})
+                make_age_rates = model_age_hierarchical.get('make_age_rates', {})
+                global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
+            else:
+                # Fallback to model_hierarchical attributes (likely empty)
+                model_age_rates = getattr(model_hierarchical, 'model_age_rates', {})
+                make_age_rates = getattr(model_hierarchical, 'make_age_rates', {})
+                global_age_rate = getattr(model_hierarchical, 'global_fail_rate', base_rate)
+
+            model_age_key = (model_id, age_band)
+            make_age_key = (history.make, age_band)
+
+            if isinstance(model_age_rates, dict) and model_age_key in model_age_rates:
+                features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
+            elif isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
+                features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
+            else:
+                features['model_age_fail_rate_eb'] = global_age_rate
+
+            # Make-age EB rate
+            if isinstance(make_age_rates, dict) and make_age_key in make_age_rates:
+                features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
+            else:
+                features['make_age_fail_rate_eb'] = global_age_rate
+
+            # Unified EB prior (use model-age as primary)
+            features['eb_unified_prior'] = features['model_age_fail_rate_eb']
+        else:
+            # No model_hierarchical - use base rate defaults for model/make rates
+            features['make_fail_rate_smoothed'] = base_rate
+            features['model_fail_rate_smoothed'] = base_rate
+
+            # But still try model_age_hierarchical for model-age rates (13.4% importance!)
+            if model_age_hierarchical:
+                model_id = f"{history.make} {history.model}" if history.model else history.make
+                age_band = get_age_band(vehicle_age_for_cohort)
+
+                model_age_rates = model_age_hierarchical.get('model_age_rates', {})
+                make_age_rates = model_age_hierarchical.get('make_age_rates', {})
+                global_age_rate = model_age_hierarchical.get('global_fail_rate', base_rate)
+
+                model_age_key = (model_id, age_band)
+                make_age_key = (history.make, age_band)
+
+                if model_age_key in model_age_rates:
+                    features['model_age_fail_rate_eb'] = model_age_rates[model_age_key]
+                elif make_age_key in make_age_rates:
+                    features['model_age_fail_rate_eb'] = make_age_rates[make_age_key]
+                else:
+                    features['model_age_fail_rate_eb'] = global_age_rate
+
+                if make_age_key in make_age_rates:
+                    features['make_age_fail_rate_eb'] = make_age_rates[make_age_key]
+                else:
+                    features['make_age_fail_rate_eb'] = global_age_rate
+
+                features['eb_unified_prior'] = features['model_age_fail_rate_eb']
+            else:
+                features['model_age_fail_rate_eb'] = base_rate
+                features['make_age_fail_rate_eb'] = base_rate
+                features['eb_unified_prior'] = base_rate
+
+        # Segment-level fail rate from segment_hierarchical (make, age_band, mileage_band)
+        if segment_hierarchical and hasattr(segment_hierarchical, 'segment_rates'):
+            age_band_seg = get_age_band(vehicle_age_for_cohort)
+            mileage = features.get('test_mileage', 0)
+            if mileage < 30000:
+                mileage_band = '0-30k'
+            elif mileage < 60000:
+                mileage_band = '30k-60k'
+            elif mileage < 100000:
+                mileage_band = '60k-100k'
+            else:
+                mileage_band = '100k+'
+            seg_key = (history.make, age_band_seg, mileage_band)
+            seg_rates = segment_hierarchical.segment_rates
+            if isinstance(seg_rates, dict) and seg_key in seg_rates:
+                features['segment_fail_rate_smoothed'] = seg_rates[seg_key]
+            else:
+                make_rates_seg = getattr(segment_hierarchical, 'make_rates', {})
+                features['segment_fail_rate_smoothed'] = make_rates_seg.get(history.make, base_rate)
+        else:
+            features['segment_fail_rate_smoothed'] = base_rate
 
     # =========================================================================
     # DERIVED FEATURES

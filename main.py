@@ -351,6 +351,7 @@ async def health_check(request: Request):
                 "database": db_status,
                 "model_v55": model_status,
                 "calibrator": model_v55.calibrator_state(),
+                "asof_priors": model_v55.asof_priors_state(),
                 "dvsa_api": {
                     "status": dvsa_status,
                     "client_id": dvsa_diag["client_id_set"],
