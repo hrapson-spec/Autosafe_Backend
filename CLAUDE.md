@@ -151,4 +151,4 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - **NEVER `git add -A` in this repo root** — untracked junk + the nested `work/` gitlink get committed. Stage explicit paths.
 - **`work/` is a separate git repo** → private remote `autosafe-research` (evidence chain; `verify_headline.py` must pass from a fresh clone). Its `legacy-product` remote is fetch-only by design — never push to it.
 - **Privacy is Option B** (notices disclose storage; 24-month retention; LIA at `docs/LIA_RISK_CHECKS.md`); PECR consent-mode default-denied — no gtag before Accept, including SEO pages.
-- The iCloud `AutoSafe/` tree is FROZEN (see its README_FROZEN); snapshot lives in the research repo.
+- The iCloud `AutoSafe/` tree is FROZEN for new work (but note `build_validation_samples.py` still executes from there — see `work/README.md` conventions). A tracked snapshot lives in the research repo at `work/icloud_snapshot/`. The tree is `compressed,dataless` — never recursively scan it; `ls -lO` first and materialise one file at a time.
