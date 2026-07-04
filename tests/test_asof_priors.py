@@ -17,6 +17,7 @@ Covers:
 """
 from __future__ import annotations
 
+import logging
 import random
 import shutil
 from datetime import date, datetime
@@ -29,9 +30,12 @@ from asof_priors import (
     ALL_COLUMNS,
     BACKOFF_PARENT,
     CHANNELS,
+    DEFAULT_TABLES_DIR,
+    STALE_MONTHS_WARN_THRESHOLD,
     AsOfPriorStore,
     PriorLookup,
     _month_trunc,
+    _months_between,
     canon_make,
     canon_model_id,
     norm_str,
@@ -685,3 +689,204 @@ class TestGoldenCrossCheck:
         assert source_counts["make_age_fail_rate_eb"]["global"] > 0
         # make itself has 100% coverage in this universe by design -> always "own".
         assert source_counts["make_fail_rate_smoothed"]["own"] == self.N_SAMPLES
+
+
+# --------------------------------------------------------------------------- #
+# Band-vocabulary train/serve guard (RT-SERVING caveat 1 / S3 / S5)
+#
+# The single highest-risk GF-17 surface: the age_band / mileage_band strings
+# the serving code emits must be EXACTLY the band vocabulary the shipped v2
+# prior tables were built with. A silent drift -- a get_age_band/get_mileage_band
+# edit, a renamed bucket, or a table rebuilt under a new band scheme -- would
+# mis-key every affected lookup into a dict-miss and a wrong global fallback:
+# exactly the CatBoost-era vocab-shim failure. asof_priors.py's lookup()
+# docstring claims this agreement is "pinned by
+# tests/test_asof_priors.py::test_band_vocabulary_matches_reference"; before
+# this file that test did not exist. This is that pin.
+# --------------------------------------------------------------------------- #
+
+def _shipped_band_vocab(band_col: str) -> set:
+    """Distinct values of `band_col` across every SHIPPED prior parquet whose
+    own-grain key includes it -- read straight from the real
+    models/asof_priors/*.parquet artifacts production loads (via
+    asof_priors.DEFAULT_TABLES_DIR), independent of AsOfPriorStore itself. Uses
+    this file's own `_STEM` (deliberately re-typed, not imported from
+    asof_priors._TABLE_SPEC) to discover which tables key on the band."""
+    vocab: set = set()
+    for stem, key_cols, _rate_col in _STEM.values():
+        if band_col in key_cols:
+            path = DEFAULT_TABLES_DIR / f"{stem}_fail_rate_asof.parquet"
+            col = pd.read_parquet(path, columns=[band_col])[band_col]
+            vocab.update(col.dropna().unique().tolist())
+    return vocab
+
+
+def test_band_vocabulary_matches_reference():
+    """Every age_band / mileage_band the serving code can emit -- driven through
+    the REAL feature_engineering_v55.get_age_band()/get_mileage_band() at their
+    bucket boundaries -- must be EXACTLY a member of the shipped tables' band
+    vocabulary, and together cover it with no drift on either side."""
+    shipped_age = _shipped_band_vocab("age_band")
+    shipped_mileage = _shipped_band_vocab("mileage_band")
+    # Never let a failure to read the vocab masquerade as a vacuous pass.
+    assert shipped_age, "no age_band vocabulary found in the shipped prior tables"
+    assert shipped_mileage, "no mileage_band vocabulary found in the shipped prior tables"
+
+    # Age boundaries: 0/3 -> '0-3', 4/5 -> '3-5', 10 -> '6-10', 15 -> '11-15',
+    # 16 -> '15+'. 5 is also the NULL-first-use-date default engineer_features
+    # falls back to (vehicle_age_for_cohort = 5 when manufacture_date is None).
+    age_inputs = [0, 3, 4, 5, 10, 15, 16]
+    emitted_age = {feature_engineering_v55.get_age_band(a) for a in age_inputs}
+    for a in age_inputs:
+        band = feature_engineering_v55.get_age_band(a)
+        assert band in shipped_age, (
+            f"serving age_band {band!r} (age={a}) absent from shipped vocab {sorted(shipped_age)}"
+        )
+
+    # Mileage boundaries: 0/29999 -> '0-30k', 30000/59999 -> '30k-60k',
+    # 60000/99999 -> '60k-100k', 100000 -> '100k+'. 0 is also the
+    # missing-mileage default (features.get('test_mileage', 0) with no tests).
+    mileage_inputs = [0, 29999, 30000, 59999, 60000, 99999, 100000]
+    emitted_mileage = {feature_engineering_v55.get_mileage_band(m) for m in mileage_inputs}
+    for m in mileage_inputs:
+        band = feature_engineering_v55.get_mileage_band(m)
+        assert band in shipped_mileage, (
+            f"serving mileage_band {band!r} (mileage={m}) absent from shipped vocab {sorted(shipped_mileage)}"
+        )
+
+    # Exact agreement in BOTH directions: the boundary inputs above emit every
+    # band the serving code can produce, so set-equality also catches a table
+    # rebuilt with a band the serving code can no longer key (e.g. a split of
+    # '15+' into '15-20'/'20+'), not merely a serving-side drift.
+    assert emitted_age == shipped_age, (
+        f"age_band vocab drift: serving emits {sorted(emitted_age)}, "
+        f"shipped tables have {sorted(shipped_age)}"
+    )
+    assert emitted_mileage == shipped_mileage, (
+        f"mileage_band vocab drift: serving emits {sorted(emitted_mileage)}, "
+        f"shipped tables have {sorted(shipped_mileage)}"
+    )
+
+
+class _BandCapturingStore:
+    """Duck-typed AsOfPriorStore stand-in that records the age_band /
+    mileage_band engineer_features() actually passes into lookup() on the
+    flag-ON serving path -- so the assertion is against the REAL emitted band
+    strings (get_age_band()/get_mileage_band() via the real engineer_features
+    wiring, incl. the NULL-fud and missing-mileage defaulting branches), not a
+    re-implementation. Value/source are irrelevant here; only the keys matter."""
+
+    def __init__(self):
+        self.age_bands: set = set()
+        self.mileage_bands: set = set()
+
+    def lookup(self, channel, keys, serving_month):
+        if keys.get("age_band") is not None:
+            self.age_bands.add(keys["age_band"])
+        if keys.get("mileage_band") is not None:
+            self.mileage_bands.add(keys["mileage_band"])
+        return PriorLookup(0.19, "global")
+
+
+def _null_fud_history() -> VehicleHistory:
+    """History with NO manufacture_date -> engineer_features defaults
+    vehicle_age_for_cohort = 5 -> age_band '3-5'."""
+    return VehicleHistory(
+        registration="NOFUD1", make="FORD", model="FOCUS", fuel_type="PE",
+        colour="BLUE", registration_date=datetime(2020, 6, 1),
+        manufacture_date=None, engine_size=1600, mot_tests=[],
+    )
+
+
+def test_serving_path_emits_only_shipped_bands(monkeypatch):
+    """End-to-end companion to test_band_vocabulary_matches_reference: drive the
+    REAL flag-ON engineer_features() wiring -- including the NULL-first-use-date
+    and missing-mileage defaulting branches the boundary-function test can't
+    reach -- and assert every band it feeds into AsOfPriorStore.lookup() is in
+    the shipped vocabulary."""
+    monkeypatch.setenv("AUTOSAFE_ASOF_PRIORS", "1")
+    shipped_age = _shipped_band_vocab("age_band")
+    shipped_mileage = _shipped_band_vocab("mileage_band")
+    spy = _BandCapturingStore()
+
+    prediction_date = datetime(2025, 7, 15)
+    histories = [
+        _make_history(make="FORD", model="FOCUS", manufacture_year=2023),   # ~2y -> '0-3'; no tests -> '0-30k'
+        _make_history(make="BMW", model="3 SERIES", manufacture_year=2008),  # ~17y -> '15+'
+        _null_fud_history(),                                                 # NULL fud -> age default 5 -> '3-5'
+    ]
+    for h in histories:
+        feature_engineering_v55.engineer_features(
+            h, "RG1 1AA", prediction_date=prediction_date, asof_store=spy,
+        )
+
+    assert spy.age_bands, "spy captured no age_band -- the flag-ON serving path did not fire"
+    assert spy.mileage_bands, "spy captured no mileage_band -- the flag-ON serving path did not fire"
+    assert spy.age_bands <= shipped_age, (
+        f"serving emitted age_band(s) {sorted(spy.age_bands - shipped_age)} absent from shipped vocab"
+    )
+    assert spy.mileage_bands <= shipped_mileage, (
+        f"serving emitted mileage_band(s) {sorted(spy.mileage_bands - shipped_mileage)} absent from shipped vocab"
+    )
+    # The two defaulting branches specifically resolve into the shipped vocab.
+    assert "3-5" in spy.age_bands       # NULL-fud default (age 5)
+    assert "0-30k" in spy.mileage_bands  # missing-mileage default (0)
+
+
+# --------------------------------------------------------------------------- #
+# Active staleness signal (RT-SERVING Q1 / caveat 4): stale_months on /health
+# + a loud load-time WARNING once tables age past two publication cycles.
+# --------------------------------------------------------------------------- #
+
+def _build_uniform_fixture(out_dir: Path, max_asof: str) -> None:
+    """Minimal one-row-per-channel fixture at an arbitrary max_asof, so the
+    staleness arithmetic can be exercised at a chosen age relative to today."""
+    _write_channel_table(out_dir, "make_fail_rate_smoothed",
+                         [{"asof_month": max_asof, "make": "FORD", "make_rate_long": 0.20}], max_asof, 0.19)
+    _write_channel_table(out_dir, "segment_fail_rate_smoothed",
+                         [{"asof_month": max_asof, "make": "FORD", "age_band": "0-3",
+                           "mileage_band": "0-30k", "segment_rate_long": 0.15}], max_asof, 0.19)
+    _write_channel_table(out_dir, "model_fail_rate_smoothed",
+                         [{"asof_month": max_asof, "model_id": "FORD FOCUS", "model_rate_long": 0.25}], max_asof, 0.19)
+    _write_channel_table(out_dir, "make_age_fail_rate_eb",
+                         [{"asof_month": max_asof, "make": "FORD", "age_band": "0-3", "make_age_rate_eb": 0.21}],
+                         max_asof, 0.19)
+    _write_channel_table(out_dir, "model_age_fail_rate_eb",
+                         [{"asof_month": max_asof, "model_id": "FORD FOCUS", "age_band": "0-3",
+                           "model_age_rate_eb": 0.30}], max_asof, 0.19)
+
+
+class TestStaleness:
+    def test_months_between_whole_calendar_months(self):
+        assert _months_between(date(2025, 6, 1), date(2026, 7, 4)) == 13
+        assert _months_between(date(2025, 6, 1), date(2025, 6, 30)) == 0  # day ignored
+        assert _months_between(date(2025, 6, 1), date(2025, 5, 1)) == -1  # future max_asof
+
+    def test_health_exposes_live_stale_months(self, sliced_store):
+        h = sliced_store.health()
+        assert "stale_months" in h
+        # Live against today, self-consistent with the same helper (max_asof 2025-06-01).
+        assert h["stale_months"] == _months_between(date(2025, 6, 1), date.today())
+
+    def test_stale_tables_warn_loudly_at_load(self, tmp_path, caplog):
+        old_dir = tmp_path / "old"
+        old_dir.mkdir()
+        _build_uniform_fixture(old_dir, "2020-01-01")  # ~decade stale from any plausible 'today'
+        with caplog.at_level(logging.WARNING):
+            store = AsOfPriorStore.load(old_dir)
+        assert store.health()["stale_months"] > STALE_MONTHS_WARN_THRESHOLD
+        assert any("STALE" in r.getMessage() and r.levelname == "WARNING" for r in caplog.records), (
+            "expected a loud staleness WARNING at load for decade-old tables"
+        )
+
+    def test_fresh_tables_do_not_warn_at_load(self, tmp_path, caplog):
+        fresh_dir = tmp_path / "fresh"
+        fresh_dir.mkdir()
+        this_month = date.today().replace(day=1).isoformat()
+        _build_uniform_fixture(fresh_dir, this_month)
+        with caplog.at_level(logging.WARNING):
+            store = AsOfPriorStore.load(fresh_dir)
+        assert store.health()["stale_months"] == 0
+        assert not any("STALE" in r.getMessage() for r in caplog.records), (
+            "a current-month store must not raise the staleness warning"
+        )

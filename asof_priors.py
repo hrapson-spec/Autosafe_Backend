@@ -204,6 +204,22 @@ def _month_trunc(d: DateLike) -> date:
     return date(d.year, d.month, 1)
 
 
+# Staleness alarm: the as-of prior tables are a frozen slice of one past DVSA
+# publication (max_asof). A store that has silently aged well past its build is
+# the passive-staleness risk RT-SERVING flags (Q1 / caveat 4: "detectable but
+# passive -- no automated age alarm"). We make it ACTIVE: `stale_months` is
+# surfaced live on /health (AsOfPriorStore.health()), and load() logs a loud
+# WARNING when it exceeds two DVSA publication cycles.
+STALE_MONTHS_WARN_THRESHOLD = 8
+
+
+def _months_between(earlier: date, later: date) -> int:
+    """Whole calendar months from `earlier` to `later` (day-of-month ignored --
+    both are month-grain in practice: `earlier` is always a table max_asof, i.e.
+    the first of a month). Negative if `later` precedes `earlier`."""
+    return (later.year - earlier.year) * 12 + (later.month - earlier.month)
+
+
 def tables_present(tables_dir: Union[Path, str] = DEFAULT_TABLES_DIR) -> bool:
     """True iff every expected table+meta parquet exists under `tables_dir`.
 
@@ -303,7 +319,21 @@ class AsOfPriorStore:
                 "restrict_to_max_asof=%s",
                 channel, len(d), max_asof, global_rate, restrict_to_max_asof,
             )
-        return cls(data, meta)
+        store = cls(data, meta)
+        # Active staleness alarm (RT-SERVING Q1 / caveat 4): loudly flag a store
+        # whose tables have aged past two publication cycles at load time.
+        stale_months = _months_between(store._max_asof, date.today())
+        if stale_months > STALE_MONTHS_WARN_THRESHOLD:
+            logger.warning(
+                "AsOfPriorStore STALE: max_asof=%s trails the current serving month "
+                "(%s) by %d months, exceeding the %d-month threshold (two DVSA "
+                "publication cycles). The prior tables are ageing -- refresh "
+                "models/asof_priors/ or predictions drift on a stale prior. "
+                "(/health.asof_priors.stale_months surfaces this live.)",
+                store._max_asof.isoformat(), date.today().isoformat(),
+                stale_months, STALE_MONTHS_WARN_THRESHOLD,
+            )
+        return store
 
     @staticmethod
     def _rows_to_dict(df: "pd.DataFrame", key_cols: Tuple[str, ...], rate_col: str
@@ -332,9 +362,9 @@ class AsOfPriorStore:
         canon-normalised (`canon_make`/`canon_model_id` above) and
         age_band/mileage_band MUST use the same band vocabulary the v2
         tables were built with -- identical to
-        `feature_engineering_v55.get_age_band()` and its inline mileage
-        banding, which are themselves identical to
-        `work/temporal_encoder.py`'s `age_band_expr`/`mileage_band_expr`
+        `feature_engineering_v55.get_age_band()` and `get_mileage_band()`,
+        which are themselves identical to `work/temporal_encoder.py`'s
+        `age_band_expr`/`mileage_band_expr`
         (pinned by `tests/test_asof_priors.py::test_band_vocabulary_matches_reference`).
 
         Backoff order (golden_row_parity.py's `compute_reference`): own cell
@@ -377,12 +407,19 @@ class AsOfPriorStore:
 
     # ---- diagnostics ------------------------------------------------------ #
     def health(self) -> Dict[str, object]:
-        """Summary for the /health-style self-check field (model_v55.asof_priors_state())."""
+        """Summary for the /health-style self-check field (model_v55.asof_priors_state()).
+
+        `stale_months` is computed live against the current serving month, so a
+        long-running process reports its tables ageing in real time (the active
+        staleness signal for RT-SERVING Q1 / caveat 4); load() additionally logs
+        a loud WARNING once it passes STALE_MONTHS_WARN_THRESHOLD.
+        """
         any_channel = CHANNELS[0]
         return {
             "loaded": True,
             "channels": list(CHANNELS),
             "max_asof": self._max_asof.isoformat(),
+            "stale_months": _months_between(self._max_asof, date.today()),
             "row_counts": {ch: self._meta[ch].n_rows for ch in CHANNELS},
             "global_rates": {ch: round(self._meta[ch].global_rate, 6) for ch in CHANNELS},
             "tables_dir": str(self._meta[any_channel].table_path.parent),

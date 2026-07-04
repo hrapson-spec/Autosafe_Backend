@@ -154,7 +154,15 @@ def get_usage_band(annualized_mileage: float) -> str:
 
 
 def get_age_band(vehicle_age: int) -> str:
-    """Convert vehicle age to age band for cohort lookups."""
+    """Convert vehicle age to age band for cohort lookups.
+
+    Single source of truth for the age_band vocabulary emitted on the serving
+    path (both the flag-ON as-of-prior lookup and the legacy hierarchical
+    lookups). This label vocabulary MUST stay identical to the age_band key
+    column the v2 as-of prior tables were built with -- that train/serve
+    agreement (the highest-risk GF-17 surface) is pinned by
+    tests/test_asof_priors.py::test_band_vocabulary_matches_reference.
+    """
     if vehicle_age <= 3:
         return '0-3'
     elif vehicle_age <= 5:
@@ -165,6 +173,26 @@ def get_age_band(vehicle_age: int) -> str:
         return '11-15'
     else:
         return '15+'
+
+
+def get_mileage_band(mileage: float) -> str:
+    """Convert test mileage to mileage band for segment cohort lookups.
+
+    Single source of truth for the mileage_band vocabulary emitted on the
+    serving path (both the flag-ON as-of-prior lookup and the legacy segment
+    lookup). This label vocabulary MUST stay identical to the mileage_band key
+    column the v2 as-of prior tables were built with -- that train/serve
+    agreement is pinned by
+    tests/test_asof_priors.py::test_band_vocabulary_matches_reference.
+    """
+    if mileage < 30000:
+        return '0-30k'
+    elif mileage < 60000:
+        return '30k-60k'
+    elif mileage < 100000:
+        return '60k-100k'
+    else:
+        return '100k+'
 
 
 def engineer_features(
@@ -661,15 +689,7 @@ def engineer_features(
         model_id = canon_model_id(history.make, history.model)
         make_key = canon_make(history.make)
         age_band = get_age_band(vehicle_age_for_cohort)
-        mileage = features.get('test_mileage', 0)
-        if mileage < 30000:
-            mileage_band = '0-30k'
-        elif mileage < 60000:
-            mileage_band = '30k-60k'
-        elif mileage < 100000:
-            mileage_band = '60k-100k'
-        else:
-            mileage_band = '100k+'
+        mileage_band = get_mileage_band(features.get('test_mileage', 0))
         asof_keys = {
             'make': make_key,
             'model_id': model_id,
@@ -770,15 +790,7 @@ def engineer_features(
         # Segment-level fail rate from segment_hierarchical (make, age_band, mileage_band)
         if segment_hierarchical and hasattr(segment_hierarchical, 'segment_rates'):
             age_band_seg = get_age_band(vehicle_age_for_cohort)
-            mileage = features.get('test_mileage', 0)
-            if mileage < 30000:
-                mileage_band = '0-30k'
-            elif mileage < 60000:
-                mileage_band = '30k-60k'
-            elif mileage < 100000:
-                mileage_band = '60k-100k'
-            else:
-                mileage_band = '100k+'
+            mileage_band = get_mileage_band(features.get('test_mileage', 0))
             seg_key = (history.make, age_band_seg, mileage_band)
             seg_rates = segment_hierarchical.segment_rates
             if isinstance(seg_rates, dict) and seg_key in seg_rates:
