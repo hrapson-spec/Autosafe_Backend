@@ -1,0 +1,242 @@
+{
+ "registration": "TEST0013",
+ "firstUsedDate": "2016-07-20",
+ "registrationDate": "2016-07-20",
+ "manufactureDate": "2016-07-20",
+ "primaryColour": "Black",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1197",
+ "model": "POLO",
+ "make": "VOLKSWAGEN",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T10:24:12.000Z",
+ "motTests": [
+  {
+   "completedDate": "2019-08-14T16:15:05.000Z",
+   "motTestNumber": 519664820913,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-08-13",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "25563",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-08-10T15:55:16.000Z",
+   "motTestNumber": 657409747634,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-08-13",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "63880",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2021-07-06T09:54:05.000Z",
+   "motTestNumber": 267352965531,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-07-05",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "70494",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "both rear tyres low in tread and perished",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-11-19T15:21:08.000Z",
+   "motTestNumber": 873835059927,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-11-18",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "76725",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-11-07T12:49:21.000Z",
+   "motTestNumber": 433355291337,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-11-18",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "87431",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-11-15T13:51:13.000Z",
+   "motTestNumber": 585080431453,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-11-18",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "97603",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake disc worn, but not excessively Nearside and offside. (1.1.14 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Tyre worn close to legal limit/worn on edge Nearside and offside. (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake disc worn, pitted or scored, but not seriously weakened Nearside and offside. (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-10-25T14:51:14.000Z",
+   "motTestNumber": 705348635380,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "FAILED",
+   "odometerValue": "106345",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Suspension arm pin or bush worn but not resulting in excessive movement both rear bushes (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Windscreen wiper does not clear the windscreen effectively (3.4 (b) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-10-25T14:51:15.000Z",
+   "motTestNumber": 814055952272,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-11-18",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "106345",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Suspension arm pin or bush worn but not resulting in excessive movement both rear bushes (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T10:24:11.000Z",
+   "motTestNumber": 156680910428,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "FAILED",
+   "odometerValue": "113659",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage ball joint has slight play (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp not working on dipped beam (4.1.1 (a) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T10:24:12.000Z",
+   "motTestNumber": 319001344568,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "LE16XGX",
+   "testResult": "PASSED",
+   "odometerValue": "113659",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Brake pad(s) wearing thin (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage ball joint has slight play (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

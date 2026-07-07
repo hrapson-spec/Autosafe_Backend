@@ -11,6 +11,7 @@ Fetches vehicle MOT history from the DVSA API with:
 
 import os
 import re
+import json
 import logging
 import time
 from typing import Optional, Dict, Any, List
@@ -174,8 +175,13 @@ class DVSAClient:
                      for k, v in os.environ.items() if k.upper().startswith("DVSA")}
         logger.info(f"DVSA env vars found: {list(dvsa_vars.keys())}")
 
-        # Check if credentials are configured (API key is REQUIRED for DVSA API)
-        self.is_configured = all([self.client_id, self.client_secret, self.token_url, self.api_key])
+        # Check if credentials are configured (API key is REQUIRED for DVSA API).
+        # Offline replay mode (DVSA_FIXTURE_DIR set) counts as configured: the
+        # client can serve histories from fixtures, so callers that gate on
+        # is_configured (e.g. the /api/risk/v55 endpoint) take the model path
+        # instead of falling straight to the lookup table.
+        self.is_configured = bool(os.environ.get("DVSA_FIXTURE_DIR")) or all(
+            [self.client_id, self.client_secret, self.token_url, self.api_key])
         if not self.is_configured:
             logger.warning("DVSA credentials not fully configured - API calls will fail")
             logger.warning(f"  CLIENT_ID: {'set' if self.client_id else 'MISSING'}")
@@ -342,6 +348,14 @@ class DVSAClient:
         # Normalize VRM
         vrm = self.normalize_vrm(registration)
 
+        # Offline replay mode: when DVSA_FIXTURE_DIR is set, serve histories
+        # from local fixture files instead of the network. Lets the whole app
+        # run offline (tests, local dev) with no credentials. Production leaves
+        # the env var unset, so this branch is inert there.
+        fixture_dir = os.environ.get("DVSA_FIXTURE_DIR")
+        if fixture_dir:
+            return self._load_fixture(vrm, fixture_dir)
+
         # P1-10 fix: Hash VRM for logging
         import hashlib
         vrm_hash = hashlib.sha256(vrm.encode()).hexdigest()[:8]
@@ -446,6 +460,17 @@ class DVSAClient:
 
         # All retries exhausted
         raise last_error or DVSAAPIError("DVSA API request failed after retries")
+
+    def _load_fixture(self, vrm: str, fixture_dir: str) -> VehicleHistory:
+        """Offline replay: load {fixture_dir}/{vrm}.json and parse it exactly
+        as a live API response. Raises VehicleNotFoundError when absent, so the
+        caller's normal not-found fallback path is exercised."""
+        path = os.path.join(fixture_dir, f"{vrm}.json")
+        if not os.path.exists(path):
+            raise VehicleNotFoundError(f"No fixture for {vrm} in {fixture_dir}")
+        with open(path) as f:
+            data = json.load(f)
+        return self._parse_response(vrm, data)
 
     def _parse_response(self, vrm: str, data: Dict[str, Any]) -> VehicleHistory:
         """Parse DVSA API response into VehicleHistory object."""

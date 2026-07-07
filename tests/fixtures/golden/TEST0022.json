@@ -1,0 +1,559 @@
+{
+ "registration": "TEST0022",
+ "firstUsedDate": "1989-08-01",
+ "registrationDate": "1989-08-01",
+ "manufactureDate": "1989-12-31",
+ "primaryColour": "Blue",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1796",
+ "model": "3 SERIES",
+ "make": "BMW",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T09:45:10.000Z",
+ "motTests": [
+  {
+   "completedDate": "2006-09-12T12:35:16.000Z",
+   "motTestNumber": 670015956270,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "105174",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Front suspension has excessive play in a lower suspension ball joint (2.5.B.1a)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Lower Body or chassis has excessive corrosion, seriously affecting its strength within 30cm of the body mountings (6.1.B.2)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2006-09-13T12:00:15.000Z",
+   "motTestNumber": 373406256295,
+   "dataSource": "DVSA",
+   "expiryDate": "2007-09-12",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "105174",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2008-05-31T14:47:34.000Z",
+   "motTestNumber": 671342258190,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "107441",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage rubber mounting deteriorated resulting in excessive movement (2.4.G.2)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Steering arm has relative movement at its fixings (2.2.B.1h)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Exhaust has a major leak of exhaust gases (7.1.2)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2008-06-02T14:58:00.000Z",
+   "motTestNumber": 880594358178,
+   "dataSource": "DVSA",
+   "expiryDate": "2009-06-01",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "107441",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2009-07-20T17:59:55.000Z",
+   "motTestNumber": 232151809278,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "109370",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front suspension has excessive play in a lower suspension ball joint (2.5.B.1a)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Front Suspension component mounting prescribed area is excessively corroded (2.4.A.3)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Suspension arm has excessive play in a pin/bush (2.4.G.2)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Front Suspension component mounting prescribed area is excessively corroded (2.4.A.3)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre tread depth below requirements of 1.6mm (4.1.E.1)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "both front brake hoses cracked on outer casings",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "offside front wish bone rear bush split",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "offside rear a frame mount spliting",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2009-07-28T19:13:44.000Z",
+   "motTestNumber": 282249009282,
+   "dataSource": "DVSA",
+   "expiryDate": "2010-07-27",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "109370",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "both front brake hoses cracked on outer casings",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "offside front wish bone rear bush split",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "offside rear a frame mount spliting",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2010-08-07T10:58:35.000Z",
+   "motTestNumber": 532429210297,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "111011",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Brakes imbalanced across an axle (3.7.B.5b)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Stop lamp not working (1.2.1b)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2010-08-11T19:58:09.000Z",
+   "motTestNumber": 574473820211,
+   "dataSource": "DVSA",
+   "expiryDate": "2011-08-10",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "111011",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2012-04-23T17:52:25.000Z",
+   "motTestNumber": 685164412139,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-04-22",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "113570",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar synthetic mounting deteriorated but not resulting in excessive movement (2.4.G.2)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Brake pipe slightly corroded (3.6.B.2c)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorber has a slightly worn bush (2.7.4)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Power steering pipe(s) or hose(s) has slight seepage from a seal (2.3.3b)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2013-07-22T10:51:32.000Z",
+   "motTestNumber": 818933103293,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "114518",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Battery insecure (1.9.1)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Lower Anti-roll bar linkage rubber mounting deteriorated resulting in excessive movement (2.4.G.2)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Obligatory mirror seriously damaged, affecting the rear view (8.1.2a)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2013-07-23T11:54:21.000Z",
+   "motTestNumber": 345684603252,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-07-22",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "114518",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2014-09-17T15:58:53.000Z",
+   "motTestNumber": 107630164253,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-09-16",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "115779",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2015-09-12T14:48:43.000Z",
+   "motTestNumber": 586771262143,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "116315",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Windscreen wiper does not clear the windscreen effectively both front (8.2.2)",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2015-09-12T14:48:44.000Z",
+   "motTestNumber": 791834432012,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-09-16",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "116315",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2017-04-06T11:32:52.000Z",
+   "motTestNumber": 627214901826,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "11642",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage has excessive play in a pin/bush (2.4.G.2)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre tread depth below requirements of 1.6mm (4.1.E.1)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Tyre tread depth below requirements of 1.6mm (4.1.E.1)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2017-04-06T14:37:15.000Z",
+   "motTestNumber": 661039604698,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-04-05",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "11642",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-03-01T15:20:50.000Z",
+   "motTestNumber": 177766520919,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-02-28",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "116450",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Lower Body has slight corrosion (6.1.B.2)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Lower Body has slight corrosion (6.1.B.2)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-05-07T09:42:06.000Z",
+   "motTestNumber": 953079725924,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "FAILED",
+   "odometerValue": "116910",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Inner Anti-roll bar linkage pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Registration plate deteriorated but not likely to be misread (0.1 (b))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Floor excessively deteriorated (6.2.4 (a) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Inner Suspension arm pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake pipe excessively corroded (1.1.11 (c))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Exhaust has a minor leak of exhaust gases (6.1.2 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Sub-frame pin or bush worn but not resulting in excessive movement (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-11-04T12:16:44.000Z",
+   "motTestNumber": 388127288663,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-11-03",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "116910",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-03-23T15:39:18.000Z",
+   "motTestNumber": 948741917442,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-03-22",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "116918",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Fuel Pipe/s corroded ",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Lower Suspension arm ball joint dust cover severely deteriorated (5.3.4 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Lower Suspension arm ball joint has slight play (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Upper Anti-roll bar ball joint dust cover severely deteriorated (5.3.4 (b) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Exhaust mounting defective (6.1.2 (a))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-01-04T11:01:19.000Z",
+   "motTestNumber": 211268785819,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-01-03",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "119308",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Central Rear Exhaust mounting defective Marked in Yellow. (6.1.2 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre slightly damaged/cracking or perishing (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre slightly damaged/cracking or perishing (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Tyre slightly damaged/cracking or perishing (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T09:45:10.000Z",
+   "motTestNumber": 275884580353,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "G872EWO",
+   "testResult": "PASSED",
+   "odometerValue": "119795",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Tyre slightly damaged/cracking or perishing n/s + o/s (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Service brake binding but not excessively (1.2.1 (f))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Oil leak, but not excessive (8.4.1 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Tyre slightly damaged/cracking or perishing n/s + o/s (5.2.3 (d) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

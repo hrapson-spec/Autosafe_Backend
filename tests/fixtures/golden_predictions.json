@@ -1,0 +1,229 @@
+{
+ "_meta": {
+  "model_cbm_sha256": "025a0e68962299e1138ae16583b55f9e4e0027b1e4240187652bebd04e396c62",
+  "generated": "2026-06-10T14:12:53",
+  "prediction_date": "2026-06-10T00:00:00",
+  "n": 26,
+  "n_skipped_unscoreable": 4,
+  "category_counts": {
+   "rookie_single_test": 1,
+   "veteran_many": 3,
+   "high_mileage": 3,
+   "prior_failure": 3,
+   "heavy_advisories": 3,
+   "latest_failed": 3,
+   "clean_pass_veteran": 3,
+   "unknown_make": 1,
+   "classic_pre1990": 3,
+   "fail_then_retest": 3
+  }
+ },
+ "TEST0001": {
+  "category": "rookie_single_test",
+  "n_tests": 1,
+  "make": "MG",
+  "raw_probability": 0.1765,
+  "failure_risk": 0.1383,
+  "confidence_level": "High"
+ },
+ "TEST0002": {
+  "category": "veteran_many",
+  "n_tests": 7,
+  "make": "SEAT",
+  "raw_probability": 0.4605,
+  "failure_risk": 0.5243,
+  "confidence_level": "High"
+ },
+ "TEST0003": {
+  "category": "veteran_many",
+  "n_tests": 6,
+  "make": "FIAT",
+  "raw_probability": 0.1993,
+  "failure_risk": 0.1578,
+  "confidence_level": "High"
+ },
+ "TEST0004": {
+  "category": "veteran_many",
+  "n_tests": 11,
+  "make": "VOLKSWAGEN",
+  "raw_probability": 0.4184,
+  "failure_risk": 0.4531,
+  "confidence_level": "High"
+ },
+ "TEST0005": {
+  "category": "high_mileage",
+  "n_tests": 17,
+  "make": "HYUNDAI",
+  "raw_probability": 0.4752,
+  "failure_risk": 0.549,
+  "confidence_level": "High"
+ },
+ "TEST0006": {
+  "category": "high_mileage",
+  "n_tests": 28,
+  "make": "TOYOTA",
+  "raw_probability": 0.3472,
+  "failure_risk": 0.3383,
+  "confidence_level": "High"
+ },
+ "TEST0007": {
+  "category": "high_mileage",
+  "n_tests": 16,
+  "make": "RENAULT",
+  "raw_probability": 0.5899,
+  "failure_risk": 0.726,
+  "confidence_level": "High"
+ },
+ "TEST0008": {
+  "category": "prior_failure",
+  "n_tests": 14,
+  "make": "TOYOTA",
+  "raw_probability": 0.4747,
+  "failure_risk": 0.5482,
+  "confidence_level": "High"
+ },
+ "TEST0009": {
+  "category": "prior_failure",
+  "n_tests": 11,
+  "make": "NISSAN",
+  "raw_probability": 0.4203,
+  "failure_risk": 0.4563,
+  "confidence_level": "High"
+ },
+ "TEST0010": {
+  "category": "prior_failure",
+  "n_tests": 24,
+  "make": "AUDI",
+  "raw_probability": 0.4989,
+  "failure_risk": 0.5885,
+  "confidence_level": "High"
+ },
+ "TEST0011": {
+  "category": "heavy_advisories",
+  "n_tests": 22,
+  "make": "FORD",
+  "raw_probability": 0.5829,
+  "failure_risk": 0.7165,
+  "confidence_level": "High"
+ },
+ "TEST0012": {
+  "category": "heavy_advisories",
+  "n_tests": 19,
+  "make": "AUDI",
+  "raw_probability": 0.425,
+  "failure_risk": 0.4642,
+  "confidence_level": "High"
+ },
+ "TEST0013": {
+  "category": "heavy_advisories",
+  "n_tests": 10,
+  "make": "VOLKSWAGEN",
+  "raw_probability": 0.4207,
+  "failure_risk": 0.4568,
+  "confidence_level": "High"
+ },
+ "TEST0014": {
+  "category": "latest_failed",
+  "n_tests": 8,
+  "make": "VOLKSWAGEN",
+  "raw_probability": 0.4751,
+  "failure_risk": 0.5489,
+  "confidence_level": "High"
+ },
+ "TEST0015": {
+  "category": "latest_failed",
+  "n_tests": 5,
+  "make": "SUZUKI",
+  "raw_probability": 0.2775,
+  "failure_risk": 0.2417,
+  "confidence_level": "High"
+ },
+ "TEST0016": {
+  "category": "latest_failed",
+  "n_tests": 7,
+  "make": "VAUXHALL",
+  "raw_probability": 0.4859,
+  "failure_risk": 0.5669,
+  "confidence_level": "High"
+ },
+ "TEST0017": {
+  "category": "clean_pass_veteran",
+  "n_tests": 2,
+  "make": "KIA",
+  "raw_probability": 0.1977,
+  "failure_risk": 0.1565,
+  "confidence_level": "High"
+ },
+ "TEST0018": {
+  "category": "clean_pass_veteran",
+  "n_tests": 4,
+  "make": "FORD",
+  "raw_probability": 0.3801,
+  "failure_risk": 0.3898,
+  "confidence_level": "High"
+ },
+ "TEST0019": {
+  "category": "clean_pass_veteran",
+  "n_tests": 10,
+  "make": "FORD",
+  "raw_probability": 0.4572,
+  "failure_risk": 0.5186,
+  "confidence_level": "High"
+ },
+ "TEST0020": {
+  "category": "unknown_make",
+  "n_tests": 10,
+  "make": "Unknown",
+  "raw_probability": 0.3295,
+  "failure_risk": 0.3119,
+  "confidence_level": "High"
+ },
+ "TEST0021": {
+  "category": "classic_pre1990",
+  "n_tests": 21,
+  "make": "TALBOT",
+  "raw_probability": 0.4915,
+  "failure_risk": 0.5762,
+  "confidence_level": "High"
+ },
+ "TEST0022": {
+  "category": "classic_pre1990",
+  "n_tests": 22,
+  "make": "BMW",
+  "raw_probability": 0.4746,
+  "failure_risk": 0.548,
+  "confidence_level": "High"
+ },
+ "TEST0023": {
+  "category": "classic_pre1990",
+  "n_tests": 21,
+  "make": "PORSCHE",
+  "raw_probability": 0.2776,
+  "failure_risk": 0.2417,
+  "confidence_level": "High"
+ },
+ "TEST0024": {
+  "category": "fail_then_retest",
+  "n_tests": 10,
+  "make": "BMW",
+  "raw_probability": 0.2435,
+  "failure_risk": 0.2019,
+  "confidence_level": "High"
+ },
+ "TEST0025": {
+  "category": "fail_then_retest",
+  "n_tests": 4,
+  "make": "TOYOTA",
+  "raw_probability": 0.28,
+  "failure_risk": 0.2447,
+  "confidence_level": "High"
+ },
+ "TEST0026": {
+  "category": "fail_then_retest",
+  "n_tests": 9,
+  "make": "AUDI",
+  "raw_probability": 0.4177,
+  "failure_risk": 0.4519,
+  "confidence_level": "High"
+ }
+}

@@ -1,0 +1,331 @@
+{
+ "registration": "TEST0010",
+ "firstUsedDate": "2008-04-23",
+ "registrationDate": "2008-04-23",
+ "manufactureDate": "2008-04-23",
+ "primaryColour": "Silver",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1968",
+ "model": "A3",
+ "make": "AUDI",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T17:25:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2011-04-21T10:10:40.000Z",
+   "motTestNumber": 817371311185,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "21857",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2012-04-16T11:37:15.000Z",
+   "motTestNumber": 428807702116,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "31465",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-04-11T14:17:46.000Z",
+   "motTestNumber": 276911803146,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "39953",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2014-04-16T11:27:55.000Z",
+   "motTestNumber": 698146804141,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "49912",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2015-04-23T13:56:39.000Z",
+   "motTestNumber": 438803715153,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "59738",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2016-03-31T13:26:30.000Z",
+   "motTestNumber": 894024839364,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "68944",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear brake caliper has restricted free movement (3.5.1k)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear brake disc worn, pitted or scored, but not seriously weakened (3.5.1i)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear brake disc worn, pitted or scored, but not seriously weakened (3.5.1i)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2016-04-01T10:08:35.000Z",
+   "motTestNumber": 680395603448,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-04-23",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "68945",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear brake disc worn, pitted or scored, but not seriously weakened (3.5.1i)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear brake disc worn, pitted or scored, but not seriously weakened (3.5.1i)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2016-04-01T10:14:06.000Z",
+   "motTestNumber": 922996020214,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-03-31",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "68945",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2017-03-11T09:25:00.000Z",
+   "motTestNumber": 17647099,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2018-03-10",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "78675",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2018-02-20T16:30:00.000Z",
+   "motTestNumber": 18952778,
+   "dataSource": "DVA_NI",
+   "expiryDate": "1900-01-01",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "86450",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2018-02-24T14:50:00.000Z",
+   "motTestNumber": 18976964,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2019-03-10",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "86502",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2019-03-07T18:20:00.000Z",
+   "motTestNumber": 20537835,
+   "dataSource": "DVA_NI",
+   "expiryDate": "1900-01-01",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "95897",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2019-03-09T18:45:00.000Z",
+   "motTestNumber": 20546065,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2020-03-10",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "95951",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2021-03-29T09:05:00.000Z",
+   "motTestNumber": 22843889,
+   "dataSource": "DVA_NI",
+   "expiryDate": "1900-01-01",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "106974",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2021-03-29T14:25:00.000Z",
+   "motTestNumber": 22748554,
+   "dataSource": "DVA_NI",
+   "expiryDate": "1900-01-01",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "106973",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2021-05-05T20:05:00.000Z",
+   "motTestNumber": 22899127,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2022-05-04",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "107094",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2022-11-22T08:45:00.000Z",
+   "motTestNumber": 1347521,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2022-05-04",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "112470",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2022-11-22T15:40:00.000Z",
+   "motTestNumber": 1349493,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2023-11-21",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "112476",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-01-20T14:30:00.000Z",
+   "motTestNumber": 2742501,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-01-19",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "118387",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-02-19T15:30:00.000Z",
+   "motTestNumber": 4057222,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-01-19",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "124629",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-04-19T11:50:00.000Z",
+   "motTestNumber": 4270378,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-01-19",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "124911",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-04-21T14:35:00.000Z",
+   "motTestNumber": 4273973,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-04-20",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "124927",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-05-14T19:50:00.000Z",
+   "motTestNumber": 5541262,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-04-20",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "FAILED",
+   "odometerValue": "131130",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T17:25:00.000Z",
+   "motTestNumber": 5616214,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "FV08BXM",
+   "testResult": "PASSED",
+   "odometerValue": "131679",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

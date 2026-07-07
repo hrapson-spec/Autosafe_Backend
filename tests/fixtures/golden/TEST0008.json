@@ -1,0 +1,244 @@
+{
+ "registration": "TEST0008",
+ "firstUsedDate": "2012-09-21",
+ "registrationDate": "2012-09-21",
+ "manufactureDate": "2012-09-21",
+ "primaryColour": "Black",
+ "secondaryColour": "Not Stated",
+ "engineSize": "998",
+ "model": "AYGO",
+ "make": "TOYOTA",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T14:55:28.000Z",
+ "motTests": [
+  {
+   "completedDate": "2015-10-03T10:55:42.000Z",
+   "motTestNumber": 963016046869,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-10-02",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "27442",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2016-10-12T15:22:28.000Z",
+   "motTestNumber": 886038307267,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-10-11",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "36064",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2017-11-08T09:54:55.000Z",
+   "motTestNumber": 378229017265,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-11-07",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "43736",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to the legal limit (4.1.E.1)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-11-27T11:09:43.000Z",
+   "motTestNumber": 711641534660,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "FAILED",
+   "odometerValue": "48868",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust Lambda reading after 2nd fast idle outside specified limits (8.2.1.2 (c))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp not working on dipped beam (4.1.1 (a) (ii))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-11-27T15:20:55.000Z",
+   "motTestNumber": 457241006463,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-11-26",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "48874",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-11-19T09:39:55.000Z",
+   "motTestNumber": 782217573536,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-11-26",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "50818",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-06-16T12:10:00.000Z",
+   "motTestNumber": 921280248459,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "50880",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2021-06-14T10:59:26.000Z",
+   "motTestNumber": 895547476412,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "51962",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-06-09T08:12:53.000Z",
+   "motTestNumber": 816509895438,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "FAILED",
+   "odometerValue": "63966",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Headlamp not working on dipped beam (4.1.1 (a) (ii))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-06-09T08:12:54.000Z",
+   "motTestNumber": 429903265848,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "63966",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-06-13T09:14:30.000Z",
+   "motTestNumber": 394566436192,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "80814",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Exhaust has a minor leak of exhaust gases (6.1.2 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Tyre worn close to legal limit/worn on edge (5.2.3 (e))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-05-31T07:21:34.000Z",
+   "motTestNumber": 352647792991,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "91072",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2025-06-10T10:42:12.000Z",
+   "motTestNumber": 504381083158,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "101899",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-06-07T14:55:28.000Z",
+   "motTestNumber": 790608334282,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-15",
+   "regMarkTimeOfTest": "CV62VPE",
+   "testResult": "PASSED",
+   "odometerValue": "110519",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Anti-roll bar linkage pin or bush worn but not resulting in excessive movement Both Sides - Nearside and Offside (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Outer Suspension arm pin or bush worn but not resulting in excessive movement Both Sides - Nearside and Offside (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Sub-frame corroded but not seriously weakened (5.3.3 (b) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Sub-frame pin or bush worn but not resulting in excessive movement Both Side (5.3.4 (a) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

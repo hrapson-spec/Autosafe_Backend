@@ -1,0 +1,174 @@
+{
+ "registration": "TEST0024",
+ "firstUsedDate": "2015-06-16",
+ "registrationDate": "2015-06-16",
+ "manufactureDate": "2015-06-16",
+ "primaryColour": "Silver",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1997",
+ "model": "420",
+ "make": "BMW",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T10:10:22.000Z",
+ "motTests": [
+  {
+   "completedDate": "2018-05-08T11:24:42.000Z",
+   "motTestNumber": 853994145572,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-05-07",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "17267",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-05-08T14:15:54.000Z",
+   "motTestNumber": 549634474846,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-11-07",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "19309",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-06-17T09:15:01.000Z",
+   "motTestNumber": 758841478565,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "21572",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2021-06-04T10:48:52.000Z",
+   "motTestNumber": 614844630802,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "22636",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-06-10T15:23:41.000Z",
+   "motTestNumber": 907435975937,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "23857",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2023-06-02T13:20:31.000Z",
+   "motTestNumber": 502020753800,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "23927",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-06-08T08:23:44.000Z",
+   "motTestNumber": 994496219474,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "FAILED",
+   "odometerValue": "23955",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Brake disc worn, pitted or scored, but not seriously weakened (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": true,
+     "text": "Nearside Front Brake disc in such a condition that it is seriously weakened (1.1.14 (a) (ii))",
+     "type": "DANGEROUS"
+    },
+    {
+     "dangerous": true,
+     "text": "Offside Front Brake disc in such a condition that it is seriously weakened (1.1.14 (a) (ii))",
+     "type": "DANGEROUS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-06-17T11:06:17.000Z",
+   "motTestNumber": 465177965514,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "23956",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2025-06-15T09:36:04.000Z",
+   "motTestNumber": 313935258270,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "24008",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-06-07T10:10:22.000Z",
+   "motTestNumber": 190656058541,
+   "dataSource": "DVSA",
+   "expiryDate": "2027-06-16",
+   "regMarkTimeOfTest": "YW15OCV",
+   "testResult": "PASSED",
+   "odometerValue": "24021",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear Outer Brake disc worn, pitted or scored, but not seriously weakened Both sides (1.1.14 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

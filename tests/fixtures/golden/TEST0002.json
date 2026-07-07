@@ -1,0 +1,100 @@
+{
+ "registration": "TEST0002",
+ "firstUsedDate": null,
+ "registrationDate": "2014-06-09",
+ "manufactureDate": "2014-01-01",
+ "primaryColour": "GREY",
+ "secondaryColour": "null",
+ "engineSize": "1968",
+ "model": "LEON FR TECHNOLOGY TDI S-A",
+ "make": "SEAT",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T13:15:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2018-05-26T09:05:00.000Z",
+   "motTestNumber": 19278296,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2019-06-08",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "19294",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2019-06-08T14:30:00.000Z",
+   "motTestNumber": 20661284,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2021-11-08",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "23361",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2022-02-07T10:20:00.000Z",
+   "motTestNumber": 403272,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2023-02-06",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "80942",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2023-02-06T19:00:00.000Z",
+   "motTestNumber": 1595194,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2024-02-06",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "93373",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-06-04T08:55:00.000Z",
+   "motTestNumber": 3190957,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-06-03",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "104225",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-06-02T09:10:00.000Z",
+   "motTestNumber": 4406237,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-06-03",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "111457",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T13:15:00.000Z",
+   "motTestNumber": 5615505,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "AR09ONR",
+   "testResult": "PASSED",
+   "odometerValue": "120083",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

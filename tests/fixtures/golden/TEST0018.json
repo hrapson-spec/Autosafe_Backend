@@ -1,0 +1,64 @@
+{
+ "registration": "TEST0018",
+ "firstUsedDate": null,
+ "registrationDate": "2017-09-19",
+ "manufactureDate": "2017-01-01",
+ "primaryColour": "GREY",
+ "secondaryColour": "null",
+ "engineSize": "1997",
+ "model": "KUGA ST-LINE TDCI 4X4",
+ "make": "FORD",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T15:20:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2022-03-28T11:35:00.000Z",
+   "motTestNumber": 566252,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2023-03-27",
+   "regMarkTimeOfTest": "FJ67VDP",
+   "testResult": "PASSED",
+   "odometerValue": "37493",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2023-05-21T09:25:00.000Z",
+   "motTestNumber": 1956418,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2024-05-20",
+   "regMarkTimeOfTest": "FJ67VDP",
+   "testResult": "PASSED",
+   "odometerValue": "45385",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-06-04T10:45:00.000Z",
+   "motTestNumber": 3191520,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-06-03",
+   "regMarkTimeOfTest": "FJ67VDP",
+   "testResult": "PASSED",
+   "odometerValue": "47033",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T15:20:00.000Z",
+   "motTestNumber": 5615850,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "FJ67VDP",
+   "testResult": "PASSED",
+   "odometerValue": "84230",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

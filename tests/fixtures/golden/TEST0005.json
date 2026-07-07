@@ -1,0 +1,275 @@
+{
+ "registration": "TEST0005",
+ "firstUsedDate": "2008-03-14",
+ "registrationDate": "2008-03-14",
+ "manufactureDate": "2008-03-14",
+ "primaryColour": "Grey",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1582",
+ "model": "I30",
+ "make": "HYUNDAI",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T15:35:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2011-02-14T10:19:04.000Z",
+   "motTestNumber": 119495441055,
+   "dataSource": "DVSA",
+   "expiryDate": "2012-03-14",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "35331",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Child seat fitted not allowing full inspection of adult belt",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2011-02-14T10:19:04.000Z",
+   "motTestNumber": 147665741427,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "FAILED",
+   "odometerValue": "35331",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Child seat fitted not allowing full inspection of adult belt",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Headlamp aim too low (1.8)",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2012-02-15T14:41:37.000Z",
+   "motTestNumber": 219646142094,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-03-14",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "48149",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-02-26T18:13:54.000Z",
+   "motTestNumber": 697167853015,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-03-14",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "61097",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2014-03-07T12:03:31.000Z",
+   "motTestNumber": 626556164070,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-03-14",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "73484",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Child seat fitted not allowing full inspection of adult belt",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2015-02-25T09:21:04.000Z",
+   "motTestNumber": 315276155023,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-03-14",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "84232",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Child seat fitted not allowing full inspection of adult belt",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Items removed from driver's view prior to test",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2015-02-25T09:21:04.000Z",
+   "motTestNumber": 557666455043,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "FAILED",
+   "odometerValue": "84232",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Child seat fitted not allowing full inspection of adult belt",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Items removed from driver's view prior to test",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Registration plate lamp not working (1.1.C.1d)",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Registration plate lamp not working (1.1.C.1d)",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2017-05-04T18:35:00.000Z",
+   "motTestNumber": 17799164,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2018-05-03",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "134263",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2018-04-24T18:35:00.000Z",
+   "motTestNumber": 19169869,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2019-05-03",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "161718",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2019-05-02T08:25:00.000Z",
+   "motTestNumber": 20639969,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2020-05-03",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "188565",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2021-05-04T10:05:00.000Z",
+   "motTestNumber": 22849035,
+   "dataSource": "DVA_NI",
+   "expiryDate": "1900-01-01",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "FAILED",
+   "odometerValue": "200902",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2021-05-28T15:55:00.000Z",
+   "motTestNumber": 22943738,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2022-05-27",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "201672",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2022-08-01T15:15:00.000Z",
+   "motTestNumber": 965012,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2023-07-31",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "212331",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-02-06T08:05:00.000Z",
+   "motTestNumber": 2799007,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-02-05",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "221145",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-03-18T16:50:00.000Z",
+   "motTestNumber": 4156261,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-02-05",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "FAILED",
+   "odometerValue": "229475",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-04-22T10:00:00.000Z",
+   "motTestNumber": 4275036,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-04-21",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "PASSED",
+   "odometerValue": "230368",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T15:35:00.000Z",
+   "motTestNumber": 5615915,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-04-21",
+   "regMarkTimeOfTest": "NJ08YHU",
+   "testResult": "FAILED",
+   "odometerValue": "236910",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

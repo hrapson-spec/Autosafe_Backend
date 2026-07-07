@@ -1,0 +1,436 @@
+{
+ "registration": "TEST0006",
+ "firstUsedDate": "2015-12-10",
+ "registrationDate": "2015-12-10",
+ "manufactureDate": "2015-12-10",
+ "primaryColour": "White",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1798",
+ "model": "PRIUS",
+ "make": "TOYOTA",
+ "fuelType": "Hybrid Electric (Clean)",
+ "lastMotTestDate": "2026-06-07T07:41:52.000Z",
+ "motTests": [
+  {
+   "completedDate": "2016-12-09T13:00:20.000Z",
+   "motTestNumber": 149956851163,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-12-08",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "42098",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorber has a light misting of oil (2.7.3)",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2017-06-07T13:11:43.000Z",
+   "motTestNumber": 317931640798,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-06-06",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "62032",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2017-12-05T09:39:03.000Z",
+   "motTestNumber": 220888567507,
+   "dataSource": "DVSA",
+   "expiryDate": "2018-12-04",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "85350",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-06-04T12:30:02.000Z",
+   "motTestNumber": 655693711988,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-06-03",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "109706",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-12-02T12:14:42.000Z",
+   "motTestNumber": 978880217916,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "133650",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Track rod end seriously misaligned (2.1.3 (e))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-12-02T12:14:43.000Z",
+   "motTestNumber": 180319732053,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-12-01",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "133650",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-12-07T10:38:40.000Z",
+   "motTestNumber": 241593253024,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "134259",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Rear Rear fog lamp not working (4.5.1 (a) (ii))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-12-07T10:38:41.000Z",
+   "motTestNumber": 867313761055,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-12-06",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "134259",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-06-07T14:44:06.000Z",
+   "motTestNumber": 541785726771,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-06-06",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "155880",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-12-04T17:12:28.000Z",
+   "motTestNumber": 917979986032,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-12-03",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "180195",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-12-19T12:49:19.000Z",
+   "motTestNumber": 805286562567,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "181763",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage insecurely attached (5.3.3 (a) (i))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Registration plate lamp inoperative in the case of a single lamp or all lamps (4.7.1 (b) (ii))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2019-12-19T12:56:58.000Z",
+   "motTestNumber": 233878460946,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-12-18",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "181763",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-10-21T11:37:36.000Z",
+   "motTestNumber": 761378780209,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-10-20",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "216208",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2021-04-17T14:57:29.000Z",
+   "motTestNumber": 386829462457,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-04-16",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "232681",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Items removed from driver's view prior to test ",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-06-22T08:43:38.000Z",
+   "motTestNumber": 600661565678,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-06-21",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "241105",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2021-12-18T12:26:27.000Z",
+   "motTestNumber": 441382357131,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "262803",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Brake pipe likely to become detached or damaged (1.1.11 (d) (ii))",
+     "type": "PRS"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp aim too high and too far to the right. (4.1.2 (a))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2021-12-18T12:26:28.000Z",
+   "motTestNumber": 432403889456,
+   "dataSource": "DVSA",
+   "expiryDate": "2022-12-17",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "262803",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-06-24T11:02:27.000Z",
+   "motTestNumber": 400066608064,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-06-23",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "279427",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2022-12-19T10:48:20.000Z",
+   "motTestNumber": 341134312787,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-12-18",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "301949",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-06-19T07:49:25.000Z",
+   "motTestNumber": 775739018175,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-06-18",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "320471",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2023-12-17T10:28:46.000Z",
+   "motTestNumber": 198552682064,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-12-16",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "344808",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-06-15T13:26:17.000Z",
+   "motTestNumber": 866743960229,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-06-14",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "363229",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-12-13T07:55:12.000Z",
+   "motTestNumber": 555514079881,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "384103",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Headlamp aim projected beam image is obviously incorrect (4.1.2 (c))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-12-13T07:55:13.000Z",
+   "motTestNumber": 425454503383,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-12-12",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "384103",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2025-06-12T11:25:21.000Z",
+   "motTestNumber": 155082299803,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "401956",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Registration plate insecure (0.1 (a))",
+     "type": "PRS"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-06-12T11:25:22.000Z",
+   "motTestNumber": 562649975768,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-06-11",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "401956",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2025-12-09T18:40:33.000Z",
+   "motTestNumber": 722626895294,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-12-08",
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "PASSED",
+   "odometerValue": "423660",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-06-07T07:41:52.000Z",
+   "motTestNumber": 772046996039,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "MF65PPU",
+   "testResult": "FAILED",
+   "odometerValue": "446001",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Track rod end ball joint has slight play (2.1.3 (b) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Seat belt webbing significantly weakened cut from edge greater than 2mm (7.1.2 (b))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear Brake pad(s) wearing thin both (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": true,
+     "text": "Offside Front Driver's seat insecure (6.2.5 (a) (ii))",
+     "type": "DANGEROUS"
+    },
+    {
+     "dangerous": true,
+     "text": "Offside Front Inner Tyre has ply or cords exposed (5.2.3 (d) (ii))",
+     "type": "DANGEROUS"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}

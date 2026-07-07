@@ -1,0 +1,97 @@
+{
+ "registration": "TEST0025",
+ "firstUsedDate": "2021-05-05",
+ "registrationDate": "2021-05-05",
+ "manufactureDate": "2021-05-05",
+ "primaryColour": "Grey",
+ "secondaryColour": "Not Stated",
+ "engineSize": "2755",
+ "model": "HILUX INVINCIB X D-4D4WD DCB A",
+ "make": "TOYOTA",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T17:50:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2024-05-02T09:18:41.000Z",
+   "motTestNumber": 530450852745,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-05-04",
+   "regMarkTimeOfTest": "HJ21SFF",
+   "testResult": "PASSED",
+   "odometerValue": "52860",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake pad(s) wearing thin Both front brake pads wearing thin. (1.1.13 (a) (ii))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-05-12T11:44:18.000Z",
+   "motTestNumber": 912395768262,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "HJ21SFF",
+   "testResult": "FAILED",
+   "odometerValue": "64288",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Shock absorbers has light misting of oil (5.3.2 (b))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorbers has light misting of oil (5.3.2 (b))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Parking brake efficiency below requirements (1.4.2 (a) (i))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-05-12T12:41:02.000Z",
+   "motTestNumber": 627082626119,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-05-11",
+   "regMarkTimeOfTest": "HJ21SFF",
+   "testResult": "PASSED",
+   "odometerValue": "64288",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Rear Shock absorbers has light misting of oil (5.3.2 (b))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Rear Shock absorbers has light misting of oil (5.3.2 (b))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2026-06-07T17:50:00.000Z",
+   "motTestNumber": 5616278,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2027-06-06",
+   "regMarkTimeOfTest": "HJ21SFF",
+   "testResult": "PASSED",
+   "odometerValue": "70205",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

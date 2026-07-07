@@ -1,0 +1,341 @@
+{
+ "registration": "TEST0007",
+ "firstUsedDate": "2009-06-29",
+ "registrationDate": "2009-06-29",
+ "manufactureDate": "2009-06-29",
+ "primaryColour": "White",
+ "secondaryColour": "Not Stated",
+ "engineSize": "1995",
+ "model": "TRAFIC",
+ "make": "RENAULT",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T17:05:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2012-05-24T09:17:41.000Z",
+   "motTestNumber": 476855542165,
+   "dataSource": "DVSA",
+   "expiryDate": "2013-05-23",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "48317",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2013-06-18T14:44:20.000Z",
+   "motTestNumber": 609089763130,
+   "dataSource": "DVSA",
+   "expiryDate": "2014-06-17",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "57800",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2014-06-17T09:21:37.000Z",
+   "motTestNumber": 406848964128,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "FAILED",
+   "odometerValue": "66079",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front reg plate cracked",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Front wipers poor cleaning",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Track rod end ball joint has excessive play (2.2.B.1f)",
+     "type": "FAIL"
+    },
+    {
+     "dangerous": false,
+     "text": "n/s/f tyre split on inner wall",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2014-06-17T16:31:30.000Z",
+   "motTestNumber": 885458464161,
+   "dataSource": "DVSA",
+   "expiryDate": "2015-06-17",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "66080",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front reg plate cracked",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "Front wipers poor cleaning",
+     "type": "USER ENTERED"
+    },
+    {
+     "dangerous": false,
+     "text": "n/s/f tyre split on inner wall",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2015-06-26T16:08:46.000Z",
+   "motTestNumber": 578007075159,
+   "dataSource": "DVSA",
+   "expiryDate": "2016-06-25",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "73512",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Anti-roll bar linkage has slight play in a ball joint (2.4.G.2)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Anti-roll bar linkage has slight play in a ball joint (2.4.G.2)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "centre lower of screen cracked encroaching drivers view",
+     "type": "USER ENTERED"
+    }
+   ]
+  },
+  {
+   "completedDate": "2016-05-24T14:02:02.000Z",
+   "motTestNumber": 254681413105,
+   "dataSource": "DVSA",
+   "expiryDate": "2017-05-23",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "82413",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Inner brake disc worn, pitted or scored, but not seriously weakened front inner faces corroded (3.5.1i)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Nearside Front coil spring corroded (2.4.C.1b)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front coil spring corroded (2.4.C.1b)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Rear brake disc worn, pitted or scored, but not seriously weakened inner faces corroded (3.5.1i)",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "spare wheel carrier corroded but secure",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-01-05T14:39:41.000Z",
+   "motTestNumber": 583822030627,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "FAILED",
+   "odometerValue": "95330",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": true,
+     "text": "Nearside Track rod end ball joint has excessive play (2.2.B.1f)",
+     "type": "FAIL"
+    }
+   ]
+  },
+  {
+   "completedDate": "2018-01-05T15:24:19.000Z",
+   "motTestNumber": 706193890216,
+   "dataSource": "DVSA",
+   "expiryDate": "2019-01-04",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "95332",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2018-12-15T08:58:45.000Z",
+   "motTestNumber": 379207742423,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-01-04",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "106789",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2019-12-03T14:50:32.000Z",
+   "motTestNumber": 474970668407,
+   "dataSource": "DVSA",
+   "expiryDate": "2020-12-02",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "119760",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2020-11-11T14:51:24.000Z",
+   "motTestNumber": 754734943170,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "FAILED",
+   "odometerValue": "127166",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Drive shaft joint constant velocity boot severely deteriorated (6.1.7 (g) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Anti-roll bar linkage ball joint dust cover no longer prevents the ingress of dirt (5.3.4 (b) (ii))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Drive shaft joint constant velocity boot severely deteriorated (6.1.7 (g) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Track rod end ball joint dust cover excessively damaged or deteriorated so that it no longer prevents the ingress of dirt (2.1.3 (g) (ii))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Windscreen wiper does not clear the windscreen effectively (3.4 (b) (ii))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2020-11-12T12:34:18.000Z",
+   "motTestNumber": 305557111118,
+   "dataSource": "DVSA",
+   "expiryDate": "2021-12-02",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "127166",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Outer Drive shaft joint constant velocity boot severely deteriorated (6.1.7 (g) (i))",
+     "type": "MINOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Outer Drive shaft joint constant velocity boot severely deteriorated (6.1.7 (g) (i))",
+     "type": "MINOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2022-02-09T15:34:46.000Z",
+   "motTestNumber": 825918044713,
+   "dataSource": "DVSA",
+   "expiryDate": "2023-02-08",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "131352",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Nearside Front Drive shaft flexible coupling slightly deteriorated (6.1.7 (d) (i))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Offside Front Drive shaft flexible coupling slightly deteriorated (6.1.7 (d) (i))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2023-04-04T19:25:00.000Z",
+   "motTestNumber": 1805883,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2024-04-03",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "135875",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-12-09T18:30:00.000Z",
+   "motTestNumber": 3821478,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-12-08",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "PASSED",
+   "odometerValue": "157455",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T17:05:00.000Z",
+   "motTestNumber": 5616196,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-12-08",
+   "regMarkTimeOfTest": "ML09MGZ",
+   "testResult": "FAILED",
+   "odometerValue": "175383",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

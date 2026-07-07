@@ -1,0 +1,100 @@
+{
+ "registration": "TEST0016",
+ "firstUsedDate": null,
+ "registrationDate": "2015-01-08",
+ "manufactureDate": "2015-01-01",
+ "primaryColour": "WHITE",
+ "secondaryColour": "null",
+ "engineSize": "1956",
+ "model": "ZAFIRA TOURER TECH LINE CDTI",
+ "make": "VAUXHALL",
+ "fuelType": "Diesel",
+ "lastMotTestDate": "2026-06-07T11:10:00.000Z",
+ "motTests": [
+  {
+   "completedDate": "2019-01-11T18:50:00.000Z",
+   "motTestNumber": 20230501,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2020-01-10",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "62297",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2019-12-21T15:20:00.000Z",
+   "motTestNumber": 21773970,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2022-06-10",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "80339",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2022-06-25T08:00:00.000Z",
+   "motTestNumber": 857076,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2023-06-24",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "113018",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2023-06-04T12:15:00.000Z",
+   "motTestNumber": 2003281,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2024-06-24",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "115617",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2024-06-15T12:45:00.000Z",
+   "motTestNumber": 3228210,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2025-06-24",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "121604",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2025-06-30T19:30:00.000Z",
+   "motTestNumber": 4505947,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-06-29",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "PASSED",
+   "odometerValue": "126425",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  },
+  {
+   "completedDate": "2026-06-07T11:10:00.000Z",
+   "motTestNumber": 5615019,
+   "dataSource": "DVA_NI",
+   "expiryDate": "2026-06-29",
+   "regMarkTimeOfTest": "IRZ7230",
+   "testResult": "FAILED",
+   "odometerValue": "138568",
+   "odometerUnit": "MI",
+   "odometerResultType": null,
+   "defects": null
+  }
+ ],
+ "modification": "UPDATED"
+}

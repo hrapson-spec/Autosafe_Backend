@@ -1,0 +1,109 @@
+{
+ "registration": "TEST0015",
+ "firstUsedDate": "2020-06-03",
+ "registrationDate": "2020-06-03",
+ "manufactureDate": "2020-06-03",
+ "primaryColour": "Blue",
+ "secondaryColour": "Not Stated",
+ "engineSize": "749",
+ "model": "GSXS 750 Z AM0",
+ "make": "SUZUKI",
+ "fuelType": "Petrol",
+ "lastMotTestDate": "2026-06-07T08:21:25.000Z",
+ "motTests": [
+  {
+   "completedDate": "2023-05-02T10:46:27.000Z",
+   "motTestNumber": 841366572653,
+   "dataSource": "DVSA",
+   "expiryDate": "2024-05-01",
+   "regMarkTimeOfTest": "PK20WMW",
+   "testResult": "PASSED",
+   "odometerValue": "11233",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2024-03-22T15:18:19.000Z",
+   "motTestNumber": 885037549221,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "PK20WMW",
+   "testResult": "FAILED",
+   "odometerValue": "11974",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust noisy (8.1.1 (a))",
+     "type": "ADVISORY"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Brake disc significantly and obviously worn Discs under wear limit (1.1.14 (a) (i))",
+     "type": "MAJOR"
+    }
+   ]
+  },
+  {
+   "completedDate": "2024-04-01T15:56:02.000Z",
+   "motTestNumber": 768447871389,
+   "dataSource": "DVSA",
+   "expiryDate": "2025-03-31",
+   "regMarkTimeOfTest": "PK20WMW",
+   "testResult": "PASSED",
+   "odometerValue": "11974",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Exhaust noisy (8.1.1 (a))",
+     "type": "ADVISORY"
+    }
+   ]
+  },
+  {
+   "completedDate": "2025-04-17T10:13:19.000Z",
+   "motTestNumber": 904019681521,
+   "dataSource": "DVSA",
+   "expiryDate": "2026-04-16",
+   "regMarkTimeOfTest": "PK20WMW",
+   "testResult": "PASSED",
+   "odometerValue": "17727",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": []
+  },
+  {
+   "completedDate": "2026-06-07T08:21:25.000Z",
+   "motTestNumber": 453115999402,
+   "dataSource": "DVSA",
+   "expiryDate": null,
+   "regMarkTimeOfTest": "PK20WMW",
+   "testResult": "FAILED",
+   "odometerValue": "20327",
+   "odometerUnit": "MI",
+   "odometerResultType": "READ",
+   "defects": [
+    {
+     "dangerous": false,
+     "text": "Front Brake indicates excessive fluctuation of brake effort (1.2.1 (e))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": false,
+     "text": "Front Headlamp aim too low (4.1.2 (a))",
+     "type": "MAJOR"
+    },
+    {
+     "dangerous": true,
+     "text": "Rear Valve stem seriously damaged (5.2.3 (j))",
+     "type": "DANGEROUS"
+    }
+   ]
+  }
+ ],
+ "modification": "UPDATED"
+}
