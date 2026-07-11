@@ -1033,3 +1033,342 @@ async def get_risk_check_stats() -> Dict:
     except Exception as e:
         logger.error(f"Failed to get risk check stats: {e}")
         return {"total_checks": 0, "checks_this_month": 0}
+
+
+# ============================================================================
+# v2 Report Contract — Postgres Persistence
+# ============================================================================
+# Additive support for the v2 report API (report_contract.py). These
+# functions are new: they do not replace or alter get_risk / save_risk_check
+# / get_risk_check_stats above, which remain the v1 read/write path.
+
+class PostgresUnavailable(RuntimeError):
+    """Raised when the Postgres pool is unconfigured/unreachable — callers fall back or degrade honestly."""
+
+
+# The 7 component risk_* columns on mot_risk, using the v2 contract's
+# shorter aliases for the two long DVSA category names.
+_V2_COMPONENT_FIELDS = (
+    'risk_brakes',
+    'risk_suspension',
+    'risk_tyres',
+    'risk_steering',
+    'risk_visibility',
+    'risk_lamps',
+    'risk_body',
+)
+
+
+async def _fetch_mot_risk_aggregate(
+    conn, model_id: str, age_band: Optional[str], mileage_band: Optional[str]
+) -> Optional[Dict]:
+    """
+    Weighted-aggregate SELECT over mot_risk for one rung of the v2 evidence
+    ladder (get_risk_v2_banded). One shared SELECT; the WHERE clause is
+    extended depending on which of age_band/mileage_band are given:
+
+        mileage_band given   -> exact_band predicate    (model + age + mileage)
+        age_band given only  -> age_band_only predicate  (model + age)
+        neither given        -> model_average predicate  (model only)
+
+    Same base model match as legacy get_risk: (model_id = $1 OR model_id
+    LIKE $1 || ' %'). Returns the single aggregate row (a bare SUM with no
+    GROUP BY always returns exactly one row, all-NULL if nothing matched),
+    or None in the degenerate case of zero rows coming back at all.
+    """
+    query = """SELECT
+        SUM(total_tests) AS total_tests,
+        SUM(total_failures) AS total_failures,
+        SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) AS failure_risk,
+        SUM(risk_brakes * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_brakes,
+        SUM(risk_suspension * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_suspension,
+        SUM(risk_tyres * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_tyres,
+        SUM(risk_steering * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_steering,
+        SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_visibility,
+        SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_lamps,
+        SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_body
+       FROM mot_risk
+       WHERE (model_id = $1 OR model_id LIKE $1 || ' %')"""
+
+    if mileage_band is not None:
+        rows = await conn.fetch(query + " AND age_band = $2 AND mileage_band = $3", model_id, age_band, mileage_band)
+    elif age_band is not None:
+        rows = await conn.fetch(query + " AND age_band = $2", model_id, age_band)
+    else:
+        rows = await conn.fetch(query, model_id)
+
+    return rows[0] if rows else None
+
+
+async def get_risk_v2_banded(model_id: str, age_band: str, mileage_band: Optional[str]) -> Optional[Dict]:
+    """
+    3-step weighted-aggregate evidence ladder over mot_risk for the v2
+    report contract.
+
+    This intentionally differs from legacy get_risk()'s single-band shape:
+    every step here is a weighted aggregate (SUM(x*total_tests)/SUM(total_tests))
+    rather than a single-row lookup, and the caller gets back which rung of
+    the ladder was actually used (match_scope) plus honest per-component
+    nulls instead of a flat default. Legacy get_risk is untouched and keeps
+    serving the v1 endpoint.
+
+    Ladder:
+        1. exact_band     — model + age_band + mileage_band
+                             (skipped entirely if mileage_band is None or
+                             'Unknown' — go straight to step 2)
+        2. age_band_only  — model + age_band
+                             (tried if step 1 was skipped or came back NULL)
+        3. model_average  — model only
+                             (tried if step 2 came back NULL)
+
+    Returns None if step 3 is also NULL (model has zero rows in mot_risk;
+    caller should render population_default — this function never fabricates
+    that default itself). Otherwise returns:
+        {
+            'match_scope': 'exact_band' | 'age_band_only' | 'model_average',
+            'total_tests': int,
+            'total_failures': Optional[int],
+            'failure_risk': float,                 # clamped to [0, 1]
+            'risk_brakes': Optional[float], ..., 'risk_body': Optional[float],
+            'components_available': bool,          # True iff all 7 components non-null
+        }
+
+    Raises PostgresUnavailable (wrapping the original error) if there is no
+    pool, or if the connection/query fails for any reason — this function
+    never swallows a Postgres failure into a silent None ladder result, so
+    callers can distinguish "model has no data" from "couldn't check".
+    """
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for get_risk_v2_banded")
+        raise PostgresUnavailable("No database pool available for get_risk_v2_banded")
+
+    try:
+        async with pool.acquire() as conn:
+            row = None
+            match_scope = None
+
+            skip_exact = mileage_band is None or mileage_band == 'Unknown'
+            if not skip_exact:
+                row = await _fetch_mot_risk_aggregate(conn, model_id, age_band, mileage_band)
+                if row is not None and row['total_tests'] is not None:
+                    match_scope = 'exact_band'
+                else:
+                    row = None
+
+            if row is None:
+                row = await _fetch_mot_risk_aggregate(conn, model_id, age_band, None)
+                if row is not None and row['total_tests'] is not None:
+                    match_scope = 'age_band_only'
+                else:
+                    row = None
+
+            if row is None:
+                row = await _fetch_mot_risk_aggregate(conn, model_id, None, None)
+                if row is not None and row['total_tests'] is not None:
+                    match_scope = 'model_average'
+                else:
+                    row = None
+
+            if row is None:
+                return None
+
+            components = {
+                field: (_clamp_risk(row[field]) if row[field] is not None else None)
+                for field in _V2_COMPONENT_FIELDS
+            }
+
+            result = {
+                'match_scope': match_scope,
+                'total_tests': int(row['total_tests']),
+                'total_failures': int(row['total_failures']) if row['total_failures'] is not None else None,
+                'failure_risk': _clamp_risk(row['failure_risk']),
+                'components_available': all(v is not None for v in components.values()),
+            }
+            result.update(components)
+            return result
+
+    except Exception as e:
+        logger.error(f"Postgres query failed in get_risk_v2_banded: {e}")
+        raise PostgresUnavailable("Postgres query failed in get_risk_v2_banded") from e
+
+
+async def save_report(record: Dict) -> Optional[str]:
+    """
+    Insert one risk_checks row for a v2 report (the persisted counterpart of
+    a ReportResponse). Unlike legacy save_risk_check, this does NOT write a
+    JSONL backup file on failure — see the fail-open branch below.
+
+    record keys (all provided by the caller — report_service.py):
+        registration, postcode, vehicle_make, vehicle_model, vehicle_year,
+        vehicle_fuel_type, mileage, last_mot_date, last_mot_result,
+        failure_risk, confidence_level, risk_components, repair_cost_estimate,
+        model_version, prediction_source, is_dvsa_data, referrer,
+        contract_version, report_token, report_payload, mileage_source,
+        effective_mileage, match_scope, total_tests, total_failures,
+        idempotency_key, expires_at
+
+    Returns the new row's id (str) on success.
+
+    Error semantics (exact, do not "improve"):
+        - No pool                      -> raise PostgresUnavailable.
+        - asyncpg UniqueViolationError -> re-raise as-is (caller resolves
+                                          idempotency_key / report_token
+                                          races by re-fetching).
+        - Any other exception          -> log and return None. This is
+                                          deliberately fail-open: the caller
+                                          already has a computed report and
+                                          returns it to the user regardless
+                                          of whether we could persist it.
+    """
+    import asyncpg
+    import json
+
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for save_report")
+        raise PostgresUnavailable("No database pool available for save_report")
+
+    try:
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """INSERT INTO risk_checks (
+                    registration, postcode,
+                    vehicle_make, vehicle_model, vehicle_year, vehicle_fuel_type,
+                    mileage, last_mot_date, last_mot_result,
+                    failure_risk, confidence_level, risk_components, repair_cost_estimate,
+                    model_version, prediction_source, is_dvsa_data,
+                    referrer,
+                    contract_version, report_token, report_payload,
+                    mileage_source, effective_mileage, match_scope,
+                    total_tests, total_failures,
+                    idempotency_key, expires_at
+                ) VALUES (
+                    $1, $2,
+                    $3, $4, $5, $6,
+                    $7, $8, $9,
+                    $10, $11, $12::jsonb, $13::jsonb,
+                    $14, $15, $16,
+                    $17,
+                    $18, $19, $20::jsonb,
+                    $21, $22, $23,
+                    $24, $25,
+                    $26, $27
+                )
+                RETURNING id""",
+                record.get('registration'),
+                record.get('postcode'),
+                record.get('vehicle_make'),
+                record.get('vehicle_model'),
+                record.get('vehicle_year'),
+                record.get('vehicle_fuel_type'),
+                record.get('mileage'),
+                record.get('last_mot_date'),
+                record.get('last_mot_result'),
+                record.get('failure_risk'),
+                record.get('confidence_level'),
+                json.dumps(record.get('risk_components')),
+                json.dumps(record.get('repair_cost_estimate')),
+                record.get('model_version'),
+                record.get('prediction_source'),
+                record.get('is_dvsa_data', False),
+                record.get('referrer'),
+                record.get('contract_version'),
+                record.get('report_token'),
+                json.dumps(record.get('report_payload')),
+                record.get('mileage_source'),
+                record.get('effective_mileage'),
+                record.get('match_scope'),
+                record.get('total_tests'),
+                record.get('total_failures'),
+                record.get('idempotency_key'),
+                record.get('expires_at'),
+            )
+            return str(result['id'])
+
+    except asyncpg.exceptions.UniqueViolationError:
+        raise
+    except Exception as e:
+        logger.error("report_persist_failed reason=%s", type(e).__name__)
+        return None
+
+
+async def get_report_by_token(token: str) -> Optional[Dict]:
+    """
+    Fetch a saved v2 report by its public share token.
+
+    Returns None if no row matches that token. Raises PostgresUnavailable
+    if there is no pool or the query fails, so callers can render an honest
+    storage_unavailable error (report_contract.ErrorCode.STORAGE_UNAVAILABLE)
+    instead of conflating "couldn't check" with "not found".
+
+    report_payload comes back from asyncpg as a JSON text string (no type
+    codec is registered on the pool — see get_pool() above), so it is
+    parsed with json.loads before being returned. expires_at /
+    pseudonymised_at / created_at are left as the native datetime values
+    asyncpg returns (or None), not stringified, since callers use them for
+    expiry/pseudonymisation comparisons rather than direct display.
+    """
+    import json
+
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for get_report_by_token")
+        raise PostgresUnavailable("No database pool available for get_report_by_token")
+
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """SELECT id, report_payload, expires_at, pseudonymised_at, created_at
+                   FROM risk_checks WHERE report_token = $1""",
+                token
+            )
+    except Exception as e:
+        logger.error(f"Postgres query failed in get_report_by_token: {e}")
+        raise PostgresUnavailable("Postgres query failed in get_report_by_token") from e
+
+    if not row:
+        return None
+
+    result = dict(row)
+    result['id'] = str(result['id'])
+    if isinstance(result.get('report_payload'), str):
+        result['report_payload'] = json.loads(result['report_payload'])
+    return result
+
+
+async def get_report_by_idempotency_key(key: str) -> Optional[Dict]:
+    """
+    Fetch a saved v2 report by the idempotency key it was created with.
+
+    Same shape as get_report_by_token (see its docstring for the
+    report_payload parsing and error-handling notes); used to resolve
+    idempotent replays of a report-creation request without inserting a
+    duplicate row.
+    """
+    import json
+
+    pool = await get_pool()
+    if not pool:
+        logger.error("No database pool available for get_report_by_idempotency_key")
+        raise PostgresUnavailable("No database pool available for get_report_by_idempotency_key")
+
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """SELECT id, report_payload, expires_at, pseudonymised_at, created_at
+                   FROM risk_checks WHERE idempotency_key = $1""",
+                key
+            )
+    except Exception as e:
+        logger.error(f"Postgres query failed in get_report_by_idempotency_key: {e}")
+        raise PostgresUnavailable("Postgres query failed in get_report_by_idempotency_key") from e
+
+    if not row:
+        return None
+
+    result = dict(row)
+    result['id'] = str(result['id'])
+    if isinstance(result.get('report_payload'), str):
+        result['report_payload'] = json.loads(result['report_payload'])
+    return result
