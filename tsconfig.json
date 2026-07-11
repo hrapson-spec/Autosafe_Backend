@@ -41,6 +41,7 @@
     "utils/**/*.ts",
     "hooks/**/*.ts",
     "hooks/**/*.tsx",
-    "e2e/**/*.ts"
+    "e2e/**/*.ts",
+    "fixtures/**/*.ts"
   ]
 }

@@ -20,6 +20,7 @@ const appFiles = [
   'hooks/**/*.ts',
   'hooks/**/*.tsx',
   'e2e/**/*.ts',
+  'fixtures/**/*.ts',
 ];
 
 export default [
