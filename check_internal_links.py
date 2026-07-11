@@ -9,6 +9,7 @@ Usage:
     python check_internal_links.py
 """
 
+import os
 import re
 import sqlite3
 import sys
@@ -17,7 +18,9 @@ from pathlib import Path
 # --- Reproduce slug/route logic from seo_pages.py ---
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-DB_PATH = Path(__file__).parent / "autosafe.db"
+# Match main.py/build_db.py's generated read database. The repository-root
+# autosafe.db is only a legacy/ignored placeholder and may be an empty file.
+DB_PATH = Path(os.environ.get("AUTOSAFE_DB_PATH", "/tmp/autosafe.db"))
 
 AGE_BAND_SLUGS = {"0-3-years", "3-5-years", "6-10-years", "10-15-years", "15-plus-years"}
 
@@ -55,15 +58,15 @@ def build_known_routes(db_path: Path) -> set[str]:
 
     # Static pages
     routes.update([
-        "/", "/will-my-car-pass-mot/", "/privacy", "/terms",
+        "/", "/app", "/will-my-car-pass-mot/", "/privacy", "/terms",
+        "/static/privacy.html", "/static/terms.html",
+        "/static/apple-touch-icon.png", "/static/favicon.png",
         "/mot-check/",
         "/guides/mot-checklist", "/guides/common-mot-failures",
         "/guides/when-is-mot-due", "/guides/mot-failure-rates-by-car",
         "/guides/mot-rules-2026", "/guides/mot-defect-categories",
         "/guides/mot-cost", "/guides/mot-history-check",
         "/guides/first-mot-guide",
-        "/insights/", "/insights/unreliable-3-year-old-cars-2026/",
-        "/insights/march-mot-rush-2026/",
     ])
 
     if not db_path.exists():

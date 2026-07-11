@@ -1,5 +1,5 @@
 """
-Add v2 report-contract columns to risk_checks (expand-contract migration).
+Add v2 report-contract columns and lead mileage provenance.
 
 Run this BEFORE deploying the v2 report API code. This is the "expand" half
 of an expand-contract migration: it only adds nullable columns and relaxes
@@ -22,15 +22,13 @@ to be set at all.
 Rollback is NOT a full inverse of forward
 ------------------------------------------
 --rollback drops the columns and indexes this migration adds, but
-deliberately does NOT restore `registration NOT NULL`. Once any retention
-sweep (scripts/retention_sweep.py) has pseudonymised even one row, that
-row's `registration` is set to NULL by design (see docs/LIA_RISK_CHECKS.md).
-Re-adding NOT NULL at that point would either fail outright (existing NULL
-rows violate the constraint) or require a destructive backfill of fabricated
-registration values — which is worse than leaving the column nullable. That
-makes the NOT NULL relaxation a one-way door: --rollback removes the new v2
-surface (columns/indexes), not the schema relaxation that made
-pseudonymisation safe.
+deliberately does NOT restore `risk_checks.registration NOT NULL` or
+`leads.postcode NOT NULL`. Retention sets old registrations to NULL by
+design, while reminder and emailed-report requests may intentionally create
+leads without a postcode. Restoring either constraint could fail on valid
+rows or require a destructive fabricated backfill. Both nullability changes
+are therefore one-way doors: --rollback removes the new v2 surface, not the
+relaxations that make retention and postcode-optional delivery safe.
 
 The practical "rollback" for a bad v2 deploy is to redeploy the previous
 (v1) image — the v1 code never looks at these columns, so the schema can
@@ -59,6 +57,14 @@ ADDED_COLUMNS = [
     ("vrm_hmac", "VARCHAR(64)"),
 ]
 
+# The garage-lead request already carries this value. Persist it next to the
+# mileage so downstream consumers do not have to infer whether that number was
+# observed, user-entered, estimated, or missing.
+LEAD_ADDED_COLUMNS = [
+    ("vehicle_mileage_source", "VARCHAR(20)"),
+    ("comparison_scope", "VARCHAR(20)"),
+]
+
 # (index name, CREATE statement) pairs added by this migration.
 ADDED_INDEXES = [
     (
@@ -81,15 +87,27 @@ ADDED_INDEXES = [
     ),
 ]
 
-DROP_NOT_NULL_SQL = "ALTER TABLE risk_checks ALTER COLUMN registration DROP NOT NULL"
+DROP_RISK_REGISTRATION_NOT_NULL_SQL = (
+    "ALTER TABLE risk_checks ALTER COLUMN registration DROP NOT NULL"
+)
+DROP_LEAD_POSTCODE_NOT_NULL_SQL = (
+    "ALTER TABLE leads ALTER COLUMN postcode DROP NOT NULL"
+)
 
 
 def forward_statements():
     """Statements run by default (no --rollback): the expand half."""
-    statements = [DROP_NOT_NULL_SQL]
+    statements = [
+        DROP_RISK_REGISTRATION_NOT_NULL_SQL,
+        DROP_LEAD_POSTCODE_NOT_NULL_SQL,
+    ]
     statements += [
         "ALTER TABLE risk_checks ADD COLUMN IF NOT EXISTS {} {}".format(col, col_type)
         for col, col_type in ADDED_COLUMNS
+    ]
+    statements += [
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS {} {}".format(col, col_type)
+        for col, col_type in LEAD_ADDED_COLUMNS
     ]
     statements += [create_sql for _name, create_sql in ADDED_INDEXES]
     return statements
@@ -98,8 +116,8 @@ def forward_statements():
 def rollback_statements():
     """Statements run with --rollback: drop indexes + columns only.
 
-    Deliberately never emits a SET NOT NULL on registration — see the
-    module docstring for why that constraint is a one-way door.
+    Deliberately never emits a SET NOT NULL on risk_checks.registration or
+    leads.postcode — see the module docstring for why both are one-way doors.
     """
     statements = [
         "DROP INDEX IF EXISTS {}".format(name) for name, _create_sql in ADDED_INDEXES
@@ -107,6 +125,10 @@ def rollback_statements():
     statements += [
         "ALTER TABLE risk_checks DROP COLUMN IF EXISTS {}".format(col)
         for col, _col_type in ADDED_COLUMNS
+    ]
+    statements += [
+        "ALTER TABLE leads DROP COLUMN IF EXISTS {}".format(col)
+        for col, _col_type in LEAD_ADDED_COLUMNS
     ]
     return statements
 
@@ -143,7 +165,8 @@ def main():
         "--rollback",
         action="store_true",
         help="Drop the columns/indexes this migration adds. Does NOT restore "
-             "registration NOT NULL (see module docstring — one-way door).",
+             "risk_checks.registration or leads.postcode NOT NULL (see module "
+             "docstring — one-way doors).",
     )
     parser.add_argument(
         "--dry-run",

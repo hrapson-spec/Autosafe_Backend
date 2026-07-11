@@ -17,6 +17,7 @@ const EXPECTED_MESSAGES: Record<Code, string> = {
   report_not_found: "That report link isn't valid — it may be incomplete.",
   report_expired: 'This report link has expired. Run a fresh check to get an up-to-date result.',
   storage_unavailable: 'Saved reports are temporarily unavailable — please try again shortly.',
+  idempotency_conflict: 'This retry could not be matched safely. Please submit the check again.',
   internal_error: 'Something went wrong on our side — please try again.',
   undeclared_parameter: 'Something went wrong on our side — please try again.',
   network_error: "We couldn't reach AutoSafe — check your connection and try again.",

@@ -3,13 +3,14 @@
 Retention sweep: rolling pseudonymisation of `risk_checks` rows past the
 published retention window.
 
-Per docs/LIA_RISK_CHECKS.md §2/§3: the privacy notice discloses a 24-month
+Per docs/LIA_RISK_CHECKS.md §5: the privacy notice discloses a 24-month
 retention period for vehicle check records. After that window, the
 plaintext registration and postcode serve no purpose and must be removed;
 the row is kept in pseudonymised form (HMAC-SHA256 of the registration,
-keyed by a secret held outside the database) so that P2 (prediction-
-accuracy measurement against later DVSA outcome data) can continue on the
-de-identified backlog.
+keyed by a secret held outside the database). Any later aggregate quality
+evaluation using that join key remains subject to the source, linkage, and
+owner-review conditions in the LIA; this script does not implement or approve
+an outcome-linkage pipeline.
 
 This script is the recurring mechanism for that commitment. For the
 one-time backlog created under the PRIOR (inaccurate) notice, see
@@ -37,8 +38,8 @@ Design notes (flagged per task instructions):
      a fixed number of days). We use dateutil.relativedelta for this.
      python-dateutil is NOT added to requirements.txt: it is already a
      transitive dependency here (requirements.txt pins pandas==2.2.0,
-     and `pip show python-dateutil` reports `Required-by: matplotlib,
-     pandas`) -- verified present in the target venv before choosing this
+     and `pip show python-dateutil` reports `Required-by: pandas`) --
+     verified present in the target venv before choosing this
      approach. Per the brief's fallback instruction ("if not [importable],
      compute calendar months by hand"), hand-rolled arithmetic was the
      documented fallback; it was not needed.
@@ -348,7 +349,8 @@ async def run_verification(conn: Any, cutoff: datetime) -> Dict[str, int]:
     in dry-run this just reports the pre-existing state, since nothing
     changed.
 
-    (a) rows older than cutoff that still have a plaintext registration --
+    (a) rows older than cutoff that still carry any field the sweep promises
+        to remove (registration, postcode, report payload, or share token) --
         expect 0 after a successful --execute.
     (b) pseudonymised-row counts: total pseudonymised, and how many of
         those have vrm_hmac set. The brief's originally-specified "had a
@@ -358,10 +360,20 @@ async def run_verification(conn: Any, cutoff: datetime) -> Dict[str, int]:
         fabricate a distinction the data can't support, we report the two
         counts that ARE honestly computable (per the brief's own fallback
         instruction for this check).
-    (c) pseudonymised rows that still carry a report_payload -- expect 0.
+    (c) pseudonymised rows that still carry any of those fields -- expect 0.
     """
-    stale_plaintext = await conn.fetchval(
-        "SELECT COUNT(*) FROM risk_checks WHERE created_at < $1 AND registration IS NOT NULL",
+    stale_sensitive_fields = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM risk_checks
+        WHERE created_at < $1
+          AND (
+              registration IS NOT NULL
+              OR postcode IS NOT NULL
+              OR report_payload IS NOT NULL
+              OR report_token IS NOT NULL
+          )
+        /* stale sensitive fields */
+        """,
         cutoff,
     )
     pseudonymised_total = await conn.fetchval(
@@ -370,21 +382,31 @@ async def run_verification(conn: Any, cutoff: datetime) -> Dict[str, int]:
     pseudonymised_with_hmac = await conn.fetchval(
         "SELECT COUNT(*) FROM risk_checks WHERE pseudonymised_at IS NOT NULL AND vrm_hmac IS NOT NULL"
     )
-    pseudonymised_with_payload = await conn.fetchval(
-        "SELECT COUNT(*) FROM risk_checks WHERE pseudonymised_at IS NOT NULL AND report_payload IS NOT NULL"
+    pseudonymised_with_sensitive_fields = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM risk_checks
+        WHERE pseudonymised_at IS NOT NULL
+          AND (
+              registration IS NOT NULL
+              OR postcode IS NOT NULL
+              OR report_payload IS NOT NULL
+              OR report_token IS NOT NULL
+          )
+        /* pseudonymised sensitive fields */
+        """
     )
 
     print("\n--- Verification ---")
-    print(f"(a) rows < cutoff still with plaintext registration : {stale_plaintext}")
+    print(f"(a) rows < cutoff still with sensitive fields       : {stale_sensitive_fields}")
     print(f"(b) pseudonymised rows, total                        : {pseudonymised_total}")
     print(f"(b) pseudonymised rows with vrm_hmac set             : {pseudonymised_with_hmac}")
-    print(f"(c) pseudonymised rows with report_payload remaining : {pseudonymised_with_payload}")
+    print(f"(c) pseudonymised rows with sensitive fields         : {pseudonymised_with_sensitive_fields}")
 
     return {
-        "stale_plaintext": stale_plaintext,
+        "stale_sensitive_fields": stale_sensitive_fields,
         "pseudonymised_total": pseudonymised_total,
         "pseudonymised_with_hmac": pseudonymised_with_hmac,
-        "pseudonymised_with_payload": pseudonymised_with_payload,
+        "pseudonymised_with_sensitive_fields": pseudonymised_with_sensitive_fields,
     }
 
 
@@ -488,7 +510,10 @@ async def _amain(args: argparse.Namespace) -> int:
     finally:
         await conn.close()
 
-    if args.execute and (result["stale_plaintext"] > 0 or result["pseudonymised_with_payload"] > 0):
+    if args.execute and (
+        result["stale_sensitive_fields"] > 0
+        or result["pseudonymised_with_sensitive_fields"] > 0
+    ):
         print("ERROR: post-execute verification failed -- see (a)/(c) above.", file=sys.stderr)
         return 1
     return 0

@@ -21,7 +21,7 @@ import type { ApiErrorEnvelope, PublicStats, ReportV2 } from '../../types';
 export const DEFAULT_STATS: PublicStats = {
   total_checks: 15321,
   checks_this_month: 481,
-  mot_records: '142M+',
+  mot_records: '148M+',
 };
 
 type ReportOrError = ReportV2 | ApiErrorEnvelope;
@@ -78,6 +78,24 @@ export async function mockCreateReport(
     if (route.request().method() !== 'POST') return route.fallback();
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   });
+}
+
+/** Hold POST /api/v2/reports until the returned release function is called. */
+export async function gateCreateReport(
+  page: Page,
+  body: ReportOrError,
+  status: number = isErrorEnvelope(body) ? 404 : 200
+): Promise<() => void> {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/v2/reports', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await gate;
+    await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+  return release;
 }
 
 /** Mocks GET /api/v2/reports/<token> (report fetch by share token) with

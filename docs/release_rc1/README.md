@@ -1,47 +1,83 @@
 # AutoSafe RC1 release packet
 
 This directory is the decision packet for PR #32 on
-`release/product-truth-rc1`. It records what was fixed, what was verified,
-what remains operationally unverified, and the exact deploy/rollback boundary.
+`release/product-truth-rc1`. It separates source/test evidence from operational
+evidence and authorises neither merge nor production deployment.
 
-## Decision order
+## Reading order
 
-1. Read [DECISION_RECORD.md](DECISION_RECORD.md) for the release decision and
+1. [DECISION_RECORD.md](DECISION_RECORD.md) — invariants, hard gates, and
    owner-only approvals.
-2. Read [RCA_CLOSURE_MATRIX.md](RCA_CLOSURE_MATRIX.md) for the five original
-   failures, their causes, fixes, and regression evidence.
-3. Read [RAILWAY_STRIP_RISK_MEMO.md](RAILWAY_STRIP_RISK_MEMO.md) before any
-   Railway deployment. This is the remaining platform-specific risk.
-4. Follow [RUNBOOK_DEPLOY_ROLLBACK.md](RUNBOOK_DEPLOY_ROLLBACK.md) exactly.
-5. Use [PRIVACY_RECONCILIATION.md](PRIVACY_RECONCILIATION.md) for the privacy
-   and retention review.
-6. Treat [FINAL_RELEASE_REPORT.md](FINAL_RELEASE_REPORT.md) as authoritative
-   for the final candidate SHA, test counts, live CI state, and verdict. It is
-   generated only after the final review and gates complete.
+2. [RCA_CLOSURE_MATRIX.md](RCA_CLOSURE_MATRIX.md) — original failures, shared
+   causes, corrections, and regression evidence.
+3. [PRIVACY_RECONCILIATION.md](PRIVACY_RECONCILIATION.md) — actual data flow,
+   logging/analytics boundary, retention, and residual risks.
+4. [RAILWAY_STRIP_RISK_MEMO.md](RAILWAY_STRIP_RISK_MEMO.md) — platform-specific
+   candidate-deploy gate that local Docker cannot close.
+5. [RUNBOOK_DEPLOY_ROLLBACK.md](RUNBOOK_DEPLOY_ROLLBACK.md) — exact-SHA staging,
+   deployment, canary, monitoring, and rollback procedure.
+6. `FINAL_RELEASE_REPORT.md` — final SHA, evidence counts, CI/staging state,
+   residual risks, and GO/NO-GO. It is created only after candidate gates.
 
-## Scope boundary
-
-The packet authorises neither a merge nor a production deployment. `main`
-auto-deploys to Railway, so both actions require an explicit owner decision.
+Supporting controls live in `docs/STAGING.md`, `docs/MONITORING.md`, and
+`docs/LIA_RISK_CHECKS.md`.
 
 ## Evidence hierarchy
 
-- Source and regression tests in this repository are the primary evidence.
-- GitHub Actions logs and artifacts for the final candidate SHA are the durable
-  integration evidence.
-- The local real-Postgres acceptance run is supporting evidence only. Its raw
-  files are deliberately not committed; the final report records the result
-  and the exact reproducible command.
-- A successful local Docker build cannot close the Railway source-stripping
-  risk. Only a real Railway candidate deploy can do that.
+1. Exact source, schema, migration, and tests in this repository.
+2. Fresh local outputs on a clean committed candidate.
+3. GitHub Actions and artifacts for that exact SHA, including a clean Docker
+   build and real-PostgreSQL acceptance.
+4. Isolated Railway candidate evidence for source packaging, public routing,
+   proxy logs, browser requests, analytics, persistence, and sharing.
+5. Explicit owner acceptance and merge authority.
+
+Old-SHA test results, a dirty local build, a healthy endpoint with unknown or
+mismatched identity, or code that merely contains a retention script cannot
+close a hard gate.
+
+## Dataset baseline
+
+The checked-in primary comparison artifact, `prod_data_clean.csv.gz`, contains
+254,145 aggregate rows representing 148,509,908 tests and 39,969,903 failures,
+an exact dataset-wide failure rate of 26.9139638817903%. Its repository artifact
+revision is 2026-01-29. The artifact does not encode the source records' coverage
+date; the revision date must not be presented as a claim that DVSA source data
+is current through that date. `scripts/claim_sweep.py` independently recalculates
+the totals and rejects stale public figures.
 
 ## Core implementation map
 
-- Contract and error taxonomy: `report_contract.py:35-272`
-- Mileage and evidence provenance: `report_service.py:135-505`
-- Atomic create/share retrieval: `report_routes.py:568-788`
-- Durable report storage: `database.py:1196-1343`
-- Browser API boundary: `services/reportApi.ts:73-146`
-- Truthful report presentation: `components/ReportCopy.tsx:84-274`
-- Retention and pseudonymisation: `scripts/retention_sweep.py:127-334`
-- Release identity acceptance: `scripts/staging_acceptance.py:133-158`
+- Contract, provenance, and error taxonomy: `report_contract.py`
+- Mileage and evidence ladder: `report_service.py`, `database.py`
+- Atomic create/idempotency/share retrieval: `report_routes.py`
+- Durable report and lead storage: `database.py`, `create_leads_table.py`
+- Browser API and retry identity: `services/reportApi.ts`, `App.tsx`
+- Truthful presentation/recommendations: `components/ReportCopy.tsx`,
+  `components/ReportDashboard.tsx`, `utils/recommendation.ts`
+- Evidence-scoped public routes: `seo_pages.py`, `templates/seo_model.html`,
+  `templates/seo_model_age.html`
+- Privacy-safe paths/referrers/log correlation: `utils.py`, `dvsa_client.py`
+- Consent and analytics boundary: `index.html`, `static/consent.js`,
+  `utils/analytics.ts`
+- Check/lead retention: `scripts/retention_sweep.py`,
+  `scripts/lead_retention_sweep.py`
+- Release identity and acceptance: `report_routes.py`,
+  `scripts/staging_acceptance.py`
+- Contract/public-claim gates: `openapi.json`,
+  `scripts/check_openapi_drift.py`, `scripts/claim_sweep.py`
+- Reproducible and audited browser dependency graph: `package.json`,
+  `package-lock.json`
+- Retired unsupported outbound publishers: `agents/`, `data_stories/`, and
+  their dedicated configuration/dependencies are absent; the claim sweep
+  retains glob coverage for any future replacement.
+
+RC1 implements no later-outcome linkage pipeline. Any future attempt to connect
+reports to subsequent MOT outcomes is a separate data-source, privacy, and
+evaluation decision outside this release.
+
+## Scope boundary
+
+`main` auto-deploys to Railway. Approval of this packet or PR review is not
+approval to merge. Only an explicit owner GO after all exact-SHA gates can
+authorise that action.

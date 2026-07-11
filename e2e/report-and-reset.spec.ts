@@ -37,12 +37,12 @@ test('happy path: submit -> persisted report -> evidence facts present -> back t
 
   await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
 
-  // Narrative paragraph (rendered twice in the control layout -- Reliability
-  // Score card + Expert Analysis -- both from the same buildNarrative call).
+  // Narrative paragraph is rendered from the same comparison-copy function
+  // wherever the control layout repeats it.
   const narrative = buildNarrative(fixtureExactHigh);
   await expect(page.getByText(narrative, { exact: true }).first()).toBeVisible();
 
-  // Scope disclosure (control-only, MOT Prediction card).
+  // Scope disclosure (control-only evidence-quality card).
   await expect(page.getByText(buildScopeDisclosure(fixtureExactHigh), { exact: true })).toBeVisible();
 
   // Sample size (evidence-meta badge).
@@ -65,7 +65,7 @@ test('happy path: submit -> persisted report -> evidence facts present -> back t
   await page.goBack();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText('Fix it before they find it.')).toBeVisible();
+  await expect(page.getByText('See what the MOT evidence says.')).toBeVisible();
   await expect(registrationInput(page)).toBeEditable();
   await expect(page.getByRole('button', { name: /check this car/i })).toBeVisible();
 });

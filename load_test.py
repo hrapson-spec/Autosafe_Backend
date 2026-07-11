@@ -3,6 +3,13 @@
 AutoSafe Performance Load Testing Script
 Measures response times, throughput, and error rates under various load conditions.
 """
+
+# This is an executable benchmark helper, not a pytest module. Its public
+# ``test_endpoint`` function names the operation it benchmarks; opt the module
+# out of test discovery so a repository-root pytest run exercises only the
+# actual suite under tests/.
+__test__ = False
+
 import asyncio
 import httpx
 import time

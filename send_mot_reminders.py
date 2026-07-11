@@ -56,7 +56,8 @@ async def get_due_reminders(dry_run: bool = False) -> list:
         async with pool.acquire() as conn:
             rows = await conn.fetch(
                 """SELECT id, email, registration, vehicle_make, vehicle_model,
-                          vehicle_year, mot_expiry_date, failure_risk
+                          vehicle_year, mot_expiry_date, failure_risk,
+                          comparison_scope
                    FROM leads
                    WHERE lead_type = 'mot_reminder'
                      AND mot_expiry_date >= $1
@@ -75,16 +76,21 @@ async def get_due_reminders(dry_run: bool = False) -> list:
                     'registration': row['registration'],
                     'vehicle_make': row['vehicle_make'] or 'Unknown',
                     'vehicle_model': row['vehicle_model'] or 'Vehicle',
-                    'vehicle_year': row['vehicle_year'] or 0,
+                    'vehicle_year': row['vehicle_year'],
                     'mot_expiry_date': row['mot_expiry_date'].isoformat() if row['mot_expiry_date'] else None,
-                    'failure_risk': float(row['failure_risk']) if row['failure_risk'] else None,
+                    'failure_risk': (
+                        float(row['failure_risk'])
+                        if row['failure_risk'] is not None
+                        else None
+                    ),
+                    'match_scope': row['comparison_scope'],
                 })
 
             logger.info(f"Found {len(leads)} reminders due (window: {window_start} to {window_end})")
             return leads
 
     except Exception as e:
-        logger.error(f"Failed to query due reminders: {e}")
+        logger.error("Failed to query due reminders (%s)", type(e).__name__)
         return []
 
 
@@ -102,7 +108,7 @@ async def mark_reminder_sent(lead_id: str) -> bool:
             )
             return True
     except Exception as e:
-        logger.error(f"Failed to mark reminder sent for {lead_id}: {e}")
+        logger.error("Failed to mark reminder sent (%s)", type(e).__name__)
         return False
 
 
@@ -137,10 +143,11 @@ async def send_reminders(dry_run: bool = False):
                 vehicle_year=lead['vehicle_year'],
                 mot_expiry_date=lead['mot_expiry_date'],
                 failure_risk=lead.get('failure_risk'),
+                match_scope=lead.get('match_scope'),
             )
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would send to {lead['email'][:3]}***: {email_content['subject']}")
+                logger.info(f"[DRY RUN] Would send reminder for lead={lead['id']}")
                 sent += 1
                 continue
 
@@ -155,14 +162,17 @@ async def send_reminders(dry_run: bool = False):
             if success:
                 await mark_reminder_sent(lead['id'])
                 sent += 1
-                logger.info(f"Reminder sent: lead={lead['id']} reg={lead['registration']}")
+                logger.info(f"Reminder sent: lead={lead['id']}")
             else:
                 failed += 1
                 logger.error(f"Reminder send failed: lead={lead['id']}")
 
         except Exception as e:
             failed += 1
-            logger.error(f"Error sending reminder for lead {lead['id']}: {e}")
+            logger.error(
+                f"Error sending reminder for lead {lead['id']}: "
+                f"type={type(e).__name__}"
+            )
 
     result = {"sent": sent, "failed": failed, "skipped": skipped}
     logger.info(f"Reminder job complete: {result}")

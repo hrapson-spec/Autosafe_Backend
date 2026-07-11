@@ -5,16 +5,10 @@
  * (report_service.py's furthest fallback rung that still has a real vehicle
  * identity). Both variants must tell a consistent story on both fixtures.
  *
- * "Risk % consistent everywhere it appears" is checked against the
- * specific elements that carry the *headline* risk/reliability figure
- * (ReportDashboard.tsx's score-value / pass-probability-value /
- * risk-score-value testids, the progressbar's aria-valuenow, and the
- * ReportCopy narrative sentence) -- not a blind page-wide scan for any
- * "%" text. Per-component fault percentages (e.g. "Brakes 18%") are a
- * legitimately different, independent metric family (each component's own
- * risk fraction, not a re-expression of the headline failure risk), so a
- * whole-page regex would produce false failures there by construction, not
- * catch real bugs.
+ * The headline percentage is one disclosed historical failure rate in both
+ * layouts. The suite checks the dedicated value slot, label, narrative and
+ * (where present) progress bar, and rejects the old arithmetic-complement
+ * labels that implied separate reliability/pass models.
  */
 import type { Page } from '@playwright/test';
 import type { ReportV2 } from '../types';
@@ -22,25 +16,28 @@ import { test, expect } from './helpers/setup';
 import { mockGetReport } from './helpers/mockApi';
 import { forceVariant, type ResultsPageVariant } from './helpers/experiments';
 import { fixtureExactHigh, fixturePopulationDefault } from '../fixtures/reportResponses';
-import { riskPercentDisplay, buildNarrative } from '../components/ReportCopy';
+import { reportRateDisplay, buildNarrative, failureRateLabel } from '../components/ReportCopy';
 
 async function assertHeadlineRiskConsistency(page: Page, variant: ResultsPageVariant, report: ReportV2): Promise<void> {
-  const risk = riskPercentDisplay(report.risk.failure_risk, report.risk.confidence);
-  const reliability = 100 - risk.value;
+  const risk = reportRateDisplay(report);
+  const value = variant === 'control'
+    ? page.getByTestId('score-value')
+    : page.getByTestId('failure-rate-value');
+  await expect(value).toHaveText(`${risk.value}%`);
+  await expect(page.getByRole('heading', { name: failureRateLabel(report) })).toBeVisible();
 
-  if (variant === 'control') {
-    await expect(page.getByTestId('score-value')).toHaveText(`${reliability}/100`);
-    await expect(page.getByTestId('pass-probability-value')).toHaveText(`${reliability}%`);
+  if (variant === 'treatment') {
+    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', String(risk.value));
   } else {
-    await expect(page.getByTestId('risk-score-value')).toHaveText(`${risk.value}%`);
+    await expect(page.getByRole('img', { name: `${failureRateLabel(report)}: ${risk.value}%` })).toBeVisible();
   }
-
-  const expectedBarValue = variant === 'control' ? reliability : risk.value;
-  await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', String(expectedBarValue));
 
   // The narrative sentence (ReportCopy.buildNarrative) embeds the same
   // headline number as prose, in both variants.
   await expect(page.getByText(buildNarrative(report), { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/reliability score/i)).toHaveCount(0);
+  await expect(page.getByText(/pass probability/i)).toHaveCount(0);
+  await expect(page.getByText(/MOT prediction/i)).toHaveCount(0);
 }
 
 async function assertShareEnabled(page: Page): Promise<void> {
@@ -63,9 +60,9 @@ async function assertComponentsVisible(page: Page, variant: ResultsPageVariant):
     // exactly as a real user would, before asserting the section is
     // visible: this is correct, intentional treatment-layout behaviour,
     // not a bug to work around.
-    await page.getByText('Full Component Breakdown & Expert Analysis').click();
+    await page.getByText('Component Comparison & Evidence Summary').click();
   }
-  await expect(page.getByRole('heading', { name: 'Common Faults To Watch' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Comparable-Vehicle Component Patterns' })).toBeVisible();
 }
 
 async function assertFallbackRender(page: Page, report: ReportV2): Promise<void> {
@@ -76,13 +73,13 @@ async function assertFallbackRender(page: Page, report: ReportV2): Promise<void>
   // matching headings.
   //
   // Sample size honestly unavailable, never fabricated as a count.
-  await expect(page.getByTestId('evidence-meta')).toContainText('Sample size unavailable');
+  await expect(page.getByTestId('evidence-meta')).toContainText('Vehicle-matched sample unavailable');
   // No mileage slot: the header's vehicle line has no " • ... miles" suffix
   // (mileage.source === 'missing') and no year prefix (vehicle.year === null)
   // -- exact match on just "make model" proves nothing was appended.
   await expect(page.getByText(`${report.vehicle.make} ${report.vehicle.model}`, { exact: true })).toBeVisible();
   // No components card at all (report.components.available === false).
-  await expect(page.getByRole('heading', { name: 'Common Faults To Watch' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Comparable-Vehicle Component Patterns' })).toHaveCount(0);
 }
 
 for (const variant of ['control', 'treatment'] as const) {

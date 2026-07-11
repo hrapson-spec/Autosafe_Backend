@@ -65,6 +65,17 @@ describe('createReport', () => {
     expect(sentBody.mileage_user).toBe(0);
   });
 
+  it('uses a caller-supplied idempotency key so a logical retry can reuse it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, fixtureExactHigh));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createReport('AB12CDE', 'SW1A 1AA', undefined, 'stable-retry-key');
+
+    const [, init] = fetchMock.mock.calls[0];
+    const sentBody = JSON.parse(init.body as string);
+    expect(sentBody.idempotency_key).toBe('stable-retry-key');
+  });
+
   it('never puts registration or postcode in the URL', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, fixtureExactHigh));
     vi.stubGlobal('fetch', fetchMock);

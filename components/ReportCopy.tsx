@@ -50,6 +50,16 @@ export interface ComponentsSectionCopy {
   emptyStateText: string | null;
 }
 
+export function hasVehicleComparison(report: ReportV2): boolean {
+  return ['exact_band', 'age_band_only', 'model_average'].includes(report.evidence.match_scope);
+}
+
+export function failureRateLabel(report: ReportV2): string {
+  return hasVehicleComparison(report)
+    ? 'Comparable-vehicle MOT failure rate'
+    : 'Dataset-wide reference MOT failure rate';
+}
+
 /**
  * Exhaustiveness guard for switches over the report's literal-union fields.
  * If the backend contract ever grows a new enum member without a matching
@@ -75,6 +85,17 @@ export function riskPercentDisplay(failureRisk: number, confidence: Confidence):
   return { value, approximate: false, text: `${value}%` };
 }
 
+/** Keep the dataset-wide reference numerically tied to its primary aggregate.
+ * Very-low confidence there means "not vehicle matched", not that the
+ * aggregate itself should be shifted to a nearest-five display. */
+export function reportRateDisplay(report: ReportV2): RiskPercentDisplay {
+  if (!hasVehicleComparison(report)) {
+    const value = Math.round(report.risk.failure_risk * 100);
+    return { value, approximate: false, text: `${value}%` };
+  }
+  return riskPercentDisplay(report.risk.failure_risk, report.risk.confidence);
+}
+
 /**
  * States, in plain language, exactly how closely the served evidence
  * matches this vehicle. This is the honesty backbone of the report: it is
@@ -87,15 +108,15 @@ export function buildScopeDisclosure(report: ReportV2): string {
 
   switch (scope) {
     case 'exact_band':
-      return `This result is based on ${make} ${model} vehicles of a similar age and mileage.`;
+      return `This comparison uses ${make} ${model} records in the matched age and mileage bands.`;
     case 'age_band_only':
-      return `This result is based on ${make} ${model} vehicles of a similar age — we didn't have enough mileage-matched data to narrow it further.`;
+      return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because there wasn't enough mileage-matched data.`;
     case 'model_average':
-      return `This result is based on all ${make} ${model} vehicles in our data, across all ages and mileages.`;
+      return `This comparison uses all ${make} ${model} records in the dataset, across all age and mileage bands.`;
     case 'population_default':
-      return `We don't have enough ${make} ${model} data yet, so this is the average across all vehicles we've checked.`;
+      return `We don't have enough ${make} ${model} group data, so this is the dataset-wide reference rate.`;
     case 'unavailable':
-      return `Our comparison data is temporarily unavailable, so this is the overall average across all vehicles — not a result for this ${make} ${model}.`;
+      return `Our comparison data is temporarily unavailable, so this is the dataset-wide reference rate — not a ${make} ${model} result.`;
     default:
       return assertUnreachable(scope, 'evidence.match_scope');
   }
@@ -109,7 +130,7 @@ export function buildScopeDisclosure(report: ReportV2): string {
 export function buildSampleSizeClause(report: ReportV2): string | null {
   const total = report.evidence.total_tests;
   if (total === null || total <= 0) return null;
-  return `Based on ${total.toLocaleString('en-GB')} MOT tests of similar vehicles.`;
+  return `Based on ${total.toLocaleString('en-GB')} recorded MOT ${total === 1 ? 'test' : 'tests'} in that comparison group.`;
 }
 
 /**
@@ -118,7 +139,11 @@ export function buildSampleSizeClause(report: ReportV2): string | null {
  */
 export function sampleSizeBadge(report: ReportV2): string {
   const total = report.evidence.total_tests;
-  if (total === null || total <= 0) return 'Sample size unavailable';
+  if (total === null || total <= 0) {
+    return hasVehicleComparison(report)
+      ? 'Sample size unavailable'
+      : 'Vehicle-matched sample unavailable';
+  }
   return `${total.toLocaleString('en-GB')} tests`;
 }
 
@@ -137,15 +162,15 @@ export function buildMileagePhrase(report: ReportV2): string | null {
     case 'missing':
       return null;
     case 'user_entered':
-      return `based on the ${n} miles you entered`;
+      return `using a mileage band selected from the ${n} miles you entered`;
     case 'observed_mot': {
-      let phrase = `based on ${n} miles recorded at its MOT${observed_at ? ` on ${formatDateGB(observed_at)}` : ''}`;
+      let phrase = `using a mileage band selected from ${n} miles recorded at its MOT${observed_at ? ` on ${formatDateGB(observed_at)}` : ''}`;
       if (anomaly) phrase += ' (an inconsistent newer reading was ignored)';
       if (unit_converted) phrase += ' (converted from kilometres)';
       return phrase;
     }
     case 'estimated':
-      return `based on an estimated ${n} miles for a vehicle of this age`;
+      return `using a mileage band selected from an estimated ${n} miles for a vehicle of this age`;
     default:
       return assertUnreachable(source, 'mileage.source');
   }
@@ -175,20 +200,59 @@ export function mileageHeaderValue(report: ReportV2): string | null {
 }
 
 /**
+ * Mileage provenance for comparison scopes that did not use mileage. This
+ * keeps observed/user/estimated context visible without implying that it
+ * narrowed an age-only, model-wide, or dataset-wide rate.
+ */
+function buildUnmatchedMileageDisclosure(report: ReportV2): string | null {
+  const { effective_value, source, observed_at, anomaly, unit_converted } = report.mileage;
+  if (effective_value === null || source === 'missing') return null;
+  const n = effective_value.toLocaleString();
+  let context: string;
+
+  switch (source) {
+    case 'user_entered':
+      context = `${n} miles entered by the user`;
+      break;
+    case 'observed_mot':
+      context = `${n} miles recorded at its MOT${observed_at ? ` on ${formatDateGB(observed_at)}` : ''}`;
+      if (anomaly) context += ' (an inconsistent newer reading was ignored)';
+      if (unit_converted) context += ' (converted from kilometres)';
+      break;
+    case 'estimated':
+      context = `an estimated ${n} miles for a vehicle of this age`;
+      break;
+    default:
+      return assertUnreachable(source, 'mileage.source');
+  }
+
+  const scope = report.evidence.match_scope;
+  const reason = scope === 'age_band_only'
+    ? 'the comparison only matched the age band'
+    : scope === 'model_average'
+      ? 'the comparison is model-wide'
+      : 'the displayed rate is the dataset-wide reference';
+  return `Mileage context: ${context}. This mileage was not used because ${reason}.`;
+}
+
+/**
  * Caveat sentence for thin-evidence confidence levels. High/Medium
  * confidence needs no caveat; Low and Very Low get progressively more
  * direct language about how much weight to put on the figure.
  */
 export function buildConfidenceCaveat(report: ReportV2): string | null {
+  if (!hasVehicleComparison(report)) {
+    return 'No vehicle-matched evidence is available — treat this dataset reference as general context only.';
+  }
   const confidence = report.risk.confidence;
   switch (confidence) {
     case 'High':
     case 'Medium':
       return null;
     case 'Low':
-      return 'This estimate is based on limited data — treat it as a guide rather than a precise figure.';
+      return 'This rate comes from limited data — treat it as broad context rather than a precise vehicle-level figure.';
     case 'Very Low':
-      return 'Very limited data is available here — treat this as a rough indication only.';
+      return 'Very limited data is available here — treat this as broad context only.';
     default:
       return assertUnreachable(confidence, 'risk.confidence');
   }
@@ -215,18 +279,40 @@ export function buildConfidenceCaveat(report: ReportV2): string | null {
  * carry information beyond its mapped scope.
  */
 export function buildNarrative(report: ReportV2): string {
-  const { vehicle, risk } = report;
-  const riskText = riskPercentDisplay(risk.failure_risk, risk.confidence).text;
-  const mileagePhrase = buildMileagePhrase(report);
-  const yearPrefix = vehicle.year ? `${vehicle.year} ` : '';
-  const mileageSuffix = mileagePhrase ? `, ${mileagePhrase}` : '';
-  const sentence1 = `A ${yearPrefix}${vehicle.make} ${vehicle.model} like this has a ${riskText} chance of an MOT failure${mileageSuffix}.`;
+  const { vehicle } = report;
+  const riskText = reportRateDisplay(report).text;
+  const scope = report.evidence.match_scope;
+  let sentence1: string;
+
+  switch (scope) {
+    case 'exact_band': {
+      const mileagePhrase = buildMileagePhrase(report);
+      sentence1 = `The matched ${vehicle.make} ${vehicle.model} age-and-mileage group has a recorded MOT failure rate of ${riskText}${mileagePhrase ? `, ${mileagePhrase}` : ''}.`;
+      break;
+    }
+    case 'age_band_only':
+      sentence1 = `The matched ${vehicle.make} ${vehicle.model} age group has a recorded MOT failure rate of ${riskText}.`;
+      break;
+    case 'model_average':
+      sentence1 = `Across all ${vehicle.make} ${vehicle.model} records in the comparison data, the recorded MOT failure rate is ${riskText}.`;
+      break;
+    case 'population_default':
+    case 'unavailable':
+      sentence1 = `The dataset-wide reference MOT failure rate shown here is ${riskText}; it is not a vehicle-matched result.`;
+      break;
+    default:
+      return assertUnreachable(scope, 'evidence.match_scope');
+  }
+
+  const unmatchedMileageDisclosure = scope === 'exact_band'
+    ? null
+    : buildUnmatchedMileageDisclosure(report);
 
   const sampleSizeClause = buildSampleSizeClause(report);
   const scopeDisclosure = buildScopeDisclosure(report);
   const confidenceCaveat = buildConfidenceCaveat(report);
 
-  return [sentence1, sampleSizeClause, scopeDisclosure, confidenceCaveat]
+  return [sentence1, unmatchedMileageDisclosure, sampleSizeClause, scopeDisclosure, confidenceCaveat]
     .filter((part): part is string => part !== null)
     .join(' ');
 }
@@ -267,11 +353,14 @@ export function repairEstimateCaption(): string {
  * cannot leak into a shared message via this function.
  */
 export function buildWhatsAppMessage(report: ReportV2): string | null {
-  if (report.share_url === null) return null;
-  const { vehicle, risk } = report;
-  const riskText = riskPercentDisplay(risk.failure_risk, risk.confidence).text;
+  if (!report.persistence.share_available || report.share_url === null) return null;
+  const { vehicle } = report;
+  const riskText = reportRateDisplay(report).text;
+  if (!hasVehicleComparison(report)) {
+    return `This report shows a dataset-wide reference MOT failure rate of ${riskText}, not a vehicle-matched result. View it: ${report.share_url}`;
+  }
   const yearPrefix = vehicle.year ? `${vehicle.year} ` : '';
-  return `My ${yearPrefix}${vehicle.make} ${vehicle.model} has a ${riskText} MOT failure risk. Check yours free: ${report.share_url}`;
+  return `Comparable ${yearPrefix}${vehicle.make} ${vehicle.model} vehicles have a recorded MOT failure rate of ${riskText}. View the report: ${report.share_url}`;
 }
 
 /** Banner shown when the report was produced from demo data, not a real lookup. */

@@ -1,7 +1,8 @@
 import { RecommendationInput, Recommendation, PrimaryAction, CtaVariant, MotivatorCardType } from '../types';
 
 const TRUST_MICROCOPY = 'Free, no obligation. Up to 3 local garages will receive your request and contact you.';
-const SCORE_LABEL = 'Estimated chance of failing your next MOT';
+const COMPARISON_SCORE_LABEL = 'Comparable-vehicle MOT failure rate';
+const REFERENCE_SCORE_LABEL = 'Dataset-wide reference MOT failure rate';
 
 function getMotivatorCard(
   input: RecommendationInput,
@@ -14,8 +15,8 @@ function getMotivatorCard(
   ) {
     return {
       type: 'COST_ESTIMATE',
-      headline: `Estimated repair cost: £${input.repairCostEstimate.cost_min}–£${input.repairCostEstimate.cost_max}`,
-      supportingLine: `Based on common faults for your ${input.make} ${input.model}. Get quotes to compare.`,
+      headline: `Comparable-vehicle cost range: £${input.repairCostEstimate.cost_min}–£${input.repairCostEstimate.cost_max}`,
+      supportingLine: 'Derived from component rates for comparable vehicles; not a quote or diagnosis of this car.',
     };
   }
 
@@ -24,7 +25,7 @@ function getMotivatorCard(
     return {
       type: 'MOT_COUNTDOWN',
       headline: 'Your MOT has expired',
-      supportingLine: 'Driving without a valid MOT is illegal and invalidates your insurance. Act now.',
+      supportingLine: 'Arrange an MOT before driving, except where a legal exemption applies.',
     };
   }
 
@@ -84,18 +85,25 @@ export function getRecommendation(input: RecommendationInput): Recommendation {
   let recommendationHeadline: string;
   let supportingLine: string;
 
-  if (input.failureRisk >= 0.5) {
+  if (!input.hasVehicleComparison) {
+    primaryAction = input.motExpired || (
+      input.daysUntilMotExpiry !== undefined && input.daysUntilMotExpiry <= 30
+    ) ? 'BOOK_MOT' : 'SET_REMINDER';
+    ctaText = primaryAction === 'BOOK_MOT' ? 'Book your MOT now' : 'Get a free MOT reminder';
+    recommendationHeadline = 'No vehicle-matched comparison is available';
+    supportingLine = 'The displayed dataset-wide reference rate does not describe this car. Use the MOT date and a physical inspection to decide what action is needed.';
+  } else if (input.failureRisk >= 0.5) {
     // High risk
     primaryAction = 'GET_QUOTES';
     ctaText = 'Get repair quotes';
-    recommendationHeadline = `Your ${input.make} ${input.model} has a ${failureRiskPercent}% chance of failing`;
-    supportingLine = `We found ${input.highRiskFaultCount} high-risk area${input.highRiskFaultCount !== 1 ? 's' : ''}. Getting quotes now means you can compare prices and book before your MOT.`;
+    recommendationHeadline = `Similar ${input.make} ${input.model} vehicles have a ${failureRiskPercent}% recorded MOT failure rate`;
+    supportingLine = 'The component patterns shown are comparison evidence, not a diagnosis of this car. A physical inspection is needed to identify real faults.';
   } else if (input.failureRisk >= 0.3) {
     // Medium risk
     primaryAction = 'PRE_MOT_CHECK';
     ctaText = 'Book a pre-MOT check';
-    recommendationHeadline = `A pre-MOT check could save you money`;
-    supportingLine = `With a ${failureRiskPercent}% failure risk, a quick inspection can catch issues before they become expensive MOT failures.`;
+    recommendationHeadline = 'A pre-MOT check can assess this car directly';
+    supportingLine = `The comparable-vehicle group has a ${failureRiskPercent}% recorded failure rate. Only an inspection can identify this car's condition.`;
   } else if (input.motExpired || (input.daysUntilMotExpiry !== undefined && input.daysUntilMotExpiry <= 30)) {
     // Low risk, MOT imminent
     primaryAction = 'BOOK_MOT';
@@ -104,20 +112,20 @@ export function getRecommendation(input: RecommendationInput): Recommendation {
       ? 'Your MOT has expired — book now'
       : `Your MOT is due in ${input.daysUntilMotExpiry} days`;
     supportingLine = input.motExpired
-      ? 'Your vehicle looks healthy, but you need a valid MOT to drive legally.'
-      : 'Your vehicle looks good — book your MOT now to get the best times.';
+      ? 'The MOT record is expired; the comparison rate does not change that requirement.'
+      : "The comparison rate is lower, but it doesn't confirm this car's condition. Book when ready.";
   } else if (input.daysUntilMotExpiry !== undefined && input.daysUntilMotExpiry <= 90) {
     // Low risk, MOT within 90 days
     primaryAction = 'SET_REMINDER';
     ctaText = 'Get a free MOT reminder';
-    recommendationHeadline = 'Looking good — stay on top of your MOT';
-    supportingLine = `Your ${input.make} ${input.model} is in good shape. We'll remind you before your MOT is due so you never miss it.`;
+    recommendationHeadline = 'Keep track of the recorded MOT due date';
+    supportingLine = `The lower comparable-vehicle rate doesn't confirm this car's condition. We'll remind you before the MOT is due.`;
   } else {
     // Low risk, MOT >90 days or unknown
     primaryAction = 'SET_REMINDER';
     ctaText = 'Get a free MOT reminder';
-    recommendationHeadline = `Your ${input.make} ${input.model} is in good shape`;
-    supportingLine = "No urgent action needed. Set a free reminder and we'll email you when your MOT is approaching.";
+    recommendationHeadline = 'Use the comparison as context, not a condition check';
+    supportingLine = "The lower comparable-vehicle rate doesn't confirm this car's condition. Set a reminder if useful.";
   }
 
   const motivator = getMotivatorCard(input, primaryAction);
@@ -137,6 +145,6 @@ export function getRecommendation(input: RecommendationInput): Recommendation {
     motivatorHeadline: motivator.headline,
     motivatorSupportingLine: motivator.supportingLine,
     failureRiskPercent,
-    scoreLabel: SCORE_LABEL,
+    scoreLabel: input.hasVehicleComparison ? COMPARISON_SCORE_LABEL : REFERENCE_SCORE_LABEL,
   };
 }

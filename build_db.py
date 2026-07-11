@@ -129,7 +129,7 @@ def build_database() -> bool:
         logger.info("Populating model_years table...")
         populate_model_years()
     except Exception as e:
-        logger.warning(f"Could not populate model_years: {e}")
+        logger.warning("Could not populate model_years (%s)", type(e).__name__)
 
     return True
 
@@ -154,7 +154,7 @@ def ensure_database() -> bool:
                 logger.info(f"Database exists with {count} rows")
                 return True
         except (sqlite3.Error, sqlite3.DatabaseError) as e:
-            logger.warning(f"Database exists but invalid: {e}")
+            logger.warning("Database exists but invalid (%s)", type(e).__name__)
 
     # Use file lock to ensure only one worker builds the database
     lock_fd = open(LOCK_FILE, 'w')
@@ -181,11 +181,11 @@ def ensure_database() -> bool:
                     logger.info(f"Database built by another worker: {count} rows")
                     return True
             except Exception as e:
-                logger.warning(f"Database still invalid after wait: {e}")
+                logger.warning("Database still invalid after wait (%s)", type(e).__name__)
                 try:
                     os.remove(DB_FILE)
                 except OSError as e:
-                    logger.warning(f"Failed to remove invalid database file: {e}")
+                    logger.warning("Failed to remove invalid database file (%s)", type(e).__name__)
 
         # Build the database
         return build_database()

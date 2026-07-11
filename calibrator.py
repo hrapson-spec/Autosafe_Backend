@@ -2,7 +2,7 @@
 
 The original calibrator was a pickled sklearn LogisticRegression fitted on raw
 model probabilities. That pickle was created under scikit-learn 1.8.0; the
-production image (python:3.9-slim) can only install scikit-learn <= 1.6.1,
+former production image (python:3.9-slim) could only install scikit-learn <= 1.6.1,
 where unpickling appears to succeed but ``predict_proba`` raises
 ``AttributeError: 'LogisticRegression' object has no attribute 'multi_class'``.
 model_v55's silent exception fallback then served RAW probabilities — the

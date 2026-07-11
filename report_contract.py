@@ -20,7 +20,7 @@ No field on this contract may be populated with a fabricated default to
 mask missing evidence. Where a value is not known, the contract must say
 so explicitly — via ``None``, or an honest enum member such as
 ``MatchScope.UNAVAILABLE``, ``MatchScope.POPULATION_DEFAULT``, or
-``PredictionSource.UNAVAILABLE`` — rather than substituting a
+``PredictionSource.DATASET_REFERENCE`` — rather than substituting a
 plausible-looking value in its place. A fully degraded report (nothing
 known about the vehicle) must still validate against this contract.
 
@@ -30,11 +30,21 @@ I/O, no web-framework imports, no database imports.
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 REPORT_CONTRACT_VERSION = "2.0"
 REPORT_TTL_DAYS = 90
-POPULATION_DEFAULT_FAILURE_RISK = 0.28   # UK population average, matches legacy default_response
+# Exact aggregate of the checked-in primary comparison artifact
+# (prod_data_clean.csv.gz): 254,145 cohort rows. The public reference rate and
+# dataset-size claims must be updated together when that artifact changes;
+# scripts/claim_sweep.py verifies these totals directly from the gzip CSV.
+DATASET_TOTAL_TESTS = 148_509_908
+DATASET_TOTAL_FAILURES = 39_969_903
+# Date the checked-in aggregate artifact last changed in repository history
+# (git log -- prod_data_clean.csv.gz). This is an artifact revision date, not
+# a claim about the underlying source records' coverage period.
+DATASET_ARTIFACT_REVISION = "2026-01-29"
+POPULATION_DEFAULT_FAILURE_RISK = DATASET_TOTAL_FAILURES / DATASET_TOTAL_TESTS
 SHARE_URL_PATH = "/app/report/{token}"
 
 
@@ -75,10 +85,14 @@ class ConfidenceLevel(str, Enum):
 
 
 class PredictionSource(str, Enum):
-    """Which backing store served the report's risk figure."""
+    """Exact source of the report's displayed risk figure."""
 
     POSTGRES = "postgres"
     SQLITE = "sqlite"
+    DATASET_REFERENCE = "dataset_reference"
+    # Retained for backwards compatibility with already-saved payloads.
+    # New degraded reports display the checked-in dataset reference and
+    # therefore use DATASET_REFERENCE; MatchScope records why they degraded.
     UNAVAILABLE = "unavailable"
 
 
@@ -100,6 +114,7 @@ class ErrorCode(str, Enum):
     REPORT_NOT_FOUND = "report_not_found"
     REPORT_EXPIRED = "report_expired"
     STORAGE_UNAVAILABLE = "storage_unavailable"
+    IDEMPOTENCY_CONFLICT = "idempotency_conflict"
     # FLAGGED ADDITIVE CHANGE (report_routes.py Wave-3 HTTP layer): the v2
     # routes reject any undeclared query-string parameter via a FastAPI
     # dependency shared by both routes. 400 is the correct status for a
@@ -122,6 +137,7 @@ ERROR_CODE_STATUS: Dict[ErrorCode, int] = {
     ErrorCode.REPORT_NOT_FOUND: 404,
     ErrorCode.REPORT_EXPIRED: 410,
     ErrorCode.STORAGE_UNAVAILABLE: 503,
+    ErrorCode.IDEMPOTENCY_CONFLICT: 409,
     ErrorCode.UNDECLARED_PARAMETER: 400,
 }
 
@@ -137,7 +153,12 @@ class ReportCreateRequest(BaseModel):
     registration: str = Field(min_length=1, max_length=12)
     postcode: Optional[str] = Field(default=None, max_length=10)
     mileage_user: Optional[int] = Field(default=None, ge=0, le=500000)
-    idempotency_key: Optional[str] = Field(default=None, max_length=100)
+    idempotency_key: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=100,
+        pattern=r"^[A-Za-z0-9._:-]+$",
+    )
 
 
 class ReportVehicle(BaseModel):
@@ -167,11 +188,19 @@ class ReportMileage(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    effective_value: Optional[int]
+    effective_value: Optional[int] = Field(ge=0)
     source: MileageSource
     observed_at: Optional[str] = None
     unit_converted: bool = False
     anomaly: bool = False
+
+    @model_validator(mode="after")
+    def validate_source_value_consistency(self):
+        if self.source == MileageSource.MISSING and self.effective_value is not None:
+            raise ValueError("missing mileage cannot have an effective value")
+        if self.source != MileageSource.MISSING and self.effective_value is None:
+            raise ValueError("known mileage source requires an effective value")
+        return self
 
 
 class ReportEvidence(BaseModel):
@@ -186,8 +215,34 @@ class ReportEvidence(BaseModel):
     match_scope: MatchScope
     age_band: Optional[str]
     mileage_band: Optional[str]
-    total_tests: Optional[int]
-    total_failures: Optional[int]
+    total_tests: Optional[int] = Field(ge=0)
+    total_failures: Optional[int] = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_counts(self):
+        if self.total_tests is None and self.total_failures is not None:
+            raise ValueError("failure count requires a known test count")
+        if self.total_tests is not None:
+            if self.total_tests == 0:
+                raise ValueError("zero tests are not evidence")
+            if self.total_failures is not None and self.total_failures > self.total_tests:
+                raise ValueError("failures cannot exceed tests")
+        if (
+            self.match_scope
+            in {MatchScope.EXACT_BAND, MatchScope.AGE_BAND_ONLY, MatchScope.MODEL_AVERAGE}
+            and self.total_tests is None
+        ):
+            raise ValueError("matched evidence requires sample counts")
+
+        if self.match_scope == MatchScope.EXACT_BAND:
+            if self.age_band is None or self.mileage_band is None:
+                raise ValueError("exact-band evidence requires both matched bands")
+        elif self.match_scope == MatchScope.AGE_BAND_ONLY:
+            if self.age_band is None or self.mileage_band is not None:
+                raise ValueError("age-only evidence requires only the matched age band")
+        elif self.age_band is not None or self.mileage_band is not None:
+            raise ValueError("broader or unavailable evidence cannot claim matched bands")
+        return self
 
 
 class ReportRisk(BaseModel):
@@ -217,15 +272,29 @@ class ReportComponents(BaseModel):
     available: bool
     items: Optional[List[ComponentRiskItem]] = None
 
+    @model_validator(mode="after")
+    def validate_availability(self):
+        if self.available and not self.items:
+            raise ValueError("available component evidence requires items")
+        if not self.available and self.items:
+            raise ValueError("unavailable component evidence cannot contain items")
+        return self
+
 
 class ReportRepairEstimate(BaseModel):
     """Indicative repair cost estimate, when one can be produced."""
 
     model_config = ConfigDict(extra="forbid")
 
-    expected: int
-    range_low: int
-    range_high: int
+    expected: int = Field(ge=0)
+    range_low: int = Field(ge=0)
+    range_high: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_range(self):
+        if not self.range_low <= self.expected <= self.range_high:
+            raise ValueError("repair estimate must satisfy low <= expected <= high")
+        return self
 
 
 class ReportPersistence(BaseModel):
@@ -260,6 +329,31 @@ class ReportResponse(BaseModel):
     prediction_source: PredictionSource
     vehicle_data_source: VehicleDataSource
     note: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_report_consistency(self):
+        if self.contract_version != REPORT_CONTRACT_VERSION:
+            raise ValueError("unsupported report contract version")
+
+        if self.repair_estimate is not None and not self.components.available:
+            raise ValueError("repair estimate requires supported component evidence")
+
+        if not self.persistence.saved and any(
+            value is not None
+            for value in (self.report_id, self.report_token, self.share_url, self.expires_at)
+        ):
+            raise ValueError("unsaved report cannot have durable report identity")
+        if self.persistence.share_available:
+            if not self.persistence.saved:
+                raise ValueError("shareable report must be saved")
+            if not all((self.report_id, self.report_token, self.share_url, self.expires_at)):
+                raise ValueError("shareable report requires id, token, URL, and expiry")
+            expected_suffix = SHARE_URL_PATH.format(token=self.report_token)
+            if not self.share_url.endswith(expected_suffix):
+                raise ValueError("share URL does not match report token")
+        elif self.report_token is not None or self.share_url is not None:
+            raise ValueError("non-shareable report cannot expose share credentials")
+        return self
 
 
 class ErrorEnvelope(BaseModel):

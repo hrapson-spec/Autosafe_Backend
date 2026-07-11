@@ -1,5 +1,12 @@
 # AutoSafe Backend - Complete Data Map
 
+> **Historical snapshot — not the RC1 data map.** This document describes the
+> January 2026 legacy V55/lead architecture and is retained only as historical
+> context. It is not accurate for the browser's v2 report path and must not be
+> used as current product, privacy, or compliance evidence. For RC1, use
+> `docs/release_rc1/PRIVACY_RECONCILIATION.md`, `docs/ARCHITECTURE.md`, and
+> `docs/DATABASE.md`. Legacy prediction endpoints remain compatibility-only.
+
 **Document Version:** 1.0
 **Last Updated:** 2026-01-20
 **Classification:** Internal / Compliance Documentation

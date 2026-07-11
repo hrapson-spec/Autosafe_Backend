@@ -13,6 +13,13 @@ declare global {
 
 type ConversionType = 'risk_check' | 'mot_booking' | 'repair_booking' | 'mot_reminder';
 
+function analyticsAllowed(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    !/^\/app\/report\//.test(window.location.pathname)
+  );
+}
+
 const CONVERSION_MAP: Record<ConversionType, { send_to: string; value: number }> = {
   risk_check: {
     send_to: 'AW-17896487388/C81ZCL3WgfQbENzz2tVC',
@@ -33,15 +40,20 @@ const CONVERSION_MAP: Record<ConversionType, { send_to: string; value: number }>
 };
 
 export function trackConversion(type: ConversionType): void {
+  if (!analyticsAllowed()) return;
   const config = CONVERSION_MAP[type];
   if (!config) return;
 
   if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'conversion', {
-      send_to: config.send_to,
-      value: config.value,
-      currency: 'GBP',
-    });
+    try {
+      window.gtag('event', 'conversion', {
+        send_to: config.send_to,
+        value: config.value,
+        currency: 'GBP',
+      });
+    } catch {
+      // Analytics is never allowed to break the user operation it observes.
+    }
   }
 }
 
@@ -65,6 +77,23 @@ type FunnelStep =
   | 'share_whatsapp'
   | 'share_copy_link';
 
+const ALLOWED_FUNNEL_DATA_KEYS = new Set([
+  'make',
+  'model',
+  'risk_bucket',
+  'risk_percent',
+  'primary_action',
+  'variant',
+]);
+
+function sanitizeEventData(
+  data?: Record<string, string | number>
+): Record<string, string | number> | undefined {
+  if (!data) return undefined;
+  const safeEntries = Object.entries(data).filter(([key]) => ALLOWED_FUNNEL_DATA_KEYS.has(key));
+  return safeEntries.length ? Object.fromEntries(safeEntries) : undefined;
+}
+
 /**
  * Track a funnel step via Umami custom events.
  * Events are fire-and-forget; failures are silently ignored.
@@ -73,11 +102,15 @@ export function trackFunnel(
   step: FunnelStep,
   data?: Record<string, string | number>
 ): void {
-  if (typeof window === 'undefined') return;
+  if (!analyticsAllowed()) return;
 
   // Umami custom event tracking
   if (window.umami?.track) {
-    window.umami.track(step, data);
+    try {
+      window.umami.track(step, sanitizeEventData(data));
+    } catch {
+      // Analytics is best-effort and must not alter product behaviour.
+    }
   }
 }
 

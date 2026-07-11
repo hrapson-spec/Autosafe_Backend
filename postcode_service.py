@@ -46,7 +46,7 @@ async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float
                     result = data["result"]
                     coords = (result["latitude"], result["longitude"])
                     _postcode_cache[postcode] = coords
-                    logger.debug(f"Geocoded {postcode} -> {coords}")
+                    logger.debug("Postcode geocoding succeeded")
                     return coords
 
             # For partial postcodes (outward code only, e.g., "SW1A"), use outcodes endpoint
@@ -64,9 +64,9 @@ async def get_postcode_coordinates(postcode: str) -> Optional[Tuple[float, float
                         return coords
 
     except httpx.TimeoutException:
-        logger.warning(f"Timeout looking up postcode: {postcode}")
+        logger.warning("Postcode lookup timed out")
     except Exception as e:
-        logger.error(f"Postcode lookup failed for {postcode}: {e}")
+        logger.error("Postcode lookup failed (%s)", type(e).__name__)
 
     return None
 
@@ -119,7 +119,7 @@ async def bulk_lookup_postcodes(postcodes: list) -> Dict[str, Tuple[float, float
                             results[postcode] = coords
 
     except Exception as e:
-        logger.error(f"Bulk postcode lookup failed: {e}")
+        logger.error("Bulk postcode lookup failed (%s)", type(e).__name__)
 
     return results
 

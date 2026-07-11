@@ -18,6 +18,8 @@ from pydantic import BaseModel, ValidationError
 
 from confidence import classify_confidence
 from report_contract import (
+    DATASET_TOTAL_FAILURES,
+    DATASET_TOTAL_TESTS,
     ERROR_CODE_STATUS,
     POPULATION_DEFAULT_FAILURE_RISK,
     REPORT_CONTRACT_VERSION,
@@ -36,6 +38,7 @@ from report_contract import (
     ReportMileage,
     ReportMot,
     ReportPersistence,
+    ReportRepairEstimate,
     ReportResponse,
     ReportRisk,
     ReportVehicle,
@@ -67,7 +70,7 @@ def _full_response_kwargs():
         risk=ReportRisk(failure_risk=POPULATION_DEFAULT_FAILURE_RISK, confidence=ConfidenceLevel.VERY_LOW),
         components=ReportComponents(available=False),
         persistence=ReportPersistence(saved=False, share_available=False),
-        prediction_source=PredictionSource.UNAVAILABLE,
+        prediction_source=PredictionSource.DATASET_REFERENCE,
         vehicle_data_source=VehicleDataSource.DEMO,
     )
 
@@ -125,6 +128,11 @@ class TestRequestBoundaryValidation(unittest.TestCase):
     def test_mileage_user_max_accepted(self):
         req = ReportCreateRequest(registration="AB12CDE", mileage_user=500000)
         self.assertEqual(req.mileage_user, 500000)
+
+    def test_empty_or_whitespace_idempotency_key_is_rejected(self):
+        for key in ("", "   "):
+            with self.subTest(key=repr(key)), self.assertRaises(ValidationError):
+                ReportCreateRequest(registration="AB12CDE", idempotency_key=key)
 
 
 class TestEnumRoundTrip(unittest.TestCase):
@@ -184,7 +192,7 @@ class TestEnumValuesExact(unittest.TestCase):
     def test_prediction_source_values(self):
         self.assertEqual(
             {m.value for m in PredictionSource},
-            {"postgres", "sqlite", "unavailable"},
+            {"postgres", "sqlite", "dataset_reference", "unavailable"},
         )
 
     def test_vehicle_data_source_values(self):
@@ -197,6 +205,7 @@ class TestEnumValuesExact(unittest.TestCase):
                 "invalid_registration", "vehicle_not_found", "dvsa_unavailable",
                 "rate_limited", "internal_error", "report_not_found",
                 "report_expired", "storage_unavailable",
+                "idempotency_conflict",
                 # FLAGGED ADDITIVE CHANGE: added for report_routes.py's
                 # shared undeclared-query-parameter guard on both v2
                 # routes (see report_contract.ErrorCode's own comment).
@@ -223,7 +232,7 @@ class TestDegradedReportResponse(unittest.TestCase):
         self.assertIsNone(resp.components.items)
         self.assertFalse(resp.persistence.saved)
         self.assertFalse(resp.persistence.share_available)
-        self.assertEqual(resp.prediction_source, PredictionSource.UNAVAILABLE)
+        self.assertEqual(resp.prediction_source, PredictionSource.DATASET_REFERENCE)
         self.assertIsNone(resp.report_id)
         self.assertIsNone(resp.report_token)
         self.assertIsNone(resp.share_url)
@@ -246,7 +255,7 @@ class TestErrorCodeStatus(unittest.TestCase):
         self.assertEqual(set(ERROR_CODE_STATUS.keys()), set(ErrorCode))
 
     def test_statuses_in_allowed_set(self):
-        allowed = {400, 404, 410, 429, 500, 503}
+        allowed = {400, 404, 409, 410, 429, 500, 503}
         for code, status in ERROR_CODE_STATUS.items():
             self.assertIn(status, allowed, f"{code} has unexpected status {status}")
 
@@ -309,6 +318,96 @@ class TestFailureRiskBounds(unittest.TestCase):
             ComponentRiskItem(key="brakes", label="Brakes", risk=1.1)
 
 
+class TestContractConsistency(unittest.TestCase):
+
+    def test_evidence_bands_describe_the_matched_scope_only(self):
+        invalid = (
+            dict(match_scope=MatchScope.EXACT_BAND, age_band="3-5", mileage_band=None),
+            dict(match_scope=MatchScope.AGE_BAND_ONLY, age_band="3-5", mileage_band="30k-60k"),
+            dict(match_scope=MatchScope.AGE_BAND_ONLY, age_band=None, mileage_band=None),
+            dict(match_scope=MatchScope.MODEL_AVERAGE, age_band="3-5", mileage_band=None),
+            dict(match_scope=MatchScope.POPULATION_DEFAULT, age_band=None, mileage_band="30k-60k"),
+            dict(match_scope=MatchScope.UNAVAILABLE, age_band="Unknown", mileage_band=None),
+        )
+        for fields in invalid:
+            with self.assertRaises(ValidationError):
+                ReportEvidence(total_tests=100 if fields["match_scope"] in {MatchScope.EXACT_BAND, MatchScope.AGE_BAND_ONLY, MatchScope.MODEL_AVERAGE} else None,
+                               total_failures=20 if fields["match_scope"] in {MatchScope.EXACT_BAND, MatchScope.AGE_BAND_ONLY, MatchScope.MODEL_AVERAGE} else None,
+                               **fields)
+
+        ReportEvidence(match_scope=MatchScope.EXACT_BAND, age_band="3-5", mileage_band="30k-60k", total_tests=100, total_failures=20)
+        ReportEvidence(match_scope=MatchScope.AGE_BAND_ONLY, age_band="3-5", mileage_band=None, total_tests=100, total_failures=20)
+        ReportEvidence(match_scope=MatchScope.MODEL_AVERAGE, age_band=None, mileage_band=None, total_tests=100, total_failures=20)
+        ReportEvidence(match_scope=MatchScope.POPULATION_DEFAULT, age_band=None, mileage_band=None, total_tests=None, total_failures=None)
+        ReportEvidence(match_scope=MatchScope.UNAVAILABLE, age_band=None, mileage_band=None, total_tests=None, total_failures=None)
+
+    def test_evidence_counts_are_nonnegative_integral_and_consistent(self):
+        for kwargs in (
+            dict(total_tests=-1, total_failures=0),
+            dict(total_tests=10, total_failures=11),
+            dict(total_tests=None, total_failures=1),
+            dict(total_tests=0, total_failures=0),
+        ):
+            with self.assertRaises(ValidationError):
+                ReportEvidence(
+                    match_scope=MatchScope.EXACT_BAND,
+                    age_band="3-5",
+                    mileage_band="30k-60k",
+                    **kwargs,
+                )
+
+    def test_component_available_flag_agrees_with_items(self):
+        item = ComponentRiskItem(key="brakes", label="Brakes", risk=0.1)
+        with self.assertRaises(ValidationError):
+            ReportComponents(available=True, items=None)
+        with self.assertRaises(ValidationError):
+            ReportComponents(available=False, items=[item])
+
+    def test_missing_mileage_has_no_effective_value(self):
+        with self.assertRaises(ValidationError):
+            ReportMileage(effective_value=50000, source=MileageSource.MISSING)
+
+    def test_repair_estimate_range_is_ordered_and_nonnegative(self):
+        with self.assertRaises(ValidationError):
+            ReportRepairEstimate(expected=100, range_low=200, range_high=50)
+        with self.assertRaises(ValidationError):
+            ReportRepairEstimate(expected=-1, range_low=-2, range_high=0)
+
+    def test_repair_estimate_requires_supported_component_evidence(self):
+        kwargs = _full_response_kwargs()
+        kwargs["repair_estimate"] = ReportRepairEstimate(
+            expected=200,
+            range_low=100,
+            range_high=300,
+        )
+        with self.assertRaises(ValidationError):
+            ReportResponse(**kwargs)
+
+    def test_shareable_response_requires_a_saved_bearer_link(self):
+        kwargs = _full_response_kwargs()
+        kwargs["persistence"] = ReportPersistence(saved=False, share_available=True)
+        with self.assertRaises(ValidationError):
+            ReportResponse(**kwargs)
+
+        kwargs = _full_response_kwargs()
+        kwargs["persistence"] = ReportPersistence(saved=True, share_available=True)
+        with self.assertRaises(ValidationError):
+            ReportResponse(**kwargs)
+
+    def test_unsaved_response_cannot_expose_share_credentials(self):
+        kwargs = _full_response_kwargs()
+        kwargs["report_token"] = "secret-token"
+        kwargs["share_url"] = "/app/report/secret-token"
+        with self.assertRaises(ValidationError):
+            ReportResponse(**kwargs)
+
+    def test_unsaved_response_cannot_claim_a_report_expiry(self):
+        kwargs = _full_response_kwargs()
+        kwargs["expires_at"] = "2026-10-09T00:00:00Z"
+        with self.assertRaises(ValidationError):
+            ReportResponse(**kwargs)
+
+
 class TestContractConstants(unittest.TestCase):
 
     def test_contract_version(self):
@@ -318,7 +417,12 @@ class TestContractConstants(unittest.TestCase):
         self.assertEqual(REPORT_TTL_DAYS, 90)
 
     def test_population_default_failure_risk(self):
-        self.assertEqual(POPULATION_DEFAULT_FAILURE_RISK, 0.28)
+        self.assertEqual(DATASET_TOTAL_TESTS, 148_509_908)
+        self.assertEqual(DATASET_TOTAL_FAILURES, 39_969_903)
+        self.assertEqual(
+            POPULATION_DEFAULT_FAILURE_RISK,
+            DATASET_TOTAL_FAILURES / DATASET_TOTAL_TESTS,
+        )
 
     def test_share_url_path_has_token_placeholder(self):
         self.assertIn("{token}", SHARE_URL_PATH)

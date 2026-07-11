@@ -13,6 +13,8 @@ import sys
 from datetime import datetime
 from unittest.mock import AsyncMock
 
+import pytest
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import report_service  # noqa: E402
@@ -181,8 +183,9 @@ def test_postgres_components_unavailable_hides_items_and_repair_even_with_failur
 def test_postgres_model_absent_returns_population_default(monkeypatch):
     """get_risk_v2_banded returning None (no PostgresUnavailable raised)
     means Postgres was reached successfully and the model has zero rows
-    -> population_default, prediction_source stays 'postgres' (Postgres
-    WAS the store that answered "no data"), never falls back to sqlite."""
+    -> population_default. The displayed number comes from the checked-in
+    dataset reference, while the scope records that this was a no-model-data
+    fallback; SQLite is never queried."""
     sqlite_calls = []
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=None), raising=False)
 
@@ -194,7 +197,7 @@ def test_postgres_model_absent_returns_population_default(monkeypatch):
                                        sqlite_conn_factory=factory, now=FIXED_NOW))
 
     assert not sqlite_calls
-    assert assessment.prediction_source == PredictionSource.POSTGRES
+    assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
     assert assessment.evidence.match_scope == MatchScope.POPULATION_DEFAULT
     assert assessment.note == NOTE_POPULATION_DEFAULT
     assert assessment.risk.failure_risk == POPULATION_DEFAULT_FAILURE_RISK
@@ -217,13 +220,22 @@ def _postgres_unavailable_mock(monkeypatch):
     )
 
 
-def test_sqlite_fallback_exact_band_best_row_wins_over_variant(monkeypatch):
+def test_sqlite_fallback_exact_band_matches_postgres_weighted_aggregate(monkeypatch):
     """PostgresUnavailable -> sqlite ladder step 1: exact age+mileage band.
     Two rows match (500-test model row, 50-test 'VARIANT' row via the LIKE
-    pattern) -- best-row (highest Total_Tests) must win, not the variant,
-    and not an aggregate of the two."""
+    pattern). SQLite must use the same sample-size-weighted aggregate as
+    Postgres, so falling back cannot change the evidence shown."""
     _postgres_unavailable_mock(monkeypatch)
     conn = seeded_sqlite()
+
+    contributing = [
+        row for row in SEEDED_RISKS_ROWS
+        if (row[0] == 'TESTMAKE TESTMODEL' or row[0].startswith('TESTMAKE TESTMODEL '))
+        and row[1] == '3-5'
+        and row[2] == '30k-60k'
+    ]
+    total_tests = sum(row[3] for row in contributing)
+    total_failures = sum(row[4] for row in contributing)
 
     identity = _identity(make='TESTMAKE', model='TESTMODEL', year=2022)  # age 4 -> '3-5'
     assessment = run(build_assessment(identity, None, mileage_user=45000,  # '30k-60k'
@@ -233,30 +245,33 @@ def test_sqlite_fallback_exact_band_best_row_wins_over_variant(monkeypatch):
     assert assessment.evidence.match_scope == MatchScope.EXACT_BAND
     assert assessment.evidence.age_band == '3-5'
     assert assessment.evidence.mileage_band == '30k-60k'
-    assert assessment.evidence.total_tests == 500
-    assert assessment.evidence.total_failures == 100
-    assert assessment.risk.failure_risk == 0.20  # NOT 0.80 (the 50-test variant's own rate)
+    assert assessment.evidence.total_tests == total_tests
+    assert assessment.evidence.total_failures == total_failures
+    assert assessment.risk.failure_risk == pytest.approx(total_failures / total_tests)
     assert assessment.note is None
 
     assert assessment.components.available is True
     items = {item.key: item.risk for item in assessment.components.items}
-    assert items['brakes'] == 0.10
-    assert items['suspension'] == 0.04
-    assert items['tyres'] == 0.03
-    assert items['steering'] == 0.02
-    assert items['visibility'] == 0.06
-    assert items['lamps'] == 0.025
-    assert items['body'] == 0.045
+    component_columns = {
+        'brakes': 6,
+        'suspension': 7,
+        'tyres': 8,
+        'steering': 9,
+        'visibility': 10,
+        'lamps': 11,
+        'body': 12,
+    }
+    for key, column in component_columns.items():
+        expected = sum(row[column] * row[3] for row in contributing) / total_tests
+        assert items[key] == pytest.approx(expected)
     assert assessment.repair_estimate is not None
 
 
-def test_sqlite_fallback_age_band_only_best_row_not_aggregate(monkeypatch):
+def test_sqlite_fallback_age_band_only_matches_postgres_weighted_aggregate(monkeypatch):
     """Step 2: age_band '6-10' has two rows (90-test and 200-test) at
     different mileage bands; querying a THIRD mileage band ('60k-100k',
     which has no row at age 6-10) must skip step 1 and fall to step 2's
-    best-row (200 tests, failure_risk 0.15) -- not a weighted average of
-    the two rows, which would be (45+30)/(90+200) ~= 0.2586, clearly
-    different from either row's own number."""
+    sample-size-weighted aggregate, exactly as Postgres does."""
     _postgres_unavailable_mock(monkeypatch)
     conn = seeded_sqlite()
 
@@ -264,16 +279,13 @@ def test_sqlite_fallback_age_band_only_best_row_not_aggregate(monkeypatch):
     assessment = run(build_assessment(identity, None, mileage_user=70000,  # '60k-100k': no exact row
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
-    naive_aggregate = (45 + 30) / (90 + 200)
-    assert assessment.risk.failure_risk != naive_aggregate
-
     assert assessment.prediction_source == PredictionSource.SQLITE
     assert assessment.evidence.match_scope == MatchScope.AGE_BAND_ONLY
     assert assessment.evidence.age_band == '6-10'
-    assert assessment.evidence.mileage_band == '60k-100k'
-    assert assessment.evidence.total_tests == 200
-    assert assessment.evidence.total_failures == 30
-    assert assessment.risk.failure_risk == 0.15
+    assert assessment.evidence.mileage_band is None
+    assert assessment.evidence.total_tests == 290
+    assert assessment.evidence.total_failures == 75
+    assert assessment.risk.failure_risk == pytest.approx(75 / 290)
     assert assessment.note == NOTE_AGE_BAND_ONLY
 
 
@@ -304,7 +316,8 @@ def test_sqlite_fallback_model_average_weighted_aggregate(monkeypatch):
 
     assert assessment.prediction_source == PredictionSource.SQLITE
     assert assessment.evidence.match_scope == MatchScope.MODEL_AVERAGE
-    assert assessment.evidence.age_band == '0-2'
+    assert assessment.evidence.age_band is None
+    assert assessment.evidence.mileage_band is None
     assert assessment.evidence.total_tests == total_tests
     assert assessment.evidence.total_failures == total_failures
     assert abs(assessment.risk.failure_risk - expected_failure_risk) < 1e-9
@@ -336,11 +349,42 @@ def test_sqlite_fallback_components_null_row(monkeypatch):
     assert assessment.repair_estimate is None
 
 
+def test_sqlite_partial_component_coverage_is_not_presented_as_complete(monkeypatch):
+    """One populated variant must not hide a NULL component in another
+    contributing row: the contract has no component-specific denominator, so
+    partial coverage must suppress the component section."""
+    _postgres_unavailable_mock(monkeypatch)
+    conn = seeded_sqlite()
+    conn.execute(
+        "INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            'TESTMAKE NULLMODEL VARIANT', '3-5', '30k-60k', 10, 2, 0.20,
+            0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10,
+        ),
+    )
+    conn.commit()
+
+    identity = _identity(make='TESTMAKE', model='NULLMODEL', year=2022)
+    assessment = run(build_assessment(
+        identity,
+        None,
+        mileage_user=45000,
+        sqlite_conn_factory=sqlite_factory(conn),
+        now=FIXED_NOW,
+    ))
+
+    assert assessment.evidence.total_tests == 50
+    assert assessment.components.available is False
+    assert assessment.components.items is None
+    assert assessment.repair_estimate is None
+
+
 def test_sqlite_fallback_step1_skipped_for_unknown_mileage_band(monkeypatch):
     """An observed reading over 500,000 miles bands to 'Unknown'
     (utils.get_mileage_band); the sqlite ladder must skip step 1 entirely
     for an 'Unknown' mileage band and fall straight to step 2 (age-only),
-    landing on the same 500-test winner row as the exact-band test above."""
+    landing on the same 550-test weighted age aggregate as the exact-band
+    test above."""
     _postgres_unavailable_mock(monkeypatch)
     conn = seeded_sqlite()
 
@@ -350,17 +394,20 @@ def test_sqlite_fallback_step1_skipped_for_unknown_mileage_band(monkeypatch):
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.mileage.effective_value == 600000
-    assert assessment.evidence.mileage_band == 'Unknown'
     assert assessment.evidence.match_scope == MatchScope.AGE_BAND_ONLY  # step 1 skipped, step 2 answered
-    assert assessment.evidence.total_tests == 500
-    assert assessment.risk.failure_risk == 0.20
+    assert assessment.evidence.age_band == '3-5'
+    assert assessment.evidence.mileage_band is None
+    assert assessment.evidence.total_tests == 550
+    assert assessment.evidence.total_failures == 140
+    assert assessment.risk.failure_risk == pytest.approx(140 / 550)
 
 
 def test_sqlite_fallback_model_absent_is_population_default_not_unavailable(monkeypatch):
     """The model has zero rows anywhere in the seeded table: sqlite WAS
     reached successfully (no exception, factory not None), so this is a
-    "queried, no data" outcome -> population_default, prediction_source
-    stays 'sqlite' (never 'unavailable' -- that distinction matters)."""
+    "queried, no data" outcome -> population_default. The displayed number's
+    source is the checked-in dataset reference; match_scope preserves the
+    distinction from store unavailability."""
     _postgres_unavailable_mock(monkeypatch)
     conn = seeded_sqlite()
 
@@ -368,7 +415,7 @@ def test_sqlite_fallback_model_absent_is_population_default_not_unavailable(monk
     assessment = run(build_assessment(identity, None, mileage_user=45000,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
-    assert assessment.prediction_source == PredictionSource.SQLITE
+    assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
     assert assessment.evidence.match_scope == MatchScope.POPULATION_DEFAULT
     assert assessment.note == NOTE_POPULATION_DEFAULT
     assert assessment.risk.failure_risk == POPULATION_DEFAULT_FAILURE_RISK
@@ -390,7 +437,7 @@ def test_sqlite_factory_none_is_unavailable(monkeypatch):
     assessment = run(build_assessment(identity, None, mileage_user=None,
                                        sqlite_conn_factory=None, now=FIXED_NOW))
 
-    assert assessment.prediction_source == PredictionSource.UNAVAILABLE
+    assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
     assert assessment.evidence.match_scope == MatchScope.UNAVAILABLE
     assert assessment.note == NOTE_UNAVAILABLE
     assert assessment.risk.failure_risk == POPULATION_DEFAULT_FAILURE_RISK
@@ -400,9 +447,8 @@ def test_sqlite_factory_none_is_unavailable(monkeypatch):
     assert assessment.components.available is False
     assert assessment.components.items is None
     assert assessment.repair_estimate is None
-    # age_band/mileage_band still reflect the honest, independently-computed
-    # facts about the vehicle even in the fully degraded case:
-    assert assessment.evidence.age_band == 'Unknown'
+    # Unavailable evidence cannot claim that any age or mileage band matched.
+    assert assessment.evidence.age_band is None
     assert assessment.evidence.mileage_band is None
 
 
@@ -421,7 +467,7 @@ def test_sqlite_exception_is_unavailable(monkeypatch):
         now=FIXED_NOW,
     ))
 
-    assert assessment.prediction_source == PredictionSource.UNAVAILABLE
+    assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
     assert assessment.evidence.match_scope == MatchScope.UNAVAILABLE
     assert assessment.note == NOTE_UNAVAILABLE
 
@@ -441,7 +487,7 @@ def test_sqlite_pool_exhaustion_yields_none_is_unavailable(monkeypatch):
     assessment = run(build_assessment(identity, None, mileage_user=15000,
                                        sqlite_conn_factory=empty_pool_factory, now=FIXED_NOW))
 
-    assert assessment.prediction_source == PredictionSource.UNAVAILABLE
+    assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
     assert assessment.evidence.match_scope == MatchScope.UNAVAILABLE
 
 
@@ -486,18 +532,19 @@ def test_mot_reflects_latest_test(monkeypatch):
 
 
 def test_age_band_unknown_when_year_missing(monkeypatch):
-    mock_dict = _postgres_dict('exact_band')
+    mock_dict = _postgres_dict('model_average')
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
     assessment = run(build_assessment(_identity(year=None), None, mileage_user=15000, now=FIXED_NOW))
-    assert assessment.evidence.age_band == 'Unknown'
+    assert assessment.evidence.age_band is None
     assert assessment.vehicle.year is None
 
 
 def test_mileage_band_none_when_effective_value_none(monkeypatch):
-    mock_dict = _postgres_dict('exact_band')
+    mock_dict = _postgres_dict('model_average')
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
     assessment = run(build_assessment(_identity(year=None), None, mileage_user=None, now=FIXED_NOW))
     assert assessment.mileage.effective_value is None
+    assert assessment.evidence.age_band is None
     assert assessment.evidence.mileage_band is None

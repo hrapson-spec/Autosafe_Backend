@@ -93,6 +93,21 @@ describe('isReportV2', () => {
     expect(isReportV2(withUndefined)).toBe(false);
   });
 
+  it('requires mileage value and source to agree', () => {
+    expect(isReportV2({
+      ...fixturePopulationDefault,
+      mileage: { ...fixturePopulationDefault.mileage, effective_value: 50000 },
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      mileage: { ...fixtureExactHigh.mileage, effective_value: null },
+    })).toBe(false);
+  });
+
+  it('requires the exact supported contract version', () => {
+    expect(isReportV2({ ...fixtureExactHigh, contract_version: '2.1' })).toBe(false);
+  });
+
   it('null/undefined discipline: total_tests accepts null but rejects undefined', () => {
     const withNull = {
       ...fixturePopulationDefault,
@@ -110,6 +125,112 @@ describe('isReportV2', () => {
   it('tolerates unknown extra keys on input (forward compatibility)', () => {
     const withExtra = { ...fixtureExactHigh, some_future_field: 'unrecognised but harmless' };
     expect(isReportV2(withExtra)).toBe(true);
+  });
+
+  it('rejects probability values outside 0..1', () => {
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        risk: { ...fixtureExactHigh.risk, failure_risk: 1.01 },
+      })
+    ).toBe(false);
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        components: {
+          available: true,
+          items: [{ key: 'brakes', label: 'Brakes', risk: -0.01 }],
+        },
+      })
+    ).toBe(false);
+  });
+
+  it('rejects impossible evidence counts', () => {
+    for (const evidence of [
+      { ...fixtureExactHigh.evidence, total_tests: -1 },
+      { ...fixtureExactHigh.evidence, total_tests: 0, total_failures: null },
+      { ...fixtureExactHigh.evidence, total_tests: 1.5 },
+      { ...fixtureExactHigh.evidence, total_tests: 10, total_failures: 11 },
+      { ...fixtureExactHigh.evidence, total_tests: null, total_failures: 1 },
+    ]) {
+      expect(isReportV2({ ...fixtureExactHigh, evidence })).toBe(false);
+    }
+  });
+
+  it('requires evidence bands to describe only the matched scope', () => {
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      evidence: { ...fixtureExactHigh.evidence, mileage_band: null },
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureAgeOnlyMedium,
+      evidence: { ...fixtureAgeOnlyMedium.evidence, mileage_band: '30k-60k' },
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureModelAverageLow,
+      evidence: { ...fixtureModelAverageLow.evidence, age_band: '11-15' },
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureUnavailableDegraded,
+      evidence: { ...fixtureUnavailableDegraded.evidence, age_band: 'Unknown' },
+    })).toBe(false);
+  });
+
+  it('requires component availability to agree with component items', () => {
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        components: { available: false, items: fixtureExactHigh.components.items },
+      })
+    ).toBe(false);
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        components: { available: true, items: null },
+      })
+    ).toBe(false);
+  });
+
+  it('requires a shareable persistence state to have all bearer-link fields', () => {
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        report_token: null,
+      })
+    ).toBe(false);
+    expect(
+      isReportV2({
+        ...fixtureUnavailableDegraded,
+        persistence: { saved: false, share_available: true },
+      })
+    ).toBe(false);
+  });
+
+  it('rejects an expiry on an unsaved report with no durable identity', () => {
+    expect(
+      isReportV2({
+        ...fixtureUnavailableDegraded,
+        expires_at: '2026-10-09T00:00:00Z',
+      })
+    ).toBe(false);
+  });
+
+  it('rejects inverted or negative repair ranges', () => {
+    expect(
+      isReportV2({
+        ...fixtureExactHigh,
+        repair_estimate: { expected: 100, range_low: 200, range_high: 50 },
+      })
+    ).toBe(false);
+  });
+
+  it('rejects a repair estimate when component evidence is unavailable', () => {
+    expect(
+      isReportV2({
+        ...fixtureUnavailableDegraded,
+        repair_estimate: { expected: 200, range_low: 100, range_high: 300 },
+      })
+    ).toBe(false);
   });
 
   it('accepts the optional repair_estimate / components.items / mileage.observed_at when the key is entirely absent', () => {
@@ -163,9 +284,14 @@ describe('enum membership consts', () => {
     ]);
     expect(VALID_MILEAGE_SOURCES).toEqual(['user_entered', 'observed_mot', 'estimated', 'missing']);
     expect(VALID_CONFIDENCE_LEVELS).toEqual(['High', 'Medium', 'Low', 'Very Low']);
-    expect(VALID_PREDICTION_SOURCES).toEqual(['postgres', 'sqlite', 'unavailable']);
+    expect(VALID_PREDICTION_SOURCES).toEqual([
+      'postgres',
+      'sqlite',
+      'dataset_reference',
+      'unavailable',
+    ]);
     expect(VALID_VEHICLE_DATA_SOURCES).toEqual(['dvsa', 'demo']);
-    expect(VALID_API_ERROR_CODES).toHaveLength(9);
+    expect(VALID_API_ERROR_CODES).toHaveLength(10);
     expect(VALID_API_ERROR_CODES).toContain('undeclared_parameter');
   });
 });

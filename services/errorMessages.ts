@@ -50,6 +50,7 @@ const ERROR_MESSAGES: Record<ApiErrorCode | 'network_error' | 'invalid_response'
   report_not_found: "That report link isn't valid — it may be incomplete.",
   report_expired: 'This report link has expired. Run a fresh check to get an up-to-date result.',
   storage_unavailable: 'Saved reports are temporarily unavailable — please try again shortly.',
+  idempotency_conflict: 'This retry could not be matched safely. Please submit the check again.',
   internal_error: DEFAULT_MESSAGE,
   undeclared_parameter: DEFAULT_MESSAGE,
   network_error: "We couldn't reach AutoSafe — check your connection and try again.",

@@ -47,6 +47,7 @@ import secrets
 import uuid as uuid_module
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
+from pathlib import Path
 
 import asyncpg
 from fastapi import Depends, FastAPI
@@ -78,7 +79,7 @@ from report_contract import (
     ReportResponse,
     VehicleDataSource,
 )
-from utils import hash_vrm
+from utils import hash_vrm, safe_log_path, safe_referrer
 
 logger = logging.getLogger(__name__)
 
@@ -207,8 +208,11 @@ def _normalize_postcode(raw: Optional[str]) -> Optional[str]:
         normalized = result.get('normalized') if isinstance(result, dict) else None
         if normalized:
             return normalized
-    except Exception:
-        logger.warning("postcode normalization raised; falling back to strip+upper", exc_info=True)
+    except Exception as exc:
+        logger.warning(
+            "postcode normalization raised; falling back to strip+upper (%s)",
+            type(exc).__name__,
+        )
     return raw.strip().upper()
 
 
@@ -216,31 +220,65 @@ def _share_url(token: str) -> str:
     return BASE_URL.rstrip('/') + SHARE_URL_PATH.format(token=token)
 
 
-@functools.lru_cache(maxsize=1)
-def _compute_frontend_bundle_hash() -> Optional[str]:
-    """sha256 of static/index.html's bytes, truncated to 16 hex chars, or
-    None if the file is absent (e.g. a backend-only checkout with no
-    frontend build). lru_cache(maxsize=1) on a zero-arg function is the
-    "compute lazily once, cache module-level" idiom: the file is a build
-    artifact that cannot change during a running process's lifetime (a
-    fresh deploy is a fresh process), so caching for the process lifetime
-    is exactly right, not just an optimization."""
+def _read_build_value(filename: str) -> Optional[str]:
+    """Read a small image-build metadata file, returning None outside a
+    packaged image instead of inventing an identity."""
     try:
-        with open("static/index.html", "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()[:16]
+        value = (Path(__file__).resolve().parent / filename).read_text().strip()
     except OSError:
         return None
+    return value or None
+
+
+@functools.lru_cache(maxsize=1)
+def _compute_frontend_bundle_hash() -> Optional[str]:
+    """Return the full SHA-256 of the built JavaScript entry bundle.
+
+    The Vite-generated ``static/index.html`` is used only to discover the
+    hashed entry filename; the digest is over the JavaScript bytes themselves,
+    matching the release packet's meaning of "frontend bundle hash". Returning
+    an index-document checksum (and truncating it) would give a reproducible
+    value, but it would not identify the deployed bundle the browser executes.
+
+    ``None`` is honest when a backend-only checkout has no built entry bundle.
+    The zero-argument cache is safe because build artifacts cannot change
+    during a running image's lifetime.
+    """
+    static_dir = Path(__file__).resolve().parent / "static"
+    try:
+        index_html = (static_dir / "index.html").read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return None
+
+    script_sources = re.findall(r'<script[^>]+src=["\']([^"\']+\.js)["\']', index_html, re.I)
+    for source in script_sources:
+        relative = source.split("?", 1)[0].lstrip("/")
+        candidate = (static_dir / relative).resolve()
+        try:
+            candidate.relative_to(static_dir.resolve())
+        except ValueError:
+            continue
+        try:
+            return hashlib.sha256(candidate.read_bytes()).hexdigest()
+        except OSError:
+            continue
+    return None
 
 
 def build_version_info(app: FastAPI) -> Dict[str, Any]:
     """Payload for GET /api/version -- build/release identifiers for
     release-verification tooling (e.g. confirming a deploy actually
     shipped the expected backend commit + frontend bundle together)."""
+    backend_sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("GIT_SHA") or "unknown"
+    frontend_sha = os.environ.get("FRONTEND_BUILD_SHA") or _read_build_value(".frontend_sha") or "unknown"
+    build_timestamp = os.environ.get("BUILD_TIMESTAMP") or _read_build_value(".build_timestamp")
     return {
-        "backend_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("GIT_SHA") or "unknown",
+        "backend_sha": backend_sha,
+        "frontend_sha": frontend_sha,
         "frontend_bundle_hash": _compute_frontend_bundle_hash(),
         "contract_version": REPORT_CONTRACT_VERSION,
         "app_version": app.version,
+        "build_timestamp": build_timestamp,
         "started_at": _STARTED_AT,
     }
 
@@ -260,7 +298,7 @@ async def rate_limit_exceeded_dispatcher(request: Request, exc: RateLimitExceede
     if request.url.path.startswith("/api/v2/"):
         correlation_id = _correlation_id()
         logger.warning(
-            "rate_limited correlation_id=%s path=%s", correlation_id, request.url.path,
+            "rate_limited correlation_id=%s path=%s", correlation_id, safe_log_path(request.url.path),
         )
         envelope = ErrorEnvelope(
             error_code=ErrorCode.RATE_LIMITED,
@@ -295,19 +333,19 @@ async def _guard_internal_errors(request: Request, coro):
     letting ReportAPIError propagate untouched but converting any other
     exception into a 500 internal_error envelope. The envelope's message
     is a fixed, generic string -- never str(exc) -- so no exception detail
-    or stack trace ever reaches the response body; the real traceback is
-    logged server-side (exc_info=True) under the same correlation_id the
-    client sees, so it's still fully debuggable from the logs.
+    or stack trace ever reaches the response body or application logs. The
+    exception type and correlation id preserve an operational breadcrumb
+    without risking request values embedded in an exception message.
     """
     try:
         return await coro
     except ReportAPIError:
         raise
-    except Exception:
+    except Exception as exc:
         correlation_id = _correlation_id()
         logger.error(
-            "report_unhandled_exception correlation_id=%s path=%s",
-            correlation_id, request.url.path, exc_info=True,
+            "report_unhandled_exception correlation_id=%s path=%s exception_type=%s",
+            correlation_id, safe_log_path(request.url.path), type(exc).__name__,
         )
         raise ReportAPIError(
             ErrorCode.INTERNAL_ERROR,
@@ -429,49 +467,61 @@ async def _resolve_vehicle_and_history(vrm: str) -> Tuple[Dict[str, Any], Vehicl
 # UniqueViolationError race-resolution path)
 # ---------------------------------------------------------------------------
 
-async def _replay_idempotent(idempotency_key: str, vrm_hash: str) -> Optional[ReportResponse]:
+async def _replay_idempotent(idempotency_key: str, vrm: str) -> Optional[ReportResponse]:
     """Look up a previously-created report by idempotency_key and return
     its stored payload verbatim, or None if there is nothing usable to
-    replay (no row, no payload, Postgres unreachable, or -- the FLAGGED
-    policy below -- a payload that no longer validates against the
-    current contract).
+    replay (no row or Postgres unreachable).
 
-    FLAGGED POLICY: if the stored report_payload fails
-    ReportResponse.model_validate, this logs and returns None (i.e. "no
-    hit") rather than raising -- the caller falls through to a fresh
-    creation instead of erroring. Rationale: an idempotency replay
-    failing to parse is a data/contract-drift problem, not something the
-    original caller did wrong, and the honest, available alternative
-    (recompute a fresh report) is strictly more useful to them than a 500.
-    The trade-off is that a client relying on idempotency_key for
-    exactly-once *identity* (not just exactly-once *effect*) could see a
-    second report_token minted for what they consider the same logical
-    request, in this one edge case. Given callers are not told this
-    happened, this is worth a second look if idempotency replay is ever
-    load-bearing for something stricter than "don't double-charge/double-
-    submit" (its LIA-covered use here).
+    Once a row exists, the key is consumed. An expired, pseudonymised,
+    missing, or contract-invalid stored payload returns the typed 409 used
+    for every unusable key. The browser then clears that key and can submit
+    a fresh logical operation; silently recomputing under the consumed key
+    would only collide with its unique index and blur exactly-once identity.
     """
     try:
         existing = await db.get_report_by_idempotency_key(idempotency_key)
     except db.PostgresUnavailable:
-        logger.warning("idempotency_lookup_unavailable hash_vrm=%s", vrm_hash)
+        logger.warning("idempotency_lookup_unavailable hash_vrm=%s", hash_vrm(vrm))
         return None  # Postgres down -> skip idempotency, proceed fresh (spec'd behaviour).
 
     if existing is None:
         return None
 
+    stored_vrm = existing.get('registration')
+    normalized_stored_vrm = re.sub(r'\s+', '', stored_vrm).upper() if isinstance(stored_vrm, str) else None
+    if normalized_stored_vrm != vrm:
+        raise ReportAPIError(
+            ErrorCode.IDEMPOTENCY_CONFLICT,
+            "That retry key was already used for a different report request.",
+        )
+
+    expires_at = _to_naive_utc(existing.get('expires_at'))
+    if existing.get('pseudonymised_at') is not None or (
+        expires_at is not None and expires_at < _naive_utc_now()
+    ):
+        raise ReportAPIError(
+            ErrorCode.IDEMPOTENCY_CONFLICT,
+            "That retry key no longer refers to an active report. Submit again with a new key.",
+        )
+
     payload = existing.get('report_payload')
     if payload is None:
-        return None
+        raise ReportAPIError(
+            ErrorCode.IDEMPOTENCY_CONFLICT,
+            "That retry key no longer refers to an active report. Submit again with a new key.",
+        )
 
     try:
         return ReportResponse.model_validate(payload)
     except ValidationError:
         logger.warning(
             "idempotency_replay_payload_invalid hash_vrm=%s report_id=%s",
-            vrm_hash, existing.get('id'),
+            hash_vrm(vrm), existing.get('id'),
         )
-        return None
+        raise ReportAPIError(
+            ErrorCode.IDEMPOTENCY_CONFLICT,
+            "That retry key no longer refers to an active report. Submit again with a new key.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -534,7 +584,7 @@ def _build_persist_record(
         'model_version': 'lookup_v2',
         'prediction_source': assessment.prediction_source.value,
         'is_dvsa_data': vehicle_data_source == VehicleDataSource.DVSA,
-        'referrer': request.headers.get('referer'),
+        'referrer': safe_referrer(request.headers.get('referer')),
         'contract_version': payload_dict.get('contract_version'),
         'report_token': token,
         'report_payload': payload_dict,
@@ -591,7 +641,7 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
     vrm_hash = hash_vrm(vrm)
 
     if body.idempotency_key:
-        replayed = await _replay_idempotent(body.idempotency_key, vrm_hash)
+        replayed = await _replay_idempotent(body.idempotency_key, vrm)
         if replayed is not None:
             return replayed
 
@@ -649,7 +699,7 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
         report_id = await db.save_report(record)
     except asyncpg.exceptions.UniqueViolationError:
         if body.idempotency_key:
-            replayed = await _replay_idempotent(body.idempotency_key, vrm_hash)
+            replayed = await _replay_idempotent(body.idempotency_key, vrm)
             if replayed is not None:
                 return replayed
         logger.warning(
@@ -720,8 +770,8 @@ async def _get_report_core(token: str) -> ReportResponse:
         # honoured anymore, go run a fresh check" (a 500 would also be
         # honest but falls outside that enumerated set).
         logger.error(
-            "report_payload_invalid_on_fetch correlation_id=%s token_prefix=%s",
-            _correlation_id(), token[:8],
+            "report_payload_invalid_on_fetch correlation_id=%s report_id=%s",
+            _correlation_id(), row.get('id'),
         )
         raise ReportAPIError(
             ErrorCode.REPORT_EXPIRED, "This report link has expired — run a fresh check.",
@@ -744,13 +794,14 @@ def register_report_routes(app: FastAPI, limiter, get_sqlite_connection) -> None
         logger.log(
             level,
             "report_api_error error_code=%s status=%s correlation_id=%s path=%s",
-            exc.error_code.value, exc.status_code, correlation_id, request.url.path,
+            exc.error_code.value, exc.status_code, correlation_id, safe_log_path(request.url.path),
         )
         envelope = ErrorEnvelope(error_code=exc.error_code, message=exc.message, correlation_id=correlation_id)
         return JSONResponse(status_code=exc.status_code, content=envelope.model_dump(mode='json'))
 
     _ERROR_RESPONSES_POST = {
         400: {"model": ErrorEnvelope},
+        409: {"model": ErrorEnvelope},
         404: {"model": ErrorEnvelope},
         429: {"model": ErrorEnvelope},
         500: {"model": ErrorEnvelope},

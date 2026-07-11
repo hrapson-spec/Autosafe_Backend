@@ -2,14 +2,7 @@
 <html lang="en">
 
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'AW-17896487388');
-    </script>
+    <script src="/static/consent.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="4vUVgVy4a6yed0TmE46yMECs6vcSH3m0VmL4dJZNv7k" />
@@ -116,7 +109,7 @@
           "name": "What does an MOT advisory mean?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "An MOT advisory is a note from the tester about a component that is showing wear or minor deterioration but has not yet reached the point of failure. Advisories do not cause the vehicle to fail its MOT, but they serve as an early warning that the component may need attention before the next test. Common advisories include brake discs wearing thin, slight tyre wear, minor corrosion, and oil leaks that are not yet dripping. Advisories from previous tests are one of the strongest predictors of what will fail on the next MOT."
+            "text": "An MOT advisory is a note from the tester about wear or minor deterioration that had not reached the point of failure at that test. It is worth checking the item again, but an advisory does not prove what will happen at the next MOT."
           }
         },
         {
@@ -124,7 +117,7 @@
           "name": "Can MOT history show if a car has been clocked?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, MOT history is one of the most reliable ways to detect mileage fraud, also known as clocking. Because the mileage is recorded at every MOT test, you can track whether the odometer reading has increased consistently over the years. If the mileage ever decreases between tests, or if there is an unusually small increase over several years followed by a sudden jump, this is a strong indicator that the odometer has been tampered with. Always compare the mileage progression across the full MOT history, not just the most recent reading."
+            "text": "MOT history can reveal mileage inconsistencies that deserve investigation. A decrease or unusual sequence can also result from unit changes, recording errors or legitimate instrument replacement, so the record alone cannot prove fraud. Compare it with service records and the vehicle's condition."
           }
         },
         {
@@ -138,9 +131,6 @@
       ]
     }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .guide-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
@@ -190,9 +180,9 @@
             <h1>How to Check MOT History: Complete Free Guide</h1>
             <p>Checking a vehicle's MOT history is one of the most important steps you can take before buying a used car, or simply to stay on top of your own vehicle's condition. The MOT history check is completely free, takes less than a minute, and gives you a detailed record of every MOT test the vehicle has undergone since 2005. This guide explains exactly how to check MOT history, what the results mean, and how to use the information to make better decisions about your vehicle.</p>
 
-            <p>Every year, over 30 million MOT tests are carried out across the UK. Each of those tests generates a detailed record that is stored by the Driver and Vehicle Standards Agency (DVSA) and made publicly available. Whether you are looking at a car to buy, checking up on your own vehicle, or simply curious about a vehicle's past, the MOT history record is an invaluable source of objective, verifiable information. Unlike a seller's verbal assurances, MOT history cannot be edited or falsified &mdash; it comes directly from the government database.</p>
+            <p>MOT tests generate records held by the Driver and Vehicle Standards Agency (DVSA). Whether you are looking at a car to buy or checking your own vehicle, the government record provides useful evidence alongside anything a seller tells you. A record check still does not establish the vehicle's present mechanical condition.</p>
 
-            <p>In this guide, we cover everything you need to know about the MOT history check: how to access it, what the results show, how to interpret advisories and failures, how to spot mileage fraud, and how tools like <a href="/will-my-car-pass-mot/">AutoSafe</a> use this data to predict future MOT outcomes.</p>
+            <p>In this guide, we cover everything you need to know about the MOT history check: how to access it, what the results show, how to interpret advisories and failures, how to spot mileage fraud, and how tools like <a href="/will-my-car-pass-mot/">AutoSafe</a> supplement recorded vehicle details with historical failure rates for comparable vehicles.</p>
 
             <p><strong>Looking for your specific car?</strong> <a href="/mot-check/" style="color: #e5c07b;">Check MOT failure rates by make and model</a> for detailed data on 400+ vehicles.</p>
 
@@ -245,7 +235,7 @@
             <h3>Understanding Advisories vs Failures</h3>
             <p>The distinction between an advisory and a failure is critical. An advisory means "this component is wearing but is still within acceptable limits." A failure means "this component has fallen below the legal minimum and must be repaired before the vehicle can pass." When reading MOT history, pay close attention to advisories that appear on one test and then become failures on the next. This pattern reveals the rate at which components are deteriorating, which is valuable information for predicting future maintenance costs.</p>
 
-            <p>For example, if you see "Front brake disc worn but above limit" as an advisory on one test, and then "Front brake disc below minimum thickness" as a failure on the next test twelve months later, you know the brakes are wearing at a rate that requires replacement roughly every two to three years. This kind of pattern analysis is exactly what <a href="/will-my-car-pass-mot/">AutoSafe's AI prediction tool</a> automates.</p>
+            <p>For example, if you see "Front brake disc worn but above limit" as an advisory on one test, and then "Front brake disc below minimum thickness" as a failure on the next test twelve months later, the sequence is useful context for a mechanic. AutoSafe does not diagnose this progression; review the authoritative history yourself or with a qualified garage.</p>
 
             <h3>Reading Multiple Tests Over Time</h3>
             <p>The real power of MOT history comes from reading it as a timeline, not as isolated snapshots. Look for these patterns across multiple tests:</p>
@@ -347,27 +337,27 @@
             <p>In this example, the mileage drops by over 14,000 miles between 2023 and 2024. This is an unmistakable sign that the odometer was wound back, most likely before the vehicle was sold to a new owner. The buyer should walk away immediately.</p>
 
             <div class="info-box">
-                <p><strong>Did you know?</strong> AutoSafe automatically analyses mileage progression when you check a vehicle. Our system flags any inconsistencies in the mileage record and factors this into the overall risk assessment. <a href="/will-my-car-pass-mot/">Try it free here</a>.</p>
+                <p><strong>Important:</strong> AutoSafe labels the source of any mileage it displays, but it does not detect clocking or analyse mileage progression. Use the authoritative GOV.UK history and professional checks when mileage integrity matters.</p>
             </div>
 
             <h2>How AutoSafe Uses MOT History</h2>
-            <p>AutoSafe takes the raw MOT history data that is publicly available through the DVSA and transforms it into actionable predictions about your vehicle's future MOT outcome. Here is how the process works and why it is more powerful than reading the history manually.</p>
+            <p>AutoSafe retrieves recorded vehicle and latest-MOT details from the DVSA service, then looks up historical MOT outcomes for the closest available group of comparable vehicles.</p>
 
-            <h3>Data Collection and Feature Engineering</h3>
-            <p>When you enter your vehicle's registration number into AutoSafe, our system retrieves the complete MOT history from the DVSA database. We then extract over 100 individual features from this data, including the pattern of advisories over time, the rate of component wear, mileage trends, the vehicle's age and type, regional corrosion factors based on your postcode, and historical failure patterns for your specific make and model.</p>
+            <h3>Evidence and Fallback Scope</h3>
+            <p>The report identifies whether the comparison matched age and mileage bands, used a broader age or model group, or fell back to the dataset-wide reference. It also shows the sample size when that evidence is available.</p>
 
-            <h3>AI-Powered Prediction</h3>
-            <p>These features are fed into a machine learning model that has been trained on millions of MOT test records. The model identifies patterns that are not visible to the human eye &mdash; subtle correlations between advisory types, mileage patterns, vehicle age, and eventual failure outcomes. The result is a personalised failure risk score for your vehicle, along with a component-level breakdown showing which parts are most likely to cause problems.</p>
+            <h3>What the Result Means</h3>
+            <p>The displayed percentage is the observed failure rate in that comparison group, not a prediction of whether this vehicle will pass and not an inspection of its condition. Component patterns are shown only when supporting comparison data exists.</p>
 
             <h3>Practical Application</h3>
-            <p>Rather than spending twenty minutes reading through years of MOT history and trying to work out what it all means, AutoSafe gives you a clear, data-driven answer in seconds. You get a percentage risk score, a list of the components most likely to fail, estimated repair costs, and a confidence interval based on how much data is available for your specific vehicle. This is particularly valuable when you are viewing a used car and need to make a quick, informed decision. You can check any vehicle for free using our <a href="/will-my-car-pass-mot/">MOT prediction tool</a>.</p>
+            <p>Use AutoSafe's comparison as context alongside the authoritative GOV.UK history, physical checks and professional advice. You can check a vehicle using our <a href="/will-my-car-pass-mot/">MOT comparison tool</a>.</p>
 
             <p>For a complete walkthrough of what to check before your MOT, see our <a href="/guides/mot-checklist">pre-MOT checklist</a>. If you want to understand how your car compares to similar vehicles, browse our <a href="/mot-check/">make and model index</a> for detailed statistics on pass rates and common failure points.</p>
 
             <div class="cta-box">
-                <h3>Check Your Vehicle's MOT Risk Now</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration number and our AI will analyse the full MOT history to predict your vehicle's risk of failure, highlight problem components, and estimate repair costs.</p>
-                <a href="/">Check Your MOT Risk Free</a>
+                <h3>Compare Recorded MOT Outcomes</h3>
+                <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration number to see recorded MOT details and the historical failure rate for the closest available comparison group.</p>
+                <a href="/">Check Your Vehicle Free</a>
             </div>
 
             <h2>MOT History for Different Vehicle Types</h2>
@@ -393,7 +383,7 @@
                 <li><strong>Service history:</strong> Shows what maintenance has been carried out between MOT tests. A vehicle with full service history and clean MOT records is the ideal combination.</li>
                 <li><strong>V5C logbook check:</strong> Confirms the seller is the registered keeper and the vehicle details match the MOT history.</li>
                 <li><strong>Physical inspection:</strong> No amount of online checking replaces a thorough in-person inspection, ideally by an independent mechanic.</li>
-                <li><strong>AutoSafe risk check:</strong> Combines MOT history with make, model, and regional data to give a comprehensive risk prediction. <a href="/will-my-car-pass-mot/">Check your vehicle here</a>.</li>
+                <li><strong>AutoSafe comparison:</strong> Shows recorded MOT details and the failure rate for the closest available group of comparable vehicles. <a href="/will-my-car-pass-mot/">Check your vehicle here</a>.</li>
             </ul>
 
             <div class="faq-section">
@@ -416,12 +406,12 @@
 
                 <div class="faq-item">
                     <h3>What does an MOT advisory mean?</h3>
-                    <p>An MOT advisory is a note from the tester about a component that is showing wear or minor deterioration but has not yet reached the point of failure. Advisories do not cause the vehicle to fail its MOT, but they serve as an early warning that the component may need attention before the next test. Common advisories include brake discs wearing thin, slight tyre wear, minor corrosion, and oil leaks that are not yet dripping. Advisories from previous tests are one of the strongest predictors of what will fail on the next MOT.</p>
+                    <p>An MOT advisory records wear or minor deterioration that had not reached the point of failure at that test. It is worth checking the item again, but an advisory does not prove what will happen at the next MOT.</p>
                 </div>
 
                 <div class="faq-item">
                     <h3>Can MOT history show if a car has been clocked?</h3>
-                    <p>Yes, MOT history is one of the most reliable ways to detect mileage fraud, also known as clocking. Because the mileage is recorded at every MOT test, you can track whether the odometer reading has increased consistently over the years. If the mileage ever decreases between tests, or if there is an unusually small increase over several years followed by a sudden jump, this is a strong indicator that the odometer has been tampered with. Always compare the mileage progression across the full MOT history, not just the most recent reading.</p>
+                    <p>MOT history can reveal mileage inconsistencies that deserve investigation. A decrease or unusual sequence can also result from unit changes, recording errors or legitimate instrument replacement, so the record alone cannot prove fraud. Compare it with service records and the vehicle's condition.</p>
                 </div>
 
                 <div class="faq-item">
@@ -432,7 +422,7 @@
 
             <h2>Related Guides</h2>
             <ul>
-                <li><a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT? Free AI Prediction</a></li>
+                <li><a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT? DVSA Failure-Rate Comparison</a></li>
                 <li><a href="/guides/mot-checklist">Pre-MOT Checklist: 15 Things to Check</a></li>
                 <li><a href="/guides/common-mot-failures">Top 10 MOT Failure Points</a></li>
                 <li><a href="/guides/when-is-mot-due">When Is My MOT Due?</a></li>
@@ -448,7 +438,7 @@
 
         <footer class="app-footer">
             <p>Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA. Not official government advice.</p>
+            <p>Data from DVSA. Not official government advice.</p>
             <div class="footer-links">
                 <a href="/terms">Terms</a> | <a href="/privacy">Privacy</a> | <a href="mailto:autosafehq@gmail.com">Feedback</a>
             </div>

@@ -23,9 +23,9 @@ const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
           </div>
           <div className="min-w-0">
             <p className="text-2xl font-semibold text-slate-900 leading-tight">
-              {motivatorHeadline.replace('Estimated repair cost: ', '')}
+              {motivatorHeadline.replace('Comparable-vehicle cost range: ', '')}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">Estimated repair cost</p>
+            <p className="text-xs text-slate-500 mt-0.5">Comparable-vehicle cost range</p>
             <p className="text-sm text-slate-600 mt-2">{motivatorSupportingLine}</p>
           </div>
         </div>

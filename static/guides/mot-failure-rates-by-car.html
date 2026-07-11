@@ -2,61 +2,34 @@
 <html lang="en">
 
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'AW-17896487388');
-    </script>
+    <script src="/static/consent.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-site-verification" content="4vUVgVy4a6yed0TmE46yMECs6vcSH3m0VmL4dJZNv7k" />
-    <title>MOT Failure Rates by Car Model (2026 Data) | AutoSafe</title>
-    <meta name="description"
-        content="Which cars fail MOT most? See failure rates for 100+ models based on 142 million UK MOT tests. Data-driven rankings of most and least reliable vehicles.">
-    <meta name="theme-color" content="#1a1a1a">
-    <meta property="og:title" content="MOT Failure Rates by Car Model (2026 Data)">
-    <meta property="og:description"
-        content="Which cars fail MOT most? See failure rates for 100+ models based on 142 million UK MOT tests.">
+    <title>MOT Failure Rates by Car: How to Read the Data | AutoSafe</title>
+    <meta name="description" content="Understand comparable-vehicle MOT failure rates, age bands, sample sizes and component patterns using AutoSafe's 148,509,908-record DVSA comparison artifact.">
+    <meta property="og:title" content="MOT Failure Rates by Car: How to Read the Data">
+    <meta property="og:description" content="A primary-data guide to comparable-vehicle MOT failure rates, evidence scope and limitations.">
     <meta property="og:type" content="article">
     <meta property="og:image" content="https://www.autosafe.one/static/og-image.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MOT Failure Rates by Car Model (2026 Data)">
-    <meta name="twitter:description"
-        content="Which cars fail MOT most? See failure rates for 100+ models based on 142 million UK MOT tests.">
+    <meta name="twitter:title" content="MOT Failure Rates by Car: How to Read the Data">
+    <meta name="twitter:description" content="A primary-data guide to comparable-vehicle MOT failure rates, evidence scope and limitations.">
     <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
     <link rel="canonical" href="https://www.autosafe.one/guides/mot-failure-rates-by-car">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/style.css">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Article",
-      "headline": "MOT Failure Rates by Car Model (2026 Data)",
-      "description": "Which cars fail MOT most? See failure rates for 100+ models based on 142 million UK MOT tests. Data-driven rankings of most and least reliable vehicles.",
-      "author": {
-        "@type": "Organization",
-        "name": "AutoSafe",
-        "url": "https://www.autosafe.one"
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "AutoSafe",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://www.autosafe.one/static/logo_clean.png"
-        }
-      },
+      "headline": "MOT Failure Rates by Car: How to Read the Data",
+      "description": "A primary-data guide to comparable-vehicle MOT failure rates, evidence scope and limitations.",
+      "author": {"@type": "Organization", "name": "AutoSafe", "url": "https://www.autosafe.one"},
+      "publisher": {"@type": "Organization", "name": "AutoSafe", "url": "https://www.autosafe.one"},
       "datePublished": "2026-02-05",
-      "dateModified": "2026-02-11",
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "https://www.autosafe.one/guides/mot-failure-rates-by-car"
-      }
+      "dateModified": "2026-07-11",
+      "mainEntityOfPage": "https://www.autosafe.one/guides/mot-failure-rates-by-car"
     }
     </script>
     <script type="application/ld+json">
@@ -66,347 +39,155 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Which car has the highest MOT failure rate?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Based on our analysis of 142 million MOT tests, the Nissan Tiida has the highest failure rate at 38.6%, followed by the Kia Cerato at 38.4% and the Peugeot 807 at 37.9%. These are primarily older models that tend to accumulate high mileage with less regular maintenance."
-          }
+          "name": "Can a model failure rate tell me whether one car will pass?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. A model or age-band rate describes recorded outcomes for a group. It does not inspect or diagnose an individual car and cannot determine its next MOT result."}
         },
         {
           "@type": "Question",
-          "name": "Which cars are most reliable for MOT?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "The most MOT-reliable models include the Land Rover Defender SE D MHEV (4.6% failure rate), Honda Jazz Crosstar EX I-MMD (5.0%), and Toyota Yaris Cross Design HEV (5.3%). Hybrid vehicles and newer premium models dominate the top spots, largely due to younger average vehicle age and more rigorous maintenance schedules."
-          }
+          "name": "What is the dataset-wide recorded failure rate?",
+          "acceptedAnswer": {"@type": "Answer", "text": "The checked-in AutoSafe artifact contains 148,509,908 recorded tests and 39,969,903 failures, a dataset-wide rate of 26.9%."}
         },
         {
           "@type": "Question",
-          "name": "Do older cars fail MOT more often?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. Vehicles aged 0-3 years have a failure rate of about 15%, rising to 18% for 6-10 year old vehicles and plateauing around 19-20% for vehicles over 10 years old. The sharpest increase occurs between 3-5 years and 6-10 years. Interestingly, vehicles over 15 years old don't fail more than 10-15 year old vehicles, likely because surviving older vehicles tend to be well-maintained."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Do electric cars have lower MOT failure rates?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. Electric vehicles typically have significantly lower MOT failure rates than petrol or diesel equivalents. This is partly due to their younger average age, but also because EVs have fewer moving parts, no exhaust system to fail emissions tests, and regenerative braking that reduces brake wear. However, EVs can still fail on tyres, lights, suspension, and structural issues."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "How many cars fail their MOT each year?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Approximately 28% of vehicles fail their MOT each year in the UK, which equates to roughly 10 million failures annually. However, this national average masks significant variation. Some models fail nearly 40% of the time, while others pass over 95% of tests. Your specific failure risk depends on your vehicle's make, model, age, mileage, and maintenance history."
-          }
+          "name": "Why does AutoSafe show sample size and match scope?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Those fields show how much evidence supports the number and whether it matched model, age and mileage or had to broaden to a less specific reference group."}
         }
       ]
     }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
     <style>
-        .guide-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .guide-content { max-width: 850px; margin: 0 auto; padding: 2rem; }
         .guide-content h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; margin-bottom: 1rem; }
-        .guide-content h2 { font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: #e5c07b; }
-        .guide-content h3 { font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
-        .guide-content p { line-height: 1.8; margin-bottom: 1rem; color: #a0a0a0; }
-        .guide-content ul { margin-bottom: 1.5rem; padding-left: 1.5rem; }
-        .guide-content li { margin-bottom: 0.75rem; line-height: 1.6; color: #a0a0a0; }
+        .guide-content h2 { font-size: 1.5rem; margin-top: 2.25rem; margin-bottom: 1rem; color: #e5c07b; }
+        .guide-content p, .guide-content li { line-height: 1.75; color: #a0a0a0; }
+        .guide-content ul, .guide-content ol { padding-left: 1.5rem; }
+        .guide-content li { margin-bottom: 0.65rem; }
         .data-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
-        .data-table th { text-align: left; padding: 0.75rem; border-bottom: 2px solid #e5c07b; color: #fff; font-weight: 600; }
+        .data-table th { text-align: left; padding: 0.75rem; border-bottom: 2px solid #e5c07b; color: #fff; }
         .data-table td { padding: 0.75rem; border-bottom: 1px solid #333; color: #a0a0a0; }
-        .data-table tr:hover { background: rgba(229, 192, 123, 0.05); }
-        .fail-rate { color: #e5c07b; font-weight: 600; }
-        .fail-rate.high { color: #ef4444; }
-        .fail-rate.low { color: #22c55e; }
-        .sample-size { font-size: 0.85rem; color: #666; }
-        .stat-highlight { background: #2a2a2a; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; text-align: center; }
-        .stat-highlight .big-number { font-size: 3rem; font-weight: 700; color: #e5c07b; }
-        .stat-highlight .label { color: #a0a0a0; margin-top: 0.5rem; }
-        .cta-box { background: linear-gradient(135deg, #2a2a2a, #1a1a1a); border: 1px solid #333; border-radius: 12px; padding: 2rem; margin: 2rem 0; text-align: center; }
-        .cta-box h3 { color: #fff; margin-bottom: 1rem; }
-        .cta-box a { display: inline-block; background: #e5c07b; color: #1a1a1a; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        .cta-box a:hover { background: #d4a85a; }
-        .back-link { display: inline-block; margin-bottom: 2rem; color: #e5c07b; text-decoration: none; }
-        .back-link:hover { text-decoration: underline; }
-        .methodology { background: #1f1f1f; border-left: 3px solid #e5c07b; padding: 1rem 1.5rem; margin: 1.5rem 0; font-size: 0.9rem; }
-        .methodology p { margin-bottom: 0.5rem; }
-        .faq-section { margin-top: 2rem; }
-        .faq-item { margin-bottom: 1.5rem; }
-        .faq-item h3 { color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem; }
-        .faq-item p { margin-bottom: 0.5rem; }
+        .number { color: #e5c07b; font-weight: 700; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .stat { background: #2a2a2a; border-radius: 10px; padding: 1.25rem; text-align: center; }
+        .stat strong { display: block; color: #e5c07b; font-size: 1.7rem; }
+        .note { border-left: 3px solid #e5c07b; background: #242424; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+        @media (max-width: 640px) { .guide-content { padding: 1.25rem; } .guide-content h1 { font-size: 2rem; } .data-table { font-size: 0.86rem; } }
     </style>
 </head>
 
 <body>
-    <div class="app-container">
+    <div class="app-container" style="max-width: 100%;">
         <header class="app-header" style="padding: 1rem 0;">
-            <div class="logo">
-                <a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a>
-            </div>
+            <div class="logo"><a href="/"><img src="/static/logo_clean.png" alt="AutoSafe" class="logo-image"></a></div>
         </header>
 
         <main class="guide-content">
-            <a href="/" class="back-link">&larr; Back to MOT Check</a>
+            <a href="/" class="back-link">&larr; Back to AutoSafe</a>
 
-            <h1>MOT Failure Rates by Car Model</h1>
-            <p>Around 1 in 4 vehicles fail their MOT each year. But that average hides huge variation between makes and
-                models. Some cars fail nearly 40% of the time, while others pass over 95% of tests.</p>
+            <h1>MOT Failure Rates by Car: How to Read the Data</h1>
 
-            <p>We analysed <strong>142 million MOT test records</strong> from the UK DVSA database to find which cars
-                are most and least likely to fail. Here's what the data shows.</p>
+            <p>AutoSafe's comparison artifact contains aggregated official MOT records grouped by model family, age band and mileage band. Those records can show how groups performed historically. They cannot establish the present condition or next result of one submitted vehicle.</p>
 
-            <p><strong>Looking for your specific car?</strong> <a href="/mot-check/" style="color: #e5c07b;">Check MOT failure rates by make and model</a> for detailed data on 400+ vehicles.</p>
-
-            <div class="stat-highlight">
-                <div class="big-number">142M+</div>
-                <div class="label">MOT tests analysed</div>
+            <div class="stat-grid">
+                <div class="stat"><strong>148,509,908</strong><span>recorded tests</span></div>
+                <div class="stat"><strong>39,969,903</strong><span>recorded failures</span></div>
+                <div class="stat"><strong>26.9%</strong><span>dataset-wide failure rate</span></div>
             </div>
 
-            <h2>Top 15 Cars Most Likely to Fail MOT</h2>
-            <p>These mainstream models have the highest failure rates in our database. All have at least 2,000 test records for statistical reliability.</p>
+            <div class="note">
+                <p><strong>Interpretation boundary:</strong> the 26.9% figure is a dataset reference, not a result for your car. A physical inspection and the official MOT are the only ways to assess its current condition and test outcome.</p>
+            </div>
+
+            <h2>Why model, age and mileage matter</h2>
+
+            <p>A model-wide average can hide material differences between newer and older vehicles. AutoSafe therefore starts with the narrowest supported group: model family, age band and available mileage band. If that cohort has no usable evidence, the report broadens to age-only, then model-wide, then the dataset reference, and labels the scope used.</p>
+
+            <h2>Recorded rates by age band</h2>
+
+            <p>These are exact weighted aggregates from the checked-in artifact. The bands are dataset groups, not promises about an individual vehicle.</p>
 
             <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Model</th>
-                        <th>Failure Rate</th>
-                        <th>Tests</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Age band</th><th>Recorded tests</th><th>Recorded failure rate</th></tr></thead>
                 <tbody>
-                    <tr><td>1</td><td>Nissan Tiida</td><td><span class="fail-rate high">38.6%</span></td><td class="sample-size">2,197</td></tr>
-                    <tr><td>2</td><td>Kia Cerato</td><td><span class="fail-rate high">38.4%</span></td><td class="sample-size">4,174</td></tr>
-                    <tr><td>3</td><td>Peugeot 807</td><td><span class="fail-rate high">37.9%</span></td><td class="sample-size">6,323</td></tr>
-                    <tr><td>4</td><td>Mazda MPV</td><td><span class="fail-rate high">37.5%</span></td><td class="sample-size">2,989</td></tr>
-                    <tr><td>5</td><td>Fiat Stilo</td><td><span class="fail-rate high">37.5%</span></td><td class="sample-size">4,753</td></tr>
-                    <tr><td>6</td><td>Citroen C15</td><td><span class="fail-rate high">37.2%</span></td><td class="sample-size">5,909</td></tr>
-                    <tr><td>7</td><td>Nissan Interstar</td><td><span class="fail-rate high">37.0%</span></td><td class="sample-size">4,018</td></tr>
-                    <tr><td>8</td><td>Fiat Multipla</td><td><span class="fail-rate high">36.8%</span></td><td class="sample-size">4,435</td></tr>
-                    <tr><td>9</td><td>Fiat Seicento</td><td><span class="fail-rate high">36.8%</span></td><td class="sample-size">7,506</td></tr>
-                    <tr><td>10</td><td>Citroen C8</td><td><span class="fail-rate high">36.6%</span></td><td class="sample-size">5,956</td></tr>
-                    <tr><td>11</td><td>Renault Trafic (pre-2014)</td><td><span class="fail-rate high">36.3%</span></td><td class="sample-size">8,412</td></tr>
-                    <tr><td>12</td><td>Peugeot Partner (pre-2008)</td><td><span class="fail-rate high">36.1%</span></td><td class="sample-size">12,305</td></tr>
-                    <tr><td>13</td><td>Vauxhall Agila</td><td><span class="fail-rate high">35.8%</span></td><td class="sample-size">9,217</td></tr>
-                    <tr><td>14</td><td>Fiat Punto (pre-2006)</td><td><span class="fail-rate high">35.5%</span></td><td class="sample-size">15,632</td></tr>
-                    <tr><td>15</td><td>Citroen Berlingo (pre-2008)</td><td><span class="fail-rate high">35.3%</span></td><td class="sample-size">11,847</td></tr>
+                    <tr><td>0–2 years</td><td>8,335,239</td><td class="number">11.52%</td></tr>
+                    <tr><td>3–5 years</td><td>33,562,625</td><td class="number">14.60%</td></tr>
+                    <tr><td>6–10 years</td><td>52,383,079</td><td class="number">25.04%</td></tr>
+                    <tr><td>11–15 years</td><td>33,834,406</td><td class="number">38.07%</td></tr>
+                    <tr><td>15+ years</td><td>20,394,536</td><td class="number">39.78%</td></tr>
                 </tbody>
             </table>
 
-            <p><strong>Pattern:</strong> Many high-failure models are older MPVs, budget vehicles, and commercial vans. These tend to accumulate high mileage and may receive less regular maintenance than newer models. French and Italian manufacturers appear disproportionately in the worst-performing list, partly reflecting the age profile of their UK fleets.</p>
+            <p>Age composition is one reason simple “best model” rankings can mislead. A model dominated by newer vehicles is not directly comparable with one dominated by older vehicles. AutoSafe therefore does not use this static guide to make a durable best/worst recommendation.</p>
 
-            <h2>Top 15 Most Reliable Cars for MOT</h2>
-            <p>These models have the lowest failure rates. Note that many are newer, premium vehicles &mdash; which partly explains their reliability.</p>
+            <h2>Dataset-wide component context</h2>
+
+            <p>The source artifact also contains component-category rates. These weighted aggregates show how often recorded tests involved each category across the dataset. They are not diagnosed faults.</p>
 
             <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Model</th>
-                        <th>Failure Rate</th>
-                        <th>Tests</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Component category</th><th>Weighted recorded rate</th></tr></thead>
                 <tbody>
-                    <tr><td>1</td><td>Land Rover Defender SE D MHEV</td><td><span class="fail-rate low">4.6%</span></td><td class="sample-size">2,162</td></tr>
-                    <tr><td>2</td><td>Honda Jazz Crosstar EX I-MMD</td><td><span class="fail-rate low">5.0%</span></td><td class="sample-size">11,126</td></tr>
-                    <tr><td>3</td><td>Toyota Yaris Cross Design HEV</td><td><span class="fail-rate low">5.3%</span></td><td class="sample-size">2,061</td></tr>
-                    <tr><td>4</td><td>Audi S3 TFSI Quattro</td><td><span class="fail-rate low">5.7%</span></td><td class="sample-size">5,917</td></tr>
-                    <tr><td>5</td><td>Audi SQ5 Vorsprung TDI Quattro</td><td><span class="fail-rate low">5.7%</span></td><td class="sample-size">2,120</td></tr>
-                    <tr><td>6</td><td>BMW M4 Competition</td><td><span class="fail-rate low">5.8%</span></td><td class="sample-size">2,116</td></tr>
-                    <tr><td>7</td><td>Nissan Qashqai Tekna DIG-T MHEV</td><td><span class="fail-rate low">5.8%</span></td><td class="sample-size">2,077</td></tr>
-                    <tr><td>8</td><td>Audi Q3 Sport 35 TFSI MHEV</td><td><span class="fail-rate low">5.8%</span></td><td class="sample-size">3,361</td></tr>
-                    <tr><td>9</td><td>Peugeot Expert S L1 BlueHDI</td><td><span class="fail-rate low">5.8%</span></td><td class="sample-size">4,094</td></tr>
-                    <tr><td>10</td><td>Volkswagen T-Roc R TSI 4Motion</td><td><span class="fail-rate low">5.9%</span></td><td class="sample-size">4,131</td></tr>
-                    <tr><td>11</td><td>Toyota Corolla Icon HEV</td><td><span class="fail-rate low">6.1%</span></td><td class="sample-size">3,892</td></tr>
-                    <tr><td>12</td><td>Lexus NX 350h F-Sport</td><td><span class="fail-rate low">6.2%</span></td><td class="sample-size">2,543</td></tr>
-                    <tr><td>13</td><td>BMW X3 xDrive20d M Sport</td><td><span class="fail-rate low">6.3%</span></td><td class="sample-size">4,267</td></tr>
-                    <tr><td>14</td><td>Hyundai Tucson Premium T-GDI MHEV</td><td><span class="fail-rate low">6.4%</span></td><td class="sample-size">2,318</td></tr>
-                    <tr><td>15</td><td>Kia Sportage GT-Line S T-GDI MHEV</td><td><span class="fail-rate low">6.5%</span></td><td class="sample-size">2,891</td></tr>
+                    <tr><td>Lamps, reflectors and electrical equipment</td><td class="number">5.57%</td></tr>
+                    <tr><td>Suspension</td><td class="number">4.28%</td></tr>
+                    <tr><td>Brakes</td><td class="number">3.44%</td></tr>
+                    <tr><td>Tyres</td><td class="number">2.96%</td></tr>
+                    <tr><td>Visibility</td><td class="number">2.34%</td></tr>
+                    <tr><td>Body, chassis and structure</td><td class="number">1.74%</td></tr>
+                    <tr><td>Steering</td><td class="number">0.94%</td></tr>
                 </tbody>
             </table>
 
-            <p><strong>Pattern:</strong> Hybrid vehicles (MHEV, HEV) dominate the top spots. Premium manufacturers like Audi, BMW, and Land Rover feature heavily &mdash; likely due to younger vehicle age and more rigorous maintenance schedules. Japanese manufacturers (Toyota, Honda, Lexus) are consistently represented, reflecting their reputation for reliability.</p>
+            <h2>How to use a comparison responsibly</h2>
+
+            <ol>
+                <li>Check the evidence scope and sample count before reading the percentage.</li>
+                <li>Treat estimated mileage differently from an observed MOT odometer reading.</li>
+                <li>Do not interpret component patterns as faults on the submitted car.</li>
+                <li>Use <a href="https://www.gov.uk/check-mot-history" rel="nofollow">GOV.UK's official service</a> for the authoritative MOT history.</li>
+                <li>Arrange a physical inspection if you need a condition assessment.</li>
+            </ol>
 
             <div class="cta-box">
-                <h3>Check Your Car's Specific Risk Score</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration to see your vehicle's predicted
-                    failure risk based on its exact make, model, age, and mileage.</p>
-                <a href="/">Check Your MOT Risk Free</a>
+                <h3>Compare a vehicle with the recorded cohorts</h3>
+                <p style="color: #a0a0a0; margin-bottom: 1rem;">See the latest recorded details, mileage provenance, evidence scope and comparable-vehicle failure rate.</p>
+                <a href="/app">Enter a registration</a>
             </div>
 
-            <h2>How Vehicle Age Affects MOT Failure Rate</h2>
-            <p>Age is one of the biggest factors in MOT outcomes. Here's how failure rates change as vehicles get older:
-            </p>
+            <h2>Methodology and provenance</h2>
 
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Vehicle Age</th>
-                        <th>Failure Rate</th>
-                        <th>Tests</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>0-3 years</td><td><span class="fail-rate low">15.3%</span></td><td class="sample-size">6.7M</td></tr>
-                    <tr><td>3-5 years</td><td><span class="fail-rate">15.6%</span></td><td class="sample-size">28.6M</td></tr>
-                    <tr><td>6-10 years</td><td><span class="fail-rate">18.0%</span></td><td class="sample-size">50.4M</td></tr>
-                    <tr><td>10-15 years</td><td><span class="fail-rate high">19.8%</span></td><td class="sample-size">34.5M</td></tr>
-                    <tr><td>15+ years</td><td><span class="fail-rate high">19.4%</span></td><td class="sample-size">22.0M</td></tr>
-                </tbody>
-            </table>
-
-            <p><strong>Key insight:</strong> Failure rates increase sharply between 3-5 years and 6-10 years &mdash; a
-                jump of 2.4 percentage points. After 10 years, the rate plateaus around 19-20%. Older vehicles that
-                remain on the road tend to be well-maintained, which may explain why 15+ year vehicles don't fail more
-                than 10-15 year vehicles.</p>
-
-            <h2>Year-Over-Year Failure Rate Trends</h2>
-            <p>The national average MOT failure rate has remained broadly stable over the past five years, hovering between 27% and 29%. However, there are notable shifts beneath the headline figure:</p>
-
-            <ul>
-                <li><strong>2018 defect category changes:</strong> The introduction of Minor, Major, and Dangerous categories in May 2018 changed what counts as a "failure". Items that previously caused a fail may now be recorded as minor advisories, and some items are now assessed more strictly.</li>
-                <li><strong>Diesel emissions tightening:</strong> Stricter diesel emissions limits have slightly increased failure rates for older diesel vehicles, particularly those with DPF (diesel particulate filter) issues.</li>
-                <li><strong>COVID-19 effects (2020-2021):</strong> MOT extensions during the pandemic created a temporary dip in test volumes and a slight increase in failure rates when vehicles returned for overdue tests.</li>
-                <li><strong>EV growth:</strong> The increasing proportion of electric and hybrid vehicles is gradually pulling the national average failure rate down, as these vehicles have significantly lower failure rates.</li>
-            </ul>
-
-            <h2>Electric vs Petrol vs Diesel: MOT Failure Comparison</h2>
-            <p>Fuel type has a meaningful impact on MOT outcomes:</p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Fuel Type</th>
-                        <th>Avg. Failure Rate</th>
-                        <th>Key Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>Electric (BEV)</td><td><span class="fail-rate low">~12%</span></td><td>No emissions test, fewer moving parts, regenerative braking</td></tr>
-                    <tr><td>Hybrid (HEV/PHEV)</td><td><span class="fail-rate low">~14%</span></td><td>Lower brake wear, younger average fleet age</td></tr>
-                    <tr><td>Petrol</td><td><span class="fail-rate">~27%</span></td><td>Close to national average</td></tr>
-                    <tr><td>Diesel</td><td><span class="fail-rate high">~30%</span></td><td>Emissions failures, DPF issues, higher average mileage</td></tr>
-                </tbody>
-            </table>
-
-            <p><strong>Why EVs do better:</strong> Electric vehicles skip the exhaust emissions test entirely, have no exhaust system to corrode or leak, and their regenerative braking systems significantly reduce brake pad and disc wear. However, EVs can still fail on tyres (they're often heavier, causing faster tyre wear), lights, suspension, and structural integrity.</p>
-
-            <p><strong>Why diesel is worse:</strong> Diesel vehicles tend to accumulate higher annual mileage (often used for commuting and commercial purposes), and post-2014 models with DPFs can fail if the filter becomes blocked. Older diesels without DPFs increasingly struggle to meet tightened emissions limits.</p>
-
-            <h2>Failure Rates by Vehicle Type</h2>
-            <p>The type of vehicle also influences MOT outcomes:</p>
-
-            <ul>
-                <li><strong>Hatchbacks (e.g., <a href="/mot-check/ford/fiesta/" style="color: #e5c07b;">Ford Fiesta</a>, <a href="/mot-check/vauxhall/corsa/" style="color: #e5c07b;">Vauxhall Corsa</a>):</strong> Generally average failure rates (25-30%). High volume means plenty of data. Older superminis from budget brands tend to be at the higher end.</li>
-                <li><strong>SUVs/Crossovers (e.g., <a href="/mot-check/nissan/qashqai/" style="color: #e5c07b;">Nissan Qashqai</a>, <a href="/mot-check/kia/sportage/" style="color: #e5c07b;">Kia Sportage</a>):</strong> Slightly below average (22-27%). Newer average fleet age and more premium positioning help.</li>
-                <li><strong>Estates and saloons (e.g., <a href="/mot-check/bmw/3-series/" style="color: #e5c07b;">BMW 3 Series</a>, <a href="/mot-check/audi/a4/" style="color: #e5c07b;">Audi A4</a>):</strong> Mixed results. German executive cars perform well; older British and French estates can have higher rates.</li>
-                <li><strong>Vans and commercial vehicles:</strong> Among the highest failure rates (30-37%). High mileage, heavy loads, and less frequent maintenance contribute to accelerated wear on brakes, suspension, and tyres.</li>
-                <li><strong>MPVs (people carriers):</strong> Historically high failure rates (32-38%). Many MPV models in the UK fleet are older and heavily used for family transport.</li>
-            </ul>
-
-            <h2>Most Common Failure Components</h2>
-            <p>When cars do fail, certain components are responsible more often than others:</p>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Component</th>
-                        <th>Avg. Failure Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>Lamps, Reflectors & Electrical</td><td><span class="fail-rate">6.2%</span></td></tr>
-                    <tr><td>Brakes</td><td><span class="fail-rate">3.9%</span></td></tr>
-                    <tr><td>Suspension</td><td><span class="fail-rate">3.6%</span></td></tr>
-                    <tr><td>Tyres</td><td><span class="fail-rate">2.6%</span></td></tr>
-                    <tr><td>Visibility (Windscreen, Wipers)</td><td><span class="fail-rate">2.5%</span></td></tr>
-                    <tr><td>Body, Chassis & Structure</td><td><span class="fail-rate">1.8%</span></td></tr>
-                    <tr><td>Steering</td><td><span class="fail-rate">1.0%</span></td></tr>
-                </tbody>
-            </table>
-
-            <p><strong>Takeaway:</strong> Lighting issues are the single biggest cause of MOT failures. A quick walk-around check of all your lights before your test could significantly improve your chances of passing. For a complete inspection guide, see our <a href="/guides/common-mot-failures" style="color: #e5c07b;">top 10 MOT failure points</a>.</p>
-
-            <h2>What This Means for Car Buyers</h2>
-            <p>If you're buying a used car, MOT failure rate data can be a valuable input into your decision:</p>
-
-            <ul>
-                <li><strong>Check the model's track record:</strong> Use our <a href="/mot-check/" style="color: #e5c07b;">make and model lookup</a> to see failure rates for any specific vehicle you're considering.</li>
-                <li><strong>Look at component-specific risks:</strong> Some models have known weak points. A <a href="/mot-check/ford/focus/" style="color: #e5c07b;">Ford Focus</a> might have different risk areas than a <a href="/mot-check/volkswagen/golf/" style="color: #e5c07b;">VW Golf</a>. Knowing these in advance helps you budget for maintenance.</li>
-                <li><strong>Factor in age:</strong> A 5-year-old car with a 15% failure rate is very different from a 12-year-old car with the same rate. Age-adjusted failure rates give a truer picture.</li>
-                <li><strong>Consider fuel type trends:</strong> If you're choosing between petrol and diesel versions of the same model, the diesel may have higher long-term maintenance costs due to DPF and emissions-related issues.</li>
-                <li><strong>Check MOT history:</strong> Before buying, always check the vehicle's MOT history at <a href="https://www.gov.uk/check-mot-history" style="color: #e5c07b;" rel="noopener">gov.uk</a>. A pattern of repeated failures or long advisory lists is a red flag.</li>
-            </ul>
-
-            <p>For a personalised assessment, enter any vehicle's registration on our <a href="/will-my-car-pass-mot/" style="color: #e5c07b;">MOT prediction tool</a> to see its specific failure risk.</p>
-
-            <div class="methodology">
-                <p><strong>Data methodology:</strong> This analysis uses MOT test records from the UK DVSA, covering 142 million+ individual tests. We filtered for models with at least 2,000 test records to ensure statistical reliability. Failure rates are averaged across all age bands and mileage bands for each model. Electric and hybrid failure rate estimates are based on available data and may shift as the EV fleet matures.</p>
-                <p>Data last updated: February 2026</p>
-            </div>
+            <p>The primary artifact is <code>prod_data_clean.csv.gz</code>. Its 254,145 cohort rows sum to 148,509,908 tests and 39,969,903 failures. Overall and age-band rates above use total failures divided by total tests. Component rates use sample-size weighting. The release claim sweep recalculates the totals from the gzip CSV and fails if the contract metadata or public dataset-size claim drifts.</p>
 
             <div class="faq-section">
                 <h2>Frequently Asked Questions</h2>
 
                 <div class="faq-item">
-                    <h3>Which car has the highest MOT failure rate?</h3>
-                    <p>Based on our analysis of 142 million MOT tests, the Nissan Tiida has the highest failure rate at 38.6%, followed by the Kia Cerato at 38.4% and the Peugeot 807 at 37.9%. These are primarily older models that tend to accumulate high mileage with less regular maintenance.</p>
+                    <h3>Which car has the lowest or highest MOT failure rate?</h3>
+                    <p>A durable ranking needs careful control for age, variant mix, sample size and data quality. Use the live make/model pages for current recorded cohorts; do not treat a low group rate as a condition assessment or buying recommendation.</p>
                 </div>
 
                 <div class="faq-item">
-                    <h3>Which cars are most reliable for MOT?</h3>
-                    <p>The most MOT-reliable models include the Land Rover Defender SE D MHEV (4.6% failure rate), Honda Jazz Crosstar EX I-MMD (5.0%), and Toyota Yaris Cross Design HEV (5.3%). Hybrid vehicles and newer premium models dominate the top spots, largely due to younger average vehicle age and more rigorous maintenance schedules.</p>
+                    <h3>Do older groups record more failures?</h3>
+                    <p>In this artifact, the weighted rate rises from 11.52% for the 0–2 band to 39.78% for the 15+ band. That is a group-level association and does not determine any individual vehicle's result.</p>
                 </div>
 
                 <div class="faq-item">
-                    <h3>Do older cars fail MOT more often?</h3>
-                    <p>Yes. Vehicles aged 0-3 years have a failure rate of about 15%, rising to 18% for 6-10 year old vehicles and plateauing around 19-20% for vehicles over 10 years old. The sharpest increase occurs between 3-5 years and 6-10 years. Interestingly, vehicles over 15 years old don't fail more than 10-15 year old vehicles, likely because surviving older vehicles tend to be well-maintained.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>Do electric cars have lower MOT failure rates?</h3>
-                    <p>Yes. Electric vehicles typically have significantly lower MOT failure rates than petrol or diesel equivalents. This is partly due to their younger average age, but also because EVs have fewer moving parts, no exhaust system to fail emissions tests, and regenerative braking that reduces brake wear. However, EVs can still fail on tyres, lights, suspension, and structural issues.</p>
-                </div>
-
-                <div class="faq-item">
-                    <h3>How many cars fail their MOT each year?</h3>
-                    <p>Approximately 28% of vehicles fail their MOT each year in the UK, which equates to roughly 10 million failures annually. However, this national average masks significant variation. Some models fail nearly 40% of the time, while others pass over 95% of tests. Your specific failure risk depends on your vehicle's make, model, age, mileage, and maintenance history.</p>
+                    <h3>Can AutoSafe predict whether my car will pass?</h3>
+                    <p>No. AutoSafe reports recorded details and comparable-vehicle evidence. It does not inspect the car or determine its next MOT result.</p>
                 </div>
             </div>
 
-            <h2>Related Guides</h2>
+            <h2>Related guides</h2>
             <ul>
-                <li><a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT? Free AI Prediction</a></li>
-                <li><a href="/guides/mot-checklist">Pre-MOT Checklist: 15 Things to Check</a></li>
-                <li><a href="/guides/common-mot-failures">Top 10 MOT Failure Points</a></li>
-                <li><a href="/guides/when-is-mot-due">When Is My MOT Due?</a></li>
-                <li><a href="/guides/mot-rules-2026">New MOT Rules 2026</a></li>
-                <li><a href="/guides/mot-defect-categories">MOT Defect Categories Explained</a></li>
-                <li><a href="/guides/mot-cost">How Much Does an MOT Cost?</a></li>
-                <li><a href="/guides/first-mot-guide">Your First MOT Guide</a></li>
-                <li><a href="/mot-check/">Browse All Makes &amp; Models</a></li>
+                <li><a href="/guides/mot-checklist">Pre-MOT checklist</a></li>
+                <li><a href="/guides/common-mot-failures">Common MOT failure points</a></li>
+                <li><a href="/guides/when-is-mot-due">When is my MOT due?</a></li>
+                <li><a href="/guides/mot-defect-categories">MOT defect categories explained</a></li>
+                <li><a href="/mot-check/">Browse make and model cohorts</a></li>
             </ul>
         </main>
 
         <footer class="app-footer">
-            <p>Contains public sector information licensed under the <a
-                    href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
-                    target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA. Not official government advice.</p>
-            <div class="footer-links">
-                <a href="/terms">Terms</a> | <a href="/privacy">Privacy</a> | <a href="mailto:autosafehq@gmail.com">Feedback</a>
-            </div>
+            <p>Contains public sector information licensed under the Open Government Licence v3.0.</p>
+            <p>Independent comparison service; not official government advice.</p>
+            <div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="mailto:autosafehq@gmail.com">Contact</a></div>
         </footer>
     </div>
 </body>

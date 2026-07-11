@@ -52,10 +52,10 @@ class FakeConnection:
             "count_candidates": 0,
             "year_breakdown": [],
             "sample_ids": [],
-            "stale_plaintext": 0,
+            "stale_sensitive_fields": 0,
             "pseudonymised_total": 0,
             "pseudonymised_with_hmac": 0,
-            "pseudonymised_with_payload": 0,
+            "pseudonymised_with_sensitive_fields": 0,
         }
         defaults.update(responses or {})
         self._responses = defaults
@@ -79,16 +79,16 @@ class FakeConnection:
 
     async def fetchval(self, sql, *args):
         self.calls.append(("fetchval", sql, args))
+        if "stale sensitive fields" in sql:
+            return self._responses["stale_sensitive_fields"]
+        if "pseudonymised sensitive fields" in sql:
+            return self._responses["pseudonymised_with_sensitive_fields"]
         # "report_token" only appears in the CANDIDATE_FILTER_SQL fragment
         # (count_candidates); none of the verification queries mention it.
         if "report_token" in sql:
             return self._responses["count_candidates"]
         if "vrm_hmac IS NOT NULL" in sql:
             return self._responses["pseudonymised_with_hmac"]
-        if "report_payload IS NOT NULL" in sql:
-            return self._responses["pseudonymised_with_payload"]
-        if "registration IS NOT NULL" in sql:
-            return self._responses["stale_plaintext"]
         if "pseudonymised_at IS NOT NULL" in sql:
             return self._responses["pseudonymised_total"]
         raise AssertionError(f"FakeConnection.fetchval: unrecognized SQL:\n{sql}")
@@ -252,7 +252,7 @@ class TestDryRunNoUpdates(unittest.TestCase):
                 f"dry-run must never issue an UPDATE, but got: {sql}",
             )
         # Verification block still ran and returned real counts.
-        self.assertEqual(result["stale_plaintext"], 0)
+        self.assertEqual(result["stale_sensitive_fields"], 0)
 
 
 # ---------------------------------------------------------------------------
@@ -311,7 +311,7 @@ class TestIdempotence(unittest.TestCase):
         result = asyncio.run(retention_sweep.run_sweep(conn, VALID_KEY, CUTOFF, 500, execute=True))
 
         self.assertEqual(conn.executemany_calls, [])
-        self.assertEqual(result["stale_plaintext"], 0)
+        self.assertEqual(result["stale_sensitive_fields"], 0)
 
 
 # ---------------------------------------------------------------------------
@@ -326,10 +326,10 @@ class TestVerificationBothModes(unittest.TestCase):
     def test_verification_runs_in_dry_run_mode(self):
         conn = FakeConnection(
             responses={
-                "stale_plaintext": 7,
+                "stale_sensitive_fields": 7,
                 "pseudonymised_total": 100,
                 "pseudonymised_with_hmac": 95,
-                "pseudonymised_with_payload": 0,
+                "pseudonymised_with_sensitive_fields": 0,
             }
         )
         import asyncio
@@ -340,10 +340,10 @@ class TestVerificationBothModes(unittest.TestCase):
         self.assertEqual(
             result,
             {
-                "stale_plaintext": 7,
+                "stale_sensitive_fields": 7,
                 "pseudonymised_total": 100,
                 "pseudonymised_with_hmac": 95,
-                "pseudonymised_with_payload": 0,
+                "pseudonymised_with_sensitive_fields": 0,
             },
         )
 
@@ -351,10 +351,10 @@ class TestVerificationBothModes(unittest.TestCase):
         conn = FakeConnection(
             batch_pages=[[]],
             responses={
-                "stale_plaintext": 0,
+                "stale_sensitive_fields": 0,
                 "pseudonymised_total": 50,
                 "pseudonymised_with_hmac": 50,
-                "pseudonymised_with_payload": 0,
+                "pseudonymised_with_sensitive_fields": 0,
             },
         )
         import asyncio

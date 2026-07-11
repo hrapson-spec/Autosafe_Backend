@@ -1,11 +1,8 @@
 /**
  * AutoSafe v2 Report API client.
  *
- * Parallel to services/autosafeApi.ts's legacy /api/risk client -- this
- * talks to the v2 report endpoints (report_contract.py) instead. Nothing
- * here is wired into the UI yet (that happens in a later wave); this
- * module and its legacy sibling coexist unmodified until consumers switch
- * over.
+ * The browser's report flow uses this client exclusively. The legacy
+ * autosafeApi module remains only for lead/reminder/email/stat endpoints.
  *
  * Every response is validated against isReportV2 / isApiErrorEnvelope
  * before this module hands it back to a caller -- a value that doesn't
@@ -106,7 +103,8 @@ async function parseReportResponse(response: Response): Promise<ReportV2> {
 export async function createReport(
   registration: string,
   postcode: string,
-  mileageUser?: number
+  mileageUser?: number,
+  idempotencyKey?: string
 ): Promise<ReportV2> {
   const body: {
     registration: string;
@@ -115,7 +113,7 @@ export async function createReport(
     idempotency_key: string;
   } = {
     registration,
-    idempotency_key: crypto.randomUUID(),
+    idempotency_key: idempotencyKey ?? crypto.randomUUID(),
   };
   if (postcode) {
     body.postcode = postcode;

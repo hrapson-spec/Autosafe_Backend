@@ -2,14 +2,7 @@
 <html lang="en">
 
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'AW-17896487388');
-    </script>
+    <script src="/static/consent.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="4vUVgVy4a6yed0TmE46yMECs6vcSH3m0VmL4dJZNv7k" />
@@ -101,7 +94,7 @@
           "name": "How can I avoid failing my MOT?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "To avoid failing your MOT, perform a pre-MOT checklist covering lights, tyres, wipers, windscreen, seatbelts, and fluid levels. Address any advisories from your previous MOT, as these are the strongest predictor of future failures. Drive the car for 20 minutes on a motorway before the test to warm the catalytic converter and DPF. Use a tool like AutoSafe to check your vehicle's specific risk profile based on its make, model, age, and history. Finally, book your MOT 2 to 4 weeks before the expiry date so you have time to fix any issues if needed."
+            "text": "To avoid failing your MOT, perform a pre-MOT checklist covering lights, tyres, wipers, windscreen, seatbelts, and fluid levels. Address any advisories from your previous MOT. AutoSafe can add historical context by showing the failure rate for the closest available comparison group, but it does not inspect your car. Finally, book your MOT 2 to 4 weeks before the expiry date so you have time to fix any issues if needed."
           }
         },
         {
@@ -115,11 +108,6 @@
       ]
     }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
-        rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .guide-content { max-width: 800px; margin: 0 auto; padding: 2rem; }
@@ -166,7 +154,7 @@
 
             <p><strong>Looking for your specific car?</strong> <a href="/mot-check/" style="color: #e5c07b;">Check MOT failure rates by make and model</a> for detailed data on 400+ vehicles.</p>
 
-            <p>According to DVSA data, approximately one in four vehicles fails its MOT on the first attempt. That is roughly 7.5 million failures each year across the UK. However, a large proportion of these are for relatively minor, preventable issues. By understanding where failures concentrate, you can focus your preparation on the areas that matter most.</p>
+            <p>Across AutoSafe's checked-in DVSA aggregate, 39,969,903 of 148,509,908 recorded tests were failures (26.9%). That artifact does not encode a source-coverage period, so this is a historical dataset total rather than an annual or current national estimate. Reviewing common test categories can still help you prepare for an inspection.</p>
 
             <div class="failure-item">
                 <span class="failure-rate">18% of failures</span>
@@ -344,10 +332,9 @@
             </table>
 
             <div class="cta-box">
-                <h3>See Your Vehicle's Specific Risk Profile</h3>
-                <p style="color: #a0a0a0; margin-bottom: 1rem;">Our AI analyses your vehicle's make, model, age, and
-                    history to predict which components are most likely to fail.</p>
-                <a href="/">Check Your MOT Risk Free</a>
+                <h3>Compare Recorded MOT Outcomes</h3>
+                <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your registration to see recorded MOT details and the historical failure rate for the closest available comparison group. Component patterns appear only when the supporting data is available.</p>
+                <a href="/">Check Your Vehicle Free</a>
             </div>
 
             <h2>How Failure Rates Change With Vehicle Age</h2>
@@ -377,7 +364,7 @@
             <ol>
                 <li><strong>Check your previous advisories:</strong> Your last MOT certificate lists advisory items that were noted but did not cause a failure. These are your strongest signal of what might fail next time. If your last test had a "brake disc worn but above limit" advisory, you can be confident that brakes should be your top priority before the next test.</li>
                 <li><strong>Consider your vehicle's profile:</strong> Use the age and type breakdowns above to identify which categories are most relevant to your car. A 12-year-old hatchback should focus on corrosion and suspension, while a 5-year-old SUV should check tyres and brakes.</li>
-                <li><strong>Use AutoSafe for personalised data:</strong> <a href="/will-my-car-pass-mot/">AutoSafe's prediction tool</a> combines all of these factors &mdash; your vehicle's make, model, age, mileage, and full MOT history &mdash; to produce a personalised risk score and component-level breakdown. This is the most targeted way to prepare for your MOT.</li>
+                <li><strong>Use AutoSafe for comparison data:</strong> <a href="/will-my-car-pass-mot/">AutoSafe's comparison tool</a> shows recorded MOT details and the failure rate for the closest available group of comparable vehicles. It does not inspect or diagnose your car.</li>
                 <li><strong>Act on the data early:</strong> Book your MOT 2 to 4 weeks before the expiry date. This gives you time to address any failures without the stress of an expired certificate. If you know your vehicle is likely to need work, get a pre-MOT inspection done at a local garage to identify issues before the official test.</li>
             </ol>
 
@@ -406,7 +393,7 @@
 
                 <div class="faq-item">
                     <h3>How can I avoid failing my MOT?</h3>
-                    <p>To avoid failing your MOT, perform a pre-MOT checklist covering lights, tyres, wipers, windscreen, seatbelts, and fluid levels. Address any advisories from your previous MOT, as these are the strongest predictor of future failures. Drive the car for 20 minutes on a motorway before the test to warm the catalytic converter and DPF. Use a tool like AutoSafe to check your vehicle's specific risk profile based on its make, model, age, and history. Finally, book your MOT 2 to 4 weeks before the expiry date so you have time to fix any issues if needed.</p>
+                    <p>To avoid failing your MOT, perform a pre-MOT checklist covering lights, tyres, wipers, windscreen, seatbelts, and fluid levels. Address any advisories from your previous MOT. AutoSafe can add historical context by showing the failure rate for the closest available comparison group, but it does not inspect your car. Finally, book your MOT 2 to 4 weeks before the expiry date so you have time to fix any issues if needed.</p>
                 </div>
 
                 <div class="faq-item">
@@ -417,7 +404,7 @@
 
             <h2>Related Guides</h2>
             <ul>
-                <li><a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT? Free AI Prediction</a></li>
+                <li><a href="/will-my-car-pass-mot/">Will My Car Pass Its MOT? DVSA Failure-Rate Comparison</a></li>
                 <li><a href="/guides/mot-checklist">Pre-MOT Checklist: 15 Things to Check</a></li>
                 <li><a href="/guides/common-mot-failures">Top 10 MOT Failure Points</a></li>
                 <li><a href="/guides/when-is-mot-due">When Is My MOT Due?</a></li>
@@ -434,7 +421,7 @@
             <p>Contains public sector information licensed under the <a
                     href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
                     target="_blank">Open Government Licence v3.0</a></p>
-            <p>Data from UK DVSA. Not official government advice.</p>
+            <p>Data from DVSA. Not official government advice.</p>
             <div class="footer-links">
                 <a href="/terms">Terms</a> | <a href="/privacy">Privacy</a> | <a href="mailto:autosafehq@gmail.com">Feedback</a>
             </div>

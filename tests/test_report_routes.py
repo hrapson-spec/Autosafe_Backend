@@ -78,6 +78,10 @@ def _naive_future():
     return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
 
 
+def _naive_past():
+    return datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+
+
 def _fixture_assessment(**overrides):
     defaults = dict(
         vehicle=ReportVehicle(make="FORD", model="FIESTA", year=2018, fuel_type="PETROL", colour="BLUE"),
@@ -232,6 +236,12 @@ class TestCreateReportPersistence(unittest.TestCase):
             resp = client.post(
                 "/api/v2/reports",
                 json={"registration": VALID_VRM, "postcode": "SW1A 1AA"},
+                headers={
+                    "referer": (
+                        "https://www.autosafe.one/app/report/secret-token"
+                        "?reg=AB12CDE&postcode=SW1A1AA"
+                    )
+                },
             )
 
         self.assertEqual(resp.status_code, 200)
@@ -265,6 +275,10 @@ class TestCreateReportPersistence(unittest.TestCase):
         self.assertEqual(record['model_version'], 'lookup_v2')
         self.assertEqual(record['prediction_source'], 'sqlite')
         self.assertFalse(record['is_dvsa_data'])  # demo mode, not DVSA
+        self.assertEqual(
+            record['referrer'],
+            "https://www.autosafe.one",
+        )
         self.assertEqual(record['contract_version'], '2.0')
         self.assertEqual(record['report_token'], body['report_token'])
         self.assertEqual(record['mileage_source'], 'observed_mot')
@@ -306,7 +320,9 @@ class TestCreateReportIdempotency(unittest.TestCase):
 
     def test_idempotent_replay_returns_stored_payload_without_recomputing(self):
         stored = _fixture_response(token="already-stored-token-1")
-        lookup = AsyncMock(return_value={'id': 'row-1', 'report_payload': stored})
+        lookup = AsyncMock(return_value={
+            'id': 'row-1', 'registration': VALID_VRM, 'report_payload': stored,
+        })
         build_mock = AsyncMock(side_effect=AssertionError("build_assessment should not be called on replay"))
         dvsa_mock = MagicMock(side_effect=AssertionError("get_dvsa_client should not be called on replay"))
         save_mock = AsyncMock(side_effect=AssertionError("save_report should not be called on replay"))
@@ -333,7 +349,10 @@ class TestCreateReportIdempotency(unittest.TestCase):
         # First call (idempotency-first check): no row yet. Second call
         # (post-UniqueViolationError race resolution): the concurrent
         # request that won the insert.
-        lookup = AsyncMock(side_effect=[None, {'id': 'row-2', 'report_payload': winner_payload}])
+        lookup = AsyncMock(side_effect=[
+            None,
+            {'id': 'row-2', 'registration': VALID_VRM, 'report_payload': winner_payload},
+        ])
         save_mock = AsyncMock(side_effect=asyncpg.exceptions.UniqueViolationError("duplicate key"))
 
         with patch("report_routes.db.get_report_by_idempotency_key", new=lookup), \
@@ -348,6 +367,84 @@ class TestCreateReportIdempotency(unittest.TestCase):
         self.assertEqual(resp.json(), winner_payload)
         self.assertEqual(lookup.await_count, 2)
         save_mock.assert_called_once()
+
+    def test_idempotency_key_cannot_replay_a_different_registration(self):
+        """An idempotency key scopes one normalized VRN, not every caller
+        who happens to know/reuse the key."""
+        other_vrm = "XY99ZZZ"
+        stored = _fixture_response(token="other-vrm-token-1", registration=other_vrm)
+        lookup = AsyncMock(return_value={
+            'id': 'row-other', 'registration': other_vrm, 'report_payload': stored,
+        })
+
+        with patch("report_routes.db.get_report_by_idempotency_key", new=lookup), \
+             patch("report_routes.report_service.build_assessment") as build_mock, \
+             patch("report_routes.db.save_report") as save_mock:
+            resp = client.post(
+                "/api/v2/reports",
+                json={"registration": VALID_VRM, "idempotency_key": "idem-key-cross-vrm-123"},
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()["error_code"], "idempotency_conflict")
+        build_mock.assert_not_called()
+        save_mock.assert_not_called()
+
+    def test_idempotency_key_cannot_resurrect_an_expired_report(self):
+        stored = _fixture_response(token="expired-idempotent-token")
+        lookup = AsyncMock(return_value={
+            'id': 'row-expired',
+            'registration': VALID_VRM,
+            'report_payload': stored,
+            'expires_at': _naive_past(),
+            'pseudonymised_at': None,
+        })
+
+        with patch("report_routes.db.get_report_by_idempotency_key", new=lookup), \
+             patch("report_routes.report_service.build_assessment") as build_mock, \
+             patch("report_routes.db.save_report") as save_mock:
+            resp = client.post(
+                "/api/v2/reports",
+                json={"registration": VALID_VRM, "idempotency_key": "expired-idem-key"},
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()["error_code"], "idempotency_conflict")
+        build_mock.assert_not_called()
+        save_mock.assert_not_called()
+
+    def test_idempotency_key_with_invalid_stored_payload_requires_a_new_key(self):
+        lookup = AsyncMock(return_value={
+            'id': 'row-invalid-payload',
+            'registration': VALID_VRM,
+            'report_payload': {'not': 'a report'},
+            'expires_at': _naive_future(),
+            'pseudonymised_at': None,
+        })
+
+        with patch("report_routes.db.get_report_by_idempotency_key", new=lookup), \
+             patch("report_routes.report_service.build_assessment") as build_mock, \
+             patch("report_routes.db.save_report") as save_mock:
+            resp = client.post(
+                "/api/v2/reports",
+                json={"registration": VALID_VRM, "idempotency_key": "invalid-payload-key"},
+            )
+
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()["error_code"], "idempotency_conflict")
+        build_mock.assert_not_called()
+        save_mock.assert_not_called()
+
+    def test_report_error_log_redacts_share_token(self):
+        token = "secretBearerToken12345"
+        with patch("report_routes.db.get_report_by_token", new=AsyncMock(return_value=None)), \
+             self.assertLogs(report_routes.logger, level="WARNING") as captured:
+            resp = client.get(f"/api/v2/reports/{token}")
+
+        self.assertEqual(resp.status_code, 404)
+        combined = "\n".join(captured.output)
+        self.assertNotIn(token, combined)
+        self.assertIn("/api/v2/reports/{token}", combined)
 
 
 # ---------------------------------------------------------------------------
@@ -496,13 +593,26 @@ class TestVersionEndpoint(unittest.TestCase):
         body = resp.json()
         self.assertEqual(
             set(body.keys()),
-            {"backend_sha", "frontend_bundle_hash", "contract_version", "app_version", "started_at"},
+            {
+                "backend_sha", "frontend_sha", "frontend_bundle_hash",
+                "contract_version", "app_version", "build_timestamp", "started_at",
+            },
         )
         self.assertEqual(body["app_version"], "2.0.0")
         self.assertEqual(body["contract_version"], "2.0")
         self.assertIsInstance(body["backend_sha"], str)
+        self.assertIsInstance(body["frontend_sha"], str)
         fbh = body["frontend_bundle_hash"]
-        self.assertTrue(fbh is None or (isinstance(fbh, str) and len(fbh) == 16))
+        self.assertTrue(
+            fbh is None
+            or (
+                isinstance(fbh, str)
+                and len(fbh) == 64
+                and all(char in "0123456789abcdef" for char in fbh)
+            )
+        )
+        if body["build_timestamp"] is not None:
+            datetime.fromisoformat(body["build_timestamp"].replace("Z", "+00:00"))
         datetime.fromisoformat(body["started_at"])  # parses as ISO8601
 
 

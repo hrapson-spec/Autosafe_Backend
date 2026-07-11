@@ -56,7 +56,7 @@ async def find_matching_garages(
     # Get lead coordinates
     lead_coords = await get_postcode_coordinates(lead_postcode)
     if not lead_coords:
-        logger.warning(f"Could not geocode lead postcode: {lead_postcode}")
+        logger.warning("Could not geocode lead postcode")
         return []
 
     lead_lat, lead_lng = lead_coords
@@ -88,7 +88,7 @@ async def find_matching_garages(
             })
 
     if not matches:
-        logger.info(f"No garages found within {RADIUS_TIERS[-1]} miles of {lead_postcode}")
+        logger.info("No garages found within %s miles of lead", RADIUS_TIERS[-1])
         return []
 
     # Sort by: paid tier first, then email quality, then distance
@@ -114,7 +114,7 @@ async def find_matching_garages(
         for m in matches[:max_results]
     ]
 
-    logger.info(f"Found {len(result)} garage(s) for lead in {lead_postcode}")
+    logger.info("Found %s garage(s) for lead", len(result))
     return result
 
 

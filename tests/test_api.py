@@ -25,6 +25,18 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.headers["content-type"].startswith("text/html"))
 
+    def test_canonical_redirect_strips_identifier_queries(self):
+        response = client.get(
+            "/?campaign=summer&reg=AB12CDE&postcode=SW1A1AA&vrm=AB12CDE",
+            headers={"host": "autosafe.one"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 301)
+        self.assertEqual(
+            response.headers["location"],
+            "https://www.autosafe.one/?campaign=summer",
+        )
+
     def test_get_makes(self):
         """Test that /api/makes returns a list of makes."""
         response = client.get("/api/makes")

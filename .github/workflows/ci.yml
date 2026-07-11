@@ -18,10 +18,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Download built frontend
@@ -48,6 +48,9 @@ jobs:
       - name: Claim sweep
         run: python scripts/claim_sweep.py
 
+      - name: Internal link sweep
+        run: python check_internal_links.py
+
       - name: Run linting (optional)
         run: |
           pip install flake8
@@ -61,10 +64,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
@@ -86,22 +89,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: Check for hardcoded secrets
         run: |
-          # Check for common secret patterns
-          ! grep -rE "(api_key|password|secret)\s*=\s*['\"][^'\"]+['\"]" --include="*.py" . || echo "Warning: Potential hardcoded secrets found"
-        continue-on-error: true
+          # Unit tests deliberately use obvious values such as "test-key";
+          # scan the shipped Python source and fail on assignments there.
+          if grep -rE "(api_key|password|secret)\s*=\s*['\"][^'\"]+['\"]" \
+            --include="*.py" \
+            --exclude-dir=.git \
+            --exclude-dir=.venv \
+            --exclude-dir=node_modules \
+            --exclude-dir=tests \
+            .; then
+            echo '::error::potential hardcoded secret in production Python source'
+            exit 1
+          fi
 
       - name: Check requirements for known vulnerabilities
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt || echo "Some vulnerabilities found - review required"
-        continue-on-error: true
+          pip-audit -r requirements.txt
 
   build-check:
     runs-on: ubuntu-latest
@@ -139,6 +150,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Audit frontend dependency graph
+        run: npm audit --audit-level=high
 
       - name: Type check
         run: npm run typecheck

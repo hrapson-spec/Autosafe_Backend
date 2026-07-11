@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { MatchScope } from '../types';
 import { submitMotReminder } from '../services/autosafeApi';
 import { trackConversion, trackFunnel } from '../utils/analytics';
 import { getAllVariants } from '../utils/experiments';
@@ -18,6 +19,7 @@ interface MotReminderCaptureProps {
   /** report.risk.failure_risk -- raw evidence fraction, passed through as-is
    * for the lead payload (not the display-rounded risk.value). */
   failureRisk: number;
+  matchScope: MatchScope;
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error';
@@ -40,6 +42,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
   vehicleModel,
   vehicleYear,
   failureRisk,
+  matchScope,
 }) => {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
@@ -59,12 +62,13 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
       const result = await submitMotReminder({
         email: email.toLowerCase().trim(),
         registration,
-        postcode: postcode ?? '',
+        ...(postcode ? { postcode } : {}),
         vehicle_make: vehicleMake,
         vehicle_model: vehicleModel,
         vehicle_year: vehicleYear ?? undefined,
         mot_expiry_date: motExpiryDate ?? undefined,
         failure_risk: failureRisk,
+        match_scope: matchScope,
         experiment_variant: getAllVariants() || undefined,
       });
 

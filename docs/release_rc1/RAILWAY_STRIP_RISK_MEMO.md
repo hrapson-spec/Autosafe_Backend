@@ -1,4 +1,4 @@
-# D6 — Railway source-stripping risk memo
+# D7 — Railway source-stripping risk memo
 
 ## Bottom line
 
@@ -37,7 +37,9 @@ healthy deploy cannot rely on committed build output.
 - CI verifies the frontend build, Docker build, ignored-output invariant,
   OpenAPI contract, public claims, tests, and staging acceptance
   (`.github/workflows/ci.yml`).
-- `/api/version` exposes backend and frontend build identities.
+- `/api/version` exposes backend/frontend SHAs, build time, contract version,
+  and the full SHA-256 of the built JavaScript entry referenced by
+  `static/index.html`.
 - Staging acceptance requires the exact backend SHA and rejects `unknown`
   (`scripts/staging_acceptance.py:133-158`).
 
@@ -50,18 +52,20 @@ record all of the following:
 
 - [ ] Railway identifies the expected Git commit SHA.
 - [ ] Build logs show `npm ci` and `npm run build` completing from source.
-- [ ] `GET /api/version` returns the expected non-`unknown` backend SHA and the
-      frontend bundle identity expected for the candidate.
+- [ ] `GET /api/version` returns the expected non-`unknown` backend and
+      frontend SHAs plus the expected full 64-character bundle hash.
 - [ ] `/` and `/app` load the RC1 bundle without console or asset 404 errors.
 - [ ] `POST /api/v2/reports` creates a report using the staging database.
-- [ ] The returned `/report/{token}` opens in a fresh browser context and after
+- [ ] The returned `/app/report/{token}` opens in a fresh browser context and after
       a reload.
 - [ ] The share URL contains no VRN or postcode.
 - [ ] A deliberately unavailable dependency produces the documented typed
       degraded state rather than invented values.
-- [ ] Logs contain no raw VRN, postcode, share token, credential, or request
-      body.
-- [ ] The database migration and retention dry run have been recorded.
+- [ ] Railway edge/proxy/application/database logs and analytics requests
+      contain no raw VRN, postcode, share token, credential, email content, or
+      request body.
+- [ ] The database migration plus both check-record and lead-retention
+      rehearsals have been recorded.
 
 Attach the Railway deployment URL, deployment ID, commit SHA, timestamps, and
 redacted check output to PR #32. Do not use production for this acceptance.

@@ -60,7 +60,12 @@ export const VALID_MILEAGE_SOURCES: readonly MileageSource[] = [
 
 export const VALID_CONFIDENCE_LEVELS: readonly ConfidenceLevel[] = ['High', 'Medium', 'Low', 'Very Low'];
 
-export const VALID_PREDICTION_SOURCES: readonly PredictionSource[] = ['postgres', 'sqlite', 'unavailable'];
+export const VALID_PREDICTION_SOURCES: readonly PredictionSource[] = [
+  'postgres',
+  'sqlite',
+  'dataset_reference',
+  'unavailable',
+];
 
 export const VALID_VEHICLE_DATA_SOURCES: readonly VehicleDataSource[] = ['dvsa', 'demo'];
 
@@ -73,6 +78,7 @@ export const VALID_API_ERROR_CODES: readonly ApiErrorCode[] = [
   'report_not_found',
   'report_expired',
   'storage_unavailable',
+  'idempotency_conflict',
   'undeclared_parameter',
 ];
 
@@ -90,6 +96,14 @@ function isString(x: unknown): x is string {
 
 function isNumber(x: unknown): x is number {
   return typeof x === 'number' && Number.isFinite(x);
+}
+
+function isNonNegativeInteger(x: unknown): x is number {
+  return isNumber(x) && Number.isInteger(x) && x >= 0;
+}
+
+function isProbability(x: unknown): x is number {
+  return isNumber(x) && x >= 0 && x <= 1;
 }
 
 function isBoolean(x: unknown): x is boolean {
@@ -116,7 +130,7 @@ function isOptionalNullable<T>(x: unknown, guard: (v: unknown) => v is T): x is 
 
 function isComponentRiskItemV2(x: unknown): x is ComponentRiskItemV2 {
   if (!isPlainObject(x)) return false;
-  return isString(x.key) && isString(x.label) && isNumber(x.risk);
+  return isString(x.key) && isString(x.label) && isProbability(x.risk);
 }
 
 function isComponentRiskItemArray(x: unknown): x is ComponentRiskItemV2[] {
@@ -149,39 +163,71 @@ function isReportMotV2(x: unknown): x is ReportMotV2 {
 
 function isReportMileageV2(x: unknown): x is ReportMileageV2 {
   if (!isPlainObject(x)) return false;
-  return (
-    isNullable(x.effective_value, isNumber) &&
+  const structurallyValid = (
+    isNullable(x.effective_value, isNonNegativeInteger) &&
     isOneOf(x.source, VALID_MILEAGE_SOURCES) &&
     isOptionalNullable(x.observed_at, isString) &&
     isBoolean(x.unit_converted) &&
     isBoolean(x.anomaly)
   );
+  if (!structurallyValid) return false;
+  return x.source === 'missing' ? x.effective_value === null : x.effective_value !== null;
 }
 
 function isReportEvidenceV2(x: unknown): x is ReportEvidenceV2 {
   if (!isPlainObject(x)) return false;
-  return (
+  const structurallyValid = (
     isOneOf(x.match_scope, VALID_MATCH_SCOPES) &&
     isNullable(x.age_band, isString) &&
     isNullable(x.mileage_band, isString) &&
-    isNullable(x.total_tests, isNumber) &&
-    isNullable(x.total_failures, isNumber)
+    isNullable(x.total_tests, isNonNegativeInteger) &&
+    isNullable(x.total_failures, isNonNegativeInteger)
   );
+  if (!structurallyValid) return false;
+  if (x.total_tests === null && x.total_failures !== null) return false;
+  if (x.total_tests === 0) return false;
+  if (
+    ['exact_band', 'age_band_only', 'model_average'].includes(x.match_scope as string) &&
+    x.total_tests === null
+  ) return false;
+  if (
+    typeof x.total_tests === 'number' &&
+    typeof x.total_failures === 'number' &&
+    x.total_failures > x.total_tests
+  ) {
+    return false;
+  }
+  if (x.match_scope === 'exact_band') {
+    if (x.age_band === null || x.mileage_band === null) return false;
+  } else if (x.match_scope === 'age_band_only') {
+    if (x.age_band === null || x.mileage_band !== null) return false;
+  } else if (x.age_band !== null || x.mileage_band !== null) {
+    return false;
+  }
+  return true;
 }
 
 function isReportRiskV2(x: unknown): x is ReportRiskV2 {
   if (!isPlainObject(x)) return false;
-  return isNumber(x.failure_risk) && isOneOf(x.confidence, VALID_CONFIDENCE_LEVELS);
+  return isProbability(x.failure_risk) && isOneOf(x.confidence, VALID_CONFIDENCE_LEVELS);
 }
 
 function isReportComponentsV2(x: unknown): x is ReportComponentsV2 {
   if (!isPlainObject(x)) return false;
-  return isBoolean(x.available) && isOptionalNullable(x.items, isComponentRiskItemArray);
+  if (!isBoolean(x.available) || !isOptionalNullable(x.items, isComponentRiskItemArray)) return false;
+  if (x.available) return Array.isArray(x.items) && x.items.length > 0;
+  return x.items === undefined || x.items === null || (Array.isArray(x.items) && x.items.length === 0);
 }
 
 function isReportRepairEstimateV2(x: unknown): x is ReportRepairEstimateV2 {
   if (!isPlainObject(x)) return false;
-  return isNumber(x.expected) && isNumber(x.range_low) && isNumber(x.range_high);
+  return (
+    isNonNegativeInteger(x.expected) &&
+    isNonNegativeInteger(x.range_low) &&
+    isNonNegativeInteger(x.range_high) &&
+    x.range_low <= x.expected &&
+    x.expected <= x.range_high
+  );
 }
 
 function isReportPersistenceV2(x: unknown): x is ReportPersistenceV2 {
@@ -199,8 +245,8 @@ function isReportPersistenceV2(x: unknown): x is ReportPersistenceV2 {
  * tolerated. */
 export function isReportV2(x: unknown): x is ReportV2 {
   if (!isPlainObject(x)) return false;
-  return (
-    isString(x.contract_version) &&
+  const structurallyValid = (
+    x.contract_version === '2.0' &&
     isNullable(x.report_id, isString) &&
     isNullable(x.report_token, isString) &&
     isNullable(x.share_url, isString) &&
@@ -219,6 +265,31 @@ export function isReportV2(x: unknown): x is ReportV2 {
     isOneOf(x.vehicle_data_source, VALID_VEHICLE_DATA_SOURCES) &&
     isNullable(x.note, isString)
   );
+  if (!structurallyValid) return false;
+
+  // Repeat this guard to give TypeScript a direct narrowing point after the
+  // aliased compound condition above.
+  if (!isReportComponentsV2(x.components)) return false;
+  if (x.repair_estimate !== undefined && x.repair_estimate !== null && !x.components.available) {
+    return false;
+  }
+  if (!isReportPersistenceV2(x.persistence)) return false;
+  const { saved, share_available: shareAvailable } = x.persistence;
+  if (
+    !saved &&
+    (x.report_id !== null || x.report_token !== null || x.share_url !== null || x.expires_at !== null)
+  ) return false;
+  if (shareAvailable) {
+    return (
+      saved &&
+      typeof x.report_id === 'string' &&
+      typeof x.report_token === 'string' &&
+      typeof x.share_url === 'string' &&
+      typeof x.expires_at === 'string' &&
+      x.share_url.endsWith(`/app/report/${x.report_token}`)
+    );
+  }
+  return x.report_token === null && x.share_url === null;
 }
 
 /** Structural guard for the v2 API's error envelope. error_code is checked

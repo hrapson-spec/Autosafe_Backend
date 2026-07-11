@@ -48,6 +48,7 @@ import json
 import os
 import secrets
 import sys
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import asyncpg
@@ -90,12 +91,12 @@ def _fake_postcode(i: int) -> str:
     return f"ZZ{i % 9 + 1} {i % 9}ZZ"
 
 
-def _build_payload(*, token, registration, created_at, expires_at, failure_risk=0.24, total_tests=500):
+def _build_payload(*, report_id, token, registration, created_at, expires_at, failure_risk=0.24, total_tests=500):
     """A schema-valid ReportResponse JSON payload, via the real pydantic
     models -- guarantees seeded rows validate exactly like a genuine
     report_routes.py-created one when fetched through GET."""
     response = ReportResponse(
-        report_id=None,
+        report_id=str(report_id),
         report_token=token,
         share_url=_share_url(token),
         created_at=created_at.isoformat(),
@@ -129,10 +130,11 @@ INSERT_SQL = """
         failure_risk, confidence_level, model_version, prediction_source, is_dvsa_data,
         contract_version, report_token, report_payload,
         mileage_source, effective_mileage, match_scope, total_tests, total_failures,
-        expires_at
+        expires_at, id
     ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16::jsonb, $17, $18, $19, $20, $21, $22
+        $14, $15, $16::jsonb, $17, $18, $19, $20, $21, $22,
+        COALESCE($23, gen_random_uuid())
     )
 """
 
@@ -141,14 +143,14 @@ def _row(*, created_at, registration, postcode, vehicle_year=2018, vehicle_fuel_
          mileage=45000, failure_risk=0.28, confidence="Low", model_version="lookup_v1",
          prediction_source="sqlite", contract_version=None, token=None, payload_json=None,
          mileage_source=None, effective_mileage=None, match_scope=None, total_tests=None,
-         total_failures=None, expires_at=None):
+         total_failures=None, expires_at=None, report_id=None):
     return (
         created_at, registration, postcode,
         "ZZTEST", "MODEL", vehicle_year, vehicle_fuel_type, mileage,
         failure_risk, confidence, model_version, prediction_source, False,
         contract_version, token, payload_json,
         mileage_source, effective_mileage, match_scope, total_tests, total_failures,
-        expires_at,
+        expires_at, report_id,
     )
 
 
@@ -161,9 +163,13 @@ def build_rows(now: datetime):
         created_at = now - timedelta(days=i, hours=i % 5)
         vrm, postcode = _fake_vrm(i), _fake_postcode(i)
         if i % 5 == 0:
+            report_id = uuid.uuid4()
             token = secrets.token_urlsafe(16)
             expires_at = created_at + timedelta(days=90)
-            payload = _build_payload(token=token, registration=vrm, created_at=created_at, expires_at=expires_at)
+            payload = _build_payload(
+                report_id=report_id, token=token, registration=vrm,
+                created_at=created_at, expires_at=expires_at,
+            )
             rows.append(_row(
                 created_at=created_at, registration=vrm, postcode=postcode,
                 failure_risk=0.24, confidence="High", model_version="lookup_v2",
@@ -171,6 +177,7 @@ def build_rows(now: datetime):
                 token=token, payload_json=json.dumps(payload),
                 mileage_source="estimated", effective_mileage=45000, match_scope="exact_band",
                 total_tests=500, total_failures=120, expires_at=expires_at,
+                report_id=report_id,
             ))
         else:
             rows.append(_row(created_at=created_at, registration=vrm, postcode=postcode))
@@ -181,10 +188,12 @@ def build_rows(now: datetime):
         months_old = RETENTION_MONTHS + 1 + i  # 25..34 months old
         created_at = now - timedelta(days=months_old * 30)
         vrm, postcode = _fake_vrm(100 + i), _fake_postcode(100 + i)
+        report_id = uuid.uuid4()
         token = secrets.token_urlsafe(16)
         expires_at = created_at + timedelta(days=90)  # long TTL-expired too, realistically
         payload = _build_payload(
-            token=token, registration=vrm, created_at=created_at, expires_at=expires_at,
+            report_id=report_id, token=token, registration=vrm,
+            created_at=created_at, expires_at=expires_at,
             failure_risk=0.33, total_tests=300,
         )
         rows.append(_row(
@@ -195,15 +204,18 @@ def build_rows(now: datetime):
             token=token, payload_json=json.dumps(payload),
             mileage_source="observed_mot", effective_mileage=80000, match_scope="exact_band",
             total_tests=300, total_failures=99, expires_at=expires_at,
+            report_id=report_id,
         ))
 
     # 2 dedicated rows for the GET-token 200/410 checks (fixed registrations
     # so staging_acceptance.py can find them without a token hand-off).
+    future_report_id = uuid.uuid4()
     future_token = secrets.token_urlsafe(16)
     future_created = now - timedelta(hours=1)
     future_expires = now + timedelta(days=30)
     future_payload = _build_payload(
-        token=future_token, registration="ZZ01FUT", created_at=future_created, expires_at=future_expires,
+        report_id=future_report_id, token=future_token, registration="ZZ01FUT",
+        created_at=future_created, expires_at=future_expires,
     )
     rows.append(_row(
         created_at=future_created, registration="ZZ01FUT", postcode="ZZ1 1ZZ",
@@ -211,13 +223,16 @@ def build_rows(now: datetime):
         contract_version=REPORT_CONTRACT_VERSION, token=future_token, payload_json=json.dumps(future_payload),
         mileage_source="estimated", effective_mileage=45000, match_scope="exact_band",
         total_tests=500, total_failures=120, expires_at=future_expires,
+        report_id=future_report_id,
     ))
 
+    past_report_id = uuid.uuid4()
     past_token = secrets.token_urlsafe(16)
     past_created = now - timedelta(days=95)
     past_expires = now - timedelta(days=5)
     past_payload = _build_payload(
-        token=past_token, registration="ZZ02PST", created_at=past_created, expires_at=past_expires,
+        report_id=past_report_id, token=past_token, registration="ZZ02PST",
+        created_at=past_created, expires_at=past_expires,
     )
     rows.append(_row(
         created_at=past_created, registration="ZZ02PST", postcode="ZZ2 2ZZ",
@@ -225,6 +240,7 @@ def build_rows(now: datetime):
         contract_version=REPORT_CONTRACT_VERSION, token=past_token, payload_json=json.dumps(past_payload),
         mileage_source="estimated", effective_mileage=45000, match_scope="exact_band",
         total_tests=500, total_failures=120, expires_at=past_expires,
+        report_id=past_report_id,
     ))
 
     return rows, future_token, past_token

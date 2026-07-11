@@ -3,7 +3,7 @@ import type { ReportV2, GarageLeadSubmission } from '../types';
 import { submitGarageLead } from '../services/autosafeApi';
 import { trackConversion } from '../utils/analytics';
 import { getAllVariants } from '../utils/experiments';
-import { riskPercentDisplay } from './ReportCopy';
+import { reportRateDisplay } from './ReportCopy';
 import { X, MapPin, Mail, Car, AlertTriangle, Heart, Phone, Clock } from './Icons';
 import { Input, Button } from './ui';
 
@@ -35,13 +35,13 @@ const HIGH_RISK_THRESHOLD = 0.15;
 // issue descriptions pre-filled into the garage lead's "tell the garage
 // about" list.
 const FAULT_TO_ISSUE: Record<string, string> = {
-  brakes: 'Brake pads, discs, or hydraulics may need attention',
-  suspension: 'Suspension components may be worn',
-  steering: 'Steering system may need inspection',
-  tyres: 'Tyres may need replacing or checking',
-  visibility: 'Wipers, windscreen, or mirrors may need attention',
-  lamps: 'Lights or electrical components may need fixing',
-  body: 'Bodywork or structural issues may need repair',
+  brakes: 'Inspect brakes — comparison pattern only, not a diagnosed fault',
+  suspension: 'Inspect suspension — comparison pattern only, not a diagnosed fault',
+  steering: 'Inspect steering — comparison pattern only, not a diagnosed fault',
+  tyres: 'Inspect tyres — comparison pattern only, not a diagnosed fault',
+  visibility: 'Inspect visibility items — comparison pattern only, not a diagnosed fault',
+  lamps: 'Inspect lamps and electrics — comparison pattern only, not a diagnosed fault',
+  body: 'Inspect body and chassis — comparison pattern only, not a diagnosed fault',
 };
 
 const URGENCY_OPTIONS = [
@@ -107,10 +107,9 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   const [issueItems, setIssueItems] = useState<string[]>([]);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  // Single risk derivation, mirroring ReportDashboard.tsx: never re-round a
-  // separately-stored reliability figure.
-  const risk = riskPercentDisplay(report.risk.failure_risk, report.risk.confidence);
-  const reliabilityScore = 100 - risk.value;
+  // Single failure-rate derivation for display/CTA thresholds. Never rename
+  // a second score derived from the same arithmetic.
+  const risk = reportRateDisplay(report);
 
   // components.items arrives in a fixed display order (brakes, suspension,
   // tyres, steering, visibility, lamps, body), not risk-sorted -- rank
@@ -243,7 +242,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
         },
         risk_data: {
           failure_risk: report.risk.failure_risk,
-          reliability_score: reliabilityScore,
+          match_scope: report.evidence.match_scope,
           top_risks: topRisks.map(item => item.key),
         },
         experiment_variant: getAllVariants() || undefined,
@@ -315,7 +314,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
             </div>
           ) : hasRisks ? (
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-600 mb-2">Areas of concern</p>
+              <p className="text-sm text-slate-600 mb-2">Comparison patterns, not diagnosed faults</p>
               <div className="space-y-2">
                 {topRisks.map((item) => (
                   <div key={item.key} className="flex items-center gap-2">
@@ -335,13 +334,13 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bg-green-50 rounded-lg p-4 mb-6">
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-green-600" aria-hidden="true" />
-                <p className="text-sm text-green-700 font-medium">Your car looks healthy!</p>
+                <Heart className="w-4 h-4 text-slate-600" aria-hidden="true" />
+                <p className="text-sm text-slate-700 font-medium">No component pattern is available</p>
               </div>
-              <p className="text-xs text-green-600 mt-1">
-                No major concerns found. A check-up can help keep it that way.
+              <p className="text-xs text-slate-600 mt-1">
+                This does not confirm the condition of your car; a physical inspection can.
               </p>
             </div>
           )}
@@ -571,7 +570,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               className="mt-2"
             >
               {ctaText || (risk.value > 50
-                ? 'Reduce your failure risk'
+                ? 'Request a pre-MOT inspection'
                 : risk.value > 30
                 ? 'Book a pre-MOT check'
                 : 'Find Garages Near Me'

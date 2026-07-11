@@ -83,11 +83,11 @@ Browser (React 19 + Vite + Tailwind)
 
 - **Root level** — Production backend Python code (main.py, database.py, model_v55.py, etc.). This is the ONLY deploy source: the root Dockerfile does `COPY . .` and runs `uvicorn main:app`; Railway builds from the GitHub repo.
 - **backend/** — ⚠ UNVERSIONED local shadow copy (not in git: absent from origin/main, untracked, not gitignored — verified 2026-06-11). It is NEVER deployed and is NOT authoritative; do not edit it expecting production effect, and do not trust it as a mirror (it has drifted, e.g. a stale pre-fix model_v55.py until 2026-06-11). Treat root as the single source of truth; delete or formally track backend/ as part of repo-hygiene cleanup.
-- **frontend/** — React frontend (Vite build, components in components/)
+- **App.tsx, index.tsx, components/, services/, utils/** — authoritative React/Vite SPA source at repository root
 - **work/** — ML research: model training, ablation studies, validation scripts, feature experiments
 - **features/** — Feature engineering experiments
 - **docs/** — ARCHITECTURE.md, DATABASE.md, RUNBOOK.md, MONITORING.md, TROUBLESHOOTING.md
-- **static/** — HTML/CSS/JS, SEO assets (sitemap.xml, robots.txt, og-image)
+- **static/** — tracked legal/guide/consent/image sources plus ignored Vite outputs (`index.html`, `assets/`)
 - **components/** — React TypeScript components (HeroForm, ReportDashboard, GarageFinderModal)
 - **catboost_production_v55/** — Trained model artifacts (model.cbm, platt_calibrator.pkl, encoders)
 

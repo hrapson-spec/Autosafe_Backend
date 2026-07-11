@@ -1,11 +1,10 @@
 /**
  * Blocks every request that isn't same-origin with the preview server.
  *
- * index.html references several real external hosts unconditionally:
- * Google Fonts (preconnect + stylesheet), the Umami analytics script
- * (unconditional `<script defer>`), and -- only if consent were ever
- * 'accepted', which this suite never does, see consent.ts -- the gtag
- * loader. share-flow.spec.ts's WhatsApp share button opens a real
+ * index.html references Google Fonts, and conditionally loads Umami only on
+ * non-report routes plus gtag only after consent. This suite declines consent,
+ * but still blocks every external host as a defense-in-depth determinism
+ * boundary. share-flow.spec.ts's WhatsApp share button opens a real
  * `wa.me` popup too. None of these are mocked by mockApi.ts (they're not
  * app `/api/*` calls), and the suite's determinism invariant rules out any
  * reliance on real network reachability (CI runners are not guaranteed to

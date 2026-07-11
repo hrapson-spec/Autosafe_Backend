@@ -27,7 +27,7 @@ import { Helmet } from 'react-helmet-async';
 import type { ReportV2 } from '../types';
 import { getReport } from '../services/reportApi';
 import { ReportApiError } from '../services/errorMessages';
-import { riskPercentDisplay } from './ReportCopy';
+import { reportRateDisplay } from './ReportCopy';
 import { trackReportView } from '../utils/analytics';
 import ReportUnavailable, { type ReportUnavailableReason } from './ReportUnavailable';
 
@@ -58,7 +58,7 @@ function reasonForError(err: unknown): ReportUnavailableReason {
 /** report_viewed fires once per successfully-obtained report, from
  * whichever path produced it (fetched or inline). */
 function fireReportViewed(report: ReportV2): void {
-  const { value } = riskPercentDisplay(report.risk.failure_risk, report.risk.confidence);
+  const { value } = reportRateDisplay(report);
   trackReportView(report.vehicle.make, report.vehicle.model, value);
 }
 

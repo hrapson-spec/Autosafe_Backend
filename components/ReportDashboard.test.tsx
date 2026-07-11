@@ -64,11 +64,11 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
     );
 
     // Narrative (buildNarrative): risk text + mileage clause + sample size + scope, all evidence-sourced
-    expect(container.textContent).toContain('12% chance of an MOT failure');
-    expect(container.textContent).toContain('based on 62,411 miles recorded at its MOT');
-    expect(container.textContent).toContain('1,842 MOT tests');
+    expect(container.textContent).toContain('recorded MOT failure rate of 12%');
+    expect(container.textContent).toContain('using a mileage band selected from 62,411 miles recorded at its MOT');
+    expect(container.textContent).toContain('1,842 recorded MOT tests');
     expect(container.textContent).toContain(
-      'This result is based on TESTMAKE TESTMODEL vehicles of a similar age and mileage.'
+      'This comparison uses TESTMAKE TESTMODEL records in the matched age and mileage bands.'
     );
 
     // Components: real item labels + the ReportCopy caption
@@ -109,10 +109,10 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
     );
 
     expect(screen.queryByText('Common Faults To Watch')).not.toBeInTheDocument();
-    expect(screen.queryByText('Repair Costs')).not.toBeInTheDocument();
-    expect(container.textContent).toContain('Sample size unavailable');
+    expect(screen.queryByText('Comparable-Vehicle Cost Context')).not.toBeInTheDocument();
+    expect(container.textContent).toContain('Vehicle-matched sample unavailable');
     expect(container.textContent).toContain(
-      "We don't have enough TESTMAKE OBSCUREMODEL data yet, so this is the average across all vehicles we've checked."
+      "We don't have enough TESTMAKE OBSCUREMODEL group data, so this is the dataset-wide reference rate."
     );
     // mileage.source === 'missing' -- no fabricated mileage slot anywhere ("no '— miles'")
     expect(container.textContent).not.toMatch(/\bmiles\b/i);
@@ -139,7 +139,7 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
     expect(container.textContent).toContain('converted from kilometres');
   });
 
-  it('never mixes two different roundings of the same risk figure (single-derivation property check)', () => {
+  it('presents one comparable-vehicle failure-rate number, never a renamed complement', () => {
     const cases: Array<Pick<ReportV2['risk'], 'failure_risk' | 'confidence'>> = [
       { failure_risk: 0.12, confidence: 'High' },
       { failure_risk: 0.345, confidence: 'Medium' },
@@ -151,19 +151,21 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
       const expected = riskPercentDisplay(risk.failure_risk, risk.confidence);
       const { unmount, queryAllByTestId } = render(<ReportDashboard report={report} onReset={vi.fn()} />);
 
-      // Every dedicated risk-figure slot (present or not, depending on variant)
-      // must read as either risk.value or its complement -- never an
-      // independently re-rounded number.
+      // Every dedicated score slot is the same failure rate. The complement
+      // must not be relabelled as a reliability score or pass probability.
       const scoreNodes = [
         ...queryAllByTestId('score-value'),
-        ...queryAllByTestId('risk-score-value'),
-        ...queryAllByTestId('pass-probability-value'),
+        ...queryAllByTestId('failure-rate-value'),
       ];
       expect(scoreNodes.length).toBeGreaterThan(0);
       scoreNodes.forEach(node => {
         const n = parseInt(node.textContent ?? '', 10);
-        expect([expected.value, 100 - expected.value]).toContain(n);
+        expect(n).toBe(expected.value);
       });
+
+      expect(screen.queryByText(/reliability score/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/pass probability/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/MOT prediction/i)).not.toBeInTheDocument();
 
       unmount();
     });

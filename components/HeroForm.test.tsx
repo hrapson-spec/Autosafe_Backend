@@ -28,8 +28,8 @@ describe('HeroForm: edit-lock', () => {
     await user.type(regInput, 'XY99ZZZ');
     expect(regInput).toHaveValue('XY99ZZZ');
 
-    // Parent re-renders with a brand new initialRegistration (e.g. the URL's
-    // ?reg= query changed) -- the user's own typed value must win.
+    // Parent re-renders with a brand new one-use prefill value -- the user's
+    // own typed value must win.
     rerender(<HeroForm onSubmit={onSubmit} isLoading={false} initialRegistration="NEWVAL12" />);
 
     expect(screen.getByLabelText('Registration Number', { exact: false })).toHaveValue('XY99ZZZ');

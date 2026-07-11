@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { ReportV2 } from '../types';
 import {
   riskPercentDisplay,
+  reportRateDisplay,
   buildScopeDisclosure,
   buildSampleSizeClause,
   sampleSizeBadge,
@@ -142,25 +143,40 @@ describe('riskPercentDisplay', () => {
   });
 });
 
+describe('reportRateDisplay', () => {
+  it('keeps the exact dataset reference rounded to one whole percent instead of coarsening it as thin model evidence', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'population_default', total_tests: null, total_failures: null },
+      risk: { failure_risk: 39_969_903 / 148_509_908, confidence: 'Very Low' },
+    });
+    expect(reportRateDisplay(report)).toEqual({ value: 27, approximate: false, text: '27%' });
+  });
+
+  it('still coarsens very-low-confidence matched cohorts', () => {
+    const report = makeReport({ risk: { failure_risk: 0.23, confidence: 'Very Low' } });
+    expect(reportRateDisplay(report)).toEqual({ value: 25, approximate: true, text: 'roughly 25%' });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // buildScopeDisclosure
 // ---------------------------------------------------------------------------
 
 describe('buildScopeDisclosure', () => {
   const cases: [ReportV2['evidence']['match_scope'], string][] = [
-    ['exact_band', 'This result is based on Ford Fiesta vehicles of a similar age and mileage.'],
+    ['exact_band', 'This comparison uses Ford Fiesta records in the matched age and mileage bands.'],
     [
       'age_band_only',
-      "This result is based on Ford Fiesta vehicles of a similar age — we didn't have enough mileage-matched data to narrow it further.",
+      "This comparison uses Ford Fiesta records in the matched age band; mileage was not used because there wasn't enough mileage-matched data.",
     ],
-    ['model_average', 'This result is based on all Ford Fiesta vehicles in our data, across all ages and mileages.'],
+    ['model_average', 'This comparison uses all Ford Fiesta records in the dataset, across all age and mileage bands.'],
     [
       'population_default',
-      "We don't have enough Ford Fiesta data yet, so this is the average across all vehicles we've checked.",
+      "We don't have enough Ford Fiesta group data, so this is the dataset-wide reference rate.",
     ],
     [
       'unavailable',
-      'Our comparison data is temporarily unavailable, so this is the overall average across all vehicles — not a result for this Ford Fiesta.',
+      'Our comparison data is temporarily unavailable, so this is the dataset-wide reference rate — not a Ford Fiesta result.',
     ],
   ];
 
@@ -186,14 +202,20 @@ describe('buildSampleSizeClause', () => {
 
   it('renders with en-GB locale grouping for a large count', () => {
     expect(buildSampleSizeClause(makeReport({ evidence: { total_tests: 12345 } }))).toBe(
-      'Based on 12,345 MOT tests of similar vehicles.'
+      'Based on 12,345 recorded MOT tests in that comparison group.'
     );
   });
 
   it('renders for a small positive count', () => {
     expect(buildSampleSizeClause(makeReport({ evidence: { total_tests: 1 } }))).toBe(
-      'Based on 1 MOT tests of similar vehicles.'
+      'Based on 1 recorded MOT test in that comparison group.'
     );
+  });
+
+  it('labels a degraded null as a missing vehicle-matched sample', () => {
+    expect(sampleSizeBadge(makeReport({
+      evidence: { match_scope: 'population_default', total_tests: null, total_failures: null },
+    }))).toBe('Vehicle-matched sample unavailable');
   });
 });
 
@@ -220,14 +242,14 @@ describe('buildMileagePhrase', () => {
     const report = makeReport({
       mileage: { source: 'user_entered', effective_value: 45000, observed_at: null, anomaly: false, unit_converted: false },
     });
-    expect(buildMileagePhrase(report)).toBe('based on the 45,000 miles you entered');
+    expect(buildMileagePhrase(report)).toBe('using a mileage band selected from the 45,000 miles you entered');
   });
 
   it('observed_mot without a date', () => {
     const report = makeReport({
       mileage: { source: 'observed_mot', effective_value: 32000, observed_at: null, anomaly: false, unit_converted: false },
     });
-    expect(buildMileagePhrase(report)).toBe('based on 32,000 miles recorded at its MOT');
+    expect(buildMileagePhrase(report)).toBe('using a mileage band selected from 32,000 miles recorded at its MOT');
   });
 
   it('observed_mot with a date', () => {
@@ -240,7 +262,7 @@ describe('buildMileagePhrase', () => {
         unit_converted: false,
       },
     });
-    expect(buildMileagePhrase(report)).toBe('based on 32,000 miles recorded at its MOT on 12 Mar 2025');
+    expect(buildMileagePhrase(report)).toBe('using a mileage band selected from 32,000 miles recorded at its MOT on 12 Mar 2025');
   });
 
   it('observed_mot with the anomaly suffix', () => {
@@ -248,7 +270,7 @@ describe('buildMileagePhrase', () => {
       mileage: { source: 'observed_mot', effective_value: 32000, observed_at: null, anomaly: true, unit_converted: false },
     });
     expect(buildMileagePhrase(report)).toBe(
-      'based on 32,000 miles recorded at its MOT (an inconsistent newer reading was ignored)'
+      'using a mileage band selected from 32,000 miles recorded at its MOT (an inconsistent newer reading was ignored)'
     );
   });
 
@@ -256,7 +278,7 @@ describe('buildMileagePhrase', () => {
     const report = makeReport({
       mileage: { source: 'observed_mot', effective_value: 32000, observed_at: null, anomaly: false, unit_converted: true },
     });
-    expect(buildMileagePhrase(report)).toBe('based on 32,000 miles recorded at its MOT (converted from kilometres)');
+    expect(buildMileagePhrase(report)).toBe('using a mileage band selected from 32,000 miles recorded at its MOT (converted from kilometres)');
   });
 
   it('observed_mot with date + anomaly + unit_converted all together, in fixed order', () => {
@@ -270,7 +292,7 @@ describe('buildMileagePhrase', () => {
       },
     });
     expect(buildMileagePhrase(report)).toBe(
-      'based on 32,000 miles recorded at its MOT on 12 Mar 2025 (an inconsistent newer reading was ignored) (converted from kilometres)'
+      'using a mileage band selected from 32,000 miles recorded at its MOT on 12 Mar 2025 (an inconsistent newer reading was ignored) (converted from kilometres)'
     );
   });
 
@@ -278,7 +300,7 @@ describe('buildMileagePhrase', () => {
     const report = makeReport({
       mileage: { source: 'estimated', effective_value: 60000, observed_at: null, anomaly: false, unit_converted: false },
     });
-    expect(buildMileagePhrase(report)).toBe('based on an estimated 60,000 miles for a vehicle of this age');
+    expect(buildMileagePhrase(report)).toBe('using a mileage band selected from an estimated 60,000 miles for a vehicle of this age');
   });
 
   it('missing source returns null', () => {
@@ -329,12 +351,22 @@ describe('buildConfidenceCaveat', () => {
   const cases: [Confidence, string | null][] = [
     ['High', null],
     ['Medium', null],
-    ['Low', 'This estimate is based on limited data — treat it as a guide rather than a precise figure.'],
-    ['Very Low', 'Very limited data is available here — treat this as a rough indication only.'],
+    ['Low', 'This rate comes from limited data — treat it as broad context rather than a precise vehicle-level figure.'],
+    ['Very Low', 'Very limited data is available here — treat this as broad context only.'],
   ];
 
   it.each(cases)('confidence=%s -> %s', (confidence, expected) => {
     expect(buildConfidenceCaveat(makeReport({ risk: { confidence } }))).toBe(expected);
+  });
+
+  it('explains missing relevance rather than claiming the dataset itself is small', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'population_default', total_tests: null, total_failures: null },
+      risk: { confidence: 'Very Low' },
+    });
+    expect(buildConfidenceCaveat(report)).toBe(
+      'No vehicle-matched evidence is available — treat this dataset reference as general context only.'
+    );
   });
 });
 
@@ -344,37 +376,65 @@ describe('buildConfidenceCaveat', () => {
 
 describe('buildNarrative', () => {
   const scopeCases: [ReportV2['evidence']['match_scope'], string][] = [
-    ['exact_band', 'This result is based on Ford Fiesta vehicles of a similar age and mileage.'],
+    ['exact_band', 'This comparison uses Ford Fiesta records in the matched age and mileage bands.'],
     [
       'age_band_only',
-      "This result is based on Ford Fiesta vehicles of a similar age — we didn't have enough mileage-matched data to narrow it further.",
+      "This comparison uses Ford Fiesta records in the matched age band; mileage was not used because there wasn't enough mileage-matched data.",
     ],
-    ['model_average', 'This result is based on all Ford Fiesta vehicles in our data, across all ages and mileages.'],
+    ['model_average', 'This comparison uses all Ford Fiesta records in the dataset, across all age and mileage bands.'],
     [
       'population_default',
-      "We don't have enough Ford Fiesta data yet, so this is the average across all vehicles we've checked.",
+      "We don't have enough Ford Fiesta group data, so this is the dataset-wide reference rate.",
     ],
     [
       'unavailable',
-      'Our comparison data is temporarily unavailable, so this is the overall average across all vehicles — not a result for this Ford Fiesta.',
+      'Our comparison data is temporarily unavailable, so this is the dataset-wide reference rate — not a Ford Fiesta result.',
     ],
   ];
 
   it.each(scopeCases)('composes the full narrative for match_scope=%s', (match_scope, disclosure) => {
-    const report = makeReport({ evidence: { match_scope, total_tests: 12345 } });
-    const expected =
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-      `Based on 12,345 MOT tests of similar vehicles. ${disclosure}`;
+    const matched = ['exact_band', 'age_band_only', 'model_average'].includes(match_scope);
+    const report = makeReport({
+      evidence: {
+        match_scope,
+        total_tests: matched ? 12345 : null,
+        total_failures: matched ? 2800 : null,
+      },
+    });
+    const headline = match_scope === 'exact_band'
+      ? 'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%, using a mileage band selected from the 45,000 miles you entered.'
+      : match_scope === 'age_band_only'
+        ? 'The matched Ford Fiesta age group has a recorded MOT failure rate of 23%.'
+        : match_scope === 'model_average'
+          ? 'Across all Ford Fiesta records in the comparison data, the recorded MOT failure rate is 23%.'
+          : 'The dataset-wide reference MOT failure rate shown here is 23%; it is not a vehicle-matched result.';
+    const mileageDisclosure = match_scope === 'exact_band'
+      ? ''
+      : match_scope === 'age_band_only'
+        ? ' Mileage context: 45,000 miles entered by the user. This mileage was not used because the comparison only matched the age band.'
+        : match_scope === 'model_average'
+          ? ' Mileage context: 45,000 miles entered by the user. This mileage was not used because the comparison is model-wide.'
+          : ' Mileage context: 45,000 miles entered by the user. This mileage was not used because the displayed rate is the dataset-wide reference.';
+    const expected = matched
+      ? `${headline}${mileageDisclosure} Based on 12,345 recorded MOT tests in that comparison group. ${disclosure}`
+      : `${headline}${mileageDisclosure} ${disclosure} No vehicle-matched evidence is available — treat this dataset reference as general context only.`;
     expect(buildNarrative(report)).toBe(expected);
   });
 
-  it('omits the year prefix when the vehicle year is unknown', () => {
-    const report = makeReport({ vehicle: { year: null }, evidence: { total_tests: 12345 } });
-    expect(buildNarrative(report)).toBe(
-      'A Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'Based on 12,345 MOT tests of similar vehicles. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage.'
-    );
+  it('never presents a broad age band as an exact model-year cohort', () => {
+    const report = makeReport({ vehicle: { year: 2015 }, evidence: { total_tests: 12345 } });
+    expect(buildNarrative(report)).not.toContain('2015 Ford Fiesta');
+  });
+
+  it('labels population and unavailable figures as dataset-wide references, not comparable vehicles', () => {
+    for (const match_scope of ['population_default', 'unavailable'] as const) {
+      const copy = buildNarrative(makeReport({
+        evidence: { match_scope, total_tests: null, total_failures: null },
+        risk: { confidence: 'Very Low' },
+      }));
+      expect(copy).toContain('dataset-wide reference MOT failure rate');
+      expect(copy).not.toMatch(/Comparable .* vehicles have/i);
+    }
   });
 
   it('omits the mileage clause (and its comma) when mileage is missing', () => {
@@ -383,25 +443,25 @@ describe('buildNarrative', () => {
       evidence: { total_tests: 12345 },
     });
     expect(buildNarrative(report)).toBe(
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure. ' +
-        'Based on 12,345 MOT tests of similar vehicles. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%. ' +
+        'Based on 12,345 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands.'
     );
   });
 
   it('omits the sample-size sentence when total_tests is null', () => {
     const report = makeReport({ evidence: { total_tests: null } });
     expect(buildNarrative(report)).toBe(
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%, using a mileage band selected from the 45,000 miles you entered. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands.'
     );
   });
 
   it('omits the sample-size sentence when total_tests is 0', () => {
     const report = makeReport({ evidence: { total_tests: 0 } });
     expect(buildNarrative(report)).toBe(
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%, using a mileage band selected from the 45,000 miles you entered. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands.'
     );
   });
 
@@ -411,10 +471,10 @@ describe('buildNarrative', () => {
       evidence: { total_tests: 12345 },
     });
     expect(buildNarrative(report)).toBe(
-      'A 2015 Ford Fiesta like this has a roughly 25% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'Based on 12,345 MOT tests of similar vehicles. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage. ' +
-        'Very limited data is available here — treat this as a rough indication only.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of roughly 25%, using a mileage band selected from the 45,000 miles you entered. ' +
+        'Based on 12,345 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands. ' +
+        'Very limited data is available here — treat this as broad context only.'
     );
   });
 
@@ -424,24 +484,24 @@ describe('buildNarrative', () => {
       evidence: { total_tests: 12345 },
     });
     expect(buildNarrative(report)).toBe(
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'Based on 12,345 MOT tests of similar vehicles. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage. ' +
-        'This estimate is based on limited data — treat it as a guide rather than a precise figure.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%, using a mileage band selected from the 45,000 miles you entered. ' +
+        'Based on 12,345 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands. ' +
+        'This rate comes from limited data — treat it as broad context rather than a precise vehicle-level figure.'
     );
   });
 
   it('dedupes: drops report.note in favour of the scope disclosure', () => {
     const report = makeReport({
-      note: 'No data available for this make and model — showing the UK average across all vehicles we have checked.',
+      note: 'No data available for this make and model — showing the dataset-wide reference across the recorded tests.',
       evidence: { total_tests: 12345 },
     });
     const narrative = buildNarrative(report);
     expect(narrative).not.toContain('No data available for this make and model');
     expect(narrative).toBe(
-      'A 2015 Ford Fiesta like this has a 23% chance of an MOT failure, based on the 45,000 miles you entered. ' +
-        'Based on 12,345 MOT tests of similar vehicles. ' +
-        'This result is based on Ford Fiesta vehicles of a similar age and mileage.'
+      'The matched Ford Fiesta age-and-mileage group has a recorded MOT failure rate of 23%, using a mileage band selected from the 45,000 miles you entered. ' +
+        'Based on 12,345 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age and mileage bands.'
     );
   });
 
@@ -518,19 +578,37 @@ describe('buildWhatsAppMessage', () => {
   it('renders the exact share message', () => {
     const report = makeReport({ share_url: 'https://www.autosafe.one/app/report/abc123' });
     expect(buildWhatsAppMessage(report)).toBe(
-      'My 2015 Ford Fiesta has a 23% MOT failure risk. Check yours free: https://www.autosafe.one/app/report/abc123'
+      'Comparable 2015 Ford Fiesta vehicles have a recorded MOT failure rate of 23%. View the report: https://www.autosafe.one/app/report/abc123'
     );
   });
 
   it('omits the year when unknown', () => {
     const report = makeReport({ vehicle: { year: null }, share_url: 'https://www.autosafe.one/app/report/abc123' });
     expect(buildWhatsAppMessage(report)).toBe(
-      'My Ford Fiesta has a 23% MOT failure risk. Check yours free: https://www.autosafe.one/app/report/abc123'
+      'Comparable Ford Fiesta vehicles have a recorded MOT failure rate of 23%. View the report: https://www.autosafe.one/app/report/abc123'
     );
+  });
+
+  it('shares a population default as a dataset-wide reference, not a vehicle comparison', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'population_default', total_tests: null, total_failures: null },
+      risk: { confidence: 'Very Low' },
+      share_url: 'https://www.autosafe.one/app/report/abc123',
+    });
+    const message = buildWhatsAppMessage(report) ?? '';
+    expect(message).toContain('dataset-wide reference MOT failure rate');
+    expect(message).not.toMatch(/Comparable .* vehicles have/i);
   });
 
   it('returns null when there is no share_url', () => {
     expect(buildWhatsAppMessage(makeReport({ share_url: null }))).toBeNull();
+  });
+
+  it('returns null when persistence says sharing is unavailable', () => {
+    expect(buildWhatsAppMessage(makeReport({
+      share_url: 'https://www.autosafe.one/app/report/abc123',
+      persistence: { saved: false, share_available: false },
+    }))).toBeNull();
   });
 
   it('never mentions postcode — the report shape has no postcode field to leak', () => {

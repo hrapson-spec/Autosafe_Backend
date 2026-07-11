@@ -1,5 +1,5 @@
 {
-  "name": "AutoSafe AI",
-  "description": "AI-powered vehicle reliability checker and MOT predictor.",
+  "name": "AutoSafe",
+  "description": "Recorded MOT history and comparable-vehicle failure-rate evidence.",
   "requestFramePermissions": []
 }

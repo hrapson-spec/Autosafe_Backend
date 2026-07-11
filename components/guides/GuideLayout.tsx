@@ -63,7 +63,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
               Ready to check your vehicle?
             </h2>
             <p className="text-slate-300 mb-6 max-w-md mx-auto">
-              Use our free MOT history checker to see your vehicle's risk score and get personalized advice.
+              Use our free MOT comparison tool to see recorded MOT details and historical outcomes for the closest available comparison group.
             </p>
             <Link to="/app/">
               <Button variant="secondary" size="lg">

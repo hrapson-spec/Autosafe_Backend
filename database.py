@@ -5,7 +5,7 @@ Uses DATABASE_URL environment variable from Railway.
 import os
 import re
 from typing import List, Dict, Optional
-from utils import hash_vrm, mask_postcode
+from utils import safe_referrer
 
 
 def _clamp_risk(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
@@ -59,7 +59,7 @@ async def get_pool():
             _pool = await asyncpg.create_pool(db_url, min_size=5, max_size=20)
             logger.info("Database connection pool created")
         except Exception as e:
-            logger.error(f"Failed to create database connection pool: {e}")
+            logger.error("Failed to create database connection pool (%s)", type(e).__name__)
             return None
     return _pool
 
@@ -72,7 +72,7 @@ async def close_pool():
             _pool = None
             logger.info("Database connection pool closed")
         except Exception as e:
-            logger.error(f"Error closing database pool: {e}")
+            logger.error("Error closing database pool (%s)", type(e).__name__)
 
 
 async def is_postgres_available() -> bool:
@@ -97,7 +97,7 @@ async def is_postgres_available() -> bool:
             await conn.execute("SELECT 1")
             return True
     except Exception as e:
-        logger.error(f"PostgreSQL health check failed: {e}")
+        logger.error("PostgreSQL health check failed (%s)", type(e).__name__)
         return False
 
 def normalize_columns(row_dict: Dict) -> Dict:
@@ -286,7 +286,7 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
             - email: str
             - postcode: str
             - lead_type: str (e.g., 'garage')
-            - vehicle: dict with make, model, year, mileage
+            - vehicle: dict with make, model, year, mileage, mileage_source
             - risk_data: dict with failure_risk, reliability_score, top_risks
 
     Returns:
@@ -311,11 +311,12 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                 """INSERT INTO leads (
                     email, postcode, name, phone, lead_type,
                     vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                    failure_risk, reliability_score, top_risks, services_requested,
+                    vehicle_mileage_source,
+                    failure_risk, comparison_scope, reliability_score, top_risks, services_requested,
                     description, urgency, consent_given, consent_timestamp,
                     utm_source, utm_medium, utm_campaign, referrer
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb,
-                          $14, $15, $16, CASE WHEN $16 THEN NOW() ELSE NULL END, $17, $18, $19, $20)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15::jsonb,
+                          $16, $17, $18, CASE WHEN $18 THEN NOW() ELSE NULL END, $19, $20, $21, $22)
                 RETURNING id""",
                 lead_data.get('email'),
                 lead_data.get('postcode'),
@@ -326,7 +327,9 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
                 vehicle.get('model'),
                 vehicle.get('year'),
                 vehicle.get('mileage'),
+                vehicle.get('mileage_source'),
                 risk_data.get('failure_risk'),
+                risk_data.get('match_scope'),
                 risk_data.get('reliability_score'),
                 json.dumps(top_risks) if top_risks else '[]',
                 json.dumps(services_requested) if services_requested else '[]',
@@ -340,12 +343,11 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
             )
 
             lead_id = str(result['id'])
-            # Log lead saved with postcode (needed for ops) but no email/name/phone
-            logger.info(f"Lead saved: id={lead_id} postcode={mask_postcode(lead_data.get('postcode'))} make={vehicle.get('make')} model={vehicle.get('model')}")
+            logger.info(f"Lead saved: id={lead_id} make={vehicle.get('make')} model={vehicle.get('model')}")
             return lead_id
 
     except Exception as e:
-        logger.error(f"Failed to save lead: {e}")
+        logger.error(f"Failed to save lead: type={type(e).__name__}")
         return None
 
 
@@ -376,7 +378,8 @@ async def get_leads(
                 rows = await conn.fetch(
                     """SELECT id, email, postcode, lead_type,
                               vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                              failure_risk, reliability_score, top_risks, services_requested,
+                              vehicle_mileage_source,
+                              failure_risk, comparison_scope, reliability_score, top_risks, services_requested,
                               created_at, contacted_at, notes
                        FROM leads
                        WHERE created_at >= $1::timestamp
@@ -388,7 +391,8 @@ async def get_leads(
                 rows = await conn.fetch(
                     """SELECT id, email, postcode, lead_type,
                               vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                              failure_risk, reliability_score, top_risks, services_requested,
+                              vehicle_mileage_source,
+                              failure_risk, comparison_scope, reliability_score, top_risks, services_requested,
                               created_at, contacted_at, notes
                        FROM leads
                        ORDER BY created_at DESC
@@ -410,7 +414,7 @@ async def get_leads(
             return leads
 
     except Exception as e:
-        logger.error(f"Failed to get leads: {e}")
+        logger.error("Failed to get leads (%s)", type(e).__name__)
         return None
 
 
@@ -431,7 +435,7 @@ async def count_leads(since: Optional[str] = None) -> int:
                 result = await conn.fetchrow("SELECT COUNT(*) as count FROM leads")
             return result['count']
     except Exception as e:
-        logger.error(f"Failed to count leads: {e}")
+        logger.error("Failed to count leads (%s)", type(e).__name__)
         return 0
 
 
@@ -476,11 +480,11 @@ async def save_garage(garage_data: Dict) -> Optional[str]:
             )
 
             garage_id = str(result['id'])
-            logger.info(f"Garage saved: {garage_data.get('name')} ({mask_postcode(garage_data.get('postcode'))})")
+            logger.info(f"Garage saved: id={garage_id}")
             return garage_id
 
     except Exception as e:
-        logger.error(f"Failed to save garage: {e}")
+        logger.error("Failed to save garage (%s)", type(e).__name__)
         return None
 
 
@@ -509,7 +513,7 @@ async def get_garage_by_id(garage_id: str) -> Optional[Dict]:
             return None
 
     except Exception as e:
-        logger.error(f"Failed to get garage: {e}")
+        logger.error("Failed to get garage (%s)", type(e).__name__)
         return None
 
 
@@ -549,7 +553,7 @@ async def get_all_garages(status: Optional[str] = None) -> List[Dict]:
             return garages
 
     except Exception as e:
-        logger.error(f"Failed to get garages: {e}")
+        logger.error("Failed to get garages (%s)", type(e).__name__)
         return []
 
 
@@ -585,7 +589,7 @@ async def get_garages_with_coordinates() -> List[Dict]:
             return garages
 
     except Exception as e:
-        logger.error(f"Failed to get garages with coordinates: {e}")
+        logger.error("Failed to get garages with coordinates (%s)", type(e).__name__)
         return []
 
 
@@ -631,7 +635,7 @@ async def update_garage(garage_id: str, updates: Dict) -> bool:
             return True
 
     except Exception as e:
-        logger.error(f"Failed to update garage: {e}")
+        logger.error("Failed to update garage (%s)", type(e).__name__)
         return False
 
 
@@ -649,7 +653,7 @@ async def increment_garage_leads_received(garage_id: str) -> bool:
             )
             return True
     except Exception as e:
-        logger.error(f"Failed to increment garage leads: {e}")
+        logger.error("Failed to increment garage leads (%s)", type(e).__name__)
         return False
 
 
@@ -677,7 +681,7 @@ async def create_lead_assignment(
             )
             return str(result['id'])
     except Exception as e:
-        logger.error(f"Failed to create lead assignment: {e}")
+        logger.error("Failed to create lead assignment (%s)", type(e).__name__)
         return None
 
 
@@ -706,7 +710,7 @@ async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bo
 
             return True
     except Exception as e:
-        logger.error(f"Failed to update lead assignment outcome: {e}")
+        logger.error("Failed to update lead assignment outcome (%s)", type(e).__name__)
         return False
 
 
@@ -721,7 +725,8 @@ async def get_lead_by_id(lead_id: str) -> Optional[Dict]:
             row = await conn.fetchrow(
                 """SELECT id, email, postcode, name, phone,
                           vehicle_make, vehicle_model, vehicle_year, vehicle_mileage,
-                          failure_risk, reliability_score, top_risks,
+                          vehicle_mileage_source,
+                          failure_risk, comparison_scope, reliability_score, top_risks,
                           distribution_status, created_at
                    FROM leads WHERE id = $1""",
                 lead_id
@@ -736,7 +741,7 @@ async def get_lead_by_id(lead_id: str) -> Optional[Dict]:
             return None
 
     except Exception as e:
-        logger.error(f"Failed to get lead: {e}")
+        logger.error("Failed to get lead (%s)", type(e).__name__)
         return None
 
 
@@ -756,7 +761,7 @@ async def update_lead_distribution_status(lead_id: str, status: str) -> bool:
             )
             return True
     except Exception as e:
-        logger.error(f"Failed to update lead distribution status: {e}")
+        logger.error("Failed to update lead distribution status (%s)", type(e).__name__)
         return False
 
 
@@ -793,7 +798,7 @@ async def get_lead_assignment_by_id(assignment_id: str) -> Optional[Dict]:
             return None
 
     except Exception as e:
-        logger.error(f"Failed to get lead assignment: {e}")
+        logger.error("Failed to get lead assignment (%s)", type(e).__name__)
         return None
 
 
@@ -865,31 +870,55 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
             )
 
             risk_check_id = str(result['id'])
-            logger.info(f"Risk check logged: postcode={mask_postcode(risk_data.get('postcode'))} make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
+            logger.info(f"Risk check logged: make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
             return risk_check_id
 
     except Exception as e:
-        logger.error(f"Failed to save risk check: {e}")
+        logger.error("Failed to save risk check (%s)", type(e).__name__)
         # Backup to local file so data is never lost
         _backup_risk_check_to_file(risk_data)
         return None
 
 
+_BACKUP_SAFE_FIELDS = (
+    'vehicle_make', 'vehicle_model', 'vehicle_year', 'vehicle_fuel_type',
+    'mileage', 'last_mot_date', 'last_mot_result', 'failure_risk',
+    'confidence_level', 'risk_components', 'repair_cost_estimate',
+    'model_version', 'prediction_source', 'is_dvsa_data',
+)
+
+
+def _redact_risk_check_backup(risk_data: Dict) -> Dict:
+    """Build the legacy fallback record from an explicit safe allowlist."""
+    from datetime import datetime, date
+
+    entry = {
+        key: risk_data.get(key)
+        for key in _BACKUP_SAFE_FIELDS
+        if key in risk_data
+    }
+    referrer = safe_referrer(risk_data.get('referrer'))
+    if referrer:
+        entry['referrer'] = referrer
+    entry['backup_timestamp'] = datetime.now().isoformat()
+    for key, value in entry.items():
+        if isinstance(value, (datetime, date)):
+            entry[key] = value.isoformat()
+    return entry
+
+
 def _backup_risk_check_to_file(risk_data: Dict):
-    """Append risk check to a local JSONL file as backup when DB save fails."""
+    """Append a redacted risk record when the legacy DB write fails."""
     try:
         import json
-        from datetime import datetime, date
         backup_path = os.path.join(os.path.dirname(__file__), "risk_checks_backup.jsonl")
-        entry = {**risk_data, "backup_timestamp": datetime.now().isoformat()}
-        for k, v in entry.items():
-            if isinstance(v, (datetime, date)):
-                entry[k] = v.isoformat()
-        with open(backup_path, "a") as f:
+        entry = _redact_risk_check_backup(risk_data)
+        fd = os.open(backup_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
-        logger.info(f"Risk check backed up to file: {hash_vrm(risk_data.get('registration')) if risk_data.get('registration') else 'none'}")
+        logger.info("Redacted risk check backed up to local fallback file")
     except Exception as e:
-        logger.error(f"Failed to backup risk check to file: {e}")
+        logger.error("Failed to backup risk check to file (%s)", type(e).__name__)
 
 
 # ============================================================================
@@ -909,9 +938,9 @@ async def save_mot_reminder(data: Dict) -> Dict:
         return {"success": False, "already_subscribed": False}
 
     try:
-        import json
         email = data.get('email', '').lower().strip()
         registration = data.get('registration', '').upper().strip()
+        postcode = (data.get('postcode') or '').upper().strip() or None
 
         async with pool.acquire() as conn:
             # Check for duplicate
@@ -938,28 +967,29 @@ async def save_mot_reminder(data: Dict) -> Dict:
                 """INSERT INTO leads (
                     email, postcode, lead_type, registration, mot_expiry_date,
                     vehicle_make, vehicle_model, vehicle_year,
-                    failure_risk, consent_given, consent_timestamp,
+                    failure_risk, comparison_scope, consent_given, consent_timestamp,
                     utm_campaign
-                ) VALUES ($1, $2, 'mot_reminder', $3, $4, $5, $6, $7, $8, TRUE, NOW(),
-                          $9)
+                ) VALUES ($1, $2, 'mot_reminder', $3, $4, $5, $6, $7, $8, $9, TRUE, NOW(),
+                          $10)
                 RETURNING id""",
                 email,
-                data.get('postcode', '').upper().strip(),
+                postcode,
                 registration,
                 mot_expiry,
                 data.get('vehicle_make'),
                 data.get('vehicle_model'),
                 data.get('vehicle_year'),
                 data.get('failure_risk'),
+                data.get('match_scope'),
                 data.get('utm_campaign'),
             )
 
             lead_id = str(result['id'])
-            logger.info(f"MOT reminder saved: id={lead_id} registration={hash_vrm(registration)}")
+            logger.info(f"MOT reminder saved: id={lead_id}")
             return {"success": True, "already_subscribed": False, "lead_id": lead_id}
 
     except Exception as e:
-        logger.error(f"Failed to save MOT reminder: {e}")
+        logger.error(f"Failed to save MOT reminder: type={type(e).__name__}")
         return {"success": False, "already_subscribed": False}
 
 
@@ -978,24 +1008,24 @@ async def save_report_email_lead(data: Dict) -> Optional[str]:
     try:
         import json
         email = data.get('email', '').lower().strip()
+        postcode = (data.get('postcode') or '').upper().strip() or None
 
         async with pool.acquire() as conn:
             result = await conn.fetchrow(
                 """INSERT INTO leads (
                     email, postcode, lead_type, registration,
                     vehicle_make, vehicle_model, vehicle_year,
-                    failure_risk, reliability_score,
-                    top_risks, consent_given, consent_timestamp
+                    failure_risk, comparison_scope, top_risks, consent_given, consent_timestamp
                 ) VALUES ($1, $2, 'report_email', $3, $4, $5, $6, $7, $8, $9::jsonb, TRUE, NOW())
                 RETURNING id""",
                 email,
-                data.get('postcode', '').upper().strip(),
+                postcode,
                 data.get('registration', '').upper().strip(),
                 data.get('vehicle_make'),
                 data.get('vehicle_model'),
                 data.get('vehicle_year'),
                 data.get('failure_risk'),
-                data.get('reliability_score'),
+                data.get('match_scope'),
                 json.dumps(data.get('common_faults', [])),
             )
 
@@ -1004,7 +1034,7 @@ async def save_report_email_lead(data: Dict) -> Optional[str]:
             return lead_id
 
     except Exception as e:
-        logger.error(f"Failed to save report email lead: {e}")
+        logger.error(f"Failed to save report email lead: type={type(e).__name__}")
         return None
 
 
@@ -1031,7 +1061,7 @@ async def get_risk_check_stats() -> Dict:
                 "checks_this_month": monthly or 0,
             }
     except Exception as e:
-        logger.error(f"Failed to get risk check stats: {e}")
+        logger.error("Failed to get risk check stats (%s)", type(e).__name__)
         return {"total_checks": 0, "checks_this_month": 0}
 
 
@@ -1080,13 +1110,20 @@ async def _fetch_mot_risk_aggregate(
         SUM(total_tests) AS total_tests,
         SUM(total_failures) AS total_failures,
         SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) AS failure_risk,
-        SUM(risk_brakes * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_brakes,
-        SUM(risk_suspension * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_suspension,
-        SUM(risk_tyres * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_tyres,
-        SUM(risk_steering * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_steering,
-        SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_visibility,
-        SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_lamps,
-        SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) AS risk_body
+        CASE WHEN COUNT(risk_brakes) = COUNT(*)
+             THEN SUM(risk_brakes * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_brakes,
+        CASE WHEN COUNT(risk_suspension) = COUNT(*)
+             THEN SUM(risk_suspension * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_suspension,
+        CASE WHEN COUNT(risk_tyres) = COUNT(*)
+             THEN SUM(risk_tyres * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_tyres,
+        CASE WHEN COUNT(risk_steering) = COUNT(*)
+             THEN SUM(risk_steering * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_steering,
+        CASE WHEN COUNT(risk_visibility) = COUNT(*)
+             THEN SUM(risk_visibility * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_visibility,
+        CASE WHEN COUNT(risk_lamps_reflectors_and_electrical_equipment) = COUNT(*)
+             THEN SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_lamps,
+        CASE WHEN COUNT(risk_body_chassis_structure) = COUNT(*)
+             THEN SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_body
        FROM mot_risk
        WHERE (model_id = $1 OR model_id LIKE $1 || ' %')"""
 
@@ -1148,24 +1185,38 @@ async def get_risk_v2_banded(model_id: str, age_band: str, mileage_band: Optiona
             row = None
             match_scope = None
 
+            def usable_evidence(candidate) -> bool:
+                """A row needs both a real denominator and a rate.
+
+                SUM(total_tests)=0 makes the weighted rate NULL. Treating
+                that as a hit would turn missing evidence into 0% through
+                the legacy _clamp_risk(None) behaviour.
+                """
+                return (
+                    candidate is not None
+                    and candidate['total_tests'] is not None
+                    and int(candidate['total_tests']) > 0
+                    and candidate['failure_risk'] is not None
+                )
+
             skip_exact = mileage_band is None or mileage_band == 'Unknown'
             if not skip_exact:
                 row = await _fetch_mot_risk_aggregate(conn, model_id, age_band, mileage_band)
-                if row is not None and row['total_tests'] is not None:
+                if usable_evidence(row):
                     match_scope = 'exact_band'
                 else:
                     row = None
 
             if row is None:
                 row = await _fetch_mot_risk_aggregate(conn, model_id, age_band, None)
-                if row is not None and row['total_tests'] is not None:
+                if usable_evidence(row):
                     match_scope = 'age_band_only'
                 else:
                     row = None
 
             if row is None:
                 row = await _fetch_mot_risk_aggregate(conn, model_id, None, None)
-                if row is not None and row['total_tests'] is not None:
+                if usable_evidence(row):
                     match_scope = 'model_average'
                 else:
                     row = None
@@ -1189,7 +1240,7 @@ async def get_risk_v2_banded(model_id: str, age_band: str, mileage_band: Optiona
             return result
 
     except Exception as e:
-        logger.error(f"Postgres query failed in get_risk_v2_banded: {e}")
+        logger.error("Postgres query failed in get_risk_v2_banded (%s)", type(e).__name__)
         raise PostgresUnavailable("Postgres query failed in get_risk_v2_banded") from e
 
 
@@ -1330,7 +1381,7 @@ async def get_report_by_token(token: str) -> Optional[Dict]:
                 token
             )
     except Exception as e:
-        logger.error(f"Postgres query failed in get_report_by_token: {e}")
+        logger.error("Postgres query failed in get_report_by_token (%s)", type(e).__name__)
         raise PostgresUnavailable("Postgres query failed in get_report_by_token") from e
 
     if not row:
@@ -1362,12 +1413,12 @@ async def get_report_by_idempotency_key(key: str) -> Optional[Dict]:
     try:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                """SELECT id, report_payload, expires_at, pseudonymised_at, created_at
+                """SELECT id, registration, report_payload, expires_at, pseudonymised_at, created_at
                    FROM risk_checks WHERE idempotency_key = $1""",
                 key
             )
     except Exception as e:
-        logger.error(f"Postgres query failed in get_report_by_idempotency_key: {e}")
+        logger.error("Postgres query failed in get_report_by_idempotency_key (%s)", type(e).__name__)
         raise PostgresUnavailable("Postgres query failed in get_report_by_idempotency_key") from e
 
     if not row:

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 import asyncio
 import httpx
 from cachetools import TTLCache
+from utils import hash_vrm
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +239,7 @@ class DVSAClient:
             )
 
             if response.status_code != 200:
-                logger.error(f"OAuth token request failed: {response.status_code} - {response.text}")
+                logger.error(f"OAuth token request failed: status={response.status_code}")
                 raise DVSAAPIError(f"OAuth authentication failed: {response.status_code}")
 
             token_data = response.json()
@@ -251,7 +252,7 @@ class DVSAClient:
             return self._token.access_token
 
         except httpx.RequestError as e:
-            raise DVSAAPIError(f"OAuth token request failed: {str(e)}")
+            raise DVSAAPIError("OAuth token request failed") from e
 
     def normalize_vrm(self, registration: str) -> str:
         """
@@ -342,9 +343,8 @@ class DVSAClient:
         # Normalize VRM
         vrm = self.normalize_vrm(registration)
 
-        # P1-10 fix: Hash VRM for logging
-        import hashlib
-        vrm_hash = hashlib.sha256(vrm.encode()).hexdigest()[:8]
+        # Use the shared keyed digest; an unkeyed VRN hash is enumerable.
+        vrm_hash = hash_vrm(vrm)
 
         # Check cache first
         if vrm in self._cache:
@@ -386,14 +386,11 @@ class DVSAClient:
                     raise VehicleNotFoundError(f"Vehicle not found in DVSA database")
 
                 if response.status_code == 403:
-                    # Log response body for debugging (truncated)
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.error(f"DVSA 403 Forbidden: {body_preview}")
+                    logger.error("DVSA 403 Forbidden")
                     raise DVSAAPIError("DVSA API access denied - check API key and OAuth token")
 
                 if response.status_code == 401:
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.warning(f"DVSA 401 Unauthorized: {body_preview} — invalidating token and retrying")
+                    logger.warning("DVSA 401 Unauthorized — invalidating token and retrying")
                     self._token.expires_at = 0  # Force token refresh on next attempt
                     if attempt < max_retries - 1:
                         continue
@@ -409,8 +406,7 @@ class DVSAClient:
                     raise DVSAAPIError("DVSA API rate limit exceeded")
 
                 if response.status_code != 200:
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.error(f"DVSA {response.status_code}: {body_preview}")
+                    logger.error(f"DVSA API error: status={response.status_code}")
                     raise DVSAAPIError(f"DVSA API error: {response.status_code}")
 
                 try:
@@ -437,8 +433,8 @@ class DVSAClient:
                     import asyncio
                     await asyncio.sleep(2 ** attempt)
                     continue
-            except httpx.RequestError as e:
-                last_error = DVSAAPIError(f"DVSA API connection error: {str(e)}")
+            except httpx.RequestError:
+                last_error = DVSAAPIError("DVSA API connection error")
                 if attempt < max_retries - 1:
                     import asyncio
                     await asyncio.sleep(2 ** attempt)
@@ -452,7 +448,7 @@ class DVSAClient:
         # Handle array response (API returns array of vehicles)
         if isinstance(data, list):
             if not data:
-                raise VehicleNotFoundError(f"No data returned for {vrm}")
+                raise VehicleNotFoundError("No vehicle data returned by DVSA")
             vehicle_data = data[0]
         else:
             vehicle_data = data

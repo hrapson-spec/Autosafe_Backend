@@ -86,8 +86,7 @@ async def send_email(
     """
     # Dry run mode - log but don't send
     if EMAIL_DRY_RUN:
-        logger.info(f"[DRY RUN] Would send email to {_mask_email(to_email)}: {subject}")
-        logger.debug(f"[DRY RUN] HTML Content: {html_body[:200]}...")
+        logger.info(f"[DRY RUN] Email delivery suppressed for {_mask_email(to_email)}")
         return True
 
     if not RESEND_API_KEY:
@@ -119,17 +118,17 @@ async def send_email(
         )
 
         if response.status_code == 200:
-            logger.info(f"Email sent to {_mask_email(to_email)}: {subject}")
+            logger.info(f"Email sent to {_mask_email(to_email)}")
             return True
         else:
-            logger.error(f"Email send failed: {response.status_code} - {response.text}")
+            logger.error(f"Email send failed: status={response.status_code}")
             return False
 
     except httpx.TimeoutException:
         logger.error(f"Timeout sending email to {_mask_email(to_email)}")
         return False
     except Exception as e:
-        logger.error(f"Email send exception: {e}")
+        logger.error(f"Email send exception: type={type(e).__name__}")
         return False
 
 

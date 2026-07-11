@@ -1,5 +1,5 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route as RouterRoute, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { Routes, Route as RouterRoute, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
 
@@ -25,6 +25,18 @@ interface HomePageProps {
   initialRegistration: string;
 }
 
+function consumePendingRegistration(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = window.sessionStorage.getItem('autosafe_pending_registration') || '';
+    window.sessionStorage.removeItem('autosafe_pending_registration');
+    const normalized = raw.replace(/\s/g, '').toUpperCase();
+    return /^[A-Z0-9]{2,8}$/.test(normalized) ? normalized : '';
+  } catch {
+    return '';
+  }
+}
+
 // Hoisted to module scope so it has a stable component identity across App
 // re-renders (e.g. `stats` resolving, `loading`/`errorMessage` changing).
 // It previously lived inside App's render body, which meant every App
@@ -37,10 +49,10 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>
-        <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
-        <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours. Free, fast, and simple." />
-        <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
-        <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours." />
+        <title>AutoSafe | MOT Records &amp; Comparable Failure Rates</title>
+        <meta name="description" content="Check recorded MOT details and compare your vehicle with official DVSA outcomes for similar vehicles. The report labels its mileage source, comparison scope and sample size." />
+        <meta property="og:title" content="Compare your car with recorded MOT outcomes." />
+        <meta property="og:description" content="See recorded MOT details and the closest available comparable-vehicle failure rate, with evidence scope shown clearly." />
         <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}
@@ -71,11 +83,11 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             {/* Text Section - Centered */}
             <div className="text-center space-y-6">
               <h1 className="text-5xl md:text-7xl font-serif font-medium text-slate-900 tracking-tight leading-tight">
-                Fix it before they find it.
+                See what the MOT evidence says.
               </h1>
 
               <p className="text-lg md:text-xl text-slate-500 font-light tracking-wide max-w-lg mx-auto font-sans">
-                Taking the stress out of MOTs and repairs.
+                Recorded MOT details and comparable-vehicle outcomes, with every fallback explained.
               </p>
             </div>
 
@@ -90,7 +102,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
 
             {/* Trust Bar */}
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 tracking-wide mt-4">
-              <span>142M+ MOT records analysed</span>
+              <span>{stats ? `${stats.mot_records} recorded MOT tests analysed` : 'Recorded DVSA MOT tests'}</span>
               <span className="hidden md:inline" aria-hidden="true">&middot;</span>
               <span>{stats ? `${stats.checks_this_month.toLocaleString()} vehicles checked this month` : 'Free vehicle checks'}</span>
               <span className="hidden md:inline" aria-hidden="true">&middot;</span>
@@ -151,7 +163,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="text-[10px] md:text-xs text-slate-400 max-w-md mx-auto leading-relaxed uppercase tracking-widest font-medium">
               Contains public sector information licensed under the Open Government Licence v3.0.
               <br />
-              Data from UK DVSA • Not official government advice.
+              Data from DVSA • Not official government advice.
             </div>
             <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
               <Link to="/app/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
@@ -167,12 +179,12 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
 }
 
 const App: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PublicStats | null>(null);
-  const queryRegistration = (searchParams.get('reg') || '').trim().toUpperCase();
+  const [pendingRegistration] = useState(consumePendingRegistration);
+  const pendingSubmission = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null);
 
   useEffect(() => {
     getPublicStats().then(setStats).catch(() => { });
@@ -182,8 +194,25 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    const fingerprint = `${registration.replace(/\s/g, '').toUpperCase()}|${postcode.replace(/\s/g, '').toUpperCase()}`;
+    if (!pendingSubmission.current || pendingSubmission.current.fingerprint !== fingerprint) {
+      pendingSubmission.current = {
+        fingerprint,
+        idempotencyKey: crypto.randomUUID(),
+      };
+    }
+
     try {
-      const report = await createReport(registration, postcode);
+      const report = await createReport(
+        registration,
+        postcode,
+        undefined,
+        pendingSubmission.current.idempotencyKey,
+      );
+      // The logical operation completed. A later deliberate check, even for
+      // the same vehicle, should mint a new report; only an unresolved retry
+      // reuses the key above.
+      pendingSubmission.current = null;
       trackConversion('risk_check');
       trackFunnel('reg_entered');
 
@@ -202,6 +231,12 @@ const App: React.FC = () => {
       }
     } catch (err) {
       if (err instanceof ReportApiError) {
+        // A 409 means the server has positively established that this key
+        // cannot represent the pending operation. Reusing it would trap the
+        // next deliberate retry in the same conflict.
+        if (err.code === 'idempotency_conflict') {
+          pendingSubmission.current = null;
+        }
         // .message is already mapped to safe, user-facing copy at the
         // point each ReportApiError is thrown (see services/reportApi.ts /
         // errorMessages.ts) -- never the server's raw message.
@@ -209,7 +244,6 @@ const App: React.FC = () => {
       } else {
         setError(mapErrorToMessage('unknown'));
       }
-      console.error('Error checking vehicle:', err);
     } finally {
       setLoading(false);
     }
@@ -218,8 +252,8 @@ const App: React.FC = () => {
   return (
     <Suspense fallback={<div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" /></div>}>
       <Routes>
-        <RouterRoute path="/" element={<HomePage onSubmit={handleCarCheck} isLoading={loading} errorMessage={error} stats={stats} initialRegistration={queryRegistration} />} />
-        <RouterRoute path="/app" element={<HomePage onSubmit={handleCarCheck} isLoading={loading} errorMessage={error} stats={stats} initialRegistration={queryRegistration} />} />
+        <RouterRoute path="/" element={<HomePage onSubmit={handleCarCheck} isLoading={loading} errorMessage={error} stats={stats} initialRegistration={pendingRegistration} />} />
+        <RouterRoute path="/app" element={<HomePage onSubmit={handleCarCheck} isLoading={loading} errorMessage={error} stats={stats} initialRegistration={pendingRegistration} />} />
         <RouterRoute path="/app/report/:token" element={<ReportScreen />} />
         <RouterRoute path="/app/privacy" element={<PrivacyPage />} />
         <RouterRoute path="/app/terms" element={<TermsPage />} />

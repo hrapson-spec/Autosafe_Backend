@@ -64,13 +64,13 @@ NOTE_MODEL_AVERAGE = (
     "for this make and model."
 )
 NOTE_POPULATION_DEFAULT = (
-    "No data available for this make and model — showing the UK average "
-    "across all vehicles we've checked."
+    "No data available for this make and model — showing the dataset-wide "
+    "reference across the recorded tests."
 )
 NOTE_UNAVAILABLE = (
     "Vehicle identity confirmed, but our comparison data is temporarily "
-    "unavailable — the figure shown is the UK average, not a result for "
-    "this make and model."
+    "unavailable — the figure shown is the checked-in dataset reference, "
+    "not a result for this make and model."
 )
 
 _NOTE_BY_SCOPE = {
@@ -264,44 +264,34 @@ def resolve_mileage(
 # for the same verified schema used to seed test fixtures.
 # ---------------------------------------------------------------------------
 
-_SQLITE_STEP1_EXACT_SQL = """
-    SELECT * FROM risks
-    WHERE (model_id = ? OR model_id LIKE ? || ' %')
-    AND age_band = ? AND mileage_band = ?
-    ORDER BY Total_Tests DESC
-    LIMIT 1
-"""
-
-_SQLITE_STEP2_AGE_ONLY_SQL = """
-    SELECT * FROM risks
-    WHERE (model_id = ? OR model_id LIKE ? || ' %')
-    AND age_band = ?
-    ORDER BY Total_Tests DESC
-    LIMIT 1
-"""
-
-_SQLITE_STEP3_MODEL_AVERAGE_SQL = """
+_SQLITE_WEIGHTED_SELECT = """
     SELECT
         SUM(Total_Tests) AS total_tests,
         SUM(Total_Failures) AS total_failures,
-        SUM(Failure_Risk * Total_Tests) * 1.0 / SUM(Total_Tests) AS failure_risk,
-        SUM(Risk_Brakes * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_brakes,
-        SUM(Risk_Suspension * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_suspension,
-        SUM(Risk_Tyres * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_tyres,
-        SUM(Risk_Steering * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_steering,
-        SUM(Risk_Visibility * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_visibility,
-        SUM(Risk_Lamps_Reflectors_And_Electrical_Equipment * Total_Tests) * 1.0
-            / SUM(Total_Tests) AS risk_lamps,
-        SUM(Risk_Body_Chassis_Structure * Total_Tests) * 1.0 / SUM(Total_Tests) AS risk_body
+        SUM(Failure_Risk * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) AS failure_risk,
+        CASE WHEN COUNT(Risk_Brakes) = COUNT(*)
+             THEN SUM(Risk_Brakes * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) END AS risk_brakes,
+        CASE WHEN COUNT(Risk_Suspension) = COUNT(*)
+             THEN SUM(Risk_Suspension * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) END AS risk_suspension,
+        CASE WHEN COUNT(Risk_Tyres) = COUNT(*)
+             THEN SUM(Risk_Tyres * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) END AS risk_tyres,
+        CASE WHEN COUNT(Risk_Steering) = COUNT(*)
+             THEN SUM(Risk_Steering * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) END AS risk_steering,
+        CASE WHEN COUNT(Risk_Visibility) = COUNT(*)
+             THEN SUM(Risk_Visibility * Total_Tests) * 1.0 / NULLIF(SUM(Total_Tests), 0) END AS risk_visibility,
+        CASE WHEN COUNT(Risk_Lamps_Reflectors_And_Electrical_Equipment) = COUNT(*)
+             THEN SUM(Risk_Lamps_Reflectors_And_Electrical_Equipment * Total_Tests) * 1.0
+                  / NULLIF(SUM(Total_Tests), 0) END AS risk_lamps,
+        CASE WHEN COUNT(Risk_Body_Chassis_Structure) = COUNT(*)
+             THEN SUM(Risk_Body_Chassis_Structure * Total_Tests) * 1.0
+                  / NULLIF(SUM(Total_Tests), 0) END AS risk_body
     FROM risks
     WHERE (model_id = ? OR model_id LIKE ? || ' %')
 """
 
-_BEST_ROW_RISK_COLUMNS = [
-    'Risk_Brakes', 'Risk_Suspension', 'Risk_Tyres', 'Risk_Steering',
-    'Risk_Visibility', 'Risk_Lamps_Reflectors_And_Electrical_Equipment',
-    'Risk_Body_Chassis_Structure',
-]
+_SQLITE_STEP1_EXACT_SQL = _SQLITE_WEIGHTED_SELECT + " AND age_band = ? AND mileage_band = ?"
+_SQLITE_STEP2_AGE_ONLY_SQL = _SQLITE_WEIGHTED_SELECT + " AND age_band = ?"
+_SQLITE_STEP3_MODEL_AVERAGE_SQL = _SQLITE_WEIGHTED_SELECT
 
 _AGG_RISK_COLUMNS = [
     'risk_brakes', 'risk_suspension', 'risk_tyres', 'risk_steering',
@@ -326,32 +316,11 @@ def _clamp_risk(value: Optional[float]) -> Optional[float]:
     return max(0.0, min(1.0, float(value)))
 
 
-def _normalize_best_row(row: sqlite3.Row, match_scope: str) -> Dict[str, Any]:
-    """Build the normalized ladder-result dict from a step1/step2 best-row
-    match. Same shape as database.get_risk_v2_banded's return value."""
-    components_available = all(row[c] is not None for c in _BEST_ROW_RISK_COLUMNS)
-    return {
-        'match_scope': match_scope,
-        'total_tests': int(row['Total_Tests']),
-        'total_failures': int(row['Total_Failures']) if row['Total_Failures'] is not None else None,
-        'failure_risk': _clamp_risk(row['Failure_Risk']),
-        'risk_brakes': _clamp_risk(row['Risk_Brakes']),
-        'risk_suspension': _clamp_risk(row['Risk_Suspension']),
-        'risk_tyres': _clamp_risk(row['Risk_Tyres']),
-        'risk_steering': _clamp_risk(row['Risk_Steering']),
-        'risk_visibility': _clamp_risk(row['Risk_Visibility']),
-        'risk_lamps': _clamp_risk(row['Risk_Lamps_Reflectors_And_Electrical_Equipment']),
-        'risk_body': _clamp_risk(row['Risk_Body_Chassis_Structure']),
-        'components_available': components_available,
-    }
-
-
-def _normalize_agg_row(row: sqlite3.Row) -> Dict[str, Any]:
-    """Build the normalized ladder-result dict from the step3 weighted
-    model-average aggregate."""
+def _normalize_agg_row(row: sqlite3.Row, match_scope: str) -> Dict[str, Any]:
+    """Normalize a weighted SQLite rung to the Postgres ladder shape."""
     components_available = all(row[c] is not None for c in _AGG_RISK_COLUMNS)
     return {
-        'match_scope': 'model_average',
+        'match_scope': match_scope,
         'total_tests': int(row['total_tests']),
         'total_failures': int(row['total_failures']) if row['total_failures'] is not None else None,
         'failure_risk': _clamp_risk(row['failure_risk']),
@@ -392,23 +361,31 @@ def _sqlite_ladder(
     """
     conn.row_factory = sqlite3.Row
 
+    def usable_aggregate(candidate: Optional[sqlite3.Row]) -> bool:
+        return (
+            candidate is not None
+            and candidate['total_tests'] is not None
+            and int(candidate['total_tests']) > 0
+            and candidate['failure_risk'] is not None
+        )
+
     skip_exact = mileage_band is None or mileage_band == 'Unknown'
     if not skip_exact:
         row = conn.execute(
             _SQLITE_STEP1_EXACT_SQL, (model_id, model_id, age_band, mileage_band)
         ).fetchone()
-        if row is not None:
-            return _normalize_best_row(row, 'exact_band')
+        if usable_aggregate(row):
+            return _normalize_agg_row(row, 'exact_band')
 
     row = conn.execute(
         _SQLITE_STEP2_AGE_ONLY_SQL, (model_id, model_id, age_band)
     ).fetchone()
-    if row is not None:
-        return _normalize_best_row(row, 'age_band_only')
+    if usable_aggregate(row):
+        return _normalize_agg_row(row, 'age_band_only')
 
     row = conn.execute(_SQLITE_STEP3_MODEL_AVERAGE_SQL, (model_id, model_id)).fetchone()
-    if row is not None and row['total_tests'] is not None:
-        return _normalize_agg_row(row)
+    if usable_aggregate(row):
+        return _normalize_agg_row(row, 'model_average')
 
     return None
 
@@ -445,8 +422,12 @@ async def _query_evidence_ladder(
                 return None, PredictionSource.UNAVAILABLE
             result = _sqlite_ladder(conn, model_id, age_band, mileage_band)
             return result, PredictionSource.SQLITE
-    except sqlite3.Error:
-        logger.warning("SQLite ladder query failed for model_id=%s", model_id, exc_info=True)
+    except sqlite3.Error as exc:
+        logger.warning(
+            "SQLite ladder query failed for model_id=%s (%s)",
+            model_id,
+            type(exc).__name__,
+        )
         return None, PredictionSource.UNAVAILABLE
 
 
@@ -460,7 +441,7 @@ def _normalize_confidence(total_tests: Optional[int]) -> ConfidenceLevel:
 
 def _degraded_risk_and_components() -> Tuple[ReportRisk, ReportComponents]:
     """The shared degraded shape for population_default and unavailable:
-    UK population-average failure risk, Very Low confidence, no
+    checked-in dataset-wide reference rate, Very Low confidence, no
     components. Never fabricate a component breakdown or repair estimate
     when there is no per-vehicle evidence behind them."""
     risk = ReportRisk(failure_risk=POPULATION_DEFAULT_FAILURE_RISK, confidence=ConfidenceLevel.VERY_LOW)
@@ -562,13 +543,14 @@ async def build_assessment(
     age_band = get_age_band(vehicle_age)
     mileage_band = get_mileage_band(mileage.effective_value) if mileage.effective_value is not None else None
 
-    ladder_result, prediction_source = await _query_evidence_ladder(
+    ladder_result, ladder_source = await _query_evidence_ladder(
         model_id, age_band, mileage_band, sqlite_conn_factory
     )
 
-    if prediction_source == PredictionSource.UNAVAILABLE:
+    if ladder_source == PredictionSource.UNAVAILABLE:
         risk, components = _degraded_risk_and_components()
         match_scope = MatchScope.UNAVAILABLE
+        prediction_source = PredictionSource.DATASET_REFERENCE
         repair_estimate = None
         note = NOTE_UNAVAILABLE
         total_tests: Optional[int] = None
@@ -576,12 +558,14 @@ async def build_assessment(
     elif ladder_result is None:
         risk, components = _degraded_risk_and_components()
         match_scope = MatchScope.POPULATION_DEFAULT
+        prediction_source = PredictionSource.DATASET_REFERENCE
         repair_estimate = None
         note = NOTE_POPULATION_DEFAULT
         total_tests = None
         total_failures = None
     else:
         match_scope = MatchScope(ladder_result['match_scope'])
+        prediction_source = ladder_source
         total_tests = ladder_result['total_tests']
         total_failures = ladder_result['total_failures']
         risk = ReportRisk(
@@ -591,10 +575,13 @@ async def build_assessment(
         components, repair_estimate = _build_components_and_repair(ladder_result)
         note = _NOTE_BY_SCOPE[match_scope]
 
+    matched_age_band = age_band if match_scope in {MatchScope.EXACT_BAND, MatchScope.AGE_BAND_ONLY} else None
+    matched_mileage_band = mileage_band if match_scope == MatchScope.EXACT_BAND else None
+
     evidence = ReportEvidence(
         match_scope=match_scope,
-        age_band=age_band,
-        mileage_band=mileage_band,
+        age_band=matched_age_band,
+        mileage_band=matched_mileage_band,
         total_tests=total_tests,
         total_failures=total_failures,
     )

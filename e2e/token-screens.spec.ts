@@ -51,7 +51,7 @@ test('410 report_expired -> expired screen with a working re-check CTA, no vehic
 
   await page.getByRole('button', { name: 'Check a vehicle' }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText('Fix it before they find it.')).toBeVisible();
+  await expect(page.getByText('See what the MOT evidence says.')).toBeVisible();
 });
 
 test('network abort -> generic error screen, no vehicle data', async ({ page }) => {

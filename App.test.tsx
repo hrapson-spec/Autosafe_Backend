@@ -53,7 +53,7 @@ import { createReport } from './services/reportApi';
 import { getPublicStats } from './services/autosafeApi';
 import { trackConversion, trackFunnel } from './utils/analytics';
 
-const DEFAULT_STATS: PublicStats = { total_checks: 1000, checks_this_month: 1, mot_records: '142M+' };
+const DEFAULT_STATS: PublicStats = { total_checks: 1000, checks_this_month: 1, mot_records: '148M+' };
 
 function renderApp(initialEntries: string[]) {
   return render(
@@ -66,6 +66,7 @@ function renderApp(initialEntries: string[]) {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.mocked(getPublicStats).mockResolvedValue(DEFAULT_STATS);
 });
 
@@ -78,10 +79,24 @@ describe('App: home page rendering', () => {
   it.each([['/'], ['/app']])('renders the check form at %s', async (path) => {
     renderApp([path]);
 
-    expect(await screen.findByText('Fix it before they find it.')).toBeInTheDocument();
+    expect(await screen.findByText('See what the MOT evidence says.')).toBeInTheDocument();
     expect(screen.getByLabelText('Registration Number', { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText('Post Code', { exact: false })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /check this car/i })).toBeInTheDocument();
+  });
+
+  it('prefills from one-use session storage without putting the registration in the URL', async () => {
+    sessionStorage.setItem('autosafe_pending_registration', 'AB12CDE');
+    renderApp(['/app']);
+
+    expect(await screen.findByLabelText('Registration Number', { exact: false })).toHaveValue('AB12CDE');
+    expect(sessionStorage.getItem('autosafe_pending_registration')).toBeNull();
+  });
+
+  it('does not read a legacy registration query parameter', async () => {
+    renderApp(['/app?reg=AB12CDE']);
+
+    expect(await screen.findByLabelText('Registration Number', { exact: false })).toHaveValue('');
   });
 });
 
@@ -101,7 +116,12 @@ describe('App: submit success', () => {
     expect(screen.getByTestId('probe-postcode')).toHaveTextContent('SW1A 1AA');
     expect(screen.getByTestId('probe-inline')).toHaveTextContent('no');
 
-    expect(createReport).toHaveBeenCalledWith('AB12CDE', 'SW1A 1AA');
+    expect(createReport).toHaveBeenCalledWith(
+      'AB12CDE',
+      'SW1A 1AA',
+      undefined,
+      expect.any(String),
+    );
     expect(trackConversion).toHaveBeenCalledWith('risk_check');
     expect(trackFunnel).toHaveBeenCalledWith('reg_entered');
   });
@@ -146,6 +166,55 @@ describe('App: submit failure (remount regression)', () => {
     expect(regInput).toHaveValue('AB12CDE');
     expect(postcodeInput).toHaveValue('SW1A 1AA');
   });
+
+  it('reuses the same idempotency key when the same logical submission is retried', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport)
+      .mockRejectedValueOnce(new ReportApiError('network_error', mapErrorToMessage('network_error')))
+      .mockResolvedValueOnce(fixtureExactHigh);
+
+    renderApp(['/app']);
+    await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
+    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+
+    expect(vi.mocked(createReport)).toHaveBeenCalledTimes(2);
+    const firstKey = vi.mocked(createReport).mock.calls[0][3];
+    const secondKey = vi.mocked(createReport).mock.calls[1][3];
+    expect(firstKey).toBeTruthy();
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it('mints a new key after an idempotency conflict makes the old key unusable', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport)
+      .mockRejectedValueOnce(
+        new ReportApiError(
+          'idempotency_conflict',
+          mapErrorToMessage('idempotency_conflict'),
+          409,
+          'corr-conflict'
+        )
+      )
+      .mockResolvedValueOnce(fixtureExactHigh);
+
+    renderApp(['/app']);
+    await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
+    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+    await screen.findByRole('alert');
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+
+    const firstKey = vi.mocked(createReport).mock.calls[0][3];
+    const secondKey = vi.mocked(createReport).mock.calls[1][3];
+    expect(firstKey).toBeTruthy();
+    expect(secondKey).toBeTruthy();
+    expect(secondKey).not.toBe(firstKey);
+  });
 });
 
 describe('App: remount regression via stats resolving mid-typing', () => {
@@ -167,11 +236,12 @@ describe('App: remount regression via stats resolving mid-typing', () => {
     // checks_this_month is kept under 1000 deliberately: toLocaleString()
     // would insert a thousands separator whose exact character depends on
     // locale, which this assertion doesn't want to depend on.
-    resolveStats({ total_checks: 999, checks_this_month: 421, mot_records: '142M+' });
+    resolveStats({ total_checks: 999, checks_this_month: 421, mot_records: '149M+' });
 
     // Proves the resolved stats actually flowed through and re-rendered
     // HomePage before we assert the input survived that re-render.
     await screen.findByText(/421 vehicles checked this month/);
+    expect(screen.getByText(/149M\+ recorded MOT tests analysed/)).toBeInTheDocument();
 
     expect(regInput).toHaveValue('AB12CDE');
   });

@@ -115,7 +115,7 @@ export const fixtureAgeOnlyMedium: ReportV2 = {
   evidence: {
     match_scope: 'age_band_only',
     age_band: '6-10',
-    mileage_band: '30k-60k',
+    mileage_band: null,
     total_tests: 340,
     total_failures: 65,
   },
@@ -183,8 +183,8 @@ export const fixtureModelAverageLow: ReportV2 = {
   },
   evidence: {
     match_scope: 'model_average',
-    age_band: '11-15',
-    mileage_band: '100k+',
+    age_band: null,
+    mileage_band: null,
     total_tests: 47,
     total_failures: 17,
   },
@@ -220,8 +220,9 @@ export const fixtureModelAverageLow: ReportV2 = {
 //    plate: make/model/fuel/colour) but manufacture year is missing, so
 //    mileage cannot even be estimated (resolve_mileage's ESTIMATED rung
 //    requires a known vehicle year) and falls all the way to 'missing'. The
-//    evidence store WAS reached (prediction_source is postgres/sqlite, not
-//    unavailable) but had literally no rows for this make/model --
+//    evidence store WAS reached but had literally no rows for this make/model.
+//    The displayed rate's source is therefore the checked-in dataset reference;
+//    match_scope preserves the distinct "reached but empty" reason --
 //    total_tests/total_failures are honestly null, never coerced to 0.
 // ----------------------------------------------------------------------------
 export const fixturePopulationDefault: ReportV2 = {
@@ -252,18 +253,14 @@ export const fixturePopulationDefault: ReportV2 = {
     anomaly: false,
   },
   evidence: {
-    // Mirrors utils.get_age_band(None) == 'Unknown' (a real string, not
-    // null -- report_service.py always calls get_age_band, even with a
-    // None age) vs. report_service.py's explicit mileage_band=None
-    // short-circuit when mileage.effective_value is None.
     match_scope: 'population_default',
-    age_band: 'Unknown',
+    age_band: null,
     mileage_band: null,
     total_tests: null,
     total_failures: null,
   },
   risk: {
-    failure_risk: 0.28,
+    failure_risk: 39_969_903 / 148_509_908,
     confidence: 'Very Low',
   },
   components: {
@@ -275,17 +272,18 @@ export const fixturePopulationDefault: ReportV2 = {
     saved: true,
     share_available: true,
   },
-  prediction_source: 'sqlite',
+  prediction_source: 'dataset_reference',
   vehicle_data_source: 'dvsa',
-  note: "No data available for this make and model — showing the UK average across all vehicles we've checked.",
+  note: 'No data available for this make and model — showing the dataset-wide reference across the recorded tests.',
 };
 
 // ----------------------------------------------------------------------------
 // 5. unavailable -- the fully degraded end-to-end failure: DVSA vehicle
 //    lookup itself fell back to a demo identity, and the evidence store
-//    could not be reached at all (prediction_source unavailable, not just
-//    "reached but empty" -- see population_default above for that distinct
-//    case). Never persisted, so report_id/report_token/share_url are all
+//    could not be reached at all. The displayed rate still comes from the
+//    checked-in dataset reference; match_scope 'unavailable' preserves the
+//    distinction from "reached but empty". Never persisted, so
+//    report_id/report_token/share_url are all
 //    honestly null rather than fabricated.
 // ----------------------------------------------------------------------------
 export const fixtureUnavailableDegraded: ReportV2 = {
@@ -317,13 +315,13 @@ export const fixtureUnavailableDegraded: ReportV2 = {
   },
   evidence: {
     match_scope: 'unavailable',
-    age_band: 'Unknown',
+    age_band: null,
     mileage_band: null,
     total_tests: null,
     total_failures: null,
   },
   risk: {
-    failure_risk: 0.28,
+    failure_risk: 39_969_903 / 148_509_908,
     confidence: 'Very Low',
   },
   components: {
@@ -335,7 +333,7 @@ export const fixtureUnavailableDegraded: ReportV2 = {
     saved: false,
     share_available: false,
   },
-  prediction_source: 'unavailable',
+  prediction_source: 'dataset_reference',
   vehicle_data_source: 'demo',
   // Deliberately NOT report_service.py's NOTE_UNAVAILABLE verbatim: that
   // copy specifically says "vehicle identity confirmed", which would
@@ -344,7 +342,7 @@ export const fixtureUnavailableDegraded: ReportV2 = {
   // report_service.py code path today -- it's a plausible future route-layer
   // outcome (DVSA lookup itself failed too), so its note is honest about
   // both failures rather than reusing text that assumes only one did.
-  note: 'Vehicle details and comparison data are temporarily unavailable — this is a demo report showing a UK average figure.',
+  note: 'Vehicle details and comparison data are temporarily unavailable — this is a demo report showing the checked-in dataset reference.',
 };
 
 // ----------------------------------------------------------------------------
@@ -393,6 +391,11 @@ export const fixtureErrorEnvelopes: Record<ApiErrorCode, ApiErrorEnvelope> = {
     error_code: 'storage_unavailable',
     message: 'Report storage is temporarily unavailable.',
     correlation_id: '2b3c4d5e6f1a',
+  },
+  idempotency_conflict: {
+    error_code: 'idempotency_conflict',
+    message: 'That retry key was already used for a different report request.',
+    correlation_id: '4d5e6f1a2b3c',
   },
   undeclared_parameter: {
     error_code: 'undeclared_parameter',

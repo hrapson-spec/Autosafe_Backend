@@ -9,6 +9,7 @@ catboost_info/
 *.db
 *.pdf
 *.log
+risk_checks_backup.jsonl
 .git/
 .DS_Store
 __pycache__/

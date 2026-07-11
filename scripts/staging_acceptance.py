@@ -36,9 +36,11 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 import traceback
+from datetime import datetime
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import httpx
@@ -138,11 +140,17 @@ async def check_version(
     r = await client.get("/api/version")
     assert r.status_code == 200, f"status={r.status_code} body={r.text}"
     body = r.json()
-    for key in ("backend_sha", "frontend_bundle_hash", "contract_version", "app_version", "started_at"):
+    for key in (
+        "backend_sha", "frontend_sha", "frontend_bundle_hash",
+        "contract_version", "app_version", "build_timestamp", "started_at",
+    ):
         assert key in body, f"missing key {key!r} in {body}"
     if expect_frontend_bundle:
         assert body["frontend_bundle_hash"] is not None, (
-            f"expected non-null frontend_bundle_hash (static/index.html exists on disk): {body}"
+            f"expected non-null frontend_bundle_hash (built JS bundle exists on disk): {body}"
+        )
+        assert re.fullmatch(r"[0-9a-f]{64}", body["frontend_bundle_hash"]), (
+            f"expected full SHA-256 frontend_bundle_hash, got {body['frontend_bundle_hash']!r}"
         )
     else:
         assert body["frontend_bundle_hash"] is None, (
@@ -155,6 +163,11 @@ async def check_version(
         assert body["backend_sha"] == expected_backend_sha, (
             f"expected backend_sha={expected_backend_sha!r}, got {body['backend_sha']!r}"
         )
+        assert body["frontend_sha"] == expected_backend_sha, (
+            f"expected frontend_sha={expected_backend_sha!r}, got {body['frontend_sha']!r}"
+        )
+        assert body["build_timestamp"], f"build_timestamp is missing: {body}"
+        datetime.fromisoformat(body["build_timestamp"].replace("Z", "+00:00"))
     show("GET /api/version", body)
     return body
 
@@ -217,10 +230,16 @@ async def check_demo_post(client: httpx.AsyncClient, base_url: str) -> Dict:
     assert body["persistence"]["saved"] is True, body["persistence"]
     assert body["report_token"], "report_token was falsy"
     assert body["share_url"] and body["share_url"].startswith(base_url), body["share_url"]
-    assert body["prediction_source"] in ("postgres", "sqlite"), (
-        f"unexpected prediction_source {body['prediction_source']!r} "
-        "(only postgres/sqlite are valid backing stores once Postgres is reachable)"
-    )
+    if match_scope in ("population_default", "unavailable"):
+        assert body["prediction_source"] == "dataset_reference", (
+            f"degraded scope {match_scope!r} displays the checked-in aggregate, "
+            f"so prediction_source must be 'dataset_reference', got {body['prediction_source']!r}"
+        )
+    else:
+        assert body["prediction_source"] in ("postgres", "sqlite"), (
+            f"matched scope {match_scope!r} must name the evidence store that "
+            f"served the cohort, got {body['prediction_source']!r}"
+        )
     print(f"NOTE: prediction_source={body['prediction_source']!r} match_scope={match_scope!r} "
           f"-- see check 4j and docs/STAGING.md for why this run took that path.")
     return body
@@ -277,6 +296,26 @@ async def check_idempotency(client: httpx.AsyncClient, pool: asyncpg.Pool) -> Di
         count2 = await conn.fetchval("SELECT COUNT(*) FROM risk_checks WHERE idempotency_key = $1", idem_key)
     assert count2 == 1, f"row count changed on idempotent replay: {count1} -> {count2}"
 
+    conflict_payload = dict(payload, registration="ZZ66XYZ")
+    conflict = await client.post("/api/v2/reports", json=conflict_payload)
+    assert conflict.status_code == 409, (
+        f"same key with a different registration: status={conflict.status_code} "
+        f"body={conflict.text}"
+    )
+    conflict_body = conflict.json()
+    assert conflict_body.get("error_code") == "idempotency_conflict", conflict_body
+    async with pool.acquire() as conn:
+        conflict_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM risk_checks WHERE idempotency_key = $1", idem_key
+        )
+        original_registration = await conn.fetchval(
+            "SELECT registration FROM risk_checks WHERE idempotency_key = $1", idem_key
+        )
+    assert conflict_count == 1, f"conflicting replay changed row count to {conflict_count}"
+    assert original_registration == "ZZ88DEF", (
+        f"conflicting replay changed stored registration to {original_registration!r}"
+    )
+
     payload3 = dict(payload, idempotency_key=idem_key + "-different")
     r3 = await client.post("/api/v2/reports", json=payload3)
     assert r3.status_code == 200, f"different-key POST: status={r3.status_code} body={r3.text}"
@@ -293,6 +332,7 @@ async def check_idempotency(client: httpx.AsyncClient, pool: asyncpg.Pool) -> Di
     result = {
         "token1": body1["report_token"], "token2_replayed": body2["report_token"],
         "token3_different_key": body3["report_token"], "row_count_same_key": count2, "row_count_both_keys": count3,
+        "cross_registration_conflict": conflict_body,
     }
     show("idempotency check", result)
     return result
@@ -392,14 +432,9 @@ async def check_invalid_registration_literal(client: httpx.AsyncClient) -> Dict:
     """Literal check per the acceptance brief: registration='A' should
     produce a 400 invalid_registration envelope with a correlation_id.
 
-    NOTE: report_contract.ReportCreateRequest.registration is declared
-    `Field(min_length=2, max_length=12)`. A single-character value fails
-    *pydantic's* request-body validation before report_routes.py's own
-    `_normalize_vrn` (which raises the typed ReportAPIError this check
-    expects) ever runs -- so this is asserting across a FastAPI-level
-    validation boundary, not just report_routes.py's. Reported exactly as
-    observed either way; see check 4h-diag for a same-shaped-but-regex-
-    invalid input that unambiguously exercises `_normalize_vrn`."""
+    ReportCreateRequest deliberately accepts one character at its schema
+    boundary so this request reaches `_normalize_vrn` and receives the v2
+    typed error envelope rather than FastAPI's generic 422 body."""
     r = await client.post("/api/v2/reports", json={"registration": "A"})
     body = r.json()
     show("POST registration='A'", {"status": r.status_code, "body": body})
@@ -411,7 +446,7 @@ async def check_invalid_registration_literal(client: httpx.AsyncClient) -> Dict:
 
 async def check_invalid_registration_diag(client: httpx.AsyncClient) -> Dict:
     """Diagnostic (not one of the lettered a-j checks): a 2-character value
-    clears ReportCreateRequest's min_length=2 gate but fails
+    clears ReportCreateRequest's body-schema gate but fails
     `_normalize_vrn`'s `^[A-Z0-9]{2,8}$` regex, so it exercises
     report_routes.py's own typed-error path unambiguously."""
     r = await client.post("/api/v2/reports", json={"registration": "A!"})
@@ -543,7 +578,7 @@ async def main_async(args: argparse.Namespace) -> int:
                 check_db_row(pool, created.get("report_token") if created else None, "ZZ99ABC"),
             )
             await runner.run(
-                "4e-idempotency", "idempotency replay (same key) + new row (different key)",
+                "4e-idempotency", "idempotency replay, cross-registration conflict, and different key",
                 check_idempotency(client, pool),
             )
             await runner.run(

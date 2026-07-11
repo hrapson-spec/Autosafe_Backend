@@ -8,6 +8,7 @@ __pycache__/
 .vscode/*
 !.vscode/extensions.json
 *.log
+risk_checks_backup.jsonl
 *.suo
 *.ntvs*
 *.njsproj

@@ -1,9 +1,8 @@
-"""
-AutoSafe API - MOT Risk Prediction (V55)
-=========================================
+"""AutoSafe API.
 
-Uses V55 CatBoost model with DVSA MOT History API for real-time predictions.
-Falls back to SQLite lookup for vehicles without DVSA history.
+The release-candidate v2 report path serves recorded DVSA vehicle/MOT details
+and explicitly scoped historical comparison evidence. Legacy prediction
+endpoints remain isolated for compatibility and are not used by the web app.
 """
 # Load environment variables FIRST (before other imports read them)
 from dotenv import load_dotenv
@@ -15,17 +14,19 @@ from starlette.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
+from urllib.parse import urlencode
 import os
 import time
 import secrets
 
 # Import database module for fallback
 import database as db
-from utils import get_age_band, get_mileage_band, hash_vrm
+from utils import get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
+from report_contract import DATASET_TOTAL_TESTS
 
 # Lead distribution
 from lead_distributor import distribute_lead
@@ -121,7 +122,12 @@ async def lifespan(app: FastAPI):
     await db.close_pool()
 
 
-app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan, version="2.0.0")
+app = FastAPI(
+    title="AutoSafe API",
+    description="Recorded MOT details and comparable-vehicle evidence API",
+    lifespan=lifespan,
+    version="2.0.0",
+)
 
 # GZip Compression Middleware - compress responses > 500 bytes
 from starlette.middleware.gzip import GZipMiddleware
@@ -160,6 +166,8 @@ else:
 # Non-WWW to WWW Redirect Middleware
 from starlette.responses import RedirectResponse
 
+_SENSITIVE_QUERY_KEYS = {"reg", "registration", "vrm", "postcode"}
+
 @app.middleware("http")
 async def redirect_non_www(request, call_next):
     """Redirect autosafe.one to www.autosafe.one for SEO canonicalization.
@@ -171,8 +179,13 @@ async def redirect_non_www(request, call_next):
     host = request.headers.get("host", "")
     if host in ("autosafe.one", "autosafe.co.uk", "www.autosafe.co.uk"):
         new_url = f"https://www.autosafe.one{request.url.path}"
-        if request.url.query:
-            new_url += f"?{request.url.query}"
+        safe_query = [
+            (key, value)
+            for key, value in request.query_params.multi_items()
+            if key.lower() not in _SENSITIVE_QUERY_KEYS
+        ]
+        if safe_query:
+            new_url += "?" + urlencode(safe_query)
         return RedirectResponse(url=new_url, status_code=301)
 
     # 301 redirect old /static/ URLs to clean URLs
@@ -200,8 +213,9 @@ async def add_security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # HSTS - enable HTTPS enforcement (1 year)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # CSP - allow self, inline, CDNs, Umami analytics, and Google Ads
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://esm.sh https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
+    # CSP - self-host product assets; permit only the disclosed Umami and
+    # consent-gated Google Ads endpoints. Remote font/CDN hosts are excluded.
+    response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
     return response
 
 
@@ -234,7 +248,10 @@ async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
     correlation_id = generate_correlation_id()
     # Log only the exception type and correlation ID - NOT the full exception or request data
-    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}", exc_info=exc)
+    logger.error(
+        f"error_id={correlation_id} path={safe_log_path(request.url.path)} "
+        f"exception_type={type(exc).__name__}",
+    )
     return JSONResponse(
         status_code=500,
         content={
@@ -374,8 +391,8 @@ async def health_check(request: Request):
 
 @app.get("/api/version")
 async def get_version():
-    """Build/version identifiers for release verification (backend_sha,
-    frontend_bundle_hash, contract_version, app_version, started_at).
+    """Build/version identifiers for release verification (backend/frontend
+    SHA, frontend bundle hash, build timestamp, contract/app version, started_at).
     No rate limit: cheap, near-static data safe for frequent polling by
     release/monitoring tooling. Payload assembly lives in report_routes.py
     (build_version_info) -- see this file's v2-import comment near the
@@ -447,7 +464,7 @@ def _init_sqlite_pool():
                 conn.execute("SELECT 1 FROM risks LIMIT 1")
                 _sqlite_pool.put(conn)
             except sqlite3.Error as e:
-                logger.error(f"Failed to create SQLite connection: {e}")
+                logger.error("Failed to create SQLite connection (%s)", type(e).__name__)
 
         logger.info(f"SQLite connection pool initialized with {_sqlite_pool.qsize()} connections")
 
@@ -482,7 +499,7 @@ def get_sqlite_connection():
         logger.warning("SQLite connection pool exhausted, timeout waiting for connection")
         yield None
     except Exception as e:
-        logger.error(f"Error getting SQLite connection: {e}")
+        logger.error("Error getting SQLite connection (%s)", type(e).__name__)
         yield None
     finally:
         if conn is not None:
@@ -841,7 +858,7 @@ async def get_risk(
             }
 
         except Exception as e:
-            logger.error(f"Database error during lookup: {e}")
+            logger.error("Database error during lookup (%s)", type(e).__name__)
             return default_response
 
 
@@ -868,8 +885,8 @@ async def get_risk_v55(
     # before checking service availability (503)
     try:
         vrm = dvsa_client.normalize_vrm(registration)
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except VRMValidationError:
+        raise HTTPException(status_code=400, detail="Invalid registration format")
 
     # Kill-switch check - allows emergency disabling of predictions
     if not PREDICTIONS_ENABLED:
@@ -904,7 +921,7 @@ async def get_risk_v55(
         utm_data['utm_medium'] = utm_medium
     if utm_campaign:
         utm_data['utm_campaign'] = utm_campaign
-    referrer = request.headers.get("referer", "")
+    referrer = safe_referrer(request.headers.get("referer"))
     if referrer:
         utm_data['referrer'] = referrer
 
@@ -939,14 +956,18 @@ async def get_risk_v55(
         )
 
     except DVSAAPIError as e:
-        logger.warning(f"DVSA API error for {vrm_hash}: {e}, falling back to lookup")
+        logger.warning(
+            "DVSA API error for %s (%s), falling back to lookup",
+            vrm_hash,
+            type(e).__name__,
+        )
         return await _fallback_prediction(
             registration=vrm,
             make="",
             model="",
             year=None,
             postcode=validated_postcode,
-            note=f"DVSA API unavailable: {str(e)}",
+            note="DVSA API temporarily unavailable",
             utm_data=utm_data,
         )
 
@@ -955,7 +976,7 @@ async def get_risk_v55(
         features = engineer_features_with_stats(history, validated_postcode)
         logger.info(f"Engineered {len(features)} features for {vrm_hash}")
     except Exception as e:
-        logger.error(f"Feature engineering failed for {vrm_hash}: {e}")
+        logger.error("Feature engineering failed for %s (%s)", vrm_hash, type(e).__name__)
         # Fall back to lookup with vehicle info from DVSA
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
@@ -964,14 +985,14 @@ async def get_risk_v55(
             model=history.model,
             year=year,
             postcode=validated_postcode,
-            note=f"Feature engineering error: {str(e)}"
+            note="Feature engineering temporarily unavailable"
         )
 
     # Get V55 model prediction
     try:
         prediction = model_v55.predict_risk(features)
     except Exception as e:
-        logger.error(f"V55 prediction failed for {vrm_hash}: {e}")
+        logger.error("V55 prediction failed for %s (%s)", vrm_hash, type(e).__name__)
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
             registration=vrm,
@@ -979,7 +1000,7 @@ async def get_risk_v55(
             model=history.model,
             year=year,
             postcode=validated_postcode,
-            note=f"Model prediction error: {str(e)}"
+            note="Model calculation temporarily unavailable"
         )
 
     # Extract vehicle info
@@ -1036,7 +1057,7 @@ async def get_risk_v55(
             **utm_data,
         })
     except Exception as e:
-        logger.warning(f"Failed to log risk check: {e}")
+        logger.warning("Failed to log risk check (%s)", type(e).__name__)
 
     return response
 
@@ -1098,7 +1119,7 @@ async def _fallback_prediction(
                 **utm_data,
             })
         except Exception as e:
-            logger.warning(f"Failed to log fallback risk check: {e}")
+            logger.warning("Failed to log fallback risk check (%s)", type(e).__name__)
         return response
 
     model_id = f"{make.upper()} {model.upper()}"
@@ -1169,7 +1190,7 @@ async def _fallback_prediction(
                         **utm_data,
                     })
                 except Exception as e:
-                    logger.warning(f"Failed to log lookup risk check: {e}")
+                    logger.warning("Failed to log lookup risk check (%s)", type(e).__name__)
                 return response
 
     # Default fallback - population average
@@ -1212,7 +1233,7 @@ async def _fallback_prediction(
             **utm_data,
         })
     except Exception as e:
-        logger.warning(f"Failed to log default fallback risk check: {e}")
+        logger.warning("Failed to log default fallback risk check (%s)", type(e).__name__)
     return response
 
 
@@ -1309,8 +1330,8 @@ async def get_vehicle(
     dvsa_client = get_dvsa_client()
     try:
         vrm = dvsa_client.normalize_vrm(registration)
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except VRMValidationError:
+        raise HTTPException(status_code=400, detail="Invalid registration format")
 
     vrm_hash = hash_vrm(vrm)
 
@@ -1338,7 +1359,7 @@ async def get_vehicle(
         except VehicleNotFoundError:
             logger.info(f"Vehicle {vrm_hash} not found in DVSA")
         except DVSAAPIError as e:
-            logger.warning(f"DVSA API error for {vrm_hash}: {e}")
+            logger.warning("DVSA API error for %s (%s)", vrm_hash, type(e).__name__)
     else:
         # Demo mode: return sample data when DVSA not configured
         logger.info(f"DVSA not configured, returning demo data for {vrm_hash}")
@@ -1364,7 +1385,7 @@ async def get_vehicle(
 # Lead Capture Endpoints
 # ============================================================================
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
 
@@ -1373,6 +1394,7 @@ class VehicleInfo(BaseModel):
     model: Optional[str] = None
     year: Optional[int] = None
     mileage: Optional[int] = None
+    mileage_source: Optional[str] = None
 
     @field_validator('mileage')
     @classmethod
@@ -1399,9 +1421,26 @@ class VehicleInfo(BaseModel):
             raise ValueError(f'Year cannot be greater than {current_year + 1}')
         return v
 
+    @field_validator('mileage_source')
+    @classmethod
+    def validate_mileage_source(cls, v):
+        if v is None:
+            return v
+        allowed = {'user_entered', 'observed_mot', 'estimated', 'missing'}
+        if v not in allowed:
+            raise ValueError('Invalid mileage_source')
+        return v
+
+
+ALLOWED_MATCH_SCOPES = {
+    'exact_band', 'age_band_only', 'model_average',
+    'population_default', 'unavailable',
+}
+
 
 class RiskData(BaseModel):
     failure_risk: Optional[float] = None
+    match_scope: Optional[str] = None
     reliability_score: Optional[int] = None
     top_risks: Optional[List[str]] = None
 
@@ -1413,6 +1452,13 @@ class RiskData(BaseModel):
             return v
         if v < 0.0 or v > 1.0:
             raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
         return v
 
     @field_validator('reliability_score')
@@ -1560,7 +1606,7 @@ async def submit_lead(
         lead_data['utm_medium'] = utm_medium
     if utm_campaign:
         lead_data['utm_campaign'] = utm_campaign
-    referrer = request.headers.get("referer", "")
+    referrer = safe_referrer(request.headers.get("referer"))
     if referrer:
         lead_data['referrer'] = referrer
 
@@ -1581,7 +1627,13 @@ async def submit_lead(
 
     # Distribute lead to matching garages (async, don't block response)
     distribution_result = await distribute_lead(lead_id)
-    logger.info(f"Lead distribution: {distribution_result}")
+    logger.info(
+        "Lead distribution complete: lead_id=%s success=%s garages_matched=%s emails_sent=%s",
+        lead_id,
+        distribution_result.get("success", False),
+        distribution_result.get("garages_matched", 0),
+        distribution_result.get("emails_sent", 0),
+    )
 
     return {
         "success": True,
@@ -1834,7 +1886,7 @@ async def test_dvsa_connection(
         except Exception as e:
             result["oauth_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "OAuth token fetch failed"
             }
     else:
@@ -1866,13 +1918,13 @@ async def test_dvsa_connection(
         except DVSAAPIError as e:
             result["api_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "DVSA API call failed"
             }
         except Exception as e:
             result["api_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "Unexpected error during API test"
             }
 
@@ -2008,7 +2060,11 @@ async def export_risk_checks(
                         "mileage": row["mileage"],
                         "last_mot_date": str(row["last_mot_date"]) if row["last_mot_date"] else None,
                         "last_mot_result": row["last_mot_result"],
-                        "failure_risk": float(row["failure_risk"]) if row["failure_risk"] else None,
+                        "failure_risk": (
+                            float(row["failure_risk"])
+                            if row["failure_risk"] is not None
+                            else None
+                        ),
                         "confidence_level": row["confidence_level"],
                         "model_version": row["model_version"],
                         "prediction_source": row["prediction_source"],
@@ -2033,7 +2089,7 @@ async def export_risk_checks(
                     row["mileage"],
                     str(row["last_mot_date"]) if row["last_mot_date"] else "",
                     row["last_mot_result"],
-                    float(row["failure_risk"]) if row["failure_risk"] else "",
+                    float(row["failure_risk"]) if row["failure_risk"] is not None else "",
                     row["confidence_level"], row["model_version"], row["prediction_source"]
                 ])
 
@@ -2044,8 +2100,8 @@ async def export_risk_checks(
             )
 
     except Exception as e:
-        logger.error(f"Export risk checks failed: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Export risk checks failed (%s)", type(e).__name__)
+        raise HTTPException(status_code=500, detail="Export failed")
 
 
 # Debug endpoint for testing risk_checks save (admin-only)
@@ -2096,8 +2152,8 @@ async def test_risk_check(request: Request):
             "count_after": count_after
         }
     except Exception as e:
-        logger.error(f"Test risk check failed: {type(e).__name__}: {e}")
-        return {"error": str(e), "type": type(e).__name__}
+        logger.error("Test risk check failed (%s)", type(e).__name__)
+        return {"error": "Test risk check failed", "type": type(e).__name__}
 
 
 # ============================================================================
@@ -2108,12 +2164,13 @@ class MotReminderSubmission(BaseModel):
     """Pydantic model for MOT reminder signup."""
     email: str
     registration: str
-    postcode: str
+    postcode: Optional[str] = None
     vehicle_make: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_year: Optional[int] = None
     mot_expiry_date: Optional[str] = None
     failure_risk: Optional[float] = None
+    match_scope: Optional[str] = None
     experiment_variant: Optional[str] = None
 
     @field_validator('email')
@@ -2138,7 +2195,9 @@ class MotReminderSubmission(BaseModel):
     @field_validator('postcode')
     @classmethod
     def validate_postcode(cls, v):
-        if not v or len(v.strip()) < 3:
+        if v is None or not v.strip():
+            return None
+        if len(v.strip()) < 3:
             raise ValueError('Postcode must be at least 3 characters')
         return v.upper().strip()
 
@@ -2149,19 +2208,25 @@ class MotReminderSubmission(BaseModel):
             raise ValueError('failure_risk must be between 0 and 1')
         return v
 
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
+        return v
+
 
 class ReportEmailSubmission(BaseModel):
     """Pydantic model for email report request."""
     email: str
     registration: str
-    postcode: str
+    postcode: Optional[str] = None
     vehicle_make: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_year: Optional[int] = None
-    reliability_score: int
-    mot_pass_prediction: int
     failure_risk: float
-    common_faults: List[Dict] = []
+    match_scope: Optional[str] = None
+    common_faults: List[Dict] = Field(default_factory=list)
     repair_cost_min: Optional[int] = None
     repair_cost_max: Optional[int] = None
     mot_expiry_date: Optional[str] = None
@@ -2183,29 +2248,31 @@ class ReportEmailSubmission(BaseModel):
     def validate_registration(cls, v):
         import bleach
         v = bleach.clean(v, tags=[], strip=True).strip().upper()
-        if len(v) > 8:
+        if not v or len(v) > 8:
             raise ValueError('Invalid registration')
         return v
 
     @field_validator('postcode')
     @classmethod
     def validate_postcode(cls, v):
-        if not v or len(v.strip()) < 3:
+        if v is None or not v.strip():
+            return None
+        if len(v.strip()) < 3:
             raise ValueError('Postcode must be at least 3 characters')
         return v.upper().strip()
-
-    @field_validator('reliability_score')
-    @classmethod
-    def validate_reliability_score(cls, v):
-        if v < 0 or v > 100:
-            raise ValueError('reliability_score must be between 0 and 100')
-        return v
 
     @field_validator('failure_risk')
     @classmethod
     def validate_failure_risk(cls, v):
         if v < 0.0 or v > 1.0:
             raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
         return v
 
 
@@ -2233,6 +2300,7 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
         "vehicle_year": data.vehicle_year,
         "mot_expiry_date": data.mot_expiry_date,
         "failure_risk": data.failure_risk,
+        "match_scope": data.match_scope,
     }
     if data.experiment_variant:
         reminder_data["utm_campaign"] = f"exp:{data.experiment_variant}"
@@ -2249,9 +2317,10 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
                 registration=data.registration,
                 vehicle_make=data.vehicle_make or "Unknown",
                 vehicle_model=data.vehicle_model or "Vehicle",
-                vehicle_year=data.vehicle_year or 0,
+                vehicle_year=data.vehicle_year,
                 mot_expiry_date=data.mot_expiry_date,
                 failure_risk=data.failure_risk,
+                match_scope=data.match_scope,
             )
             await send_email(
                 to_email=data.email,
@@ -2261,7 +2330,7 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
                 tags={"type": "mot_reminder_confirmation"},
             )
         except Exception as e:
-            logger.error(f"Failed to send MOT reminder confirmation: {e}")
+            logger.error("Failed to send MOT reminder confirmation (%s)", type(e).__name__)
 
     return {
         "success": True,
@@ -2290,7 +2359,7 @@ async def email_report(request: Request, data: ReportEmailSubmission):
         "vehicle_model": data.vehicle_model,
         "vehicle_year": data.vehicle_year,
         "failure_risk": data.failure_risk,
-        "reliability_score": data.reliability_score,
+        "match_scope": data.match_scope,
         "common_faults": [{"component": f.get("component"), "risk_level": f.get("risk_level")} for f in data.common_faults],
     })
 
@@ -2305,10 +2374,9 @@ async def email_report(request: Request, data: ReportEmailSubmission):
                 registration=data.registration,
                 vehicle_make=data.vehicle_make or "Unknown",
                 vehicle_model=data.vehicle_model or "Vehicle",
-                vehicle_year=data.vehicle_year or 0,
-                reliability_score=data.reliability_score,
-                mot_pass_prediction=data.mot_pass_prediction,
+                vehicle_year=data.vehicle_year,
                 failure_risk=data.failure_risk,
+                match_scope=data.match_scope,
                 common_faults=data.common_faults,
                 repair_cost_min=data.repair_cost_min,
                 repair_cost_max=data.repair_cost_max,
@@ -2323,7 +2391,7 @@ async def email_report(request: Request, data: ReportEmailSubmission):
                 tags={"type": "report_email"},
             )
         except Exception as e:
-            logger.error(f"Failed to send report email: {e}")
+            logger.error("Failed to send report email (%s)", type(e).__name__)
 
     return {"success": True}
 
@@ -2344,7 +2412,7 @@ async def get_stats(request: Request):
     result = {
         "total_checks": stats.get("total_checks", 0),
         "checks_this_month": stats.get("checks_this_month", 0),
-        "mot_records": "142M+",
+        "mot_records": f"{DATASET_TOTAL_TESTS // 1_000_000}M+",
     }
     _stats_cache[cache_key] = result
     return result
@@ -2445,8 +2513,8 @@ async def ping_indexnow(request: Request):
             )
         return {"success": True, "status_code": resp.status_code, "urls_submitted": len(url_list)}
     except Exception as e:
-        logger.error(f"IndexNow ping failed: {e}")
-        return {"success": False, "error": str(e)}
+        logger.error("IndexNow ping failed (%s)", type(e).__name__)
+        return {"success": False, "error": "IndexNow request failed"}
 
 
 

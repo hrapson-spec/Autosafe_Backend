@@ -1,5 +1,10 @@
 # UX Audit & Persona Synthesis Report
 
+> **Historical pre-RC1 audit.** The architecture, copy, scores, error handling,
+> form lifecycle, and sharing behaviour below describe the product state that
+> this audit evaluated; they are not claims about the current v2 report path.
+> See `docs/release_rc1/RCA_CLOSURE_MATRIX.md` for the verified RC1 corrections.
+
 ## Step 1: Codebase Analysis
 
 ### Architecture Overview

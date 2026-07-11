@@ -3,12 +3,12 @@
  * restructure specifically had to fix (see App.tsx's HomePage doc comment)
  * -- a failed submission, or unrelated state resolving (stats), must never
  * wipe out what the user already typed. Case (4) covers the same
- * edit-lock guarantee for the `?reg=` pre-fill path (HeroForm.tsx's
- * `userEdited` flag). Case (5) is the intentional, user-initiated reset --
+ * edit-lock guarantee for the privacy-safe one-use session prefill path
+ * (HeroForm.tsx's `userEdited` flag). Case (5) is the intentional reset --
  * the one path that's *supposed* to clear the form.
  */
 import { test, expect } from './helpers/setup';
-import { mockCreateReport, mockGetReport, gateStats, DEFAULT_STATS } from './helpers/mockApi';
+import { mockCreateReport, mockGetReport, gateCreateReport, gateStats, DEFAULT_STATS } from './helpers/mockApi';
 import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import { fixtureErrorEnvelopes, fixtureExactHigh } from '../fixtures/reportResponses';
@@ -72,6 +72,40 @@ test.describe('form-lifecycle', () => {
     });
   }
 
+  test('429 rate_limited preserves both fields', async ({ page }) => {
+    await mockCreateReport(page, fixtureErrorEnvelopes.rate_limited, 429);
+    await page.goto('/app');
+
+    const regInput = registrationInput(page);
+    const postInput = postcodeInput(page);
+    await regInput.fill('AB12CDE');
+    await postInput.fill('SW1A 1AA');
+    await page.getByRole('button', { name: /check this car/i }).click();
+
+    await expect(page.getByRole('alert')).toHaveText(mapErrorToMessage('rate_limited'));
+    await expect(regInput).toHaveValue('AB12CDE');
+    await expect(postInput).toHaveValue('SW1A 1AA');
+  });
+
+  test('loading transition preserves both fields until success', async ({ page }) => {
+    const release = await gateCreateReport(page, fixtureExactHigh, 200);
+    await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
+    await page.goto('/app');
+
+    const regInput = registrationInput(page);
+    const postInput = postcodeInput(page);
+    await regInput.fill('AB12CDE');
+    await postInput.fill('SW1A 1AA');
+    await page.getByRole('button', { name: /check this car/i }).click();
+
+    await expect(regInput).toHaveValue('AB12CDE');
+    await expect(postInput).toHaveValue('SW1A 1AA');
+    await expect(page.getByRole('button', { name: /loading/i })).toBeDisabled();
+
+    release();
+    await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
+  });
+
   // ---------------------------------------------------------------------
   // (3) The historical remount bug: HomePage used to be recreated as a new
   // component type on every App re-render (including the one triggered by
@@ -99,14 +133,22 @@ test.describe('form-lifecycle', () => {
   });
 
   // ---------------------------------------------------------------------
-  // (4) ?reg= pre-fills the field; once the user edits it, HeroForm's
-  // userEdited edit-lock must keep their edit even across a failed submit
-  // (a second potential wipe point, distinct from case (1)'s plain-typed
-  // value).
+  // (4) Registration identifiers are stripped from legacy query URLs. The
+  // replacement SEO handoff uses one-use sessionStorage; once the user edits
+  // that value, the edit lock must keep it across a failed submit.
   // ---------------------------------------------------------------------
-  test('edited ?reg= value survives a failed submit', async ({ page }) => {
-    await mockCreateReport(page, fixtureErrorEnvelopes.vehicle_not_found, 404);
+  test('legacy ?reg= is removed before analytics and is not used as form state', async ({ page }) => {
     await page.goto('/?reg=AB12CDE');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(registrationInput(page)).toHaveValue('');
+  });
+
+  test('edited one-use session prefill survives a failed submit', async ({ page }) => {
+    await mockCreateReport(page, fixtureErrorEnvelopes.vehicle_not_found, 404);
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('autosafe_pending_registration', 'AB12CDE');
+    });
+    await page.goto('/app');
 
     const regInput = registrationInput(page);
     const postInput = postcodeInput(page);
@@ -127,24 +169,26 @@ test.describe('form-lifecycle', () => {
   // brief.
   // ---------------------------------------------------------------------
   for (const entryPath of ENTRY_PATHS) {
-    test(`"Check Another Vehicle" resets to an empty form @ ${entryPath}`, async ({ page }) => {
-      await forceVariant(page, 'control');
-      await mockCreateReport(page, fixtureExactHigh, 200);
-      await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
-      await page.goto(entryPath);
+    for (const variant of ['control', 'treatment'] as const) {
+      test(`"Check Another Vehicle" resets to an empty form @ ${entryPath} (${variant})`, async ({ page }) => {
+        await forceVariant(page, variant);
+        await mockCreateReport(page, fixtureExactHigh, 200);
+        await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
+        await page.goto(entryPath);
 
-      await registrationInput(page).fill('AB12CDE');
-      await postcodeInput(page).fill('SW1A 1AA');
-      await page.getByRole('button', { name: /check this car/i }).click();
+        await registrationInput(page).fill('AB12CDE');
+        await postcodeInput(page).fill('SW1A 1AA');
+        await page.getByRole('button', { name: /check this car/i }).click();
 
-      await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
+        await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
 
-      await page.getByRole('button', { name: /check another vehicle/i }).first().click();
+        await page.getByRole('button', { name: /check another vehicle/i }).first().click();
 
-      await expect(page).toHaveURL(/\/app$/);
-      await expect(page.getByText('Fix it before they find it.')).toBeVisible();
-      await expect(registrationInput(page)).toHaveValue('');
-      await expect(postcodeInput(page)).toHaveValue('');
-    });
+        await expect(page).toHaveURL(/\/app$/);
+        await expect(page.getByText('See what the MOT evidence says.')).toBeVisible();
+        await expect(registrationInput(page)).toHaveValue('');
+        await expect(postcodeInput(page)).toHaveValue('');
+      });
+    }
   }
 });

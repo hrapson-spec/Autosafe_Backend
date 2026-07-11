@@ -14,7 +14,7 @@ import { getAllVariants, getVariant } from '../utils/experiments';
 import { getRecommendation } from '../utils/recommendation';
 import { useStickyCtaVisibility } from '../hooks/useStickyCtaVisibility';
 import {
-  riskPercentDisplay,
+  reportRateDisplay,
   buildNarrative,
   buildScopeDisclosure,
   sampleSizeBadge,
@@ -24,6 +24,8 @@ import {
   repairEstimateCaption,
   buildWhatsAppMessage,
   demoBanner,
+  failureRateLabel,
+  hasVehicleComparison,
 } from './ReportCopy';
 
 interface ReportDashboardProps {
@@ -69,14 +71,12 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
 
   // ─────────────────────────────────────────────────
   // Single derivation point. risk.value / risk.text is THE number for the
-  // whole tree; every reliability/pass-probability framing is 100 -
-  // risk.value computed inline at its render site -- never a separately
-  // stored/re-rounded figure (that's the double-rounding bug this rewire
-  // kills: the old report.reliabilityScore vs. client-re-derived
-  // (100-failureRisk*100) could silently disagree by 1).
+  // whole tree. Its complement is not relabelled as a separate reliability
+  // score or pass-outcome estimate.
   // ─────────────────────────────────────────────────
-  const risk = riskPercentDisplay(report.risk.failure_risk, report.risk.confidence);
-  const reliabilityValue = 100 - risk.value;
+  const risk = reportRateDisplay(report);
+  const vehicleComparisonAvailable = hasVehicleComparison(report);
+  const displayedRateLabel = failureRateLabel(report);
 
   const componentsCopy = componentsSectionCopy(report);
   const repairCardVisible = componentsCopy.show && report.repair_estimate != null;
@@ -107,6 +107,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
   // shown elsewhere on the page for coarsened (Very Low confidence) reports.
   const recommendation = getRecommendation({
     failureRisk: risk.value / 100,
+    hasVehicleComparison: vehicleComparisonAvailable,
     repairCostEstimate: report.repair_estimate
       ? {
         cost_min: report.repair_estimate.range_low,
@@ -159,13 +160,12 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
       const data: ReportEmailSubmission = {
         email: emailReportEmail.toLowerCase().trim(),
         registration: report.registration,
-        postcode: postcode ?? '',
+        ...(postcode ? { postcode } : {}),
         vehicle_make: report.vehicle.make,
         vehicle_model: report.vehicle.model,
         vehicle_year: report.vehicle.year ?? undefined,
-        reliability_score: reliabilityValue,
-        mot_pass_prediction: reliabilityValue,
         failure_risk: report.risk.failure_risk,
+        match_scope: report.evidence.match_scope,
         common_faults: report.components.available && report.components.items
           ? report.components.items.map(item => ({ component: item.label, risk_level: `${Math.round(item.risk * 100)}%` }))
           : [],
@@ -274,7 +274,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
       <div className="flex flex-col gap-1 -mt-2">
         <div className="flex items-center justify-between">
           <p className="text-xs text-slate-400">
-            Based on analysis of 142M+ official DVSA MOT test records
+            Based on 148M+ recorded DVSA MOT tests
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -373,7 +373,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         <Card.Header
           icon={<AlertTriangle className="w-5 h-5 text-red-600" aria-hidden="true" />}
           iconBg="bg-red-50"
-          title="Common Faults To Watch"
+          title="Comparable-Vehicle Component Patterns"
         />
         {items.length > 0 ? (
           <>
@@ -430,7 +430,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         <Card.Header
           icon={<Wrench className="w-5 h-5 text-orange-600" aria-hidden="true" />}
           iconBg="bg-orange-50"
-          title="Repair Costs"
+          title="Comparable-Vehicle Cost Context"
         />
         <div className="space-y-4">
           <div className="text-center">
@@ -453,26 +453,20 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
   // CONTROL: Current layout (unchanged structure)
   // ─────────────────────────────────────────────────
   if (variant === 'control' || variant === undefined) {
-    const reliabilityData = [
-      { name: 'Reliability', value: reliabilityValue },
-      { name: 'Risk', value: risk.value },
+    const riskData = [
+      { name: 'Recorded failures', value: risk.value },
+      { name: 'Other recorded outcomes', value: 100 - risk.value },
     ];
 
-    const COLORS = reliabilityValue > 75
-      ? ['#16a34a', '#e2e8f0']
-      : reliabilityValue > 50
+    const COLORS = risk.value >= 50
+      ? ['#dc2626', '#e2e8f0']
+      : risk.value >= 30
         ? ['#ca8a04', '#e2e8f0']
-        : ['#dc2626', '#e2e8f0'];
-
-    const controlScoreLabel = reliabilityValue > 75
-      ? 'Good'
-      : reliabilityValue > 50
-        ? 'Fair'
-        : 'Poor';
+        : ['#16a34a', '#e2e8f0'];
 
     const getGarageCtaText = () => {
-      if (risk.value > 50) return 'Reduce your failure risk';
-      if (risk.value > 30) return 'Book a pre-MOT check';
+      if (vehicleComparisonAvailable && risk.value > 50) return 'Request a pre-MOT inspection';
+      if (vehicleComparisonAvailable && risk.value > 30) return 'Book a pre-MOT check';
       return 'Find a local garage';
     };
 
@@ -481,9 +475,9 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         daysUntilMotExpiry !== undefined &&
         daysUntilMotExpiry <= 30 &&
         daysUntilMotExpiry > 0 &&
-        risk.value > 30
+        vehicleComparisonAvailable && risk.value > 30
       ) {
-        return `Your MOT is in ${daysUntilMotExpiry} days and we predict a ${risk.text} failure risk. A pre-MOT check can help.`;
+        return `Your MOT is in ${daysUntilMotExpiry} days. Comparable vehicles in this group have a recorded failure rate of ${risk.text}; a physical check can assess this car.`;
       }
       return null;
     };
@@ -496,20 +490,20 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
 
         {/* Main Stats Grid */}
         <div className={`grid grid-cols-1 ${repairCardVisible ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
-          {/* Reliability Score Card */}
+          {/* One score only: the rate for the disclosed comparison group. */}
           <Card className="flex flex-col items-center justify-center relative overflow-hidden">
             <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-4">
-              Reliability Score
+              {displayedRateLabel}
             </h2>
             <div
               className="h-48 w-full relative"
               role="img"
-              aria-label={`Reliability score: ${reliabilityValue} out of 100. Rating: ${controlScoreLabel}`}
+              aria-label={`${displayedRateLabel}: ${risk.value}%`}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={reliabilityData}
+                    data={riskData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -519,7 +513,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
                     paddingAngle={0}
                     dataKey="value"
                   >
-                    {reliabilityData.map((entry, index) => (
+                    {riskData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -528,47 +522,35 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
               <div className="absolute inset-0 flex flex-col items-center justify-center pt-10" aria-hidden="true">
                 <span
                   data-testid="score-value"
-                  className={`text-4xl font-semibold ${reliabilityValue > 75 ? 'text-green-600'
-                      : reliabilityValue > 50 ? 'text-yellow-600'
-                        : 'text-red-600'
+                  className={`text-4xl font-semibold ${risk.value >= 50 ? 'text-red-600'
+                      : risk.value >= 30 ? 'text-yellow-600'
+                        : 'text-green-600'
                     }`}
                 >
-                  {reliabilityValue}/100
+                  {risk.value}%
                 </span>
-                <span className="text-slate-500 text-xs mt-1">AutoSafe Index</span>
+                <span className="text-slate-500 text-xs mt-1">Recorded failure rate</span>
               </div>
             </div>
             <p className="text-center text-slate-700 px-4 text-sm mt-[-20px]">{buildNarrative(report)}</p>
             <p data-testid="evidence-meta" className="text-center text-xs text-slate-400 px-4 mt-2">{evidenceMeta}</p>
           </Card>
 
-          {/* MOT Prediction Card */}
+          {/* Evidence card: no renamed arithmetic complement. */}
           <Card>
             <Card.Header
               icon={<ShieldCheck className="w-5 h-5 text-blue-600" aria-hidden="true" />}
               iconBg="bg-blue-50"
-              title="MOT Prediction"
+              title="Evidence Quality"
             />
             <div className="flex items-baseline gap-2 mb-2">
-              <span data-testid="pass-probability-value" className="text-3xl font-semibold text-slate-900">{reliabilityValue}%</span>
-              <span className="text-sm text-slate-600">Pass Probability</span>
+              <span className="text-3xl font-semibold text-slate-900">{report.risk.confidence}</span>
+              <span className="text-sm text-slate-600">confidence</span>
             </div>
             <p className="text-slate-700 text-sm leading-relaxed mb-6">
               {buildScopeDisclosure(report)}
             </p>
-            <div
-              className="w-full bg-slate-100 rounded-full h-2"
-              role="progressbar"
-              aria-valuenow={reliabilityValue}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`MOT pass probability: ${reliabilityValue}%`}
-            >
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${reliabilityValue}%` }}
-              />
-            </div>
+            <p className="text-xs text-slate-500">{sampleSizeBadge(report)}</p>
           </Card>
 
           {/* Repair Costs Card (hidden entirely when no repair estimate) */}
@@ -593,13 +575,14 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
             vehicleModel={report.vehicle.model}
             vehicleYear={report.vehicle.year}
             failureRisk={report.risk.failure_risk}
+            matchScope={report.evidence.match_scope}
           />
           {renderEmailReport()}
         </div>
 
         {/* Detailed Analysis */}
         <Card padding="lg">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Expert Analysis</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Evidence Summary</h2>
           <p className="text-slate-700 leading-relaxed text-lg">
             {buildNarrative(report)}
           </p>
@@ -623,7 +606,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
               <p className="text-slate-300 mb-6">
                 {hasSubmitted
                   ? 'A local garage will contact you shortly.'
-                  : `This risk overview is a great start, but nothing beats a physical check. Book a certified mechanic to inspect this ${report.vehicle.make} ${report.vehicle.model} today.`
+                  : `This comparison overview is useful context, but nothing beats a physical check. Book a certified mechanic to inspect this ${report.vehicle.make} ${report.vehicle.model} if you want a condition assessment.`
                 }
               </p>
               {hasSubmitted ? (
@@ -709,13 +692,13 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
 
       {/* Score + Motivator Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Failure Risk Score (loss-framed) */}
+        {/* Historical failure rate for the disclosed comparison scope */}
         <Card>
           <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-4">
             {recommendation.scoreLabel}
           </h2>
           <div className="flex items-baseline gap-2 mb-2">
-            <span data-testid="risk-score-value" className={`text-5xl font-bold ${riskColorClass}`}>
+            <span data-testid="failure-rate-value" className={`text-5xl font-bold ${riskColorClass}`}>
               {risk.value}%
             </span>
           </div>
@@ -759,6 +742,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
           vehicleModel={report.vehicle.model}
           vehicleYear={report.vehicle.year}
           failureRisk={report.risk.failure_risk}
+          matchScope={report.evidence.match_scope}
         />
         {renderEmailReport()}
       </div>
@@ -773,7 +757,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         }}
       >
         <summary className="cursor-pointer list-none flex items-center justify-between rounded-xl border border-slate-200 p-5 hover:bg-slate-50 transition-colors">
-          <span className="text-lg font-semibold text-slate-900">Full Component Breakdown &amp; Expert Analysis</span>
+          <span className="text-lg font-semibold text-slate-900">Component Comparison &amp; Evidence Summary</span>
           <svg
             className="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180"
             fill="none"
@@ -792,7 +776,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
 
           {/* Expert Analysis */}
           <Card padding="lg">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Expert Analysis</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Evidence Summary</h2>
             <p className="text-slate-700 leading-relaxed text-lg">
               {buildNarrative(report)}
             </p>

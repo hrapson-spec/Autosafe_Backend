@@ -1,23 +1,34 @@
 {% extends "seo_base.html" %}
 
-{% block title %}{% if model_slug|length % 2 == 0 %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data)
-| AutoSafe{% else %}{{ "%.1f"|format(overall_fail_rate * 100) }}% Failure Rate: {{ make_display }} {{ model_display }}
-MOT Problems & Tips | AutoSafe{% endif %}{% endblock %}
-{% block meta_description %}{% if model_slug|length % 2 == 0 %}The {{ make_display }} {{ model_display }} has a {{
-"%.1f"|format(overall_fail_rate * 100)
-}}% MOT failure rate based on {{ "{:,}".format(overall_tests) }} tests. See failure breakdown by age, component risks,
-and common MOT problems.{% else %}{{ make_display }} {{ model_display }}: {{ "%.1f"|format(overall_fail_rate * 100) }}%
-of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_components[0].risk * 100) }}%). Data from
-{{ "{:,}".format(overall_tests) }} official DVSA tests. Free risk check.{% endif %}{% endblock %}
-{% block og_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
-{% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{
-"{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
-{% block twitter_title %}{{ make_display }} {{ model_display }} MOT Failure Rate (2026 Data){% endblock %}
-{% block twitter_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate based on {{
-"{:,}".format(overall_tests) }} real MOT tests.{% endblock %}
+{% block title %}{{ make_display }} {{ model_display }} Recorded MOT Failure Rates | AutoSafe{% endblock %}
+{% block meta_description %}Recorded MOT outcomes for the {{ make_display }} {{ model_display }} group: {{
+"%.1f"|format(overall_fail_rate * 100) }}% historical failure rate from {{ "{:,}".format(overall_tests) }} tests, with
+age-band and component-category sample evidence.{% endblock %}
+{% block og_title %}{{ make_display }} {{ model_display }} Recorded MOT Outcomes{% endblock %}
+{% block og_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% historical failure rate from {{
+"{:,}".format(overall_tests) }} recorded tests.{% endblock %}
+{% block twitter_title %}{{ make_display }} {{ model_display }} Recorded MOT Outcomes{% endblock %}
+{% block twitter_description %}{{ "%.1f"|format(overall_fail_rate * 100) }}% historical failure rate from {{
+"{:,}".format(overall_tests) }} recorded tests.{% endblock %}
 {% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
 
 {% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "{{ make_display }} {{ model_display }} recorded MOT outcomes",
+  "description": "Historical model-group MOT failure rates calculated from DVSA records. Population evidence only; not an individual vehicle prediction or diagnosis.",
+  "url": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/",
+  "creator": {"@type": "Organization", "name": "AutoSafe", "url": "https://www.autosafe.one"},
+  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+  "dateModified": "{{ dataset_artifact_revision }}",
+  "variableMeasured": [
+    {"@type": "PropertyValue", "name": "Historical MOT failure rate", "value": "{{ "%.4f"|format(overall_fail_rate) }}"},
+    {"@type": "PropertyValue", "name": "Recorded tests", "value": "{{ overall_tests }}"}
+  ]
+}
+</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -25,64 +36,20 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "What is the MOT failure rate for a {{ make_display }} {{ model_display }}?",
+      "name": "What is the recorded MOT failure rate for the {{ make_display }} {{ model_display }} group?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The {{ make_display }} {{ model_display }} has an overall MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}%, based on {{ "{:,}".format(overall_tests) }} MOT tests in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK average of 28%."
+        "text": "The historical group failure rate is {{ "%.1f"|format(overall_fail_rate * 100) }}%, calculated from {{ "{:,}".format(overall_tests) }} recorded tests. The dataset-wide reference is {{ "%.1f"|format(dataset_reference_rate * 100) }}%. This does not predict an individual vehicle's result."
       }
     },
     {
       "@type": "Question",
-      "name": "What are the most common MOT failures on a {{ make_display }} {{ model_display }}?",
+      "name": "What do the component percentages mean?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The most common MOT failure areas for the {{ make_display }} {{ model_display }} are: {% for comp in top_components[:3] %}{{ comp.name }} ({{ "%.1f"|format(comp.risk * 100) }}% risk){{ ", " if not loop.last else "" }}{% endfor %}. These are based on weighted component failure rates across all age and mileage bands."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Is the {{ make_display }} {{ model_display }} reliable for MOT?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "{% if overall_fail_rate < 0.20 %}Yes, the {{ make_display }} {{ model_display }} is more reliable than average for MOT, with a failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%.{% elif overall_fail_rate < 0.30 %}The {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(overall_fail_rate * 100) }}% MOT failure rate, which is close to the UK average of 28%.{% else %}The {{ make_display }} {{ model_display }} has a higher-than-average MOT failure rate of {{ "%.1f"|format(overall_fail_rate * 100) }}% compared to the UK average of 28%. Pay extra attention to {{ top_components[0].name|lower if top_components else "common wear items" }} before your test.{% endif %}"
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The {{ make_display }} {{ model_display }} MOT failure rate increases with vehicle age. Newer models typically have lower failure rates, while vehicles over 10 years old see significantly higher rates, often above 35%. Regular maintenance becomes more important as your vehicle ages."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Check all lights and bulbs, inspect tyre tread depth, test windscreen washers and wipers, listen for brake or suspension noises, and consider a pre-MOT check at a local garage. Use AutoSafe's free tool to see the failure rate for vehicles like yours."
+        "text": "They are weighted historical rates for recorded component categories in this model group. They do not identify a fault on a particular vehicle."
       }
     }
-  ]
-}
-</script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Dataset",
-  "name": "{{ make_display }} {{ model_display }} MOT Failure Rate Data",
-  "description": "MOT test failure rates and component risk breakdown for the {{ make_display }} {{ model_display }}, sourced from official DVSA records.",
-  "url": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/",
-  "creator": {
-    "@type": "Organization",
-    "name": "AutoSafe",
-    "url": "https://www.autosafe.one"
-  },
-  "license": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",{% if data_updated %}
-  "dateModified": "{{ data_updated }}",{% endif %}
-  "variableMeasured": [
-    {"@type": "PropertyValue", "name": "MOT Failure Rate", "value": "{{ "%.4f"|format(overall_fail_rate) }}"},
-    {"@type": "PropertyValue", "name": "Total Tests", "value": "{{ overall_tests }}"}
   ]
 }
 </script>
@@ -113,66 +80,41 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
 {% endblock %}
 
 {% block content %}
-
-<h1>{{ make_display }} {{ model_display }} MOT Failure Rate</h1>
-
+<h1>{{ make_display }} {{ model_display }} Recorded MOT Outcomes</h1>
 <div class="stat-highlight">
   <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
-  <div class="label">MOT failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
-  <div class="label" style="font-size: 1rem; margin-top: 1rem;">
-    {% if overall_fail_rate > 0.28 %}
-    <span style="color: var(--danger); font-weight: 700;">{{ "%.1f"|format((overall_fail_rate - 0.28) * 100) }}pp above
-      the UK
-      average (28%)</span>
-    {% elif overall_fail_rate < 0.28 %} <span style="color: var(--success); font-weight: 700;">{{ "%.1f"|format((0.28 -
-      overall_fail_rate) * 100)
-      }}pp below the UK average (28%)</span>
-      {% else %}
-      <span>Equal to the UK average (28%)</span>
-      {% endif %}
+  <div class="label">historical failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
+  <div class="label">
+    {% if overall_fail_rate > dataset_reference_rate %}
+    {{ "%.1f"|format((overall_fail_rate - dataset_reference_rate) * 100) }} percentage points above
+    {% elif overall_fail_rate < dataset_reference_rate %}
+    {{ "%.1f"|format((dataset_reference_rate - overall_fail_rate) * 100) }} percentage points below
+    {% else %}
+    equal to
+    {% endif %}
+    the dataset-wide reference of {{ "%.1f"|format(dataset_reference_rate * 100) }}%
   </div>
 </div>
 
-<div class="key-findings" style="background: #f1f5f9; border-radius: 12px; padding: 2rem; margin: 2.5rem 0;">
-  <h2 style="margin-top: 0; font-size: 1.5rem; font-family: 'Inter', sans-serif; font-weight: 700;">Key Findings for the
-    {{ make_display }} {{ model_display }}</h2>
-  <ul style="margin: 1.5rem 0 0; padding-left: 1.2rem;">
-    <li>Overall MOT failure rate: <strong>{{ "%.1f"|format(overall_fail_rate * 100) }}%</strong> — {{
-      "%.1f"|format(((overall_fail_rate - uk_avg_fail_rate) * 100)|abs) }}pp {{ "above" if overall_fail_rate >
-      uk_avg_fail_rate else "below" }} the UK average ({{ "%.0f"|format(uk_avg_fail_rate * 100) }}%)</li>
-    <li>Highest-risk component: <strong>{{ top_components[0].name }}</strong> ({{ "%.1f"|format(top_components[0].risk *
-      100) }}% failure risk)</li>
-    {% if best_age_band %}
-    <li>Most reliable age group: <strong>{{ best_age_band.age_band }} years</strong> ({{
-      "%.1f"|format(best_age_band.fail_rate * 100) }}% failure rate)</li>
-    {% endif %}
-    {% if worst_age_band %}
-    <li>Highest-risk age group: <strong>{{ worst_age_band.age_band }} years</strong> ({{
-      "%.1f"|format(worst_age_band.fail_rate * 100) }}% failure rate)</li>
-    {% endif %}
-    <li>Based on <strong>{{ "{:,}".format(overall_tests) }}</strong> official DVSA MOT tests</li>
-  </ul>
+<div class="methodology">
+  <p><strong>Evidence scope:</strong> This page summarises past outcomes for a make/model group. It does not use the
+    condition, service history or current defects of a particular vehicle, so it is not a pass prediction, diagnosis
+    or buying recommendation.</p>
 </div>
 
 {% if age_bands %}
-<h2>Failure Rate by Vehicle Age</h2>
-<p>How the {{ make_display }} {{ model_display }} MOT failure rate changes with age:</p>
+<h2>Recorded Failure Rate by Age Band</h2>
 <table class="data-table">
   <thead>
-    <tr>
-      <th>Age</th>
-      <th>Failure Rate</th>
-      <th>Tests</th>
-      <th>Worst Area</th>
-    </tr>
+    <tr><th>Age band</th><th>Failure rate</th><th>Tests</th><th>Highest recorded component category</th></tr>
   </thead>
   <tbody>
     {% for band in age_bands %}
     <tr>
-      <td>{{ band.age_band }} years</td>
-      <td><span class="fail-rate {% if band.fail_rate > 0.35 %}high{% elif band.fail_rate < 0.20 %}low{% endif %}">{{
-          "%.1f"|format(band.fail_rate * 100) }}%</span></td>
-      <td class="sample-size">{{ "{:,}".format(band.total_tests) }}</td>
+      <td><a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{
+        band.age_band }} years</a></td>
+      <td>{{ "%.1f"|format(band.fail_rate * 100) }}%</td>
+      <td>{{ "{:,}".format(band.total_tests) }}</td>
       <td>{{ band.worst_component }}</td>
     </tr>
     {% endfor %}
@@ -180,214 +122,58 @@ of MOTs fail. Top issues: {{ top_components[0].name }} ({{ "%.1f"|format(top_com
 </table>
 {% endif %}
 
-<h2>Component Risk Breakdown</h2>
-<p>Which parts of the {{ make_display }} {{ model_display }} are most likely to cause an MOT failure:</p>
+<h2>Recorded Component-Category Rates</h2>
+<p>Each percentage is a sample-size-weighted historical category rate across the included age and mileage groups.</p>
+{% if components %}
+<table class="data-table">
+  <thead><tr><th>Component category</th><th>Recorded rate</th></tr></thead>
+  <tbody>
+    {% for comp in components %}
+    <tr><td>{{ comp.name }}</td><td>{{ "%.1f"|format(comp.risk * 100) }}%</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Complete component-category evidence is not available for this model group.</p>
+{% endif %}
+<p><em>These categories describe aggregate records. They do not show that a specific vehicle has a component fault.</em></p>
 
-{% for comp in components %}
-<div class="risk-bar-container">
-  <div class="risk-bar-label">
-    <span>{{ comp.name }}</span>
-    <span>{{ "%.1f"|format(comp.risk * 100) }}%</span>
-  </div>
-  <div class="risk-bar">
-    <div class="risk-bar-fill {% if comp.risk > 0.15 %}high{% elif comp.risk > 0.08 %}medium{% else %}low{% endif %}"
-      style="width: {{ (comp.risk * 500)|round|int }}%"></div>
-  </div>
-</div>
-{% endfor %}
-
-{% if age_bands %}
-<h2>{{ make_display }} {{ model_display }} by Age Group</h2>
-<p>See detailed MOT failure data for each age group:</p>
+{% if comparisons %}
+<h2>Recorded Model-Group Comparisons</h2>
 <div class="related-links">
-  {% for band in age_bands %}
-  <a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{
-    band.age_band }} years &mdash; {{ "%.1f"|format(band.fail_rate * 100) }}%</a>
-  {% endfor %}
+  {% for comparison in comparisons %}<a href="{{ comparison.url }}">{{ comparison.title }}</a>{% endfor %}
 </div>
 {% endif %}
 
-<h2>What {{ make_display }} {{ model_display }} Owners Should Watch For</h2>
-<p>Based on the MOT test data for the {{ make_display }} {{ model_display }}, here are the key areas to pay attention to
-  before your MOT:</p>
-<ul>
-  {% for comp in top_components[:3] %}
-  <li><strong>{{ comp.name }}</strong> ({{ "%.1f"|format(comp.risk * 100) }}% failure risk) &mdash; {% if comp.name ==
-    "Brakes" %}Check brake pad thickness, disc condition, and handbrake operation. Listen for grinding or squealing when
-    braking.{% elif comp.name == "Suspension" %}Look for leaking shock absorbers, worn bushes, and damaged springs. A
-    bouncing or uneven ride often signals problems.{% elif comp.name == "Tyres" %}Ensure all tyres have at least 1.6mm
-    tread depth across the central three-quarters. Check for sidewall damage, bulges, and uneven wear.{% elif comp.name
-    == "Steering" %}Check for play in the steering wheel, power steering fluid levels, and worn track rod ends.{% elif
-    comp.name == "Visibility" %}Inspect windscreen for chips larger than 10mm in the driver&rsquo;s line of vision and
-    40mm elsewhere in the swept area. Check all washers and wipers.{% elif comp.name == "Lamps & Electrics" %}Walk
-    around the car and check every bulb &mdash; headlights, brake lights, indicators, fog lights, and number plate
-    lights. This is one of the cheapest and easiest fixes.{% elif comp.name == "Body & Chassis" %}Inspect the underside
-    and sills for rust holes, particularly around structural mounting points. Corrosion that weakens the structure
-    within 30cm of a mounting point is an automatic fail.{% else %}Inspect this area carefully before your test and
-    address any worn or damaged components.{% endif %}</li>
-  {% endfor %}
-</ul>
-<p>Many of these issues are inexpensive to fix when caught early. A pre-MOT inspection at a local garage typically costs
-  &pound;20&ndash;&pound;40 and can save you the cost of a retest (&pound;15&ndash;&pound;30) plus the inconvenience of
-  a failed MOT.</p>
-
-<div class="faq-section">
-  <h2>Frequently Asked Questions</h2>
-
-  <div class="faq-item">
-    <h3>What is the MOT failure rate for a {{ make_display }} {{ model_display }}?</h3>
-    <p>The {{ make_display }} {{ model_display }} has an overall MOT failure rate of <strong>{{
-        "%.1f"|format(overall_fail_rate * 100) }}%</strong>, based on {{ "{:,}".format(overall_tests) }} MOT tests
-      recorded in the DVSA database. This is {{ "above" if overall_fail_rate > 0.28 else "below" }} the UK national
-      average of approximately 28%.</p>
-  </div>
-
-  <div class="faq-item">
-    <h3>What are the most common MOT failures on a {{ make_display }} {{ model_display }}?</h3>
-    <p>The most common areas for MOT failure on a {{ make_display }} {{ model_display }} are:</p>
-    <ul>
-      {% for comp in top_components[:3] %}
-      <li><strong>{{ comp.name }}</strong> &mdash; {{ "%.1f"|format(comp.risk * 100) }}% failure risk</li>
-      {% endfor %}
-    </ul>
-    <p>These component risks are weighted averages across all age and mileage bands in the dataset.</p>
-  </div>
-
-  <div class="faq-item">
-    <h3>Is the {{ make_display }} {{ model_display }} reliable for MOT?</h3>
-    {% if overall_fail_rate < 0.20 %} <p>Yes, the {{ make_display }} {{ model_display }} performs <strong>better than
-        average</strong> in MOT tests. Its {{ "%.1f"|format(overall_fail_rate * 100) }}% failure rate is well below the
-      UK average of 28%, making it one of the more reliable options.</p>
-      {% elif overall_fail_rate < 0.30 %} <p>The {{ make_display }} {{ model_display }} has a {{
-        "%.1f"|format(overall_fail_rate * 100) }}% failure rate, which is <strong>close to the UK average</strong> of
-        28%. It's neither particularly unreliable nor exceptionally reliable for MOT purposes.</p>
-        {% else %}
-        <p>The {{ make_display }} {{ model_display }} has a <strong>higher-than-average</strong> MOT failure rate of {{
-          "%.1f"|format(overall_fail_rate * 100) }}%, compared to the UK average of 28%. Before your MOT, pay extra
-          attention to <strong>{{ top_components[0].name|lower if top_components else "common wear items" }}</strong>,
-          which is the most common failure area for this model.</p>
-        {% endif %}
-  </div>
-
-  <div class="faq-item">
-    <h3>How does the {{ make_display }} {{ model_display }} MOT failure rate change with age?</h3>
-    {% if age_bands|length > 1 %}
-    <p>The failure rate increases significantly with vehicle age. {% if age_bands[0].fail_rate < 0.15 %}Newer {{
-        make_display }} {{ model_display }} models ({{ age_bands[0].age_band }} years) have a relatively low {{ "%.1f"
-        |format(age_bands[0].fail_rate * 100) }}% failure rate{% endif %}{% if age_bands[-1].fail_rate> 0.30 %}, while
-        older examples ({{ age_bands[-1].age_band }} years) see failure rates rise to {{
-        "%.1f"|format(age_bands[-1].fail_rate * 100) }}%{% endif %}. This pattern is common across most vehicle models
-        and reflects increased wear on mechanical components over time.</p>
-    {% else %}
-    <p>We have limited age-band data for this model. In general, MOT failure rates increase steadily with vehicle age as
-      components wear. Vehicles over 10 years old typically have failure rates above 35%.</p>
-    {% endif %}
-  </div>
-
-  <div class="faq-item">
-    <h3>How can I reduce the risk of my {{ make_display }} {{ model_display }} failing its MOT?</h3>
-    <p>The most effective steps are: (1) Check all lights and bulbs before your test &mdash; lighting failures are the
-      most common and cheapest to fix. (2) Inspect tyre tread depth and condition. (3) Test your windscreen washers and
-      wipers. (4) Listen for unusual noises from brakes or suspension. (5) Consider a pre-MOT check at a local garage.
-      You can also <a href="/" style="color: #e5c07b;">use our free comparison tool</a> to see recorded MOT history
-      and failure rates for comparable vehicles.</p>
-  </div>
-
-  <div class="faq-item">
-    <h3>Where can I check the MOT history of a {{ make_display }} {{ model_display }}?</h3>
-    <p>You can check any vehicle's full MOT history for free on the <a href="https://www.gov.uk/check-mot-history"
-        style="color: #e5c07b;" rel="nofollow">official DVSA service</a>. This shows all previous test results, advisory
-      items, and failure reasons. AutoSafe goes further by analysing this data with AI to <a href="/"
-        style="color: #e5c07b;">predict your future MOT outcome</a>.</p>
-  </div>
-</div>
-
-<div class="cta-box" style="margin-top: 4rem;">
-  <h3>Check Your Specific {{ make_display }} {{ model_display }}</h3>
-  <p>Enter your reg to see if <em>your</em> {{ make_display }} {{
-    model_display }} is at risk.</p>
-  <form class="reg-lookup-form" action="/" method="get">
-    <input type="hidden" name="utm_source" value="seo">
-    <input type="hidden" name="utm_medium" value="organic">
-    <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
-    <input type="hidden" name="utm_content" value="model_overview">
-    <div class="reg-plate-wrapper">
-      <div class="reg-plate-gb">GB</div>
-      <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
-        aria-label="Vehicle registration number">
-    </div>
-    <button type="submit" class="reg-lookup-btn">Check My MOT Risk</button>
-  </form>
-</div>
-
-<h2>Other {{ make_display }} Models</h2>
-<p>Compare the {{ make_display }} {{ model_display }} MOT failure rate against other {{ make_display }} models:</p>
+{% if sibling_models %}
+<h2>Other {{ make_display }} Model Groups</h2>
 <div class="related-links">
   {% for sibling in sibling_models %}
   <a href="/mot-check/{{ make_slug }}/{{ sibling.slug }}/">{{ make_display }} {{ sibling.display_name }}</a>
   {% endfor %}
 </div>
-
-{% if competitors %}
-<h2>How {{ make_display }} {{ model_display }} Compares to Rivals</h2>
-<p>See how the {{ make_display }} {{ model_display }} stacks up against similar models:</p>
-<div class="related-links">
-  {% for comp in competitors %}
-  <a href="/mot-check/{{ comp.make_slug }}/{{ comp.model_slug }}/">{{ comp.make_display }} {{ comp.model_display }}</a>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if comparisons %}
-<h2>{{ make_display }} {{ model_display }} vs. Rivals</h2>
-<div class="related-links">
-  {% for comp in comparisons %}
-  <a href="{{ comp.url }}">{{ comp.title }}</a>
-  {% endfor %}
-</div>
 {% endif %}
 
 {% if similar_models %}
-<h2>Similar Failure Rate Models</h2>
-<p>These models from other manufacturers have a similar MOT failure rate to the {{ make_display }} {{ model_display }}:
-</p>
+<h2>Groups With Similar Recorded Rates</h2>
 <div class="related-links">
-  {% for sim in similar_models %}
-  <a href="/mot-check/{{ sim.make_slug }}/{{ sim.model_slug }}/">{{ sim.make_display }} {{ sim.model_display }} ({{
-    "%.1f"|format(sim.fail_rate * 100) }}%)</a>
+  {% for similar in similar_models %}
+  <a href="/mot-check/{{ similar.make_slug }}/{{ similar.model_slug }}/">{{ similar.make_display }} {{
+    similar.model_display }} ({{ "%.1f"|format(similar.fail_rate * 100) }}%)</a>
   {% endfor %}
 </div>
 {% endif %}
 
-<h2>Related Guides</h2>
-<ul>
-  <li><a href="/guides/common-mot-failures" style="color: #e5c07b;">Top 10 MOT Failure Points &amp; How to Avoid
-      Them</a></li>
-  <li><a href="/guides/mot-checklist" style="color: #e5c07b;">Pre-MOT Checklist: 15 Things to Check Before Your Test</a>
-  </li>
-  <li><a href="/guides/mot-failure-rates-by-car" style="color: #e5c07b;">MOT Failure Rates by Car Make and Model</a>
-  </li>
-  <li><a href="/guides/mot-history-check" style="color: #e5c07b;">How to Check MOT History</a></li>
-</ul>
-
 <div class="methodology">
-  <p><strong>Data methodology:</strong> Failure rates are weighted averages across all mileage bands, calculated from
-    official DVSA MOT test records. Only age/mileage combinations with 100+ tests are included. Component risks
-    represent the probability of failure in each specific area. Data covers 142 million MOT tests across the UK.</p>
-  <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
-    <strong>Trust signals:</strong> Method: official DVSA failure rates by make, model and age &bull;
-    Data source: <a
-      href="https://www.data.gov.uk/dataset/e3939ef8-30c7-4ca8-9c7c-ad9475cc9b2f/anonymised-mot-tests-and-results"
-      style="color: #e5c07b;" rel="nofollow">DVSA Open Data (OGL v3)</a> &bull;
-    {% if data_updated %}Last updated: {{ data_updated }} &bull; {% endif %}
-    <em>Limitation: population averages; individual vehicle condition, service history and mileage may vary.</em>
-  </p>
+  <p><strong>Method:</strong> Failure and component-category rates are sample-size weighted. Only age/mileage groups
+    with at least 100 tests are included. The checked-in source contains {{ "{:,}".format(dataset_total_tests) }} tests
+    and {{ "{:,}".format(dataset_total_failures) }} failures.</p>
+  <p><strong>Source:</strong> <a
+    href="https://www.data.gov.uk/dataset/e3939ef8-30c7-4ca8-9c7c-ad9475cc9b2f/anonymised-mot-tests-and-results"
+    rel="nofollow">DVSA anonymised MOT tests and results</a>, reused under the Open Government Licence v3.</p>
 </div>
-
-<p style="text-align: center; margin-top: 1.5rem;"><a href="/will-my-car-pass-mot/" style="color: #e5c07b;">Will My Car
-    Pass Its MOT? &rarr; Free DVSA Comparison Tool</a></p>
 {% endblock %}
 
-{% block cta_heading %}Check Your Specific {{ make_display }} {{ model_display }}{% endblock %}
-{% block cta_text %}Enter your registration to see recorded MOT history, mileage provenance and the closest available
-comparison group.{% endblock %}
+{% block cta_heading %}Compare a Specific {{ make_display }} {{ model_display }}{% endblock %}
+{% block cta_text %}Enter a registration to see recorded MOT history and the closest available comparison group, with
+its evidence source and sample size.{% endblock %}

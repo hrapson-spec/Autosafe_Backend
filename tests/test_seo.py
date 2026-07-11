@@ -10,13 +10,22 @@ Run with: pytest tests/test_seo.py -v
 import json
 import os
 import re
+import sqlite3
 import sys
 import unittest
+from datetime import date
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient
 from main import app
+from report_contract import DATASET_ARTIFACT_REVISION
+from seo_pages import (
+    _align_component_rates,
+    _query_model_age_bands,
+    _query_model_overall,
+    _summarise_models,
+)
 
 # Enter context manager so lifespan (including SEO data init) runs before tests
 client = TestClient(app)
@@ -50,6 +59,50 @@ class TestSeoPages(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("Ford", r.text)
 
+    def test_make_summary_weights_rates_by_test_count(self):
+        summary = _summarise_models([
+            {"total_tests": 100, "total_failures": 10},
+            {"total_tests": 900, "total_failures": 270},
+        ])
+        self.assertEqual(summary["total_tests"], 1_000)
+        self.assertEqual(summary["total_failures"], 280)
+        self.assertEqual(summary["fail_rate"], 0.28)
+
+    def test_partial_component_coverage_is_omitted_not_averaged_selectively(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.execute(
+            """CREATE TABLE risks (
+                model_id TEXT, age_band TEXT, mileage_band TEXT,
+                Total_Tests INTEGER, Total_Failures INTEGER,
+                Risk_Brakes REAL, Risk_Suspension REAL, Risk_Tyres REAL,
+                Risk_Steering REAL, Risk_Visibility REAL,
+                Risk_Lamps_Reflectors_And_Electrical_Equipment REAL,
+                Risk_Body_Chassis_Structure REAL
+            )"""
+        )
+        rows = [
+            ("FORD FIESTA", "3-5", "0-30k", 100, 20, 0.10, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01),
+            ("FORD FIESTA ST", "3-5", "0-30k", 100, 30, None, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03),
+        ]
+        conn.executemany("INSERT INTO risks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+
+        overall = _query_model_overall(conn, "FORD", "FIESTA")
+        age_bands = _query_model_age_bands(conn, "FORD", "FIESTA")
+        conn.close()
+
+        self.assertIsNotNone(overall)
+        self.assertNotIn("Brakes", {item["name"] for item in overall["components"]})
+        self.assertNotIn("Brakes", age_bands[0]["components"])
+        self.assertIn("Suspension", {item["name"] for item in overall["components"]})
+
+    def test_component_comparison_includes_only_categories_supported_for_both_groups(self):
+        aligned = _align_component_rates(
+            [{"name": "Brakes", "risk": 0.1}, {"name": "Tyres", "risk": 0.2}],
+            [{"name": "Tyres", "risk": 0.3}],
+        )
+        self.assertEqual(aligned, [{"name": "Tyres", "risk1": 0.2, "risk2": 0.3}])
+
     def test_seo_make_page_invalid_returns_404(self):
         r = client.get("/mot-check/nonexistent-make/")
         self.assertEqual(r.status_code, 404)
@@ -62,6 +115,40 @@ class TestSeoPages(unittest.TestCase):
     def test_seo_model_page_invalid_model_returns_404(self):
         r = client.get("/mot-check/ford/nonexistent-model/")
         self.assertEqual(r.status_code, 404)
+
+    def test_evidence_pillar_uses_primary_dataset_metadata(self):
+        r = client.get("/will-my-car-pass-mot/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("148,509,908", r.text)
+        self.assertIn("39,969,903", r.text)
+        self.assertIn("26.9%", r.text)
+
+    def test_broken_first_mot_insights_are_retired_to_honest_guides(self):
+        cases = {
+            "/insights/unreliable-3-year-old-cars-2026/": "/guides/mot-failure-rates-by-car",
+            "/insights/march-mot-rush-2026/": "/guides/first-mot-guide",
+        }
+        for path, target in cases.items():
+            r = client.get(path, follow_redirects=False)
+            self.assertEqual(r.status_code, 301)
+            self.assertEqual(r.headers["location"], target)
+
+    def test_missing_insights_backend_is_retired_to_the_data_guide(self):
+        for path in ("/insights/", "/insights/legacy-story/"):
+            r = client.get(path, follow_redirects=False)
+            self.assertEqual(r.status_code, 301)
+            self.assertEqual(r.headers["location"], "/guides/mot-failure-rates-by-car")
+
+    def test_model_year_url_redirects_to_stable_model_group_evidence(self):
+        model_year = date.today().year - 8
+        r = client.get(f"/mot-check/ford/fiesta/{model_year}/", follow_redirects=False)
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.headers["location"], "/mot-check/ford/fiesta/")
+
+    def test_unsupported_local_pages_are_retired_to_the_report_form(self):
+        r = client.get("/local-mot/london/", follow_redirects=False)
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.headers["location"], "/")
 
 
 class TestSeoCanonicalTags(unittest.TestCase):
@@ -119,7 +206,7 @@ class TestSeoStructuredData(unittest.TestCase):
         schemas = self._extract_jsonld(r.text)
         dataset = next((s for s in schemas if s.get("@type") == "Dataset"), None)
         self.assertIsNotNone(dataset, "No Dataset schema found")
-        self.assertIn("dateModified", dataset, "Dataset should include dateModified")
+        self.assertEqual(dataset.get("dateModified"), DATASET_ARTIFACT_REVISION)
 
 
 class TestSeoMetaTags(unittest.TestCase):
@@ -153,16 +240,19 @@ class TestSeoMetaTags(unittest.TestCase):
 
 
 class TestSeoFreshnessSignals(unittest.TestCase):
-    """Verify freshness indicators are present."""
+    """Verify artifact freshness is not relabelled as source coverage."""
 
-    def test_footer_contains_data_updated(self):
+    def test_footer_identifies_the_checked_in_artifact_revision(self):
         r = client.get("/mot-check/ford/fiesta/")
-        self.assertTrue(re.search(r"Data last\s*updated:", r.text) is not None, "'Data last updated:' not found in footer")
+        self.assertRegex(
+            r.text,
+            rf"Checked-in dataset revision:\s*{re.escape(DATASET_ARTIFACT_REVISION)}",
+        )
 
-    def test_data_updated_is_valid_date(self):
+    def test_footer_does_not_invent_a_source_coverage_date(self):
         r = client.get("/mot-check/ford/fiesta/")
-        match = re.search(r"Data last\s*updated:\s*(\d{4}-\d{2}-\d{2})", r.text)
-        self.assertIsNotNone(match, "Data updated date should be in YYYY-MM-DD format")
+        self.assertNotIn("Data last updated:", r.text)
+        self.assertIn("source coverage date is not encoded", r.text)
 
 
 class TestSeoComparisons(unittest.TestCase):
@@ -192,6 +282,20 @@ class TestSitemap(unittest.TestCase):
     def test_sitemap_contains_make_urls(self):
         r = client.get("/sitemap-makes.xml")
         self.assertIn("/mot-check/ford/", r.text)
+
+    def test_sitemap_index_does_not_advertise_retired_local_pages(self):
+        r = client.get("/sitemap.xml")
+        self.assertNotIn("sitemap-local.xml", r.text)
+
+    def test_retired_local_sitemap_redirects_to_the_index(self):
+        r = client.get("/sitemap-local.xml", follow_redirects=False)
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.headers["location"], "/sitemap.xml")
+
+    def test_dataset_driven_sitemaps_use_the_artifact_revision(self):
+        for path in ("/sitemap-makes.xml", "/sitemap-models.xml", "/sitemap-comparisons.xml"):
+            r = client.get(path)
+            self.assertIn(f"<lastmod>{DATASET_ARTIFACT_REVISION}</lastmod>", r.text)
 
 
 class TestNoindexDirectives(unittest.TestCase):
@@ -240,6 +344,12 @@ class TestSitemapIndex(unittest.TestCase):
             self.assertNotIn("3-5-years", r.text,
                              f"Age-band slug found in {path}")
 
+    def test_sitemap_excludes_retired_first_mot_insight_urls(self):
+        r = client.get("/sitemap-content.xml")
+        self.assertNotIn("unreliable-3-year-old-cars-2026", r.text)
+        self.assertNotIn("march-mot-rush-2026", r.text)
+        self.assertNotIn("/insights/", r.text)
+
 
 class TestLegacySlugRedirects(unittest.TestCase):
     """Verify legacy age-band slugs redirect to current ones."""
@@ -254,18 +364,18 @@ class TestLegacySlugRedirects(unittest.TestCase):
 
 
 class TestModelPageDistinctiveness(unittest.TestCase):
-    """Verify Key Findings block and trust signals are present."""
+    """Verify evidence scope and primary-source signals are present."""
 
-    def test_model_page_has_key_findings(self):
+    def test_model_page_has_evidence_scope(self):
         r = client.get("/mot-check/ford/fiesta/")
-        self.assertIn("Key Findings", r.text)
+        self.assertIn("Evidence scope", r.text)
+        self.assertIn("not a pass prediction, diagnosis", r.text)
 
     def test_model_page_has_trust_signals(self):
         r = client.get("/mot-check/ford/fiesta/")
-        self.assertIn("official DVSA failure rates by make, model and age", r.text)
-        self.assertIn("DVSA Open Data", r.text)
+        self.assertIn("DVSA anonymised MOT tests and results", r.text)
+        self.assertIn("Open Government Licence v3", r.text)
 
 
 if __name__ == "__main__":
     unittest.main()
-

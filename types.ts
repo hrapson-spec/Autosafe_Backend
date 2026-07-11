@@ -32,7 +32,8 @@ export interface GarageLeadVehicle {
 
 export interface GarageLeadRiskData {
   failure_risk: number;
-  reliability_score: number;
+  match_scope: MatchScope;
+  reliability_score?: number;
   top_risks: string[];
 }
 
@@ -60,12 +61,13 @@ export interface GarageLeadResponse {
 export interface MotReminderSubmission {
   email: string;
   registration: string;
-  postcode: string;
+  postcode?: string;
   vehicle_make?: string;
   vehicle_model?: string;
   vehicle_year?: number;
   mot_expiry_date?: string;
   failure_risk?: number;
+  match_scope?: MatchScope;
   experiment_variant?: string;
 }
 
@@ -78,13 +80,12 @@ export interface MotReminderResponse {
 export interface ReportEmailSubmission {
   email: string;
   registration: string;
-  postcode: string;
+  postcode?: string;
   vehicle_make?: string;
   vehicle_model?: string;
   vehicle_year?: number;
-  reliability_score: number;
-  mot_pass_prediction: number;
   failure_risk: number;
+  match_scope?: MatchScope;
   common_faults: { component: string; risk_level: string }[];
   repair_cost_min?: number;
   repair_cost_max?: number;
@@ -106,6 +107,7 @@ export type MotivatorCardType = 'COST_ESTIMATE' | 'MOT_COUNTDOWN' | 'REMINDER_PI
 
 export interface RecommendationInput {
   failureRisk: number;                // 0-1
+  hasVehicleComparison: boolean;
   repairCostEstimate?: { cost_min: number; cost_max: number; display: string };
   motExpired?: boolean;
   daysUntilMotExpiry?: number;        // undefined = unknown
@@ -167,9 +169,9 @@ export type MileageSource = 'user_entered' | 'observed_mot' | 'estimated' | 'mis
  * exactly, including the space in 'Very Low'). */
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low' | 'Very Low';
 
-/** Which backing store served the report's risk figure. Mirrors
+/** Exact source of the report's displayed risk figure. Mirrors
  * report_contract.PredictionSource. */
-export type PredictionSource = 'postgres' | 'sqlite' | 'unavailable';
+export type PredictionSource = 'postgres' | 'sqlite' | 'dataset_reference' | 'unavailable';
 
 /** Which backing store served the report's vehicle details. Mirrors
  * report_contract.VehicleDataSource. */
@@ -196,6 +198,7 @@ export type ApiErrorCode =
   | 'report_not_found'
   | 'report_expired'
   | 'storage_unavailable'
+  | 'idempotency_conflict'
   | 'undeclared_parameter';
 
 /** Vehicle identity fields shown on a report. Mirrors report_contract.ReportVehicle. */

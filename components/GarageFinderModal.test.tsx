@@ -75,15 +75,14 @@ describe('GarageFinderModal', () => {
     expect(payload.vehicle.mileage_source).toBe('observed_mot');
   });
 
-  it('derives reliability_score as 100 - Math.round(failure_risk * 100), and passes failure_risk through raw', async () => {
+  it('passes the failure rate without inventing a separate reliability score', async () => {
     const user = userEvent.setup();
     render(<GarageFinderModal isOpen onClose={vi.fn()} onSubmitSuccess={vi.fn()} report={fixtureExactHigh} />);
 
     await fillAndSubmit(user);
 
     const payload = submittedPayload();
-    const expected = 100 - Math.round(fixtureExactHigh.risk.failure_risk * 100);
-    expect(payload.risk_data.reliability_score).toBe(expected);
+    expect('reliability_score' in payload.risk_data).toBe(false);
     expect(payload.risk_data.failure_risk).toBe(fixtureExactHigh.risk.failure_risk);
   });
 
@@ -111,6 +110,7 @@ describe('GarageFinderModal', () => {
 
     const payload = submittedPayload();
     expect(payload.risk_data.top_risks).toEqual([]);
+    expect(payload.risk_data.match_scope).toBe('population_default');
   });
 
   it('sends the top 3 highest-risk component keys, ranked by magnitude, when components are available', async () => {
@@ -122,6 +122,8 @@ describe('GarageFinderModal', () => {
     const payload = submittedPayload();
     // fixtureExactHigh items: brakes .18, tyres .09, suspension .07 (already <=3, already descending)
     expect(payload.risk_data.top_risks).toEqual(['brakes', 'tyres', 'suspension']);
+    expect(screen.getByText(/comparison patterns, not diagnosed faults/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^areas of concern$/i)).not.toBeInTheDocument();
   });
 
   it('seeds the postcode field from the postcode prop but the field remains user-editable', () => {

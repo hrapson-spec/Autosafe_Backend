@@ -9,7 +9,7 @@ const TermsPage: React.FC = () => {
     <div className="min-h-screen bg-[#F0F0F0] text-slate-900">
       <Helmet>
         <title>Terms of Use | AutoSafe</title>
-        <meta name="description" content="Terms and conditions for using AutoSafe's free MOT prediction service. Our predictions are for information only." />
+        <meta name="description" content="Terms and conditions for AutoSafe's free MOT record and comparable-vehicle failure-rate service." />
         <link rel="canonical" href="https://www.autosafe.one/terms" />
       </Helmet>
       {/* Header */}
@@ -33,7 +33,7 @@ const TermsPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Terms of Use</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 18 January 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 11 July 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">1. About these terms</h2>
@@ -44,56 +44,55 @@ const TermsPage: React.FC = () => {
               AutoSafe is operated by Henri Rapson trading as AutoSafe.
             </p>
             <ul className="text-slate-600 space-y-1">
-              <li><strong>Contact:</strong> <a href="mailto:hello@autosafe.co.uk" className="text-blue-600 hover:underline">hello@autosafe.co.uk</a></li>
-              <li><strong>Address:</strong> [ADDRESS]</li>
+              <li><strong>Contact:</strong> <a href="mailto:autosafehq@gmail.com" className="text-blue-600 hover:underline">autosafehq@gmail.com</a></li>
             </ul>
           </section>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">2. What our service does</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              AutoSafe provides a free tool that predicts the likelihood of a vehicle passing or failing its next MOT test. We do this by analysing publicly available vehicle data from the DVSA (Driver and Vehicle Standards Agency).
+              AutoSafe provides recorded MOT details and the failure rate for the closest supported group of comparable vehicles in aggregated DVSA data. It does not inspect or diagnose the submitted vehicle.
             </p>
             <p className="text-slate-600 leading-relaxed mb-2">Our service:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside">
-              <li>Generates a risk assessment based on MOT history</li>
-              <li>Shows potential problem areas</li>
-              <li>Provides estimated repair cost ranges</li>
+              <li>Labels the mileage source, comparison scope and sample size</li>
+              <li>Shows component patterns only when the comparison data supports them</li>
+              <li>Provides indicative repair cost ranges only when supporting component data exists</li>
               <li>Is completely free to use</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">3. Predictions are not guarantees</h2>
+            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">3. Comparison rates are not guarantees</h2>
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
               <p className="font-medium text-amber-900">This is important - please read carefully.</p>
             </div>
             <p className="text-slate-600 leading-relaxed mb-4">
-              Our predictions are for information only. They are not a guarantee of any particular MOT outcome.
+              The displayed rates are aggregate comparison evidence for information only. They are not a guarantee of any particular MOT outcome.
             </p>
             <p className="text-slate-600 leading-relaxed mb-2">We cannot guarantee that:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
               <li>Your vehicle will pass or fail its MOT</li>
-              <li>Our risk assessments are accurate for your specific vehicle</li>
-              <li>Any identified issues will actually be present</li>
-              <li>Any issues not identified are absent</li>
+              <li>The comparison rate will reflect your vehicle's next result</li>
+              <li>A component pattern means that issue is present on your vehicle</li>
+              <li>The absence of a component pattern means the issue is absent</li>
             </ul>
             <p className="text-slate-600 leading-relaxed mb-2">Many factors affect MOT results that we cannot assess, including:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
               <li>The condition of parts we cannot see from data alone</li>
               <li>Recent repairs or maintenance you have done</li>
-              <li>The specific standards applied by individual MOT testers</li>
+              <li>The vehicle's condition at the time of its next physical test</li>
               <li>Wear and tear since the last MOT</li>
             </ul>
             <p className="text-slate-600 leading-relaxed font-medium">
-              You should not rely solely on our predictions when making decisions about your vehicle.
+              You should not rely solely on the comparison report when making decisions about your vehicle.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">4. Repair cost estimates</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              Any repair cost ranges we show are estimates only, based on typical UK prices.
+              Any repair cost ranges we show are estimates only, based on configured indicative component-price ranges.
             </p>
             <p className="text-slate-600 leading-relaxed mb-2">Actual costs vary significantly based on:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
@@ -111,10 +110,10 @@ const TermsPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">5. Third-party data</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              Our predictions are based on data from the DVSA MOT History service. This is publicly available data that we retrieve in real-time.
+              Vehicle details and recorded MOT information come from the DVSA MOT History service. Comparison rates come from aggregated official MOT records.
             </p>
             <p className="text-slate-600 leading-relaxed">
-              We do not control the accuracy or completeness of DVSA data. If the underlying data is incorrect, our predictions may be affected.
+              We do not control the accuracy or completeness of DVSA data. If the underlying data is incorrect, the report may be affected.
             </p>
           </section>
 
@@ -123,7 +122,7 @@ const TermsPage: React.FC = () => {
             <p className="text-slate-600 leading-relaxed mb-2">To the maximum extent permitted by law:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
               <li>We provide this service "as is" without any warranties</li>
-              <li>We are not liable for any losses arising from your use of our predictions</li>
+              <li>We are not liable for any losses arising from your use of the comparison report</li>
               <li>We are not liable for any decisions you make based on our service</li>
               <li>Our total liability to you is limited to &pound;100</li>
             </ul>
@@ -156,7 +155,7 @@ const TermsPage: React.FC = () => {
             <p className="text-slate-600 leading-relaxed mb-2">We own all intellectual property rights in:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
               <li>The AutoSafe website and its design</li>
-              <li>Our prediction algorithms and models</li>
+              <li>Our comparison logic, evidence presentation and software</li>
               <li>Our content and presentation</li>
             </ul>
             <p className="text-slate-600 leading-relaxed mb-4">
@@ -220,8 +219,7 @@ const TermsPage: React.FC = () => {
               If you have questions about these terms:
             </p>
             <ul className="text-slate-600 space-y-1">
-              <li><strong>Email:</strong> <a href="mailto:hello@autosafe.co.uk" className="text-blue-600 hover:underline">hello@autosafe.co.uk</a></li>
-              <li><strong>Address:</strong> [ADDRESS]</li>
+              <li><strong>Email:</strong> <a href="mailto:autosafehq@gmail.com" className="text-blue-600 hover:underline">autosafehq@gmail.com</a></li>
             </ul>
           </section>
         </article>

@@ -117,17 +117,17 @@ RISKS_COLUMNS = [
 #
 #   model_id                     age_band  mileage_band  Tests  Fails  FailRisk  Brakes  Susp  Tyres  Steer  Vis   Lamps  Body
 SEEDED_RISKS_ROWS = [
-    # -- exact_band target (step 1): the biggest sample for 3-5 / 30k-60k.
+    # -- exact_band target (step 1): two rows that must be combined with
+    #    sample-size weighting, matching the Postgres evidence ladder.
     ('TESTMAKE TESTMODEL',        '3-5',   '30k-60k',    500,   100,   0.20,     0.10,   0.04, 0.03,  0.02,  0.06, 0.025, 0.045),
     # -- same exact band, smaller sample, matched via the model_id LIKE
-    #    variant pattern -- proves step 1 picks the best row, not just any
-    #    matching row (also contributes to the step-3 aggregate below).
+    #    variant pattern -- proves step 1 aggregates every matching variant
+    #    (and also contributes to the step-3 aggregate below).
     ('TESTMAKE TESTMODEL VARIANT', '3-5',  '30k-60k',    50,    40,    0.80,     0.40,   0.10, 0.10,  0.10,  0.10, 0.10,  0.10),
     # -- age_band_only target (step 2): two rows at age 6-10, different
     #    mileage bands, neither of which is the band under test
     #    ('60k-100k') -- proves step 2 searches across mileage bands and
-    #    picks the bigger-sample row (200 tests), not a weighted average
-    #    of the two ((45+30)/(90+200) =/= either row's own Failure_Risk).
+    #    uses the same weighted aggregate as Postgres.
     ('TESTMAKE TESTMODEL',        '6-10',  '0-30k',      90,    45,    0.50,     0.25,   0.10, 0.10,  0.10,  0.10, 0.10,  0.10),
     ('TESTMAKE TESTMODEL',        '6-10',  '30k-60k',    200,   30,    0.15,     0.075,  0.10, 0.10,  0.10,  0.10, 0.10,  0.10),
     # -- model_average-only contributors (step 3): different age bands

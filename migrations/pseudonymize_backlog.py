@@ -3,18 +3,18 @@
 One-time backlog remediation: pseudonymise all `risk_checks` rows created
 before the corrected privacy notice went live.
 
-Per docs/LIA_RISK_CHECKS.md §5 and owner ruling D1 (2026-07-03): rows
+Per docs/LIA_RISK_CHECKS.md §6 and owner ruling D1 (2026-07-03): rows
 collected under the PRIOR, inaccurate privacy notice are remediated
 immediately -- rather than waiting out the normal 24-month retention
 horizon -- by pseudonymising them the same way the ongoing retention
 sweep does: HMAC the registration, null the plaintext PII/report fields,
-stamp pseudonymised_at. This LIA's P2 purpose (prediction-accuracy
-measurement) continues on the pseudonymised backlog, since it only needs
-a stable per-vehicle join key, not the plaintext VRN.
+stamp pseudonymised_at. The stable keyed digest may support a separately
+reviewed aggregate-quality workflow, but this migration neither implements nor
+approves any later-outcome source or linkage method.
 
 This script IMPLEMENTS that remediation (previously only a doc reference
 to a script that never existed in git history -- see docs/LIA_RISK_CHECKS.md
-§5). It has not been executed against production as of this RC; that run
+§6). It has not been executed against production as of this RC; that run
 is owner-scheduled, using the --before value below.
 
 --before is REQUIRED and must be supplied by the owner: it is the exact
@@ -163,14 +163,11 @@ def parse_before(value: str) -> datetime:
     datetime (matching risk_checks.created_at, a TIMESTAMP WITHOUT TIME
     ZONE column).
 
-    Python 3.9 -- this repo's production runtime, per the Dockerfile's
-    `FROM python:3.9-slim` -- cannot parse a trailing "Z" via
-    datetime.fromisoformat (that support landed in 3.11). The
-    owner-supplied value may well be "Z"-suffixed (e.g. copied from a JS
-    `Date.toISOString()`), so "Z" is rewritten to "+00:00" before
-    delegating to fromisoformat; any resulting offset is then converted to
-    UTC and the tzinfo dropped, to compare cleanly against the naive
-    `created_at` column.
+    A trailing "Z" is normalised explicitly to "+00:00" before delegating
+    to datetime.fromisoformat. This keeps the input rule unambiguous across
+    supported Python runtimes and handles values copied from a JavaScript
+    `Date.toISOString()`. Any resulting offset is converted to UTC and the
+    tzinfo dropped, to compare cleanly against the naive `created_at` column.
     """
     text = value.strip()
     if text.endswith("Z") or text.endswith("z"):
@@ -275,12 +272,24 @@ async def apply_batch(conn: Any, key: str, rows: List[Tuple[Any, Optional[str]]]
 
 
 async def run_verification(conn: Any, cutoff: datetime) -> Dict[str, int]:
-    """Post-run sanity checks -- see scripts/retention_sweep.py's version
-    for the full rationale on each check, including why (b) reports two
-    counts rather than the originally-specified (undeterminable)
-    had-a-registration split."""
-    stale_plaintext = await conn.fetchval(
-        "SELECT COUNT(*) FROM risk_checks WHERE created_at < $1 AND registration IS NOT NULL",
+    """Verify every field this migration promises to remove.
+
+    This intentionally mirrors the rolling sweep: checking only registration
+    or only the payload could report success while postcode or a live bearer
+    token remained on an old row.
+    """
+    stale_sensitive_fields = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM risk_checks
+        WHERE created_at < $1
+          AND (
+              registration IS NOT NULL
+              OR postcode IS NOT NULL
+              OR report_payload IS NOT NULL
+              OR report_token IS NOT NULL
+          )
+        /* stale sensitive fields */
+        """,
         cutoff,
     )
     pseudonymised_total = await conn.fetchval(
@@ -289,21 +298,31 @@ async def run_verification(conn: Any, cutoff: datetime) -> Dict[str, int]:
     pseudonymised_with_hmac = await conn.fetchval(
         "SELECT COUNT(*) FROM risk_checks WHERE pseudonymised_at IS NOT NULL AND vrm_hmac IS NOT NULL"
     )
-    pseudonymised_with_payload = await conn.fetchval(
-        "SELECT COUNT(*) FROM risk_checks WHERE pseudonymised_at IS NOT NULL AND report_payload IS NOT NULL"
+    pseudonymised_with_sensitive_fields = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM risk_checks
+        WHERE pseudonymised_at IS NOT NULL
+          AND (
+              registration IS NOT NULL
+              OR postcode IS NOT NULL
+              OR report_payload IS NOT NULL
+              OR report_token IS NOT NULL
+          )
+        /* pseudonymised sensitive fields */
+        """
     )
 
     print("\n--- Verification ---")
-    print(f"(a) rows < cutoff still with plaintext registration : {stale_plaintext}")
+    print(f"(a) rows < cutoff still with sensitive fields       : {stale_sensitive_fields}")
     print(f"(b) pseudonymised rows, total                        : {pseudonymised_total}")
     print(f"(b) pseudonymised rows with vrm_hmac set             : {pseudonymised_with_hmac}")
-    print(f"(c) pseudonymised rows with report_payload remaining : {pseudonymised_with_payload}")
+    print(f"(c) pseudonymised rows with sensitive fields         : {pseudonymised_with_sensitive_fields}")
 
     return {
-        "stale_plaintext": stale_plaintext,
+        "stale_sensitive_fields": stale_sensitive_fields,
         "pseudonymised_total": pseudonymised_total,
         "pseudonymised_with_hmac": pseudonymised_with_hmac,
-        "pseudonymised_with_payload": pseudonymised_with_payload,
+        "pseudonymised_with_sensitive_fields": pseudonymised_with_sensitive_fields,
     }
 
 
@@ -354,7 +373,7 @@ async def run_sweep(conn: Any, key: Optional[str], cutoff: datetime, batch_size:
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "One-time backlog remediation (docs/LIA_RISK_CHECKS.md §5 / "
+            "One-time backlog remediation (docs/LIA_RISK_CHECKS.md §6 / "
             "owner ruling D1): pseudonymise risk_checks rows created "
             "before the corrected privacy notice went live. --before is "
             "required. Dry-run (report only) by default."
@@ -395,7 +414,10 @@ async def _amain(args: argparse.Namespace) -> int:
     finally:
         await conn.close()
 
-    if args.execute and (result["stale_plaintext"] > 0 or result["pseudonymised_with_payload"] > 0):
+    if args.execute and (
+        result["stale_sensitive_fields"] > 0
+        or result["pseudonymised_with_sensitive_fields"] > 0
+    ):
         print("ERROR: post-execute verification failed -- see (a)/(c) above.", file=sys.stderr)
         return 1
     return 0

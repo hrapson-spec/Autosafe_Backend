@@ -50,6 +50,7 @@
           "report_not_found",
           "report_expired",
           "storage_unavailable",
+          "idempotency_conflict",
           "undeclared_parameter"
         ],
         "title": "ErrorCode",
@@ -375,6 +376,17 @@
             ],
             "title": "Failure Risk"
           },
+          "match_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Scope"
+          },
           "mot_expiry_date": {
             "anyOf": [
               {
@@ -387,8 +399,15 @@
             "title": "Mot Expiry Date"
           },
           "postcode": {
-            "title": "Postcode",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
           },
           "registration": {
             "title": "Registration",
@@ -430,17 +449,17 @@
         },
         "required": [
           "email",
-          "registration",
-          "postcode"
+          "registration"
         ],
         "title": "MotReminderSubmission",
         "type": "object"
       },
       "PredictionSource": {
-        "description": "Which backing store served the report's risk figure.",
+        "description": "Exact source of the report's displayed risk figure.",
         "enum": [
           "postgres",
           "sqlite",
+          "dataset_reference",
           "unavailable"
         ],
         "title": "PredictionSource",
@@ -483,6 +502,8 @@
             "anyOf": [
               {
                 "maxLength": 100,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:-]+$",
                 "type": "string"
               },
               {
@@ -533,7 +554,6 @@
         "description": "Pydantic model for email report request.",
         "properties": {
           "common_faults": {
-            "default": [],
             "items": {
               "additionalProperties": true,
               "type": "object"
@@ -571,6 +591,17 @@
             "title": "Failure Risk",
             "type": "number"
           },
+          "match_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Scope"
+          },
           "mot_expiry_date": {
             "anyOf": [
               {
@@ -582,21 +613,20 @@
             ],
             "title": "Mot Expiry Date"
           },
-          "mot_pass_prediction": {
-            "title": "Mot Pass Prediction",
-            "type": "integer"
-          },
           "postcode": {
-            "title": "Postcode",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
           },
           "registration": {
             "title": "Registration",
             "type": "string"
-          },
-          "reliability_score": {
-            "title": "Reliability Score",
-            "type": "integer"
           },
           "repair_cost_max": {
             "anyOf": [
@@ -657,9 +687,6 @@
         "required": [
           "email",
           "registration",
-          "postcode",
-          "reliability_score",
-          "mot_pass_prediction",
           "failure_risk"
         ],
         "title": "ReportEmailSubmission",
@@ -697,6 +724,7 @@
           "total_failures": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -708,6 +736,7 @@
           "total_tests": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -739,6 +768,7 @@
           "effective_value": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "integer"
               },
               {
@@ -840,14 +870,17 @@
         "description": "Indicative repair cost estimate, when one can be produced.",
         "properties": {
           "expected": {
+            "minimum": 0.0,
             "title": "Expected",
             "type": "integer"
           },
           "range_high": {
+            "minimum": 0.0,
             "title": "Range High",
             "type": "integer"
           },
           "range_low": {
+            "minimum": 0.0,
             "title": "Range Low",
             "type": "integer"
           }
@@ -1074,6 +1107,17 @@
             ],
             "title": "Failure Risk"
           },
+          "match_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Scope"
+          },
           "reliability_score": {
             "anyOf": [
               {
@@ -1105,6 +1149,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -1169,6 +1220,17 @@
             ],
             "title": "Mileage"
           },
+          "mileage_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage Source"
+          },
           "model": {
             "anyOf": [
               {
@@ -1198,7 +1260,7 @@
     }
   },
   "info": {
-    "description": "MOT Risk Prediction API",
+    "description": "Recorded MOT details and comparable-vehicle evidence API",
     "title": "AutoSafe API",
     "version": "2.0.0"
   },
@@ -2111,6 +2173,16 @@
             },
             "description": "Not Found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -2298,7 +2370,7 @@
     },
     "/api/version": {
       "get": {
-        "description": "Build/version identifiers for release verification (backend_sha,\nfrontend_bundle_hash, contract_version, app_version, started_at).\nNo rate limit: cheap, near-static data safe for frequent polling by\nrelease/monitoring tooling. Payload assembly lives in report_routes.py\n(build_version_info) -- see this file's v2-import comment near the\nLimiter setup for why.",
+        "description": "Build/version identifiers for release verification (backend/frontend\nSHA, frontend bundle hash, build timestamp, contract/app version, started_at).\nNo rate limit: cheap, near-static data safe for frequent polling by\nrelease/monitoring tooling. Payload assembly lives in report_routes.py\n(build_version_info) -- see this file's v2-import comment near the\nLimiter setup for why.",
         "operationId": "get_version_api_version_get",
         "responses": {
           "200": {
@@ -2917,7 +2989,7 @@
     },
     "/sitemap-local.xml": {
       "get": {
-        "description": "Sub-sitemap: local MOT pages.",
+        "description": "Retired local-page sitemap; point crawlers to the live index.",
         "operationId": "sitemap_local_sitemap_local_xml_get",
         "responses": {
           "200": {
