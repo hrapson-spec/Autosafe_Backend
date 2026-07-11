@@ -102,8 +102,7 @@ services:
     command: >
       sh -c "
         python3 scripts/seed_staging_data.py &&
-        python3 scripts/staging_acceptance.py --base-url http://app:8000
-          --expected-backend-sha ${GIT_SHA:-unknown} &&
+        python3 scripts/staging_acceptance.py --base-url http://app:8000 --expected-share-base-url http://127.0.0.1:8100 --expected-backend-sha ${GIT_SHA:-unknown} &&
         python3 scripts/retention_sweep.py --months 1 &&
         python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
         python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&

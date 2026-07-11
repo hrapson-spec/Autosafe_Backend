@@ -111,8 +111,10 @@ requires it. Production-only credentials remain absent from local staging.
 `scripts/staging_acceptance.py` checks health/readiness/version identity,
 frontend bundle hashing, OpenAPI/legacy route shape, report create/persist,
 idempotent replay and conflict, retrieval, expiry/error taxonomy, normalisation,
-and real PostgreSQL evidence selection. PostgreSQL and SQLite are expected to
-use the same weighted cohort arithmetic; only their declared source differs.
+the configured public share-link base (separately from any internal container
+transport address), and real PostgreSQL evidence selection. PostgreSQL and
+SQLite are expected to use the same weighted cohort arithmetic; only their
+declared source differs.
 
 Playwright covers browser lifecycle and sharing separately against the built
 SPA. Railway source stripping, proxy logs, public routing, and consent behaviour

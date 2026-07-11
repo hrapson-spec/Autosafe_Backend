@@ -7,7 +7,7 @@ from typing import Optional
 import httpx
 import pytest
 
-from scripts.staging_acceptance import check_version
+from scripts.staging_acceptance import check_demo_post, check_version
 from scripts.seed_staging_data import (
     MOT_RISK_FIXTURE_MODEL,
     WIPE_RISK_CHECKS_SQL,
@@ -117,6 +117,31 @@ def test_version_check_rejects_missing_build_timestamp():
 
     with pytest.raises(AssertionError, match="build_timestamp"):
         asyncio.run(run_check())
+
+
+def test_demo_post_validates_the_public_share_base_not_the_internal_transport():
+    response = {
+        "vehicle_data_source": "demo",
+        "mileage": {"source": "observed_mot"},
+        "evidence": {"match_scope": "population_default", "total_tests": None},
+        "risk": {"confidence": "Very Low"},
+        "persistence": {"saved": True},
+        "report_token": "opaque-token",
+        "share_url": "http://public-staging/app/report/opaque-token",
+        "prediction_source": "dataset_reference",
+    }
+
+    async def run_check():
+        transport = httpx.MockTransport(
+            lambda _request: httpx.Response(200, json=response)
+        )
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://internal-app:8000",
+        ) as client:
+            return await check_demo_post(client, "http://public-staging")
+
+    assert asyncio.run(run_check()) == response
 
 
 def test_seeded_saved_payloads_share_the_database_row_identity():

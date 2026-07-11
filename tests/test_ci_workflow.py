@@ -91,3 +91,8 @@ def test_staging_stack_bootstraps_assignment_tables_and_gates_retention():
     assert "python3 scripts/lead_retention_sweep.py --months 1" in compose
     assert "python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50" in compose
     assert "VRM_HMAC_KEY:" in compose.split("  acceptance:\n", 1)[1]
+    assert (
+        "python3 scripts/staging_acceptance.py --base-url http://app:8000 "
+        "--expected-share-base-url http://127.0.0.1:8100 "
+        "--expected-backend-sha ${GIT_SHA:-unknown}"
+    ) in compose

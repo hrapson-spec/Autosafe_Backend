@@ -210,7 +210,9 @@ async def check_openapi(client: httpx.AsyncClient) -> Dict:
 # 4c: demo-mode POST /api/v2/reports
 # ---------------------------------------------------------------------------
 
-async def check_demo_post(client: httpx.AsyncClient, base_url: str) -> Dict:
+async def check_demo_post(
+    client: httpx.AsyncClient, expected_share_base_url: str
+) -> Dict:
     payload = {"registration": "ZZ99ABC", "postcode": "ZZ1 1ZZ"}
     r = await client.post("/api/v2/reports", json=payload)
     assert r.status_code == 200, f"status={r.status_code} body={r.text}"
@@ -229,7 +231,9 @@ async def check_demo_post(client: httpx.AsyncClient, base_url: str) -> Dict:
     assert body["risk"]["confidence"] in ("High", "Medium", "Low", "Very Low"), body["risk"]
     assert body["persistence"]["saved"] is True, body["persistence"]
     assert body["report_token"], "report_token was falsy"
-    assert body["share_url"] and body["share_url"].startswith(base_url), body["share_url"]
+    assert body["share_url"] and body["share_url"].startswith(
+        expected_share_base_url.rstrip("/") + "/"
+    ), body["share_url"]
     if match_scope in ("population_default", "unavailable"):
         assert body["prediction_source"] == "dataset_reference", (
             f"degraded scope {match_scope!r} displays the checked-in aggregate, "
@@ -556,6 +560,7 @@ async def main_async(args: argparse.Namespace) -> int:
         expect_frontend_bundle = os.path.exists(os.path.join(REPO_ROOT, "static", "index.html"))
     else:
         expect_frontend_bundle = args.expect_frontend_bundle == "true"
+    expected_share_base_url = args.expected_share_base_url or args.base_url
 
     try:
         async with httpx.AsyncClient(base_url=args.base_url, timeout=30.0) as client:
@@ -571,7 +576,8 @@ async def main_async(args: argparse.Namespace) -> int:
             )
 
             created = await runner.run(
-                "4c-demo-post", "POST /api/v2/reports demo flow", check_demo_post(client, args.base_url)
+                "4c-demo-post", "POST /api/v2/reports demo flow",
+                check_demo_post(client, expected_share_base_url),
             )
             await runner.run(
                 "4d-db-row", "risk_checks row for the created report token",
@@ -626,6 +632,12 @@ async def main_async(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="AutoSafe staging acceptance-evidence suite.")
     parser.add_argument("--base-url", required=True, help="e.g. http://127.0.0.1:8100")
+    parser.add_argument(
+        "--expected-share-base-url",
+        default=None,
+        help="Public BASE_URL expected in returned share links. Defaults to --base-url; "
+             "set it when the acceptance client uses an internal service address.",
+    )
     parser.add_argument(
         "--expect-frontend-bundle", choices=["auto", "true", "false"], default="auto",
         help="Whether GET /api/version's frontend_bundle_hash should be non-null. "
