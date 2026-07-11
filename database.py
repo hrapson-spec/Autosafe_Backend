@@ -5,6 +5,7 @@ Uses DATABASE_URL environment variable from Railway.
 import os
 import re
 from typing import List, Dict, Optional
+from utils import hash_vrm, mask_postcode
 
 
 def _clamp_risk(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
@@ -340,7 +341,7 @@ async def save_lead(lead_data: Dict) -> Optional[str]:
 
             lead_id = str(result['id'])
             # Log lead saved with postcode (needed for ops) but no email/name/phone
-            logger.info(f"Lead saved: id={lead_id} postcode={lead_data.get('postcode')} make={vehicle.get('make')} model={vehicle.get('model')}")
+            logger.info(f"Lead saved: id={lead_id} postcode={mask_postcode(lead_data.get('postcode'))} make={vehicle.get('make')} model={vehicle.get('model')}")
             return lead_id
 
     except Exception as e:
@@ -475,7 +476,7 @@ async def save_garage(garage_data: Dict) -> Optional[str]:
             )
 
             garage_id = str(result['id'])
-            logger.info(f"Garage saved: {garage_data.get('name')} ({garage_data.get('postcode')})")
+            logger.info(f"Garage saved: {garage_data.get('name')} ({mask_postcode(garage_data.get('postcode'))})")
             return garage_id
 
     except Exception as e:
@@ -864,7 +865,7 @@ async def save_risk_check(risk_data: Dict) -> Optional[str]:
             )
 
             risk_check_id = str(result['id'])
-            logger.info(f"Risk check logged: postcode={risk_data.get('postcode')} make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
+            logger.info(f"Risk check logged: postcode={mask_postcode(risk_data.get('postcode'))} make={risk_data.get('vehicle_make')} model={risk_data.get('vehicle_model')}")
             return risk_check_id
 
     except Exception as e:
@@ -886,7 +887,7 @@ def _backup_risk_check_to_file(risk_data: Dict):
                 entry[k] = v.isoformat()
         with open(backup_path, "a") as f:
             f.write(json.dumps(entry) + "\n")
-        logger.info(f"Risk check backed up to file: {risk_data.get('registration')}")
+        logger.info(f"Risk check backed up to file: {hash_vrm(risk_data.get('registration')) if risk_data.get('registration') else 'none'}")
     except Exception as e:
         logger.error(f"Failed to backup risk check to file: {e}")
 
@@ -954,7 +955,7 @@ async def save_mot_reminder(data: Dict) -> Dict:
             )
 
             lead_id = str(result['id'])
-            logger.info(f"MOT reminder saved: id={lead_id} registration={registration}")
+            logger.info(f"MOT reminder saved: id={lead_id} registration={hash_vrm(registration)}")
             return {"success": True, "already_subscribed": False, "lead_id": lead_id}
 
     except Exception as e:

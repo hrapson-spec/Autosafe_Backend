@@ -1,6 +1,8 @@
 """
-Utility functions for age and mileage band calculations.
+Utility functions for age/mileage band calculations and privacy-safe
+logging helpers (VRM hashing, postcode masking).
 """
+import hashlib
 from typing import Optional, Union
 import pandas as pd
 
@@ -60,3 +62,34 @@ def get_mileage_band(miles: Optional[Union[int, float]]) -> str:
     if miles < 100000:
         return '60k-100k'
     return '100k+'
+
+
+def hash_vrm(vrm: str) -> str:
+    """Hash VRM for logging to protect privacy (P1-10 fix)."""
+    return hashlib.sha256(vrm.encode()).hexdigest()[:8]
+
+
+def mask_postcode(postcode) -> str:
+    """
+    Mask a postcode's inward code for safe logging (outward code only).
+
+    For log redaction only -- never use this for storage, matching, or
+    display. The full postcode must still be persisted/used elsewhere;
+    this helper only produces a coarse value safe to place in log lines.
+
+    Args:
+        postcode: Raw postcode value (can be None, empty, non-str, or a
+            UK postcode string, with or without the space, any case).
+
+    Returns:
+        The outward code (e.g. "SW1A 1AA" -> "SW1A", "sw1a1aa" -> "SW1A",
+        "M1 1AE" -> "M1") upper-cased with surrounding whitespace
+        trimmed, or "***" if the input is None, empty, non-str, or too
+        short to safely mask (<=3 chars remaining after stripping).
+    """
+    if not isinstance(postcode, str) or not postcode.strip():
+        return "***"
+    cleaned = postcode.strip().upper()
+    if len(cleaned) > 3:
+        return cleaned[:-3].strip()
+    return "***"

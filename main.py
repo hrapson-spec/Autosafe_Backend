@@ -21,7 +21,7 @@ import secrets
 
 # Import database module for fallback
 import database as db
-from utils import get_age_band, get_mileage_band
+from utils import get_age_band, get_mileage_band, hash_vrm
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
@@ -42,7 +42,6 @@ import model_v55
 
 import logging
 import sys
-import hashlib
 
 # Configure structured logging
 logging.basicConfig(
@@ -293,11 +292,6 @@ def get_real_client_ip(request: Request) -> str:
 limiter = Limiter(key_func=get_real_client_ip)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-
-def hash_vrm(vrm: str) -> str:
-    """Hash VRM for logging to protect privacy (P1-10 fix)."""
-    return hashlib.sha256(vrm.encode()).hexdigest()[:8]
 
 
 # Dynamic year validation - current year + 1 (P2-1 fix)
