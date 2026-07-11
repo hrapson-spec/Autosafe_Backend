@@ -47,6 +47,7 @@ dist-ssr
 # untracks the previously-committed copies)
 /static/index.html
 /static/assets/
+e2e-artifacts/
 
 # Logs
 logs

@@ -84,7 +84,6 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistr
           maxLength={8}
           uppercase
           required
-          aria-label="Enter registration for MOT history check"
         />
 
         <Input
