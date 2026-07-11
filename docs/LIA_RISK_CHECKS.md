@@ -82,8 +82,10 @@ All `risk_checks` rows created before the corrected notice went live were
 collected under an inaccurate transparency statement. Remediation (owner
 ruling D1): immediately pseudonymise the backlog — replace plaintext VRN with
 its HMAC and null the postcode — rather than waiting for the 24-month
-horizon. Executed by `migrations/pseudonymize_vrm.py` (task 2.2); this LIA's
-P2 purpose continues on the pseudonymised backlog (fingerprint linkage does
+horizon. Implemented in `migrations/pseudonymize_backlog.py` (task 2.2);
+execution against production is pending an owner-supplied `--before` cutoff
+(the moment the corrected notice went live) and owner-run. This LIA's P2
+purpose continues on the pseudonymised backlog (fingerprint linkage does
 not require the plaintext VRN).
 
 ## 6. Review
