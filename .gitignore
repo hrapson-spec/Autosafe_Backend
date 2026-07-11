@@ -48,6 +48,8 @@ dist-ssr
 /static/index.html
 /static/assets/
 e2e-artifacts/
+playwright-report/
+test-results/
 
 # Logs
 logs

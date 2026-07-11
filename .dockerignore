@@ -23,3 +23,6 @@ __pycache__/
 # two patterns and continue to come from the build context as before.
 static/index.html
 static/assets/
+e2e-artifacts/
+playwright-report/
+test-results/

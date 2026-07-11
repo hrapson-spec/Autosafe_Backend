@@ -30,6 +30,7 @@
   },
   "include": [
     "App.tsx",
+    "App.test.tsx",
     "index.tsx",
     "types.ts",
     "vite.config.ts",

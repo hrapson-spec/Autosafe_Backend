@@ -8,6 +8,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 const appFiles = [
   'App.tsx',
+  'App.test.tsx',
   'index.tsx',
   'types.ts',
   'vite.config.ts',
