@@ -5,6 +5,7 @@ from pathlib import Path
 
 WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "ci.yml"
 DOCKERFILE = Path(__file__).parents[1] / "Dockerfile"
+STAGING_COMPOSE = Path(__file__).parents[1] / "docker-compose.staging.yml"
 
 
 def _staging_job() -> str:
@@ -78,3 +79,15 @@ def test_internal_link_sweep_is_a_hard_ci_gate():
     assert "python check_internal_links.py" in test_job
     link_step = test_job.split("python check_internal_links.py", 1)[1]
     assert "continue-on-error: true" not in link_step.split("\n      - name:", 1)[0]
+
+
+def test_staging_stack_bootstraps_assignment_tables_and_gates_retention():
+    compose = STAGING_COMPOSE.read_text()
+
+    assert "python3 create_garages_table.py" in compose
+    assert "python3 scripts/seed_staging_data.py" in compose
+    assert "python3 scripts/retention_sweep.py --months 1" in compose
+    assert "python3 scripts/retention_sweep.py --months 1 --execute --batch 50" in compose
+    assert "python3 scripts/lead_retention_sweep.py --months 1" in compose
+    assert "python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50" in compose
+    assert "VRM_HMAC_KEY:" in compose.split("  acceptance:\n", 1)[1]

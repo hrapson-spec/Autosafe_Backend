@@ -28,6 +28,7 @@ export BUILD_TIMESTAMP
 
 python create_risk_checks_table.py
 python create_leads_table.py
+python create_garages_table.py
 python migrations/add_report_contract_columns.py
 python scripts/seed_staging_data.py
 python build_db.py
@@ -58,20 +59,24 @@ docker rm autosafe-rc-staging-pg
 
 ## Retention rehearsal
 
-Seed synthetic check records, leads, and lead assignments older than one month,
-then run both jobs against the disposable database:
+`scripts/seed_staging_data.py` creates deterministic synthetic check records,
+leads, a garage, and lead assignments on both sides of a one-month cutoff.
+Run both jobs against the disposable database:
 
 ```bash
 python scripts/retention_sweep.py --months 1
 python scripts/retention_sweep.py --months 1 --execute --batch 50
+python scripts/retention_sweep.py --months 1 --execute --batch 50
 python scripts/lead_retention_sweep.py --months 1
+python scripts/lead_retention_sweep.py --months 1 --execute --batch 50
 python scripts/lead_retention_sweep.py --months 1 --execute --batch 50
 ```
 
 Required evidence: dry runs mutate nothing; check execution removes plaintext
 VRN/postcode/payload/token and leaves the keyed digest; lead execution deletes
-assignments before leads; both verification queries report zero stale rows; no
-output contains the seeded identifiers or contact data.
+assignments before leads; both verification queries report zero stale rows;
+the second execute is idempotent (zero mutations); retention-job output may
+show internal UUIDs for auditability but never seeded contact data.
 
 ## GitHub clean-image path
 

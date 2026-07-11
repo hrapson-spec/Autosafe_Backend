@@ -48,6 +48,7 @@ services:
       sh -c "
         python3 create_risk_checks_table.py &&
         python3 create_leads_table.py &&
+        python3 create_garages_table.py &&
         python3 migrations/add_report_contract_columns.py
       "
     environment:
@@ -102,12 +103,19 @@ services:
       sh -c "
         python3 scripts/seed_staging_data.py &&
         python3 scripts/staging_acceptance.py --base-url http://app:8000
-          --expected-backend-sha ${GIT_SHA:-unknown}
+          --expected-backend-sha ${GIT_SHA:-unknown} &&
+        python3 scripts/retention_sweep.py --months 1 &&
+        python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/lead_retention_sweep.py --months 1 &&
+        python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50
       "
     environment:
       DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
       BASE_URL: http://app:8000
       GIT_SHA: ${GIT_SHA:-unknown}
+      VRM_HMAC_KEY: ${VRM_HMAC_KEY:-staging_only_hmac_key_min_32_chars_ok}
     depends_on:
       app:
         condition: service_healthy

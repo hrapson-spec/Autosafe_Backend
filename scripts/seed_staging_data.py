@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Seed synthetic risk_checks rows into a staging Postgres database.
+Seed synthetic release-acceptance rows into a staging Postgres database.
 
 Feeds two consumers:
   - scripts/staging_acceptance.py (the GET-token 200/410 checks need two
@@ -12,7 +12,9 @@ Synthetic data ONLY: fake ZZ-prefixed VRMs, fake ZZ# #ZZ postcodes, a fake
 'ZZTEST' make/'MODEL' model. Never point this at a real database -- it is a
 staging/CI-only tool, not a production migration.
 
-Seeds, in one run (~32 rows total):
+Seeds, in one run:
+  - A six-row ``mot_risk`` fixture for the real PostgreSQL evidence ladder.
+    Its exact-band cohort is pinned to 500 tests / 120 failures / 24%.
   - 20 "recent" rows (created_at spread over the last ~20 days): 16 v1-shaped
     (no report_token/contract columns -- simulates pre-v2-release data,
     still readable by legacy /api/admin/export-risk-checks) and 4 v2-shaped
@@ -32,6 +34,9 @@ Seeds, in one run (~32 rows total):
                                                               path than the
                                                               retention-swept
                                                               rows above)
+  - Five synthetic leads (three older than one month, two recent), one
+    synthetic garage, and one assignment per lead for the deletion-order
+    retention rehearsal.
 
 report_payload is built via the real report_contract.py pydantic models
 (never hand-rolled JSON), so every v2-shaped seeded row round-trips through
@@ -77,6 +82,168 @@ BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8100")
 N_RECENT = 20
 N_OLD = 10
 RETENTION_MONTHS = 24  # matches scripts/retention_sweep.py's DEFAULT_RETENTION_MONTHS
+MOT_RISK_FIXTURE_MODEL = "ZZTEST MODEL"
+
+STAGING_GARAGE_ID = uuid.UUID("00000000-0000-4000-8000-000000000100")
+STAGING_LEAD_IDS = tuple(
+    uuid.UUID(f"00000000-0000-4000-8000-{i:012d}") for i in range(201, 206)
+)
+STAGING_ASSIGNMENT_IDS = tuple(
+    uuid.UUID(f"00000000-0000-4000-8000-{i:012d}") for i in range(301, 306)
+)
+
+
+MOT_RISK_DDL = """
+    CREATE TABLE IF NOT EXISTS mot_risk (
+        model_id VARCHAR(255),
+        age_band VARCHAR(255),
+        mileage_band VARCHAR(255),
+        total_tests INTEGER,
+        total_failures INTEGER,
+        failure_risk REAL,
+        risk_brakes REAL,
+        risk_suspension REAL,
+        risk_tyres REAL,
+        risk_steering REAL,
+        risk_visibility REAL,
+        risk_lamps_reflectors_and_electrical_equipment REAL,
+        risk_body_chassis_structure REAL
+    )
+"""
+
+MOT_RISK_INSERT_SQL = """
+    INSERT INTO mot_risk (
+        model_id, age_band, mileage_band, total_tests, total_failures,
+        failure_risk, risk_brakes, risk_suspension, risk_tyres,
+        risk_steering, risk_visibility,
+        risk_lamps_reflectors_and_electrical_equipment,
+        risk_body_chassis_structure
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+"""
+
+WIPE_RISK_CHECKS_SQL = """
+    DELETE FROM risk_checks
+    WHERE registration LIKE 'ZZ%' OR vehicle_make = 'ZZTEST'
+"""
+
+
+def build_mot_risk_fixture():
+    """Return the deterministic synthetic cohorts used by acceptance.
+
+    Only the ``ZZTEST MODEL`` namespace is replaced, so this remains safe
+    alongside a fuller staging copy of ``mot_risk``.
+    """
+    return [
+        (
+            MOT_RISK_FIXTURE_MODEL, "3-5", "30k-60k", 500, 120, 0.24,
+            0.08, 0.06, 0.05, 0.02, 0.03, 0.07, 0.04,
+        ),
+        (
+            MOT_RISK_FIXTURE_MODEL, "3-5", "0-30k", 200, 40, 0.20,
+            0.06, 0.05, 0.04, 0.01, 0.02, 0.05, 0.03,
+        ),
+        (
+            MOT_RISK_FIXTURE_MODEL, "3-5", "60k-100k", 300, 90, 0.30,
+            0.10, 0.08, 0.07, 0.03, 0.04, 0.09, 0.05,
+        ),
+        (
+            MOT_RISK_FIXTURE_MODEL, "6-10", "30k-60k", 400, 120, 0.30,
+            0.10, 0.09, 0.06, 0.03, 0.04, 0.08, 0.06,
+        ),
+        (
+            MOT_RISK_FIXTURE_MODEL, "0-2", "0-30k", 100, 15, 0.15,
+            0.04, 0.03, 0.03, 0.01, 0.02, 0.04, 0.02,
+        ),
+        (
+            MOT_RISK_FIXTURE_MODEL, "11-15", "100k+", 250, 100, 0.40,
+            0.14, 0.12, 0.09, 0.04, 0.05, 0.11, 0.08,
+        ),
+    ]
+
+
+def build_lead_fixture(now: datetime):
+    """Return deterministic, manifestly synthetic lead-retention rows."""
+    garage = (
+        STAGING_GARAGE_ID,
+        "RC1 Synthetic Garage",
+        "rc1-garage@staging.invalid",
+        "ZZ1 1ZZ",
+        now - timedelta(days=90),
+    )
+    ages = (45, 60, 75, 5, 10)
+    leads = [
+        (
+            lead_id,
+            f"rc1-lead-{i}@staging.invalid",
+            f"ZZ{i + 1} {i + 1}ZZ",
+            "RC1 Synthetic Lead",
+            "garage",
+            "ZZTEST",
+            "MODEL",
+            True,
+            now - timedelta(days=ages[i]),
+        )
+        for i, lead_id in enumerate(STAGING_LEAD_IDS)
+    ]
+    assignments = [
+        (
+            assignment_id,
+            lead_id,
+            STAGING_GARAGE_ID,
+            now - timedelta(days=ages[i]),
+        )
+        for i, (assignment_id, lead_id) in enumerate(
+            zip(STAGING_ASSIGNMENT_IDS, STAGING_LEAD_IDS)
+        )
+    ]
+    return garage, leads, assignments
+
+
+async def seed_mot_risk_fixture(conn) -> int:
+    await conn.execute(MOT_RISK_DDL)
+    await conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mot_risk_model_age_mileage "
+        "ON mot_risk(model_id, age_band, mileage_band)"
+    )
+    await conn.execute("DELETE FROM mot_risk WHERE model_id = $1", MOT_RISK_FIXTURE_MODEL)
+    rows = build_mot_risk_fixture()
+    await conn.executemany(MOT_RISK_INSERT_SQL, rows)
+    return len(rows)
+
+
+async def seed_lead_fixture(conn, now: datetime) -> int:
+    """Replace only fixed-ID staging fixtures; never match ordinary rows."""
+    garage, leads, assignments = build_lead_fixture(now)
+    await conn.execute(
+        "DELETE FROM lead_assignments WHERE lead_id = ANY($1::uuid[])",
+        list(STAGING_LEAD_IDS),
+    )
+    await conn.execute("DELETE FROM leads WHERE id = ANY($1::uuid[])", list(STAGING_LEAD_IDS))
+    await conn.execute("DELETE FROM garages WHERE id = $1", STAGING_GARAGE_ID)
+    await conn.execute(
+        """
+        INSERT INTO garages (id, name, email, postcode, created_at)
+        VALUES ($1, $2, $3, $4, $5)
+        """,
+        *garage,
+    )
+    await conn.executemany(
+        """
+        INSERT INTO leads (
+            id, email, postcode, name, lead_type, vehicle_make,
+            vehicle_model, consent_given, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        """,
+        leads,
+    )
+    await conn.executemany(
+        """
+        INSERT INTO lead_assignments (id, lead_id, garage_id, created_at)
+        VALUES ($1, $2, $3, $4)
+        """,
+        assignments,
+    )
+    return len(leads)
 
 
 def _share_url(token: str) -> str:
@@ -260,13 +427,12 @@ async def _amain(wipe_first: bool) -> int:
 
     conn = await asyncpg.connect(get_database_url())
     try:
-        if wipe_first:
-            deleted = await conn.execute(
-                "DELETE FROM risk_checks WHERE registration LIKE 'ZZ%' OR vrm_hmac IS NOT NULL"
-            )
-            print(f"--wipe-first: {deleted}")
-
         async with conn.transaction():
+            deleted = None
+            if wipe_first:
+                deleted = await conn.execute(WIPE_RISK_CHECKS_SQL)
+            mot_risk_n = await seed_mot_risk_fixture(conn)
+            lead_n = await seed_lead_fixture(conn, now)
             for row in rows:
                 await conn.execute(INSERT_SQL, *row)
 
@@ -279,10 +445,14 @@ async def _amain(wipe_first: bool) -> int:
     finally:
         await conn.close()
 
+    if deleted is not None:
+        print(f"--wipe-first: {deleted}")
     print("Seed summary:")
+    print(f"  mot_risk fixture rows : {mot_risk_n}")
     print(f"  rows inserted this run : {len(rows)}")
+    print(f"  lead fixture rows : {lead_n}")
     print(f"  risk_checks total rows : {total}")
-    print(f"  rows created_at < 25d ago : {recent_n}")
+    print(f"  rows created within 25 days : {recent_n}")
     print(f"  rows older than 24 months w/ registration+token : {old_n}")
     print(f"  FUTURE_TOKEN (registration=ZZ01FUT) = {future_token}")
     print(f"  PAST_TOKEN   (registration=ZZ02PST) = {past_token}")
@@ -293,7 +463,7 @@ def main():
     parser = argparse.ArgumentParser(description="Seed synthetic staging risk_checks rows.")
     parser.add_argument(
         "--wipe-first", action="store_true",
-        help="Delete existing ZZ*-registration / pseudonymised rows before seeding (safe re-run).",
+        help="Delete existing synthetic risk-check rows before seeding (safe re-run).",
     )
     args = parser.parse_args()
     return asyncio.run(_amain(args.wipe_first))
