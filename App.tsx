@@ -60,6 +60,7 @@ const App: React.FC = () => {
   };
 
   // Main home page content
+  // eslint-disable-next-line react/no-unstable-nested-components -- known defect: HomePage hoist lands in Wave 4; this suppression MUST be removed by that change
   const HomePage = () => (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>

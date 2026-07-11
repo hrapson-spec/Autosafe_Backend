@@ -302,13 +302,21 @@ export function transformToCarReport(data: BackendRiskResponse): CarReport {
     data.Repair_Cost_Estimate?.cost_mid ??
     Math.round(data.Failure_Risk * 800 + 150); // Fallback estimate
 
-  // Pass through full cost data if available, mapping backend → frontend field names
-  const repairCostEstimate = data.Repair_Cost_Estimate ? {
-    cost_min: data.Repair_Cost_Estimate.range_low ?? data.Repair_Cost_Estimate.cost_min,
-    cost_mid: data.Repair_Cost_Estimate.expected ?? data.Repair_Cost_Estimate.cost_mid,
-    cost_max: data.Repair_Cost_Estimate.range_high ?? data.Repair_Cost_Estimate.cost_max,
-    display: data.Repair_Cost_Estimate.display || 'if your vehicle fails its MOT',
-    disclaimer: data.Repair_Cost_Estimate.disclaimer || 'Estimate based on common repair costs for similar vehicles'
+  // Pass through full cost data if available, mapping backend → frontend field names.
+  // Guard: only build the object when all three numeric fields actually resolved to a
+  // number. Repair_Cost_Estimate's sub-fields are all optional on the wire, but
+  // RepairCostEstimate (types.ts) requires cost_min/cost_mid/cost_max — asserting
+  // undefined into those under strictNullChecks would just move the bug to render time
+  // (e.g. ReportDashboard rendering "£undefined"), so fall back to undefined instead.
+  const costMin = data.Repair_Cost_Estimate?.range_low ?? data.Repair_Cost_Estimate?.cost_min;
+  const costMid = data.Repair_Cost_Estimate?.expected ?? data.Repair_Cost_Estimate?.cost_mid;
+  const costMax = data.Repair_Cost_Estimate?.range_high ?? data.Repair_Cost_Estimate?.cost_max;
+  const repairCostEstimate = (costMin !== undefined && costMid !== undefined && costMax !== undefined) ? {
+    cost_min: costMin,
+    cost_mid: costMid,
+    cost_max: costMax,
+    display: data.Repair_Cost_Estimate?.display || 'if your vehicle fails its MOT',
+    disclaimer: data.Repair_Cost_Estimate?.disclaimer || 'Estimate based on common repair costs for similar vehicles'
   } : undefined;
 
   return {
@@ -397,7 +405,7 @@ export async function getReportBySelection(
 // Lead Capture
 // ============================================================================
 
-import { GarageLeadSubmission, GarageLeadResponse } from '../types';  // eslint-disable-line
+import { GarageLeadSubmission, GarageLeadResponse } from '../types';
 
 /**
  * Submit a garage lead to the backend.
