@@ -36,10 +36,21 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistr
   const [registration, setRegistration] = useState(initialRegistration);
   const [postcode, setPostcode] = useState('');
   const [touched, setTouched] = useState({ registration: false, postcode: false });
+  // Edit-lock: once the user has typed into the registration field, a
+  // changed initialRegistration prop (e.g. a parent re-render triggered by
+  // something unrelated) must never overwrite what they've typed.
+  const [userEdited, setUserEdited] = useState(false);
 
   useEffect(() => {
-    setRegistration(initialRegistration);
-  }, [initialRegistration]);
+    if (!userEdited) {
+      setRegistration(initialRegistration);
+    }
+  }, [initialRegistration, userEdited]);
+
+  const handleRegistrationChange = (value: string) => {
+    setUserEdited(true);
+    setRegistration(value);
+  };
 
   const registrationError = touched.registration ? validateRegistration(registration) : undefined;
   const postcodeError = touched.postcode ? validatePostcode(postcode) : undefined;
@@ -66,7 +77,7 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistr
           label="Registration Number"
           placeholder="e.g. AB12 CDE"
           value={registration}
-          onChange={setRegistration}
+          onChange={handleRegistrationChange}
           onBlur={() => setTouched(t => ({ ...t, registration: true }))}
           error={registrationError}
           success={touched.registration && !registrationError}
