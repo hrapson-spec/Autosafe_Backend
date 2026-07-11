@@ -1,0 +1,3108 @@
+{
+  "components": {
+    "schemas": {
+      "ComponentRiskItem": {
+        "additionalProperties": false,
+        "description": "A single component-level risk entry.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "risk": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Risk",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "risk"
+        ],
+        "title": "ComponentRiskItem",
+        "type": "object"
+      },
+      "ConfidenceLevel": {
+        "description": "Sample-size confidence classification.\n\nValues must match confidence.classify_confidence exactly.",
+        "enum": [
+          "High",
+          "Medium",
+          "Low",
+          "Very Low"
+        ],
+        "title": "ConfidenceLevel",
+        "type": "string"
+      },
+      "ErrorCode": {
+        "description": "Machine-readable error codes for the v2 report API.",
+        "enum": [
+          "invalid_registration",
+          "vehicle_not_found",
+          "dvsa_unavailable",
+          "rate_limited",
+          "internal_error",
+          "report_not_found",
+          "report_expired",
+          "storage_unavailable",
+          "undeclared_parameter"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "Standard error body for the v2 report API.",
+        "properties": {
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "error_code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error_code",
+          "message",
+          "correlation_id"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "GarageSubmission": {
+        "description": "Pydantic model for garage submission.",
+        "properties": {
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postcode": {
+            "title": "Postcode",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "active",
+            "title": "Status"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "free",
+            "title": "Tier"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "postcode"
+        ],
+        "title": "GarageSubmission",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LeadSubmission": {
+        "properties": {
+          "consent_given": {
+            "title": "Consent Given",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "experiment_variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Variant"
+          },
+          "lead_type": {
+            "default": "garage",
+            "title": "Lead Type",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postcode": {
+            "title": "Postcode",
+            "type": "string"
+          },
+          "risk_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "services_requested": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Services Requested"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "postcode",
+          "consent_given"
+        ],
+        "title": "LeadSubmission",
+        "type": "object"
+      },
+      "MatchScope": {
+        "description": "How closely the served evidence matches this specific vehicle.\n\nOrdered from most to least specific; ``UNAVAILABLE`` and\n``POPULATION_DEFAULT`` both signal degraded evidence and must be\nrendered honestly, not hidden behind a narrower-looking scope.",
+        "enum": [
+          "exact_band",
+          "age_band_only",
+          "model_average",
+          "population_default",
+          "unavailable"
+        ],
+        "title": "MatchScope",
+        "type": "string"
+      },
+      "MileageSource": {
+        "description": "Provenance of the mileage value used to produce a report.",
+        "enum": [
+          "user_entered",
+          "observed_mot",
+          "estimated",
+          "missing"
+        ],
+        "title": "MileageSource",
+        "type": "string"
+      },
+      "MotReminderSubmission": {
+        "description": "Pydantic model for MOT reminder signup.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "experiment_variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Variant"
+          },
+          "failure_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Risk"
+          },
+          "mot_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mot Expiry Date"
+          },
+          "postcode": {
+            "title": "Postcode",
+            "type": "string"
+          },
+          "registration": {
+            "title": "Registration",
+            "type": "string"
+          },
+          "vehicle_make": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Make"
+          },
+          "vehicle_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Model"
+          },
+          "vehicle_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Year"
+          }
+        },
+        "required": [
+          "email",
+          "registration",
+          "postcode"
+        ],
+        "title": "MotReminderSubmission",
+        "type": "object"
+      },
+      "PredictionSource": {
+        "description": "Which backing store served the report's risk figure.",
+        "enum": [
+          "postgres",
+          "sqlite",
+          "unavailable"
+        ],
+        "title": "PredictionSource",
+        "type": "string"
+      },
+      "ReportComponents": {
+        "additionalProperties": false,
+        "description": "Component-level risk breakdown, if any is available.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ComponentRiskItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "ReportComponents",
+        "type": "object"
+      },
+      "ReportCreateRequest": {
+        "additionalProperties": false,
+        "description": "Inbound request to create (or idempotently fetch) a report.",
+        "properties": {
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "mileage_user": {
+            "anyOf": [
+              {
+                "maximum": 500000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage User"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "registration": {
+            "maxLength": 12,
+            "minLength": 2,
+            "title": "Registration",
+            "type": "string"
+          }
+        },
+        "required": [
+          "registration"
+        ],
+        "title": "ReportCreateRequest",
+        "type": "object"
+      },
+      "ReportEmailSubmission": {
+        "description": "Pydantic model for email report request.",
+        "properties": {
+          "common_faults": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Common Faults",
+            "type": "array"
+          },
+          "days_until_mot_expiry": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Until Mot Expiry"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "experiment_variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Variant"
+          },
+          "failure_risk": {
+            "title": "Failure Risk",
+            "type": "number"
+          },
+          "mot_expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mot Expiry Date"
+          },
+          "mot_pass_prediction": {
+            "title": "Mot Pass Prediction",
+            "type": "integer"
+          },
+          "postcode": {
+            "title": "Postcode",
+            "type": "string"
+          },
+          "registration": {
+            "title": "Registration",
+            "type": "string"
+          },
+          "reliability_score": {
+            "title": "Reliability Score",
+            "type": "integer"
+          },
+          "repair_cost_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repair Cost Max"
+          },
+          "repair_cost_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repair Cost Min"
+          },
+          "vehicle_make": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Make"
+          },
+          "vehicle_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Model"
+          },
+          "vehicle_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle Year"
+          }
+        },
+        "required": [
+          "email",
+          "registration",
+          "postcode",
+          "reliability_score",
+          "mot_pass_prediction",
+          "failure_risk"
+        ],
+        "title": "ReportEmailSubmission",
+        "type": "object"
+      },
+      "ReportEvidence": {
+        "additionalProperties": false,
+        "description": "Evidence backing the report's risk figure.\n\ntotal_tests / total_failures are null-means-unknown: None means the\ncount was not available, and must never be coerced to 0.",
+        "properties": {
+          "age_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Band"
+          },
+          "match_scope": {
+            "$ref": "#/components/schemas/MatchScope"
+          },
+          "mileage_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage Band"
+          },
+          "total_failures": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Failures"
+          },
+          "total_tests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tests"
+          }
+        },
+        "required": [
+          "match_scope",
+          "age_band",
+          "mileage_band",
+          "total_tests",
+          "total_failures"
+        ],
+        "title": "ReportEvidence",
+        "type": "object"
+      },
+      "ReportMileage": {
+        "additionalProperties": false,
+        "description": "Mileage figure actually used to produce the report, with provenance.",
+        "properties": {
+          "anomaly": {
+            "default": false,
+            "title": "Anomaly",
+            "type": "boolean"
+          },
+          "effective_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Value"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "source": {
+            "$ref": "#/components/schemas/MileageSource"
+          },
+          "unit_converted": {
+            "default": false,
+            "title": "Unit Converted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "effective_value",
+          "source"
+        ],
+        "title": "ReportMileage",
+        "type": "object"
+      },
+      "ReportMot": {
+        "additionalProperties": false,
+        "description": "Most recent known MOT status for the vehicle.",
+        "properties": {
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          },
+          "last_result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Result"
+          },
+          "last_test_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Date"
+          }
+        },
+        "title": "ReportMot",
+        "type": "object"
+      },
+      "ReportPersistence": {
+        "additionalProperties": false,
+        "description": "Whether the report was saved and can be shared via a link.",
+        "properties": {
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "share_available": {
+            "title": "Share Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "saved",
+          "share_available"
+        ],
+        "title": "ReportPersistence",
+        "type": "object"
+      },
+      "ReportRepairEstimate": {
+        "additionalProperties": false,
+        "description": "Indicative repair cost estimate, when one can be produced.",
+        "properties": {
+          "expected": {
+            "title": "Expected",
+            "type": "integer"
+          },
+          "range_high": {
+            "title": "Range High",
+            "type": "integer"
+          },
+          "range_low": {
+            "title": "Range Low",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected",
+          "range_low",
+          "range_high"
+        ],
+        "title": "ReportRepairEstimate",
+        "type": "object"
+      },
+      "ReportResponse": {
+        "additionalProperties": false,
+        "description": "The v2 report: full response body for a created or fetched report.",
+        "properties": {
+          "components": {
+            "$ref": "#/components/schemas/ReportComponents"
+          },
+          "contract_version": {
+            "default": "2.0",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/ReportEvidence"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "mileage": {
+            "$ref": "#/components/schemas/ReportMileage"
+          },
+          "mot": {
+            "$ref": "#/components/schemas/ReportMot"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "persistence": {
+            "$ref": "#/components/schemas/ReportPersistence"
+          },
+          "prediction_source": {
+            "$ref": "#/components/schemas/PredictionSource"
+          },
+          "registration": {
+            "title": "Registration",
+            "type": "string"
+          },
+          "repair_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportRepairEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Id"
+          },
+          "report_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Token"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/ReportRisk"
+          },
+          "share_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Url"
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/ReportVehicle"
+          },
+          "vehicle_data_source": {
+            "$ref": "#/components/schemas/VehicleDataSource"
+          }
+        },
+        "required": [
+          "created_at",
+          "registration",
+          "vehicle",
+          "mot",
+          "mileage",
+          "evidence",
+          "risk",
+          "components",
+          "persistence",
+          "prediction_source",
+          "vehicle_data_source"
+        ],
+        "title": "ReportResponse",
+        "type": "object"
+      },
+      "ReportRisk": {
+        "additionalProperties": false,
+        "description": "The report's headline risk figure and its confidence.",
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "failure_risk": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Failure Risk",
+            "type": "number"
+          }
+        },
+        "required": [
+          "failure_risk",
+          "confidence"
+        ],
+        "title": "ReportRisk",
+        "type": "object"
+      },
+      "ReportVehicle": {
+        "additionalProperties": false,
+        "description": "Vehicle identity fields shown on a report.",
+        "properties": {
+          "colour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Colour"
+          },
+          "fuel_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuel Type"
+          },
+          "make": {
+            "title": "Make",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "make",
+          "model",
+          "year"
+        ],
+        "title": "ReportVehicle",
+        "type": "object"
+      },
+      "RiskData": {
+        "properties": {
+          "failure_risk": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Risk"
+          },
+          "reliability_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reliability Score"
+          },
+          "top_risks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Risks"
+          }
+        },
+        "title": "RiskData",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VehicleDataSource": {
+        "description": "Which backing store served the report's vehicle details.",
+        "enum": [
+          "dvsa",
+          "demo"
+        ],
+        "title": "VehicleDataSource",
+        "type": "string"
+      },
+      "VehicleInfo": {
+        "properties": {
+          "make": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Make"
+          },
+          "mileage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "title": "VehicleInfo",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "MOT Risk Prediction API",
+    "title": "AutoSafe API",
+    "version": "2.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "seo_homepage__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seo Homepage"
+      }
+    },
+    "/api/admin/dvsa-test": {
+      "get": {
+        "description": "Test DVSA API connectivity (admin only).\n\nAttempts OAuth token fetch and test lookup to diagnose issues.\nReturns detailed diagnostic information.",
+        "operationId": "test_dvsa_connection_api_admin_dvsa_test_get",
+        "parameters": [
+          {
+            "description": "Test registration (default: ZZ99ABC)",
+            "in": "query",
+            "name": "registration",
+            "required": false,
+            "schema": {
+              "default": "ZZ99ABC",
+              "description": "Test registration (default: ZZ99ABC)",
+              "title": "Registration",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Dvsa Connection"
+      }
+    },
+    "/api/admin/export-risk-checks": {
+      "get": {
+        "description": "Export risk_checks as CSV or JSON (admin only).",
+        "operationId": "export_risk_checks_api_admin_export_risk_checks_get",
+        "parameters": [
+          {
+            "description": "ISO date string (e.g. 2026-01-23)",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO date string (e.g. 2026-01-23)",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Export format: csv or json",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "csv",
+              "description": "Export format: csv or json",
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Risk Checks"
+      }
+    },
+    "/api/admin/garages": {
+      "get": {
+        "description": "List all garages (admin only).\n\nRequires X-API-Key header matching ADMIN_API_KEY.",
+        "operationId": "list_garages_api_admin_garages_get",
+        "parameters": [
+          {
+            "description": "Filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Garages"
+      },
+      "post": {
+        "description": "Create a new garage (admin only).\n\nRequires X-API-Key header matching ADMIN_API_KEY.\nRequires PostgreSQL to be available (no SQLite fallback for writes).",
+        "operationId": "create_garage_api_admin_garages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GarageSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Garage"
+      }
+    },
+    "/api/admin/garages/{garage_id}": {
+      "get": {
+        "description": "Get a single garage by ID (admin only).",
+        "operationId": "get_garage_api_admin_garages__garage_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "garage_id",
+            "required": true,
+            "schema": {
+              "title": "Garage Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Garage"
+      },
+      "patch": {
+        "description": "Update a garage (admin only).\nRequires PostgreSQL to be available (no SQLite fallback for writes).",
+        "operationId": "update_garage_api_admin_garages__garage_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "garage_id",
+            "required": true,
+            "schema": {
+              "title": "Garage Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Garage"
+      }
+    },
+    "/api/admin/indexnow": {
+      "post": {
+        "description": "Ping IndexNow with a list of URLs (admin only).",
+        "operationId": "ping_indexnow_api_admin_indexnow_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ping Indexnow"
+      }
+    },
+    "/api/admin/test-risk-check": {
+      "get": {
+        "description": "Test endpoint to debug risk_checks saving (admin only).",
+        "operationId": "test_risk_check_api_admin_test_risk_check_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Test Risk Check"
+      }
+    },
+    "/api/email-report": {
+      "post": {
+        "description": "Send the vehicle report to the user's email.\n\nRate limited to 10 requests per minute per IP.",
+        "operationId": "email_report_api_email_report_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportEmailSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Email Report"
+      }
+    },
+    "/api/garage/outcome/{assignment_id}": {
+      "get": {
+        "description": "Handle outcome reporting from email links.\n\nIf result is provided, record the outcome and return confirmation.\nOtherwise, return info about the assignment.",
+        "operationId": "get_outcome_page_api_garage_outcome__assignment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Result"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Outcome Page"
+      },
+      "post": {
+        "description": "Report outcome for a lead assignment.\n\nBody should contain: {\"outcome\": \"won\" | \"lost\" | \"no_response\"}\nRequires PostgreSQL to be available (no SQLite fallback for writes).",
+        "operationId": "report_outcome_api_garage_outcome__assignment_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Outcome"
+      }
+    },
+    "/api/leads": {
+      "get": {
+        "description": "Get leads (admin only).\n\nRequires X-API-Key header matching ADMIN_API_KEY environment variable.",
+        "operationId": "get_leads_api_leads_get",
+        "parameters": [
+          {
+            "description": "Max leads to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max leads to return",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of leads to skip",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Number of leads to skip",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ISO date string to filter leads after",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO date string to filter leads after",
+              "title": "Since"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Leads"
+      },
+      "post": {
+        "description": "Submit a lead for garage matching.\n\nRate limited to 10 requests per minute per IP.\n\nIMPORTANT: This endpoint requires PostgreSQL to be available.\nWe do NOT fall back to SQLite for lead persistence to prevent data loss.",
+        "operationId": "submit_lead_api_leads_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "utm_source",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Utm Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "utm_medium",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Utm Medium",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "utm_campaign",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Utm Campaign",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Lead"
+      }
+    },
+    "/api/makes": {
+      "get": {
+        "description": "Return a list of all unique vehicle makes (cached for 1 hour).",
+        "operationId": "get_makes_api_makes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Makes Api Makes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Makes"
+      }
+    },
+    "/api/models": {
+      "get": {
+        "description": "Return a list of models for a given make (cached for 1 hour).",
+        "operationId": "get_models_api_models_get",
+        "parameters": [
+          {
+            "description": "Vehicle Make (e.g., FORD)",
+            "in": "query",
+            "name": "make",
+            "required": true,
+            "schema": {
+              "description": "Vehicle Make (e.g., FORD)",
+              "title": "Make",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Models Api Models Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Models"
+      }
+    },
+    "/api/mot-reminder": {
+      "post": {
+        "description": "Submit an MOT reminder signup.\n\nRate limited to 10 requests per minute per IP.",
+        "operationId": "submit_mot_reminder_api_mot_reminder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotReminderSubmission"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Mot Reminder"
+      }
+    },
+    "/api/risk": {
+      "get": {
+        "description": "Calculate MOT failure risk using lookup table.\n\nInterim solution using pre-computed population averages by make/model/age.\nReturns confidence level based on sample size in the lookup data.",
+        "operationId": "get_risk_api_risk_get",
+        "parameters": [
+          {
+            "description": "Vehicle make (e.g., FORD)",
+            "in": "query",
+            "name": "make",
+            "required": true,
+            "schema": {
+              "description": "Vehicle make (e.g., FORD)",
+              "maxLength": 50,
+              "minLength": 1,
+              "title": "Make",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Vehicle model (e.g., FIESTA)",
+            "in": "query",
+            "name": "model",
+            "required": true,
+            "schema": {
+              "description": "Vehicle model (e.g., FIESTA)",
+              "maxLength": 50,
+              "minLength": 1,
+              "title": "Model",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Year of manufacture",
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "description": "Year of manufacture",
+              "minimum": 1990,
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Risk"
+      }
+    },
+    "/api/risk/v55": {
+      "get": {
+        "description": "V55 model prediction using real-time DVSA MOT history.\n\nReturns calibrated failure probability and component-level risks.\nFalls back to lookup table if DVSA data unavailable.",
+        "operationId": "get_risk_v55_api_risk_v55_get",
+        "parameters": [
+          {
+            "description": "Vehicle registration mark (e.g., AB12CDE)",
+            "in": "query",
+            "name": "registration",
+            "required": true,
+            "schema": {
+              "description": "Vehicle registration mark (e.g., AB12CDE)",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Registration",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UK postcode for regional factors (optional)",
+            "in": "query",
+            "name": "postcode",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "UK postcode for regional factors (optional)",
+              "maxLength": 10,
+              "title": "Postcode",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTM source",
+            "in": "query",
+            "name": "utm_source",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "UTM source",
+              "maxLength": 100,
+              "title": "Utm Source",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTM medium",
+            "in": "query",
+            "name": "utm_medium",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "UTM medium",
+              "maxLength": 100,
+              "title": "Utm Medium",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTM campaign",
+            "in": "query",
+            "name": "utm_campaign",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "UTM campaign",
+              "maxLength": 100,
+              "title": "Utm Campaign",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Risk V55"
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "description": "Get public stats for the trust bar.\n\nCached for 5 minutes.",
+        "operationId": "get_stats_api_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Stats"
+      }
+    },
+    "/api/v2/reports": {
+      "post": {
+        "operationId": "create_report_api_v2_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Report"
+      }
+    },
+    "/api/v2/reports/{token}": {
+      "get": {
+        "operationId": "get_report_api_v2_reports__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Report"
+      }
+    },
+    "/api/vehicle": {
+      "get": {
+        "description": "Look up vehicle details by registration number.\n\nReturns make, model, year, fuel type from DVLA/DVSA data.\nRate limited to prevent enumeration attacks.\nFalls back to demo data when DVSA not configured.",
+        "operationId": "get_vehicle_api_vehicle_get",
+        "parameters": [
+          {
+            "description": "UK vehicle registration number",
+            "in": "query",
+            "name": "registration",
+            "required": true,
+            "schema": {
+              "description": "UK vehicle registration number",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Registration",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Vehicle"
+      }
+    },
+    "/api/version": {
+      "get": {
+        "description": "Build/version identifiers for release verification (backend_sha,\nfrontend_bundle_hash, contract_version, app_version, started_at).\nNo rate limit: cheap, near-static data safe for frequent polling by\nrelease/monitoring tooling. Payload assembly lives in report_routes.py\n(build_version_info) -- see this file's v2-import comment near the\nLimiter setup for why.",
+        "operationId": "get_version_api_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Version"
+      }
+    },
+    "/autosafe-indexnow-key.txt": {
+      "get": {
+        "description": "Serve IndexNow verification key file.",
+        "operationId": "indexnow_key_file_autosafe_indexnow_key_txt_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Indexnow Key File"
+      }
+    },
+    "/guides/{slug}": {
+      "get": {
+        "description": "Serve guide pages at clean URLs.",
+        "operationId": "serve_guide_guides__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Serve Guide"
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Liveness check with component status.\nAlways returns 200 if the app is up (for container orchestration).\nDetailed diagnostics require X-API-Key header matching ADMIN_API_KEY.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check"
+      }
+    },
+    "/indexnow-key.txt": {
+      "get": {
+        "description": "Serve IndexNow verification key file.",
+        "operationId": "indexnow_key_file_indexnow_key_txt_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Indexnow Key File"
+      }
+    },
+    "/insights/": {
+      "get": {
+        "operationId": "insights_index_insights__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Insights Index"
+      }
+    },
+    "/insights/march-mot-rush-2026/": {
+      "get": {
+        "operationId": "seo_march_rush_insights_march_mot_rush_2026__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seo March Rush"
+      }
+    },
+    "/insights/unreliable-3-year-old-cars-2026/": {
+      "get": {
+        "operationId": "seo_unreliable_cars_insights_unreliable_3_year_old_cars_2026__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seo Unreliable Cars"
+      }
+    },
+    "/insights/{story_slug}/": {
+      "get": {
+        "operationId": "insights_story_insights__story_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "story_slug",
+            "required": true,
+            "schema": {
+              "title": "Story Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Insights Story"
+      }
+    },
+    "/local-mot/{city_slug}/": {
+      "get": {
+        "operationId": "seo_local_page_local_mot__city_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "city_slug",
+            "required": true,
+            "schema": {
+              "title": "City Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Local Page"
+      }
+    },
+    "/mot-check/": {
+      "get": {
+        "operationId": "seo_index_mot_check__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seo Index"
+      }
+    },
+    "/mot-check/compare/{slug1}-vs-{slug2}/": {
+      "get": {
+        "operationId": "seo_compare_mot_check_compare__slug1__vs__slug2___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug1",
+            "required": true,
+            "schema": {
+              "title": "Slug1",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slug2",
+            "required": true,
+            "schema": {
+              "title": "Slug2",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Compare"
+      }
+    },
+    "/mot-check/problems/{component_slug}/": {
+      "get": {
+        "operationId": "seo_component_hub_mot_check_problems__component_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "component_slug",
+            "required": true,
+            "schema": {
+              "title": "Component Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Component Hub"
+      }
+    },
+    "/mot-check/{make_slug}/": {
+      "get": {
+        "operationId": "seo_make_mot_check__make_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "make_slug",
+            "required": true,
+            "schema": {
+              "title": "Make Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Make"
+      }
+    },
+    "/mot-check/{make_slug}/{model_slug}/": {
+      "get": {
+        "operationId": "seo_model_mot_check__make_slug___model_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "make_slug",
+            "required": true,
+            "schema": {
+              "title": "Make Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "model_slug",
+            "required": true,
+            "schema": {
+              "title": "Model Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Model"
+      }
+    },
+    "/mot-check/{make_slug}/{model_slug}/problems/{component_slug}/": {
+      "get": {
+        "operationId": "seo_model_component_mot_check__make_slug___model_slug__problems__component_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "make_slug",
+            "required": true,
+            "schema": {
+              "title": "Make Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "model_slug",
+            "required": true,
+            "schema": {
+              "title": "Model Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "component_slug",
+            "required": true,
+            "schema": {
+              "title": "Component Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Model Component"
+      }
+    },
+    "/mot-check/{make_slug}/{model_slug}/{detail_slug}/": {
+      "get": {
+        "operationId": "seo_model_detail_mot_check__make_slug___model_slug___detail_slug___get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "make_slug",
+            "required": true,
+            "schema": {
+              "title": "Make Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "model_slug",
+            "required": true,
+            "schema": {
+              "title": "Model Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "detail_slug",
+            "required": true,
+            "schema": {
+              "title": "Detail Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seo Model Detail"
+      }
+    },
+    "/privacy": {
+      "get": {
+        "description": "Serve privacy page at clean URL.",
+        "operationId": "serve_privacy_privacy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Serve Privacy"
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "Readiness check - is the application ready to serve traffic?\nReturns 503 if PostgreSQL is unavailable.\n\nUse this endpoint for UptimeRobot / load balancer health checks.",
+        "operationId": "readiness_check_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness Check"
+      }
+    },
+    "/robots.txt": {
+      "get": {
+        "description": "Serve robots.txt at root URL for search engine crawlers.",
+        "operationId": "robots_txt_robots_txt_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Robots Txt"
+      }
+    },
+    "/sitemap-comparisons.xml": {
+      "get": {
+        "description": "Sub-sitemap: comparison pages.",
+        "operationId": "sitemap_comparisons_sitemap_comparisons_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Comparisons"
+      }
+    },
+    "/sitemap-content.xml": {
+      "get": {
+        "description": "Sub-sitemap: homepage, pillar, guides, insights, legal pages.",
+        "operationId": "sitemap_content_sitemap_content_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Content"
+      }
+    },
+    "/sitemap-local.xml": {
+      "get": {
+        "description": "Sub-sitemap: local MOT pages.",
+        "operationId": "sitemap_local_sitemap_local_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Local"
+      }
+    },
+    "/sitemap-makes.xml": {
+      "get": {
+        "description": "Sub-sitemap: all make hub pages.",
+        "operationId": "sitemap_makes_sitemap_makes_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Makes"
+      }
+    },
+    "/sitemap-models.xml": {
+      "get": {
+        "description": "Sub-sitemap: all model detail pages (the core money pages).",
+        "operationId": "sitemap_models_sitemap_models_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Models"
+      }
+    },
+    "/sitemap.xml": {
+      "get": {
+        "description": "Sitemap index pointing to segmented sub-sitemaps.",
+        "operationId": "sitemap_index_sitemap_xml_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sitemap Index"
+      }
+    },
+    "/static/guides/{slug}.html": {
+      "get": {
+        "operationId": "redirect_old_guide_static_guides__slug__html_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redirect Old Guide"
+      }
+    },
+    "/static/privacy.html": {
+      "get": {
+        "operationId": "redirect_old_privacy_static_privacy_html_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Redirect Old Privacy"
+      }
+    },
+    "/static/terms.html": {
+      "get": {
+        "operationId": "redirect_old_terms_static_terms_html_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Redirect Old Terms"
+      }
+    },
+    "/terms": {
+      "get": {
+        "description": "Serve terms page at clean URL.",
+        "operationId": "serve_terms_terms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Serve Terms"
+      }
+    },
+    "/will-my-car-pass-mot/": {
+      "get": {
+        "operationId": "seo_k7_pillar_will_my_car_pass_mot__get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seo K7 Pillar"
+      }
+    },
+    "/{path}": {
+      "get": {
+        "operationId": "serve_spa__path__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Serve Spa"
+      }
+    }
+  }
+}

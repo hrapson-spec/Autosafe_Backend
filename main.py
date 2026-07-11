@@ -121,7 +121,7 @@ async def lifespan(app: FastAPI):
     await db.close_pool()
 
 
-app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
+app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan, version="2.0.0")
 
 # GZip Compression Middleware - compress responses > 500 bytes
 from starlette.middleware.gzip import GZipMiddleware
@@ -254,7 +254,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 MIN_TESTS_FOR_UI = int(os.environ.get("MIN_TESTS_FOR_UI", "100"))
 
 # Rate Limiting Setup
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
@@ -291,7 +291,17 @@ def get_real_client_ip(request: Request) -> str:
 
 limiter = Limiter(key_func=get_real_client_ip)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# v2 report API (report_routes.py owns all v2-aware logic; main.py's edit
+# surface for the v2 release is limited to this one import, the
+# register_report_routes(...) call below, this handler swap, the
+# GET /api/version route, and the FastAPI(version=...) kwarg above).
+from report_routes import register_report_routes, rate_limit_exceeded_dispatcher, build_version_info
+
+# Dispatches to the v2 ErrorEnvelope shape for /api/v2/* and to slowapi's
+# original _rate_limit_exceeded_handler (byte-identical legacy shape) for
+# every other route -- see report_routes.rate_limit_exceeded_dispatcher.
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_dispatcher)
 
 
 # Dynamic year validation - current year + 1 (P2-1 fix)
@@ -360,6 +370,17 @@ async def health_check(request: Request):
         })
 
     return response
+
+
+@app.get("/api/version")
+async def get_version():
+    """Build/version identifiers for release verification (backend_sha,
+    frontend_bundle_hash, contract_version, app_version, started_at).
+    No rate limit: cheap, near-static data safe for frequent polling by
+    release/monitoring tooling. Payload assembly lives in report_routes.py
+    (build_version_info) -- see this file's v2-import comment near the
+    Limiter setup for why."""
+    return build_version_info(app)
 
 
 @app.get("/ready")
@@ -2377,6 +2398,11 @@ if os.path.isdir("static"):
 # Register SEO pages (must be before SPA catch-all)
 from seo_pages import register_seo_routes
 register_seo_routes(app, get_sqlite_connection)
+
+# Register v2 report API routes (must also be before the SPA catch-all;
+# see the v2-import comment near the Limiter setup for why this import
+# lives up there rather than here).
+register_report_routes(app, limiter, get_sqlite_connection)
 
 # IndexNow protocol for faster search engine indexation
 INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "autosafe-indexnow-key")

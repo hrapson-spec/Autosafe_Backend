@@ -191,6 +191,10 @@ class TestEnumValuesExact(unittest.TestCase):
                 "invalid_registration", "vehicle_not_found", "dvsa_unavailable",
                 "rate_limited", "internal_error", "report_not_found",
                 "report_expired", "storage_unavailable",
+                # FLAGGED ADDITIVE CHANGE: added for report_routes.py's
+                # shared undeclared-query-parameter guard on both v2
+                # routes (see report_contract.ErrorCode's own comment).
+                "undeclared_parameter",
             },
         )
 

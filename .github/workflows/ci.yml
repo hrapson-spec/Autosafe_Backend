@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Backend tests exercise the SPA-serving routes (e.g. GET / -> static/index.html).
+    # Build outputs are untracked since RC1, so consume the real built frontend from
+    # the frontend-build job — the same reality the Docker image ships.
+    needs: [frontend-build]
 
     steps:
       - name: Checkout code
@@ -19,6 +23,12 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
+
+      - name: Download built frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-static
+          path: static/
 
       - name: Install dependencies
         run: |
@@ -41,8 +51,33 @@ jobs:
       - name: Run linting (optional)
         run: |
           pip install flake8
-          flake8 main.py database.py --max-line-length=120 --ignore=E501,W503
+          flake8 main.py database.py report_contract.py report_service.py report_routes.py --max-line-length=120 --ignore=E501,W503
         continue-on-error: true
+
+  contract-drift:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check OpenAPI schema drift (v2 report API + legacy routes)
+        run: python scripts/check_openapi_drift.py
+        env:
+          # Minimal env vars for testing (no external services) -- matches
+          # the test job; importing main.app doesn't need more than this.
+          PORT: 8000
 
   security-check:
     runs-on: ubuntu-latest

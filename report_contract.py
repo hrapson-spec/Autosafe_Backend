@@ -100,6 +100,17 @@ class ErrorCode(str, Enum):
     REPORT_NOT_FOUND = "report_not_found"
     REPORT_EXPIRED = "report_expired"
     STORAGE_UNAVAILABLE = "storage_unavailable"
+    # FLAGGED ADDITIVE CHANGE (report_routes.py Wave-3 HTTP layer): the v2
+    # routes reject any undeclared query-string parameter via a FastAPI
+    # dependency shared by both routes. 400 is the correct status for a
+    # malformed request, but none of the existing codes describe *why* --
+    # this one does, without overloading INVALID_REGISTRATION (which is
+    # specifically about the registration field) or INTERNAL_ERROR (which
+    # is specifically about the server, not the request). See
+    # tests/test_report_contract.py::TestEnumValuesExact.test_error_code_values
+    # for the matching one-line update to this contract's exhaustiveness
+    # expectation.
+    UNDECLARED_PARAMETER = "undeclared_parameter"
 
 
 ERROR_CODE_STATUS: Dict[ErrorCode, int] = {
@@ -111,6 +122,7 @@ ERROR_CODE_STATUS: Dict[ErrorCode, int] = {
     ErrorCode.REPORT_NOT_FOUND: 404,
     ErrorCode.REPORT_EXPIRED: 410,
     ErrorCode.STORAGE_UNAVAILABLE: 503,
+    ErrorCode.UNDECLARED_PARAMETER: 400,
 }
 
 
