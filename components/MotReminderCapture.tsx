@@ -1,25 +1,52 @@
 import React, { useState } from 'react';
-import { CarReport, CarSelection } from '../types';
 import { submitMotReminder } from '../services/autosafeApi';
 import { trackConversion, trackFunnel } from '../utils/analytics';
 import { getAllVariants } from '../utils/experiments';
+import { formatDateGB } from './ReportCopy';
 import { Mail, Check, AlertTriangle, Clock } from './Icons';
 import { Button } from './ui';
 
 interface MotReminderCaptureProps {
-  report: CarReport;
-  selection: CarSelection;
-  postcode: string;
+  registration: string;
+  /** report.mot.expiry_date -- raw ISO date/datetime, or null when unknown. */
+  motExpiryDate: string | null;
+  postcode?: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  /** report.vehicle.year -- honestly null when the manufacture year is unknown. */
+  vehicleYear: number | null;
+  /** report.risk.failure_risk -- raw evidence fraction, passed through as-is
+   * for the lead payload (not the display-rounded risk.value). */
+  failureRisk: number;
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error';
 
-const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selection, postcode }) => {
+/** Days from `now` until an ISO date/datetime string. Null-safe: returns
+ * undefined when the date is unknown, matching RecommendationInput /
+ * MotReminderSubmission's "unknown" convention rather than fabricating a
+ * value. Positive = in the future, negative = already expired. */
+function daysUntil(dateIso: string | null, now: number = Date.now()): number | undefined {
+  if (!dateIso) return undefined;
+  const diffMs = new Date(dateIso).getTime() - now;
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
+  registration,
+  motExpiryDate,
+  postcode,
+  vehicleMake,
+  vehicleModel,
+  vehicleYear,
+  failureRisk,
+}) => {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { motExpiryDate, daysUntilMotExpiry, motExpired, registration } = report;
+  const daysUntilMotExpiry = daysUntil(motExpiryDate);
+  const motExpired = daysUntilMotExpiry !== undefined ? daysUntilMotExpiry < 0 : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +58,13 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
     try {
       const result = await submitMotReminder({
         email: email.toLowerCase().trim(),
-        registration: registration || '',
-        postcode,
-        vehicle_make: selection.make,
-        vehicle_model: selection.model,
-        vehicle_year: selection.year,
-        mot_expiry_date: motExpiryDate,
-        failure_risk: (100 - report.reliabilityScore) / 100,
+        registration,
+        postcode: postcode ?? '',
+        vehicle_make: vehicleMake,
+        vehicle_model: vehicleModel,
+        vehicle_year: vehicleYear ?? undefined,
+        mot_expiry_date: motExpiryDate ?? undefined,
+        failure_risk: failureRisk,
         experiment_variant: getAllVariants() || undefined,
       });
 
@@ -54,12 +81,6 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
     }
   };
 
-  // Format the expiry date for display
-  const formatExpiryDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
   // Determine urgency level and visual treatment
   const getUrgencyConfig = () => {
     if (motExpired) {
@@ -69,7 +90,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         iconColor: 'text-red-600',
         headline: 'Your MOT has expired',
         description: motExpiryDate
-          ? `It expired on ${formatExpiryDate(motExpiryDate)}. Driving without a valid MOT is illegal and invalidates your insurance.`
+          ? `It expired on ${formatDateGB(motExpiryDate)}. Driving without a valid MOT is illegal and invalidates your insurance.`
           : 'Driving without a valid MOT is illegal and invalidates your insurance.',
         ctaLabel: 'Get help getting compliant',
         secondaryLabel: 'Email me a reminder anyway',
@@ -83,7 +104,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         bgColor: 'bg-amber-50',
         iconColor: 'text-amber-600',
         headline: `Your MOT is due in ${daysUntilMotExpiry} days`,
-        description: motExpiryDate ? `Due ${formatExpiryDate(motExpiryDate)}. We'll remind you and send a pre-MOT checklist.` : '',
+        description: motExpiryDate ? `Due ${formatDateGB(motExpiryDate)}. We'll remind you and send a pre-MOT checklist.` : '',
         ctaLabel: 'Remind me + send a pre-MOT checklist',
         compact: false,
       };
@@ -94,7 +115,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         borderColor: 'border-blue-200',
         bgColor: 'bg-blue-50',
         iconColor: 'text-blue-600',
-        headline: `MOT due ${motExpiryDate ? formatExpiryDate(motExpiryDate) : 'soon'}`,
+        headline: `MOT due ${motExpiryDate ? formatDateGB(motExpiryDate) : 'soon'}`,
         description: 'Get a free reminder 4 weeks before your MOT is due.',
         ctaLabel: 'Get a free reminder',
         compact: false,
@@ -134,7 +155,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({ report, selecti
         <div className="flex items-center gap-2 text-green-700">
           <Check className="w-5 h-5" />
           <span className="font-medium text-sm">
-            Reminder set{motExpiryDate ? ` for ${formatExpiryDate(motExpiryDate)}` : ''}
+            Reminder set{motExpiryDate ? ` for ${formatDateGB(motExpiryDate)}` : ''}
           </span>
         </div>
       </div>
