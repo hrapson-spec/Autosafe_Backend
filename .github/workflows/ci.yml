@@ -164,3 +164,79 @@ jobs:
         with:
           name: frontend-static
           path: static/
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [frontend-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download built frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-static
+          path: static/
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite (fully mocked, against the built SPA)
+        run: npx playwright test
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: e2e-artifacts/
+          retention-days: 14
+
+  # The fresh-engineer path: build the real image, run it against a real
+  # Postgres, migrate, seed synthetic data, and run the full staging
+  # acceptance suite (scripts/staging_acceptance.py) inside the stack.
+  staging-evidence:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run staging stack + acceptance
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          docker compose -f docker-compose.staging.yml up \
+            --build --abort-on-container-exit --exit-code-from acceptance
+
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.staging.yml logs --no-color | tail -300
+
+      - name: Teardown
+        if: always()
+        run: docker compose -f docker-compose.staging.yml down -v
