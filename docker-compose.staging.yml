@@ -4,10 +4,11 @@
 # uvicorn), plus the v2 bootstrap steps (create_risk_checks_table.py,
 # migrations/add_report_contract_columns.py) as one-shot init containers.
 #
-# CI runs this file verbatim (`docker compose -f docker-compose.staging.yml
-# up --build --exit-code-from acceptance`) once a runner has enough disk/CPU
-# to build the ~multi-GB application image (CatBoost, PaddleOCR, OpenCV,
-# etc. are heavy transitive deps -- see requirements.txt).
+# CI starts the long-lived app stack with `up --build --wait app`, then runs
+# the one-shot acceptance service with `run --rm --build --no-deps acceptance`.
+# A runner needs enough disk/CPU to build the ~multi-GB application image
+# (CatBoost, PaddleOCR, OpenCV, etc. are heavy transitive deps -- see
+# requirements.txt).
 #
 # Local low-disk/low-memory machines (e.g. this repo's own dev laptop) do
 # NOT build or run this file: local staging instead runs a small

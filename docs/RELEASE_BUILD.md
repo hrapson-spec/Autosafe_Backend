@@ -41,8 +41,9 @@ local-docker fallback.
 to Docker, so a `.railwayignore` strip can starve a `COPY` in this
 Dockerfile even when a local `docker build` succeeds. This can only be
 caught on a real Railway deploy, not by CI's `build-check` job (which uses
-`.dockerignore`, not `.railwayignore`). See the RC1 release packet's D6
-risk memo (to be added) for the live-deploy verification of this gap.
+`.dockerignore`, not `.railwayignore`). See
+[`release_rc1/RAILWAY_STRIP_RISK_MEMO.md`](release_rc1/RAILWAY_STRIP_RISK_MEMO.md)
+for the required live-deploy verification.
 
 ## CI guard
 
