@@ -1,8 +1,8 @@
 {% extends "seo_base.html" %}
 
 {% block title %}Free MOT History Check & Failure Risk Predictor | AutoSafe{% endblock %}
-{% block meta_description %}Will your car pass its MOT? Check your vehicle's MOT failure risk instantly using AI trained
-on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, fast, no signup.{% endblock %}
+{% block meta_description %}Check your vehicle's MOT history and comparable-vehicle failure rate using evidence from
+{{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, fast, no signup.{% endblock %}
 {% block og_title %}Free MOT Failure Risk Predictor — Will Your Car Pass Its MOT?{% endblock %}
 {% block og_description %}Check your vehicle's MOT failure risk instantly. Based on {{
 "{:,}".format(total_tests_analysed) }}+ official DVSA records. Free, no signup.{% endblock %}
@@ -63,7 +63,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
       "name": "Will my car pass its MOT?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Whether your car will pass depends on its age, mileage, make, model, and previous test history. The UK average failure rate is approximately 28%. Use AutoSafe's free prediction tool to check your specific vehicle's risk by entering your registration number."
+        "text": "Whether your car will pass depends on its condition and many factors. The UK average failure rate is approximately 28%. AutoSafe uses your registration to show recorded MOT history and the failure rate for the closest available group of comparable vehicles."
       }
     },
     {
@@ -79,7 +79,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
       "name": "Is AutoSafe free to use?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. AutoSafe is completely free. Enter your registration number and postcode to get an instant, personalised MOT failure risk prediction covering seven key failure areas. No signup or payment required."
+        "text": "Yes. AutoSafe is completely free. Enter your registration number and postcode to see recorded MOT history, the mileage source and the closest available comparable-vehicle failure rate. Component patterns appear only when supporting data exists. No signup or payment is required."
       }
     }
   ]
@@ -106,7 +106,7 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
         </div>
         <button type="submit" class="reg-lookup-btn">Check My MOT Risk &rarr;</button>
     </form>
-    <p style="color: #666; font-size: 0.85rem; margin-top: 0.75rem;">AI prediction based on {{
+    <p style="color: #666; font-size: 0.85rem; margin-top: 0.75rem;">Comparison evidence from {{
         "{:,}".format(total_tests_analysed) }}+ official DVSA test records</p>
 </div>
 
@@ -128,8 +128,8 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
     <div style="text-align: center; padding: 1.5rem; background: #2a2a2a; border-radius: 12px;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
         <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">3. Get Your Risk Score</h3>
-        <p style="color: #a0a0a0; font-size: 0.9rem;">See your personalised failure probability across 7 key component
-            areas: brakes, suspension, tyres, steering, visibility, lamps, and body.</p>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">See the failure rate for the closest available comparison group,
+            with component patterns only when supporting data exists.</p>
     </div>
 </div>
 
@@ -238,8 +238,8 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
         <h3>Will my car pass its MOT?</h3>
         <p>Whether your car will pass depends on its age, mileage, make, model, and previous test history. The UK
             average failure rate is approximately {{ "%.0f"|format(national_avg_fail_rate * 100) }}%, meaning nearly 1
-            in 3 vehicles fail. <a href="/app/" style="color: #e5c07b;">Enter your registration</a> to check your
-            specific vehicle's risk instantly.</p>
+            in 3 vehicles fail. <a href="/app/" style="color: #e5c07b;">Enter your registration</a> to compare your
+            vehicle with historical outcomes for similar vehicles.</p>
     </div>
 
     <div class="faq-item">
@@ -252,8 +252,9 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
 
     <div class="faq-item">
         <h3>Is AutoSafe really free?</h3>
-        <p>Yes, completely. Enter your registration number and postcode for an instant, personalised MOT failure risk
-            prediction covering seven key failure areas. No signup, no payment, no catch.</p>
+        <p>Yes, completely. Enter your registration number and postcode to see recorded MOT history, the mileage source
+            and the closest available comparable-vehicle failure rate. Component patterns appear only when supporting
+            data exists. No signup, no payment, no catch.</p>
     </div>
 
     <div class="faq-item">
@@ -281,5 +282,5 @@ on {{ "{:,}".format(total_tests_analysed) }}+ official DVSA test records. Free, 
 {% endblock %}
 
 {% block cta_heading %}Check Your Vehicle's MOT Risk{% endblock %}
-{% block cta_text %}Enter your registration to get a personalised MOT failure prediction based on your exact vehicle's
-age, mileage and history.{% endblock %}
+{% block cta_text %}Enter your registration to see recorded MOT history, mileage provenance and the closest available
+comparison group.{% endblock %}

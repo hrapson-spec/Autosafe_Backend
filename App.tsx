@@ -106,9 +106,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                 <BrainCircuit className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="font-serif text-2xl text-slate-900 font-medium">Trusted Precision</h3>
+              <h3 className="font-serif text-2xl text-slate-900 font-medium">Trusted Evidence</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Built on an industry-leading predictive model, our analysis offers more than just data—it offers confidence. Trust in a score derived from millions of validated outcomes.
+                We compare your vehicle with official DVSA MOT outcomes and state clearly when only broader make-and-model data is available.
               </p>
             </div>
 
@@ -117,9 +117,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                 <Database className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="font-serif text-2xl text-slate-900 font-medium">Tailored Insight</h3>
+              <h3 className="font-serif text-2xl text-slate-900 font-medium">Matched Context</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Your car has its own story. We synthesize end-to-end data—from manufacturing logs to specific MOT history—to deliver a report personalized to your vehicle's unique DNA.
+                Every report labels its mileage source, comparison scope and available sample size, so you can see exactly what supports the result.
               </p>
             </div>
 
@@ -130,7 +130,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </div>
               <h3 className="font-serif text-2xl text-slate-900 font-medium">The Road Ahead</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Knowledge is only useful if you can use it. We interpret risks to provide clear, actionable steps that help you avoid costly repairs. Our insights are entirely free, helping you navigate your ownership journey with certainty.
+                Where supporting component data exists, we show patterns for comparable vehicles—not a diagnosis—and explain when evidence is unavailable.
               </p>
             </div>
 

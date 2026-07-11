@@ -40,7 +40,7 @@ data and reliability from {{ "{:,}".format(overall1.total_tests + overall2.total
       "name": "Should I buy a {{ display1 }} or {{ display2 }}?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "{% if winner %}From an MOT reliability standpoint, the {{ winner }} has a lower failure rate. However, MOT pass rates are just one factor — also consider insurance costs, fuel economy, running costs and personal preference. Use AutoSafe's free prediction tool to check a specific vehicle by registration.{% else %}Both models have similar MOT reliability. Consider other factors like insurance costs, fuel economy, running costs and personal preference. Use AutoSafe's free prediction tool to check a specific vehicle by registration.{% endif %}"
+        "text": "{% if winner %}From an MOT reliability standpoint, the {{ winner }} has a lower failure rate. However, MOT pass rates are just one factor — also consider insurance costs, fuel economy, running costs and personal preference. Use AutoSafe to view a vehicle's recorded MOT history and comparable-vehicle failure rates by registration.{% else %}Both models have similar MOT reliability. Consider other factors like insurance costs, fuel economy, running costs and personal preference. Use AutoSafe to view a vehicle's recorded MOT history and comparable-vehicle failure rates by registration.{% endif %}"
       }
     }
   ]
@@ -466,7 +466,7 @@ data and reliability from {{ "{:,}".format(overall1.total_tests + overall2.total
         <div class="cta-box" style="margin-top: 2rem;">
             <h3>Check Your Specific Vehicle</h3>
             <p style="color: #a0a0a0; margin-bottom: 1rem;">Considering a {{ display1 }} or {{ display2 }}? Enter a reg
-                to see that exact vehicle's MOT risk.</p>
+                to see its recorded MOT history and the closest available comparable-vehicle failure rate.</p>
             <form class="reg-lookup-form" action="/" method="get">
                 <input type="hidden" name="utm_source" value="seo">
                 <input type="hidden" name="utm_medium" value="organic">
@@ -493,5 +493,5 @@ data and reliability from {{ "{:,}".format(overall1.total_tests + overall2.total
         {% endblock %}
 
         {% block cta_heading %}Check Your {{ display1 }} or {{ display2 }}{% endblock %}
-        {% block cta_text %}Enter your registration to get a personalised MOT failure prediction for your specific
-        vehicle.{% endblock %}
+        {% block cta_text %}Enter your registration to see recorded MOT history and failure rates for comparable
+        vehicles.{% endblock %}

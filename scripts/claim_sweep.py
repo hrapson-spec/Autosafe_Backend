@@ -45,6 +45,28 @@ BANNED = [
     (r"Platt scaling|expected calibration error|\bECE\b", "claims calibration machinery the path lacks"),
     (r"104\s+(engineered\s+)?features", "describes the model's features as the served method"),
     (r"8[05]%\+?\s*accur", "uncited accuracy claim"),
+    # Broader product-truth phrases found during the RC1 release review.
+    # These describe per-vehicle modelling or evidence sources that the
+    # report path does not have, even though they avoid the literal words
+    # caught by the older AI/ML-only patterns above.
+    (r"industry[- ]leading\s+predictive\s+model", "claims an unverified industry-leading model"),
+    (r"manufacturing\s+logs", "claims a source the report path does not use"),
+    (r"unique\s+DNA", "claims vehicle-specific evidence the report path does not have"),
+    (r"\bAI[- ]?(trained|prediction|tool|powered)\b", "claims an AI method in the user path"),
+    (
+        r"personali[sz]ed\s+(MOT\s+)?(failure\s+)?(risk\s+)?(prediction|probability|assessment|breakdown)",
+        "claims a personalised failure prediction",
+    ),
+    (r"tailored\s+specifically\s+to\s+your\s+(vehicle|car)", "claims a vehicle-specific prediction"),
+    (r"based\s+on\s+your\s+exact\s+(vehicle|car)", "claims exact-vehicle evidence"),
+    (r"your\s+(vehicle|car)'s\s+individual\s+MOT\s+history", "claims individual-history modelling"),
+    (
+        r"specific\s+components\s+most\s+likely\s+to\s+cause\s+a\s+failure\s+on\s+your\s+car",
+        "presents population component rates as a diagnosis",
+    ),
+    (r"covering\s+(seven|7)\s+key\s+failure\s+areas", "promises components when evidence may be unavailable"),
+    (r"specific\s+(vehicle|car)(?:'s)?\s+(risk|common\s+failure\s+points)", "claims vehicle-specific risk evidence"),
+    (r"exact\s+vehicle(?:'s)?\s+MOT\s+risk", "claims an exact-vehicle risk"),
 ]
 
 # Lines that are allowed to match (documentation of the ban itself, comments
@@ -60,7 +82,11 @@ def main() -> int:
     violations = []
     for pattern in SURFACES:
         for f in sorted(ROOT.glob(pattern)):
-            if "assets" in f.parts or not f.is_file():
+            # Vite generates static/index.html from root index.html. A local
+            # build may leave that ignored output behind; scanning it would
+            # double-count stale copy that cannot exist in a fresh checkout.
+            relative = f.relative_to(ROOT)
+            if relative.as_posix() == "static/index.html" or "assets" in f.parts or not f.is_file():
                 continue
             try:
                 text = f.read_text(errors="ignore")
@@ -71,7 +97,7 @@ def main() -> int:
                     continue
                 for rx, why in BANNED:
                     if re.search(rx, line, re.I):
-                        violations.append((f.relative_to(ROOT), i, why, line.strip()[:110]))
+                        violations.append((relative, i, why, line.strip()[:110]))
     if violations:
         print(f"CLAIM SWEEP: {len(violations)} violation(s)\n")
         for path, line, why, snippet in violations:

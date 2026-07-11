@@ -56,7 +56,7 @@ DVSA data.{% endblock %}
       "name": "How can I predict if my {{ make_display }} will pass its MOT?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "AutoSafe offers a free AI-powered MOT prediction tool. Enter your registration number to get a personalised failure risk assessment based on your vehicle's age, mileage, and MOT history."
+        "text": "AutoSafe offers a free MOT-history and comparable-vehicle failure-rate report. Enter your registration number to see the evidence source and comparison scope used."
       }
     }
   ]
@@ -175,16 +175,16 @@ DVSA data.{% endblock %}
 
   <div class="faq-item">
     <h3>How can I predict if my {{ make_display }} will pass its MOT?</h3>
-    <p>AutoSafe offers a <a href="/" style="color: #e5c07b;">free AI-powered MOT prediction tool</a>. Enter your
-      registration number and postcode to get a personalised failure risk assessment based on your specific
-      vehicle&rsquo;s age, mileage, and MOT history.</p>
+    <p>AutoSafe offers a <a href="/" style="color: #e5c07b;">free MOT-history and comparison report</a>. Enter your
+      registration number and postcode to see the recorded history, mileage source and closest available comparison
+      group.</p>
   </div>
 </div>
 
 <div class="cta-box" style="margin-top: 2rem;">
   <h3>Check Your {{ make_display }}</h3>
-  <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to get a personalised MOT failure prediction for your
-    specific {{ make_display }}.</p>
+  <p style="color: #a0a0a0; margin-bottom: 1rem;">Enter your reg to see recorded MOT history and comparable-vehicle
+    failure rates for your {{ make_display }}.</p>
   <form class="reg-lookup-form" action="/" method="get">
     <input type="hidden" name="utm_source" value="seo_pages">
     <input type="hidden" name="utm_medium" value="organic">
@@ -220,5 +220,5 @@ DVSA data.{% endblock %}
 {% endblock %}
 
 {% block cta_heading %}Check Your {{ make_display }}{% endblock %}
-{% block cta_text %}Enter your reg to get a personalised MOT failure prediction for your specific {{ make_display }}.{%
+{% block cta_text %}Enter your reg to see recorded MOT history and comparable-vehicle failure rates for your {{ make_display }}.{%
 endblock %}

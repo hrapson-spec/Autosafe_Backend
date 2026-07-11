@@ -187,7 +187,7 @@ def generate_lead_email(
         <tr>
             <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
                 <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700;">AutoSafe</h1>
-                <p style="margin: 8px 0 0 0; color: #94A3B8; font-size: 14px; letter-spacing: 0.5px;">AI-Powered MOT Predictions</p>
+                <p style="margin: 8px 0 0 0; color: #94A3B8; font-size: 14px; letter-spacing: 0.5px;">MOT History &amp; Comparable-Vehicle Evidence</p>
             </td>
         </tr>
 
@@ -367,7 +367,7 @@ def generate_lead_email(
     # Plain text version - also use Jinja2 for consistency
     text_template = _jinja_env.from_string("""
 ======================================================================
-  AUTOSAFE - AI-Powered MOT Predictions
+  AUTOSAFE - MOT History & Comparable-Vehicle Evidence
 ======================================================================
 
 FREE LEAD ({{ leads_remaining }} of {{ max_leads_per_month }} remaining this month)
@@ -542,7 +542,7 @@ def generate_mot_reminder_confirmation(
         <tr>
             <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
                 <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    AutoSafe &middot; MOT History &amp; Comparable-Vehicle Evidence &middot;
                     <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
                 </p>
             </td>
@@ -944,7 +944,7 @@ def generate_mot_reminder_28d(
         <tr>
             <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
                 <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    AutoSafe &middot; MOT History &amp; Comparable-Vehicle Evidence &middot;
                     <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
                 </p>
             </td>
