@@ -86,3 +86,46 @@ jobs:
           tags: autosafe:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: No committed build assets
+        run: |
+          if git ls-files --error-unmatch static/index.html >/dev/null 2>&1 || [ -n "$(git ls-files static/assets)" ]; then
+            echo '::error::build outputs must not be tracked'
+            exit 1
+          fi
+
+      - name: Upload frontend static bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-static
+          path: static/

@@ -43,6 +43,11 @@ dist
 dist-ssr
 *.local
 
+# build outputs — built from source in Docker/CI since RC1 (orchestrator
+# untracks the previously-committed copies)
+/static/index.html
+/static/assets/
+
 # Logs
 logs
 npm-debug.log*

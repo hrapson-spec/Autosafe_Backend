@@ -12,3 +12,14 @@ catboost_info/
 .git/
 .DS_Store
 __pycache__/
+
+# Frontend build outputs are rebuilt from source in the frontend stage of
+# the Dockerfile and overlaid onto the runtime image after `COPY . .`.
+# Excluding them here shrinks the build context and, more importantly,
+# stops any stale/untracked local build artifacts (e.g. leftover hashed
+# chunks from a prior `npm run build`) from leaking into the runtime image
+# via `COPY . .` regardless of what git tracks. Other static/ files (SEO
+# HTML wrappers, sitemap/robots, logo/og images) are untouched by these
+# two patterns and continue to come from the build context as before.
+static/index.html
+static/assets/
