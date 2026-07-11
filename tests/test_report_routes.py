@@ -241,6 +241,7 @@ class TestCreateReportPersistence(unittest.TestCase):
         record = fake_save.call_args[0][0]
 
         expected_keys = {
+            'id',
             'registration', 'postcode', 'vehicle_make', 'vehicle_model', 'vehicle_year',
             'vehicle_fuel_type', 'mileage', 'last_mot_date', 'last_mot_result',
             'failure_risk', 'confidence_level', 'risk_components', 'repair_cost_estimate',
@@ -276,15 +277,14 @@ class TestCreateReportPersistence(unittest.TestCase):
         self.assertIsNone(record['expires_at'].tzinfo, "must be naive for asyncpg's TIMESTAMP column")
         self.assertIsInstance(record['last_mot_date'], datetime)  # real datetime, not the ISO string
 
-        # persisted payload == returned payload, except report_id (see
-        # report_routes._create_report_core's docstring: unknowable
-        # pre-insert since Postgres assigns it at INSERT time).
+        # persisted payload == returned payload, byte-for-byte INCLUDING
+        # report_id: the route mints the uuid pre-insert and passes it as
+        # the explicit row id (record['id']), so POST and any later GET
+        # replay agree on every field (staging acceptance check 4f).
         stored_payload = record['report_payload']
-        self.assertIsNone(stored_payload['report_id'])
-        self.assertEqual(body['report_id'], 'row-id-123')
-        live_without_id = {k: v for k, v in body.items() if k != 'report_id'}
-        stored_without_id = {k: v for k, v in stored_payload.items() if k != 'report_id'}
-        self.assertEqual(live_without_id, stored_without_id)
+        self.assertEqual(body, stored_payload)
+        self.assertEqual(body['report_id'], str(record['id']))
+        self.assertRegex(body['report_id'], r'^[0-9a-f-]{36}$')
 
         # token format + share_url composition
         self.assertRegex(body['report_token'], r'^[A-Za-z0-9_-]{10,64}$')

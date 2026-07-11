@@ -487,12 +487,15 @@ def _build_persist_record(
     vehicle_data_source: VehicleDataSource,
     token: str,
     payload_dict: Dict[str, Any],
+    report_uuid: "uuid_module.UUID",
     expires_at_naive: datetime,
     idempotency_key: Optional[str],
 ) -> Dict[str, Any]:
     """Build the dict passed to database.save_report, matching its
-    documented keys exactly (27 keys; see save_report's own docstring and
-    its INSERT column list -- both enumerate the identical set).
+    documented keys exactly (28 keys; see save_report's own docstring and
+    its INSERT column list -- both enumerate the identical set). 'id' is
+    the pre-minted report uuid so the persisted payload's report_id and
+    the row's primary key agree byte-for-byte.
 
     last_mot_date/last_mot_result are read from `history` directly
     (history.mot_tests[0]), NOT from assessment.mot.last_test_date --
@@ -514,6 +517,7 @@ def _build_persist_record(
     repair_dict = assessment.repair_estimate.model_dump() if assessment.repair_estimate is not None else None
 
     return {
+        'id': report_uuid,
         'registration': vrm,
         'postcode': postcode,
         'vehicle_make': assessment.vehicle.make,
@@ -573,23 +577,14 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
     model_dump(mode='json') snapshot for the DB record BEFORE calling
     save_report, so the persisted report_payload and the payload the
     caller sees are the same computation, not two independently-built
-    ones that could drift. report_id is the one field this can't hold for
-    on the very first creation: Postgres only assigns the row's id at
-    INSERT time (save_report's INSERT has no id parameter -- see its
-    column list), so the snapshot captured pre-insert necessarily has
-    report_id=None. response.report_id is set from save_report's return
-    value *after* the snapshot was already taken, so the live POST
-    response does carry the real id but the persisted payload does not.
-    FLAGGED: a later GET replay of this same report therefore returns
-    report_id=None even though a real id exists. This is intentional
-    given report_contract.py's own "no fabricated defaults" principle
-    (None over a placeholder) rather than a bug, but it is a real,
-    visible gap between "persisted payload" and "returned payload" for
-    that one field, worth a second look if report_id ever becomes
-    load-bearing for a client (today, report_token/share_url are the
-    load-bearing identifiers, and those *do* round-trip exactly, because
-    this module mints the token itself before persistence rather than
-    letting Postgres assign it).
+    ones that could drift. This module mints BOTH identifiers itself
+    before persistence — report_token (secrets.token_urlsafe) and
+    report_id (uuid4, inserted explicitly as the risk_checks.id) — so
+    the persisted payload and the live POST response are byte-identical
+    for every field, and a later GET replay returns exactly what POST
+    returned. (Staging acceptance check 4f enforces the byte-equality;
+    the pre-RC1 design let Postgres assign the id post-snapshot, which
+    made report_id None on every replay.)
     """
     vrm = _normalize_vrn(body.registration)
     postcode = _normalize_postcode(body.postcode)
@@ -612,10 +607,11 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
 
     now_dt = datetime.now(timezone.utc)
     token = secrets.token_urlsafe(16)
+    report_uuid = uuid_module.uuid4()
     expires_dt = now_dt + timedelta(days=REPORT_TTL_DAYS)
 
     response = ReportResponse(
-        report_id=None,
+        report_id=str(report_uuid),
         report_token=token,
         share_url=_share_url(token),
         created_at=now_dt.isoformat(),
@@ -643,6 +639,7 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
         assessment=assessment,
         vehicle_data_source=vehicle_data_source,
         token=token,
+        report_uuid=report_uuid,
         payload_dict=payload_dict,
         expires_at_naive=expires_dt.replace(tzinfo=None),
         idempotency_key=body.idempotency_key,
@@ -674,7 +671,8 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
         )
         return _degrade(response)
 
-    response.report_id = report_id
+    # report_id was minted pre-insert and passed to save_report as the
+    # explicit row id; the returned id is the same value by construction.
     return response
 
 

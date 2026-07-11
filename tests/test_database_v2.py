@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import unittest
+import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
@@ -392,6 +393,7 @@ class TestSaveReport(unittest.TestCase):
             total_failures=20,
             idempotency_key="idem_123",
             expires_at=None,
+            id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
         )
         record.update(overrides)
         return record
@@ -411,7 +413,10 @@ class TestSaveReport(unittest.TestCase):
             self.assertEqual(method, "fetchrow")
             for col in self.NAMED_COLUMNS:
                 self.assertIn(col, sql)
-            self.assertEqual(len(params), 27)
+            self.assertEqual(len(params), 28)
+            # id is the pre-minted uuid, COALESCEd server-side if absent
+            self.assertEqual(params[27], record["id"])
+            self.assertIn("COALESCE($28, gen_random_uuid())", sql)
             # JSONB params go through json.dumps before the ::jsonb cast,
             # mirroring legacy save_risk_check's handling.
             self.assertEqual(params[11], json.dumps(record["risk_components"]))

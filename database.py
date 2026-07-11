@@ -1199,7 +1199,10 @@ async def save_report(record: Dict) -> Optional[str]:
     a ReportResponse). Unlike legacy save_risk_check, this does NOT write a
     JSONL backup file on failure — see the fail-open branch below.
 
-    record keys (all provided by the caller — report_service.py):
+    record keys (all provided by the caller — report_routes.py):
+        id (uuid.UUID, pre-minted by the route so the persisted payload's
+        report_id matches the row's primary key; COALESCEd to
+        gen_random_uuid() if a caller omits it),
         registration, postcode, vehicle_make, vehicle_model, vehicle_year,
         vehicle_fuel_type, mileage, last_mot_date, last_mot_result,
         failure_risk, confidence_level, risk_components, repair_cost_estimate,
@@ -1242,7 +1245,8 @@ async def save_report(record: Dict) -> Optional[str]:
                     contract_version, report_token, report_payload,
                     mileage_source, effective_mileage, match_scope,
                     total_tests, total_failures,
-                    idempotency_key, expires_at
+                    idempotency_key, expires_at,
+                    id
                 ) VALUES (
                     $1, $2,
                     $3, $4, $5, $6,
@@ -1253,7 +1257,8 @@ async def save_report(record: Dict) -> Optional[str]:
                     $18, $19, $20::jsonb,
                     $21, $22, $23,
                     $24, $25,
-                    $26, $27
+                    $26, $27,
+                    COALESCE($28, gen_random_uuid())
                 )
                 RETURNING id""",
                 record.get('registration'),
@@ -1283,6 +1288,7 @@ async def save_report(record: Dict) -> Optional[str]:
                 record.get('total_failures'),
                 record.get('idempotency_key'),
                 record.get('expires_at'),
+                record.get('id'),
             )
             return str(result['id'])
 

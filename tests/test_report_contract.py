@@ -88,9 +88,15 @@ class TestExtraForbid(unittest.TestCase):
 
 class TestRequestBoundaryValidation(unittest.TestCase):
 
-    def test_registration_length_1_rejected(self):
+    def test_registration_length_1_accepted_at_contract_level(self):
+        # Deliberate: a 1-char value must pass pydantic so the ROUTE's VRN
+        # regex rejects it with the typed 400 invalid_registration envelope
+        # instead of a generic 422 (staging acceptance check 4h). Empty
+        # string still fails min_length here.
+        req = ReportCreateRequest(registration="A")
+        self.assertEqual(req.registration, "A")
         with self.assertRaises(ValidationError):
-            ReportCreateRequest(registration="A")
+            ReportCreateRequest(registration="")
 
     def test_registration_length_2_accepted(self):
         req = ReportCreateRequest(registration="AB")

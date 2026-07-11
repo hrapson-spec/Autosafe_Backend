@@ -518,7 +518,7 @@
           },
           "registration": {
             "maxLength": 12,
-            "minLength": 2,
+            "minLength": 1,
             "title": "Registration",
             "type": "string"
           }

@@ -131,7 +131,10 @@ class ReportCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    registration: str = Field(min_length=2, max_length=12)
+    # min_length=1 (not 2) is deliberate: a 1-char value must reach the
+    # route's VRN regex so it yields the typed 400 invalid_registration
+    # envelope rather than pydantic's generic 422 (staging check 4h).
+    registration: str = Field(min_length=1, max_length=12)
     postcode: Optional[str] = Field(default=None, max_length=10)
     mileage_user: Optional[int] = Field(default=None, ge=0, le=500000)
     idempotency_key: Optional[str] = Field(default=None, max_length=100)
