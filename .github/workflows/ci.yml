@@ -226,12 +226,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run staging stack + acceptance
+      # `migrate` is intentionally a successful one-shot service. Running the
+      # whole stack with attached exit-code propagation therefore
+      # tears everything down as soon as migration finishes, before app or
+      # acceptance can run. Start the long-lived app stack first, then execute
+      # acceptance independently and gate on that command's exit status.
+      - name: Build and start staging app
         env:
           GIT_SHA: ${{ github.sha }}
-        run: |
-          docker compose -f docker-compose.staging.yml up \
-            --build --abort-on-container-exit --exit-code-from acceptance
+        run: docker compose -f docker-compose.staging.yml up --build --wait app
+
+      - name: Run staging acceptance
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: docker compose -f docker-compose.staging.yml run --rm --build --no-deps acceptance
 
       - name: Stack logs on failure
         if: failure()

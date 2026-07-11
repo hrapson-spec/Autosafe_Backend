@@ -84,7 +84,7 @@ Run:
 ```bash
 /Users/henrirapson/autosafe/.venv/bin/python -m pytest tests/test_ci_workflow.py -q
 docker compose -f docker-compose.staging.yml config --quiet
-ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml", aliases: true); puts "workflow yaml ok"'
+ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml"); puts "workflow yaml ok"'
 ```
 
 Expected: regression test PASS; Compose and workflow YAML exit 0.
