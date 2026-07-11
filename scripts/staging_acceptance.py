@@ -130,7 +130,11 @@ async def check_ready(client: httpx.AsyncClient) -> Dict:
     return body
 
 
-async def check_version(client: httpx.AsyncClient, expect_frontend_bundle: bool) -> Dict:
+async def check_version(
+    client: httpx.AsyncClient,
+    expect_frontend_bundle: bool,
+    expected_backend_sha: Optional[str] = None,
+) -> Dict:
     r = await client.get("/api/version")
     assert r.status_code == 200, f"status={r.status_code} body={r.text}"
     body = r.json()
@@ -143,6 +147,13 @@ async def check_version(client: httpx.AsyncClient, expect_frontend_bundle: bool)
     else:
         assert body["frontend_bundle_hash"] is None, (
             f"expected null frontend_bundle_hash (static/index.html absent -- documented honestly, not faked): {body}"
+        )
+    if expected_backend_sha is not None:
+        assert expected_backend_sha != "unknown", (
+            "expected_backend_sha must be a concrete commit SHA, not 'unknown'"
+        )
+        assert body["backend_sha"] == expected_backend_sha, (
+            f"expected backend_sha={expected_backend_sha!r}, got {body['backend_sha']!r}"
         )
     show("GET /api/version", body)
     return body
@@ -517,7 +528,7 @@ async def main_async(args: argparse.Namespace) -> int:
             await runner.run("4a-ready", "GET /ready -> ok, database connected", check_ready(client))
             await runner.run(
                 "4a-version", "GET /api/version shape + frontend_bundle_hash",
-                check_version(client, expect_frontend_bundle),
+                check_version(client, expect_frontend_bundle, args.expected_backend_sha),
             )
             await runner.run(
                 "4b-openapi", "openapi.json: legacy /api/risk params + v2 routes typed",
@@ -584,6 +595,11 @@ def main() -> int:
         "--expect-frontend-bundle", choices=["auto", "true", "false"], default="auto",
         help="Whether GET /api/version's frontend_bundle_hash should be non-null. "
              "'auto' (default) checks for static/index.html on disk next to this script's repo root.",
+    )
+    parser.add_argument(
+        "--expected-backend-sha",
+        default=None,
+        help="Exact commit SHA expected from GET /api/version. CI must pass a concrete value.",
     )
     args = parser.parse_args()
     return asyncio.run(main_async(args))

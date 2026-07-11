@@ -89,8 +89,8 @@ services:
       retries: 5
 
   # Runs scripts/staging_acceptance.py against `app` and exits non-zero on
-  # any failed check -- CI gates on this service's exit code
-  # (`--exit-code-from acceptance`).
+  # any failed check -- CI gates on `docker compose run`'s exit code after
+  # the long-lived app stack is healthy.
   acceptance:
     build:
       context: .
@@ -101,10 +101,12 @@ services:
       sh -c "
         python3 scripts/seed_staging_data.py &&
         python3 scripts/staging_acceptance.py --base-url http://app:8000
+          --expected-backend-sha ${GIT_SHA:-unknown}
       "
     environment:
       DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
       BASE_URL: http://app:8000
+      GIT_SHA: ${GIT_SHA:-unknown}
     depends_on:
       app:
         condition: service_healthy
