@@ -1,105 +1,33 @@
-export interface CarSelection {
-  make: string;
-  model: string;
-  year: number;
-  mileage: number;
-}
+// Legacy pre-v2 types (CarSelection, CarReport, Fault, RepairCostEstimate,
+// VehicleLookupResponse, BackendRiskResponse, MockCarMake/Model, InputMode)
+// were removed in RC1: the v2 report contract (ReportV2 below) replaced them
+// and nothing references them. Their adapter fabricated evidence defaults
+// (0 tests, stringified-year "bands", a 50,000-mile placeholder) — do not
+// reintroduce that pattern.
 
 export interface RegistrationQuery {
   registration: string;
   postcode: string;
 }
 
-export interface Fault {
-  component: string;
-  description: string;
-  riskLevel: 'Low' | 'Medium' | 'High';
-}
-
-export interface RepairCostEstimate {
-  cost_min: number;
-  cost_mid: number;
-  cost_max: number;
-  display: string;
-  disclaimer: string;
-}
-
-export interface CarReport {
-  reliabilityScore: number;
-  verdict: string;
-  detailedAnalysis: string;
-  commonFaults: Fault[];
-  estimatedAnnualMaintenance: number;
-  repairCostEstimate?: RepairCostEstimate;
-  motPassRatePrediction: number;
-  motExpiryDate?: string;
-  daysUntilMotExpiry?: number;
-  motExpired?: boolean;
-  registration?: string;
-}
-
-export interface MockCarModel {
-  id: string;
-  name: string;
-}
-
-export interface MockCarMake {
-  id: string;
-  name: string;
-  models: MockCarModel[];
-}
-
-// Backend API Response Types
-export interface VehicleLookupResponse {
-  registration: string;
-  make: string;
-  model: string;
-  year: number;
-  fuel_type: string;
-  colour: string;
-  engine_capacity: number | null;
-  mot_status: string;
-  mot_expiry: string;
-  tax_status: string;
-  tax_due_date: string;
-}
-
-export interface BackendRiskResponse {
-  model_id: string;
-  age_band: string;
-  mileage_band: string;
-  Total_Tests: number;
-  Total_Failures: number;
-  Failure_Risk: number;
-  Failure_Risk_CI_Lower?: number;
-  Failure_Risk_CI_Upper?: number;
-  Confidence_Level?: 'High' | 'Medium' | 'Low';
-  Risk_Brakes?: number;
-  Risk_Suspension?: number;
-  Risk_Tyres?: number;
-  Risk_Steering?: number;
-  Risk_Visibility?: number;
-  Risk_Lamps?: number;
-  Risk_Body?: number;
-  Repair_Cost_Estimate?: {
-    cost_min: number;
-    cost_mid: number;
-    cost_max: number;
-    display: string;
-    disclaimer: string;
-  };
-  note?: string;
-}
-
-// Input mode for the form
-export type InputMode = 'registration' | 'manual';
-
 // Lead Capture Types
+//
+// year: number | null (not just `number`) because it is sourced from
+// ReportV2.vehicle.year, which is honestly null when the vehicle's
+// manufacture year is unknown (see report_contract.ReportVehicle) -- main.py's
+// VehicleInfo.year is Optional[int] = None server-side, so an explicit null is
+// accepted the same as an absent key; no need to fabricate or omit it.
+// mileage / mileage_source: additive, nullable-tweak fields for the same
+// reason -- ReportV2.mileage.effective_value is `number | null` (omitted from
+// the wire payload entirely when null, never sent as 0 or a fabricated
+// default), and mileage_source records its provenance. Both stay optional so
+// any other producer of GarageLeadVehicle in the codebase keeps compiling.
 export interface GarageLeadVehicle {
   make: string;
   model: string;
-  year: number;
-  mileage: number;
+  year: number | null;
+  mileage?: number;
+  mileage_source?: MileageSource;
 }
 
 export interface GarageLeadRiskData {
