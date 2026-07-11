@@ -9,7 +9,7 @@ const PrivacyPage: React.FC = () => {
     <div className="min-h-screen bg-[#F0F0F0] text-slate-900">
       <Helmet>
         <title>Privacy Notice | AutoSafe</title>
-        <meta name="description" content="How AutoSafe handles your data. We don't store your vehicle registration or postcode. Read our full privacy notice." />
+        <meta name="description" content="How AutoSafe handles your data: what we collect when you run a check, why, and how long we keep it. Vehicle registration and postcode are kept for up to 24 months, then deleted or irreversibly pseudonymised." />
         <link rel="canonical" href="https://www.autosafe.one/privacy" />
       </Helmet>
       {/* Header */}
