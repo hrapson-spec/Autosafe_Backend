@@ -208,7 +208,8 @@ export function buildMileagePhrase(report: ReportV2): string | null {
  *
  * observed_mot is always qualified "(last recorded MOT mileage)" — this is
  * the most recent odometer reading on file, which may be months old, and
- * must never be presented (or misread) as the vehicle's *current* mileage.
+ * must never be presented (or misread) as anything more up to date than
+ * the vehicle's latest recorded mileage.
  */
 export function mileageHeaderValue(report: ReportV2): string | null {
   const { effective_value, source } = report.mileage;
