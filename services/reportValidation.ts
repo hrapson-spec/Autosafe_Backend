@@ -418,7 +418,7 @@ export function isRiskLookupV2(x: unknown): x is RiskLookupV2 {
   const structurallyValid = (
     isString(x.vehicle) &&
     isNumber(x.year) &&
-    isNullable(x.mileage, isNumber) &&
+    isNullable(x.mileage, isNonNegativeInteger) &&
     isNullable(x.note, isString) &&
     isNullable(x.confidence_level, isString) &&
     isNullable(x.risk_brakes, isNumber) &&

@@ -5,6 +5,7 @@
  * This is the single source of truth for how report evidence gets worded:
  * risk percentages, mileage phrases, scope disclosures, sample-size clauses,
  * confidence caveats, the composed narrative, component-section copy, the
+ * last-recorded-mileage statement, the population-average badge, the
  * WhatsApp share message, and the demo-data banner. No other module should
  * hand-roll any of these strings.
  *
@@ -19,7 +20,9 @@
  *  - a null or zero sample size never renders as a number (buildSampleSizeClause,
  *    sampleSizeBadge)
  *  - a `missing` mileage source never produces a mileage phrase or header
- *    value (buildMileagePhrase, mileageHeaderValue)
+ *    value (buildMileagePhrase, mileageHeaderValue), and never a dated
+ *    last-recorded-mileage line (lastRecordedMileageLine returns null for a
+ *    missing or undated reading rather than an undated claim)
  *  - nothing here claims vehicle-specific modelling — copy is always phrased
  *    in terms of "vehicles like this" / "similar vehicles"
  *
@@ -58,6 +61,20 @@ export function failureRateLabel(report: ReportV2): string {
   return hasVehicleComparison(report)
     ? 'Comparable-vehicle MOT failure rate'
     : 'Dataset-wide reference MOT failure rate';
+}
+
+/**
+ * Fixed badge shown next to every displayed rate, regardless of match
+ * scope: every served rate is a population/cohort lookup, never a
+ * per-vehicle prediction, so this badge and its tooltip apply uniformly —
+ * unlike failureRateLabel, which varies its wording by match scope, this
+ * is one constant pair for every report.
+ */
+export function populationBadge(): { label: string; title: string } {
+  return {
+    label: 'Population average',
+    title: 'A recorded failure rate for a group of similar vehicles — not a prediction for this vehicle.',
+  };
 }
 
 /**
@@ -109,8 +126,16 @@ export function buildScopeDisclosure(report: ReportV2): string {
   switch (scope) {
     case 'exact_band':
       return `This comparison uses ${make} ${model} records in the matched age and mileage bands.`;
-    case 'age_band_only':
-      return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because there wasn't enough mileage-matched data.`;
+    case 'age_band_only': {
+      // Two distinct reasons mileage went unused: genuinely sparse
+      // mileage-matched data (the original case) vs. no reliable recorded
+      // mileage at all (missing or anomalous). Same sentence shape either
+      // way; only the reason clause differs.
+      const reason = report.mileage.source === 'missing'
+        ? 'no reliable recorded mileage was available'
+        : "there wasn't enough mileage-matched data";
+      return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because ${reason}.`;
+    }
     case 'model_average':
       return `This comparison uses all ${make} ${model} records in the dataset, across all age and mileage bands.`;
     case 'population_default':
@@ -180,6 +205,10 @@ export function buildMileagePhrase(report: ReportV2): string | null {
  * Mileage value for header/summary slots. Same missing-source rule as
  * buildMileagePhrase: never "0 miles", never "— miles" — the slot is
  * omitted (null) instead.
+ *
+ * observed_mot is always qualified "(last recorded MOT mileage)" — this is
+ * the most recent odometer reading on file, which may be months old, and
+ * must never be presented (or misread) as the vehicle's *current* mileage.
  */
 export function mileageHeaderValue(report: ReportV2): string | null {
   const { effective_value, source } = report.mileage;
@@ -190,13 +219,45 @@ export function mileageHeaderValue(report: ReportV2): string | null {
     case 'missing':
       return null;
     case 'user_entered':
-    case 'observed_mot':
       return `${n} miles`;
+    case 'observed_mot':
+      // Explicit 'en-GB' here (matching buildSampleSizeClause / sampleSizeBadge
+      // elsewhere in this file), computed separately from the shared `n`
+      // above so the user_entered/estimated branches stay byte-identical.
+      return `${effective_value.toLocaleString('en-GB')} miles (last recorded MOT mileage)`;
     case 'estimated':
       return `~${n} miles (estimated)`;
     default:
       return assertUnreachable(source, 'mileage.source');
   }
+}
+
+/**
+ * Standalone "as of" mileage statement for a dedicated header/detail slot —
+ * distinct from mileageHeaderValue's compact inline value (which this
+ * complements, not replaces): names the MOT test date the effective
+ * mileage came from, and discloses the pre-conversion km figure when a
+ * unit conversion happened.
+ *
+ * Null whenever there is no dateable MOT-observed reading to report: a
+ * `missing` mileage source, or (defensively) any source lacking an
+ * `observed_at` date — never an undated claim. In practice this also
+ * excludes user_entered/estimated mileage, since neither ever carries an
+ * observed_at date (ReportMileageV2.observed_at is populated only for the
+ * observed-MOT reading path).
+ */
+export function lastRecordedMileageLine(report: ReportV2): string | null {
+  const { effective_value, source, observed_at, unit_converted, original_value } = report.mileage;
+  if (source === 'missing') return null;
+  if (!observed_at) return null;
+  if (effective_value === null) return null;
+
+  const n = effective_value.toLocaleString('en-GB');
+  let line = `Last recorded MOT mileage: ${n} miles on ${formatDateGB(observed_at)}`;
+  if (unit_converted && original_value != null) {
+    line += ` — converted from ${original_value.toLocaleString('en-GB')} km`;
+  }
+  return line;
 }
 
 /**
@@ -206,7 +267,18 @@ export function mileageHeaderValue(report: ReportV2): string | null {
  */
 function buildUnmatchedMileageDisclosure(report: ReportV2): string | null {
   const { effective_value, source, observed_at, anomaly, unit_converted } = report.mileage;
-  if (effective_value === null || source === 'missing') return null;
+  if (source === 'missing') {
+    // New-state copy (Release 1): the backend now rejects an anomalous
+    // reading outright (source becomes 'missing') rather than silently
+    // substituting an inconsistent one — see the observed_mot anomaly
+    // suffix below, kept only for legacy payloads that still show a
+    // substituted reading. A genuinely absent reading (anomaly: false)
+    // still has nothing to disclose here.
+    return anomaly
+      ? "Recorded mileage was not used: the vehicle's MOT mileage history is inconsistent, so no reading could be trusted."
+      : null;
+  }
+  if (effective_value === null) return null;
   const n = effective_value.toLocaleString();
   let context: string;
 
@@ -216,6 +288,11 @@ function buildUnmatchedMileageDisclosure(report: ReportV2): string | null {
       break;
     case 'observed_mot':
       context = `${n} miles recorded at its MOT${observed_at ? ` on ${formatDateGB(observed_at)}` : ''}`;
+      // Legacy rendering only: current backend logic never substitutes an
+      // inconsistent reading silently (an anomalous reading now makes
+      // source 'missing', handled above) — this branch stays reachable so
+      // an old persisted payload recorded before that change still renders
+      // honestly.
       if (anomaly) context += ' (an inconsistent newer reading was ignored)';
       if (unit_converted) context += ' (converted from kilometres)';
       break;
@@ -331,7 +408,7 @@ export function componentsSectionCopy(report: ReportV2): ComponentsSectionCopy {
   if (items && items.length > 0) {
     return {
       show: true,
-      caption: 'Components most often linked to MOT failure for similar vehicles — not a diagnosis of this vehicle.',
+      caption: 'Indicative estimates: components most often linked to MOT failure among similar vehicles — not a diagnosis of this vehicle.',
       emptyStateText: null,
     };
   }

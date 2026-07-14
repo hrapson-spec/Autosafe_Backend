@@ -119,7 +119,6 @@ describe('App: submit success', () => {
     expect(createReport).toHaveBeenCalledWith(
       'AB12CDE',
       'SW1A 1AA',
-      undefined,
       expect.any(String),
     );
     expect(trackConversion).toHaveBeenCalledWith('risk_check');
@@ -182,8 +181,10 @@ describe('App: submit failure (remount regression)', () => {
     await user.click(screen.getByRole('button', { name: /check this car/i }));
 
     expect(vi.mocked(createReport)).toHaveBeenCalledTimes(2);
-    const firstKey = vi.mocked(createReport).mock.calls[0][3];
-    const secondKey = vi.mocked(createReport).mock.calls[1][3];
+    // idempotencyKey is createReport's 3rd positional argument (index 2)
+    // now that the removed mileageUser parameter no longer occupies index 2.
+    const firstKey = vi.mocked(createReport).mock.calls[0][2];
+    const secondKey = vi.mocked(createReport).mock.calls[1][2];
     expect(firstKey).toBeTruthy();
     expect(secondKey).toBe(firstKey);
   });
@@ -209,8 +210,10 @@ describe('App: submit failure (remount regression)', () => {
     await screen.findByRole('alert');
     await user.click(screen.getByRole('button', { name: /check this car/i }));
 
-    const firstKey = vi.mocked(createReport).mock.calls[0][3];
-    const secondKey = vi.mocked(createReport).mock.calls[1][3];
+    // idempotencyKey is createReport's 3rd positional argument (index 2)
+    // now that the removed mileageUser parameter no longer occupies index 2.
+    const firstKey = vi.mocked(createReport).mock.calls[0][2];
+    const secondKey = vi.mocked(createReport).mock.calls[1][2];
     expect(firstKey).toBeTruthy();
     expect(secondKey).toBeTruthy();
     expect(secondKey).not.toBe(firstKey);

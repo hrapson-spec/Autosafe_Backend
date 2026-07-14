@@ -414,7 +414,10 @@ export interface RiskLookupAvailableV2 {
 }
 
 /** RiskLookupV2 when no rate could be produced at all -- every risk/cohort/
- * confidence field is honestly null rather than a fabricated default. */
+ * confidence field is honestly null rather than a fabricated default.
+ * repair_cost_estimate is included (always null here) because real backend
+ * responses carry the key as null rather than omitting it -- this lets
+ * components read it type-safely without an `in` check. */
 export interface RiskLookupUnavailableV2 {
   prediction_source: 'unavailable';
   failure_risk: null;
@@ -430,6 +433,7 @@ export interface RiskLookupUnavailableV2 {
   risk_visibility: null;
   risk_lamps: null;
   risk_body: null;
+  repair_cost_estimate: null;
   note: string | null;
 }
 

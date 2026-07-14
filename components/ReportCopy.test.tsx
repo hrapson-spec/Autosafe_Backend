@@ -8,6 +8,8 @@ import {
   sampleSizeBadge,
   buildMileagePhrase,
   mileageHeaderValue,
+  lastRecordedMileageLine,
+  populationBadge,
   buildConfidenceCaveat,
   buildNarrative,
   componentsSectionCopy,
@@ -17,11 +19,19 @@ import {
   formatDateGB,
   type Confidence,
 } from './ReportCopy';
+import {
+  fixtureObservedHighMileage,
+  fixtureKmConverted,
+  fixtureAnomalyMissing,
+  fixtureLegacyEstimated2_0,
+} from '../fixtures/reportResponses';
 
 // ---------------------------------------------------------------------------
-// Local report factory. fixtures/ is owned by a parallel agent in this wave
-// — deliberately not imported here. These are small, inline, override-based
-// builders scoped to this test file only.
+// Local report factory for hand-rolled, override-based cases below.
+// fixtures/reportResponses.ts (Task 5, committed) is used directly for the
+// handful of tests that need a specific named evidence-ladder cell
+// (lastRecordedMileageLine, the legacy-estimated byte-identity check) rather
+// than a one-off override -- the two approaches coexist deliberately.
 // ---------------------------------------------------------------------------
 
 const BASE_VEHICLE: ReportV2['vehicle'] = {
@@ -184,6 +194,16 @@ describe('buildScopeDisclosure', () => {
     const report = makeReport({ evidence: { match_scope } });
     expect(buildScopeDisclosure(report)).toBe(expected);
   });
+
+  it('uses the no-reliable-mileage reason for age_band_only when mileage is missing (distinct from the sparse-data reason above)', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'age_band_only' },
+      mileage: { source: 'missing', effective_value: null, observed_at: null, anomaly: false, unit_converted: false },
+    });
+    expect(buildScopeDisclosure(report)).toBe(
+      'This comparison uses Ford Fiesta records in the matched age band; mileage was not used because no reliable recorded mileage was available.'
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -324,9 +344,12 @@ describe('mileageHeaderValue', () => {
     expect(mileageHeaderValue(report)).toBe('45,000 miles');
   });
 
-  it('observed_mot', () => {
+  it('observed_mot carries the "last recorded MOT mileage" qualifier, never "current"', () => {
     const report = makeReport({ mileage: { source: 'observed_mot', effective_value: 32000 } });
-    expect(mileageHeaderValue(report)).toBe('32,000 miles');
+    const value = mileageHeaderValue(report);
+    expect(value).toBe('32,000 miles (last recorded MOT mileage)');
+    expect(value).toContain('(last recorded MOT mileage)');
+    expect((value ?? '').toLowerCase()).not.toContain('current');
   });
 
   it('estimated gets the ~ prefix and "(estimated)" suffix', () => {
@@ -340,6 +363,54 @@ describe('mileageHeaderValue', () => {
     // A null slot is the whole point: the caller omits it entirely rather
     // than rendering a fabricated "0 miles" / "— miles" placeholder.
     expect(value).toBeNull();
+  });
+
+  it('never uses the word "current" for any source', () => {
+    for (const source of ['user_entered', 'observed_mot', 'estimated'] as const) {
+      const report = makeReport({ mileage: { source, effective_value: 10000 } });
+      expect((mileageHeaderValue(report) ?? '').toLowerCase()).not.toContain('current');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// lastRecordedMileageLine
+// ---------------------------------------------------------------------------
+
+describe('lastRecordedMileageLine', () => {
+  it('renders the exact line for a bare-date observed reading (miles, unconverted)', () => {
+    expect(lastRecordedMileageLine(fixtureObservedHighMileage)).toBe(
+      'Last recorded MOT mileage: 112,406 miles on 2 Nov 2025'
+    );
+  });
+
+  it('appends the km-conversion suffix when unit_converted and original_value are present', () => {
+    const line = lastRecordedMileageLine(fixtureKmConverted) ?? '';
+    // fixtureKmConverted's observed_at ("2026-07-01T00:00:00") has no
+    // explicit UTC marker -- formatDateGB's own documented contract only
+    // commits to bare dates and explicit-UTC timestamps, so the exact
+    // calendar date rendered here is host-timezone-sensitive (see report's
+    // Concerns section). Assert the load-bearing prefix/suffix instead of
+    // pinning the exact date digit.
+    expect(line).toContain('Last recorded MOT mileage: 111,847 miles on');
+    expect(line).toContain('— converted from 180,000 km');
+  });
+
+  it('is null when the mileage source is missing', () => {
+    expect(lastRecordedMileageLine(fixtureAnomalyMissing)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// populationBadge
+// ---------------------------------------------------------------------------
+
+describe('populationBadge', () => {
+  it('returns the fixed label and title', () => {
+    expect(populationBadge()).toEqual({
+      label: 'Population average',
+      title: 'A recorded failure rate for a group of similar vehicles — not a prediction for this vehicle.',
+    });
   });
 });
 
@@ -512,6 +583,41 @@ describe('buildNarrative', () => {
     expect(narrative).not.toContain('5-7 years');
     expect(narrative).not.toContain('40000-50000');
   });
+
+  it('discloses a distrusted mileage history instead of silently omitting it (source missing + anomaly true)', () => {
+    expect(buildNarrative(fixtureAnomalyMissing)).toBe(
+      'The matched TESTMAKE ANOMALYMODEL age group has a recorded MOT failure rate of 27%. ' +
+        "Recorded mileage was not used: the vehicle's MOT mileage history is inconsistent, so no reading could be trusted. " +
+        'Based on 512 recorded MOT tests in that comparison group. ' +
+        'This comparison uses TESTMAKE ANOMALYMODEL records in the matched age band; mileage was not used because no reliable recorded mileage was available.'
+    );
+  });
+
+  it('omits the mileage-history disclosure when mileage is simply missing, not anomalous', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'age_band_only', total_tests: 512, total_failures: 140 },
+      mileage: { source: 'missing', effective_value: null, observed_at: null, anomaly: false, unit_converted: false },
+    });
+    const narrative = buildNarrative(report);
+    expect(narrative).not.toContain('Recorded mileage was not used');
+    expect(narrative).not.toContain('mileage history is inconsistent');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// W9 / global constraint: the 'estimated' and 'user_entered' copy branches
+// are kept verbatim -- an old persisted 2.0 payload (fixtureLegacyEstimated2_0,
+// source: 'estimated', no original_value/original_unit keys at all) must
+// still render exactly as before this task's changes.
+// ---------------------------------------------------------------------------
+
+describe('legacy estimated payloads render byte-identically (W9)', () => {
+  it('renders fixtureLegacyEstimated2_0 through the untouched "estimated" branches verbatim', () => {
+    expect(buildMileagePhrase(fixtureLegacyEstimated2_0)).toBe(
+      'using a mileage band selected from an estimated 56,000 miles for a vehicle of this age'
+    );
+    expect(mileageHeaderValue(fixtureLegacyEstimated2_0)).toBe('~56,000 miles (estimated)');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -527,14 +633,14 @@ describe('componentsSectionCopy', () => {
     });
   });
 
-  it('shows the caption when items are present', () => {
+  it('shows the caption when items are present, prefixed "Indicative estimates:"', () => {
     expect(
       componentsSectionCopy(
         makeReport({ components: { available: true, items: [{ key: 'brakes', label: 'Brakes', risk: 0.12 }] } })
       )
     ).toEqual({
       show: true,
-      caption: 'Components most often linked to MOT failure for similar vehicles — not a diagnosis of this vehicle.',
+      caption: 'Indicative estimates: components most often linked to MOT failure among similar vehicles — not a diagnosis of this vehicle.',
       emptyStateText: null,
     });
   });

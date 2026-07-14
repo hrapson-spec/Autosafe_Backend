@@ -377,6 +377,25 @@ describe('isReportMileageV2 additive original_value/original_unit tolerance', ()
   });
 });
 
+// ----------------------------------------------------------------------------
+// source: 'user_entered' predates the Release 1 odometer/original_value work
+// entirely (it's the pre-existing "customer typed a mileage" path, not a
+// legacy-2.0-shaped payload like fixtureLegacyEstimated2_0) -- no fixture
+// carries it, so this is asserted directly against a minimal inline payload.
+// ----------------------------------------------------------------------------
+describe('isReportMileageV2 source coverage', () => {
+  it('accepts an old persisted user_entered mileage shape', () => {
+    const userEnteredMileage = {
+      effective_value: 45000,
+      source: 'user_entered',
+      observed_at: null,
+      unit_converted: false,
+      anomaly: false,
+    };
+    expect(isReportMileageV2(userEnteredMileage)).toBe(true);
+  });
+});
+
 describe('isOdometerReadingV2', () => {
   const validAvailable = {
     value_miles: 62411,
@@ -621,6 +640,11 @@ describe('isRiskLookupV2', () => {
 
   it('rejects a cohort with total_tests: 0', () => {
     expect(isRiskLookupV2({ ...validPopulationExact, cohort: { ...exactCohort, total_tests: 0 } })).toBe(false);
+  });
+
+  it('rejects a fractional or negative mileage (mileage is a non-negative integer, same as other mileage-shaped fields)', () => {
+    expect(isRiskLookupV2({ ...validPopulationExact, mileage: 62411.5 })).toBe(false);
+    expect(isRiskLookupV2({ ...validPopulationExact, mileage: -100 })).toBe(false);
   });
 
   it('rejects population_exact with only one matched band known', () => {

@@ -19,6 +19,8 @@ import {
   buildScopeDisclosure,
   sampleSizeBadge,
   mileageHeaderValue,
+  lastRecordedMileageLine,
+  populationBadge,
   buildConfidenceCaveat,
   componentsSectionCopy,
   repairEstimateCaption,
@@ -237,7 +239,11 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
   const sharingUnavailable = !shareUrl && !whatsAppMessage;
   const shareDisabledLabel = "Sharing isn't available for this report";
   const mileageDisplay = mileageHeaderValue(report);
+  const lastRecordedMileageText = lastRecordedMileageLine(report);
   const demoBannerText = demoBanner(report);
+  // Rendered next to the displayed rate label in both layout variants below
+  // -- every report, every match scope (see populationBadge's doc comment).
+  const populationBadgeCopy = populationBadge();
 
   // Shared header + trust signal (+ demo banner, rendered prominently when non-null)
   const renderHeader = () => (
@@ -259,6 +265,9 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
             {report.vehicle.year ? `${report.vehicle.year} ` : ''}{report.vehicle.make} {report.vehicle.model}
             {mileageDisplay ? ` • ${mileageDisplay}` : ''}
           </p>
+          {lastRecordedMileageText && (
+            <p className="text-slate-500 text-sm mt-0.5">{lastRecordedMileageText}</p>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -492,9 +501,16 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         <div className={`grid grid-cols-1 ${repairCardVisible ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
           {/* One score only: the rate for the disclosed comparison group. */}
           <Card className="flex flex-col items-center justify-center relative overflow-hidden">
-            <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-4">
+            <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-1">
               {displayedRateLabel}
             </h2>
+            <span
+              data-testid="population-badge"
+              className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 mb-4"
+              title={populationBadgeCopy.title}
+            >
+              {populationBadgeCopy.label}
+            </span>
             <div
               className="h-48 w-full relative"
               role="img"
@@ -694,9 +710,16 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Historical failure rate for the disclosed comparison scope */}
         <Card>
-          <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-4">
+          <h2 className="text-slate-600 text-sm font-semibold uppercase tracking-wider mb-1">
             {recommendation.scoreLabel}
           </h2>
+          <span
+            data-testid="population-badge"
+            className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 mb-4"
+            title={populationBadgeCopy.title}
+          >
+            {populationBadgeCopy.label}
+          </span>
           <div className="flex items-baseline gap-2 mb-2">
             <span data-testid="failure-rate-value" className={`text-5xl font-bold ${riskColorClass}`}>
               {risk.value}%

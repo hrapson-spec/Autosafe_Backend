@@ -54,22 +54,22 @@ describe('createReport', () => {
     expect(sentBody.postcode).toBe('SW1A 1AA');
   });
 
-  it('includes mileage_user when 0 (a genuine value, not "unset")', async () => {
+  it('never sends a mileage_user key in the request body, regardless of arguments (the backend 422s any sender of it)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, fixtureExactHigh));
     vi.stubGlobal('fetch', fetchMock);
 
-    await createReport('AB12CDE', '', 0);
+    await createReport('AB12CDE', 'SW1A 1AA', 'some-idempotency-key');
 
     const [, init] = fetchMock.mock.calls[0];
     const sentBody = JSON.parse(init.body as string);
-    expect(sentBody.mileage_user).toBe(0);
+    expect('mileage_user' in sentBody).toBe(false);
   });
 
   it('uses a caller-supplied idempotency key so a logical retry can reuse it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, fixtureExactHigh));
     vi.stubGlobal('fetch', fetchMock);
 
-    await createReport('AB12CDE', 'SW1A 1AA', undefined, 'stable-retry-key');
+    await createReport('AB12CDE', 'SW1A 1AA', 'stable-retry-key');
 
     const [, init] = fetchMock.mock.calls[0];
     const sentBody = JSON.parse(init.body as string);
