@@ -383,6 +383,30 @@ class TestContractConsistency(unittest.TestCase):
         with self.assertRaises(ValidationError):
             ReportMileage(effective_value=50000, source=MileageSource.MISSING)
 
+    def test_unit_converted_requires_km_original_unit(self):
+        # unit_converted True + an explicitly wrong original_unit is rejected.
+        with self.assertRaises(ValidationError):
+            ReportMileage(
+                effective_value=45000, source=MileageSource.OBSERVED_MOT,
+                unit_converted=True, original_value=45000, original_unit='mi',
+            )
+        # unit_converted True + the correct 'km' original_unit validates.
+        mileage = ReportMileage(
+            effective_value=11185, source=MileageSource.OBSERVED_MOT,
+            unit_converted=True, original_value=18000, original_unit='km',
+        )
+        self.assertEqual(mileage.original_unit, 'km')
+
+    def test_unit_converted_tolerates_missing_original_unit_for_old_payloads(self):
+        """A 2.0 payload persisted before original_value/original_unit
+        existed can have unit_converted=True with original_unit absent
+        entirely (defaults to None) -- that must still validate per the
+        additive-optional contract guarantee. None means "unknown", not
+        "known and not km"; only an explicitly wrong unit is rejected."""
+        mileage = ReportMileage(effective_value=62137, source=MileageSource.OBSERVED_MOT, unit_converted=True)
+        self.assertIsNone(mileage.original_unit)
+        self.assertIsNone(mileage.original_value)
+
     def test_repair_estimate_range_is_ordered_and_nonnegative(self):
         with self.assertRaises(ValidationError):
             ReportRepairEstimate(expected=100, range_low=200, range_high=50)
