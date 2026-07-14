@@ -1615,10 +1615,17 @@ else:
 def _verify_admin_api_key(api_key: Optional[str]) -> bool:
     """
     Verify admin API key using constant-time comparison.
+
+    The comparison always runs, even when ADMIN_API_KEY or api_key is
+    missing, so response timing can't reveal whether the admin key is
+    configured at all.
     """
-    if not ADMIN_API_KEY or not api_key:
+    expected = ADMIN_API_KEY or ""
+    provided = api_key or ""
+    result = secrets.compare_digest(provided, expected)
+    if not expected:
         return False
-    return secrets.compare_digest(api_key, ADMIN_API_KEY)
+    return result
 
 
 @app.get("/api/leads")

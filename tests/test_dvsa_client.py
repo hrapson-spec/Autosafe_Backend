@@ -9,13 +9,17 @@ suite builds MOTTest fixtures with already-typed odometer_value ints
 (tests/report_test_helpers.make_history) and so never exercises DVSA's
 raw string-parsing behaviour.
 """
+import asyncio
 import os
 import sys
 import unittest
+from unittest.mock import AsyncMock, patch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dvsa_client import DVSAClient  # noqa: E402
+import httpx  # noqa: E402
+
+from dvsa_client import DVSAClient, DVSAAPIError  # noqa: E402
 
 
 def _client():
@@ -113,6 +117,83 @@ class TestParseResponseOdometerUnit(unittest.TestCase):
         history = _client()._parse_response('AB12CDE', data)
 
         self.assertEqual(history.mot_tests[0].odometer_value, 45000)
+
+
+class TestFetchRetryConfig(unittest.TestCase):
+    """fetch_vehicle_history's retry loop must honor the module-level
+    DVSA_MAX_RETRIES / DVSA_RETRY_BACKOFF constants (B12) instead of the
+    hardcoded max_retries=3 / unscaled 2**attempt backoff, while leaving
+    behaviour unchanged when the constants sit at their (env-absent)
+    defaults.
+
+    _client.get is mocked to always raise httpx.RequestError, the
+    cheapest way to drive the loop's generic retry branch on every
+    attempt; _get_access_token is mocked out so no real OAuth call is
+    attempted; asyncio.sleep is mocked so the tests don't actually wait
+    and so the exact backoff durations passed can be asserted.
+    """
+
+    def _failing_client(self):
+        client = _client()
+        client._get_access_token = AsyncMock(return_value='token')
+        client._client.get = AsyncMock(side_effect=httpx.RequestError('boom'))
+        return client
+
+    def test_defaults_unchanged_when_env_absent(self):
+        """No env vars set (the CI/dev default): must still make exactly
+        3 attempts with 2**attempt-second backoff -- the prior hardcoded
+        behaviour -- so shipping this port changes nothing by default."""
+        client = self._failing_client()
+        sleep_mock = AsyncMock()
+
+        async def run_test():
+            with patch('asyncio.sleep', new=sleep_mock):
+                with self.assertRaises(DVSAAPIError):
+                    await client.fetch_vehicle_history('AB12CDE')
+
+        asyncio.run(run_test())
+
+        self.assertEqual(client._client.get.call_count, 3)
+        self.assertEqual(sleep_mock.call_count, 2)
+        sleep_mock.assert_any_call(1.0 * (2 ** 0))
+        sleep_mock.assert_any_call(1.0 * (2 ** 1))
+
+    def test_retry_count_honors_env(self):
+        """DVSA_MAX_RETRIES=5 (simulating the env var being set, which is
+        how this module-level constant is populated) must drive 5
+        attempts, not the old hardcoded 3."""
+        client = self._failing_client()
+        sleep_mock = AsyncMock()
+
+        async def run_test():
+            with patch('dvsa_client.DVSA_MAX_RETRIES', 5), \
+                 patch('asyncio.sleep', new=sleep_mock):
+                with self.assertRaises(DVSAAPIError):
+                    await client.fetch_vehicle_history('AB12CDE')
+
+        asyncio.run(run_test())
+
+        self.assertEqual(client._client.get.call_count, 5)
+        self.assertEqual(sleep_mock.call_count, 4)
+
+    def test_backoff_scales_with_env(self):
+        """DVSA_RETRY_BACKOFF=2.5 must scale every sleep duration by 2.5x
+        relative to the unscaled 2**attempt sequence."""
+        client = self._failing_client()
+        sleep_mock = AsyncMock()
+
+        async def run_test():
+            with patch('dvsa_client.DVSA_MAX_RETRIES', 3), \
+                 patch('dvsa_client.DVSA_RETRY_BACKOFF', 2.5), \
+                 patch('asyncio.sleep', new=sleep_mock):
+                with self.assertRaises(DVSAAPIError):
+                    await client.fetch_vehicle_history('AB12CDE')
+
+        asyncio.run(run_test())
+
+        self.assertEqual(sleep_mock.call_count, 2)
+        sleep_mock.assert_any_call(2.5 * (2 ** 0))
+        sleep_mock.assert_any_call(2.5 * (2 ** 1))
 
 
 if __name__ == '__main__':

@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Configurable timeout and retry settings
 DVSA_TIMEOUT = float(os.environ.get("DVSA_TIMEOUT", "5.0"))  # Default 5 seconds
-DVSA_MAX_RETRIES = int(os.environ.get("DVSA_MAX_RETRIES", "2"))  # Default 2 retries
+DVSA_MAX_RETRIES = int(os.environ.get("DVSA_MAX_RETRIES", "3"))  # Default 3 attempts (matches prior hardcoded loop value)
 DVSA_RETRY_BACKOFF = float(os.environ.get("DVSA_RETRY_BACKOFF", "1.0"))  # Base backoff in seconds
 
 
@@ -352,7 +352,7 @@ class DVSAClient:
             return self._cache[vrm]
 
         # P2-6 fix: Add retry logic for transient failures
-        max_retries = 3
+        max_retries = DVSA_MAX_RETRIES
         last_error = None
 
         for attempt in range(max_retries):
@@ -401,7 +401,7 @@ class DVSAClient:
                     logger.warning(f"DVSA 429: Rate limited, attempt {attempt+1}/{max_retries}")
                     if attempt < max_retries - 1:
                         import asyncio
-                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                        await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))  # Exponential backoff
                         continue
                     raise DVSAAPIError("DVSA API rate limit exceeded")
 
@@ -431,13 +431,13 @@ class DVSAClient:
                 last_error = DVSAAPIError("DVSA API request timed out")
                 if attempt < max_retries - 1:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))
                     continue
             except httpx.RequestError:
                 last_error = DVSAAPIError("DVSA API connection error")
                 if attempt < max_retries - 1:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))
                     continue
 
         # All retries exhausted

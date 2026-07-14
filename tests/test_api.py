@@ -6,6 +6,7 @@ Tests for the AutoSafe MOT Risk Prediction API endpoints.
 Updated to match actual API contract (P0-2 fix).
 """
 from fastapi.testclient import TestClient
+import secrets
 import unittest
 import os
 import sys
@@ -15,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import main as main_module  # noqa: E402
 from main import app
 from report_test_helpers import make_history
 
@@ -290,6 +292,41 @@ class TestVehicleEndpoint(unittest.TestCase):
         self.assertEqual(odometer["status"], "unavailable")
         self.assertEqual(odometer["unavailable_reason"], "no_reading")
         self.assertIsNone(odometer["value_miles"])
+
+
+class TestVerifyAdminApiKey(unittest.TestCase):
+    """_verify_admin_api_key must run secrets.compare_digest() on every
+    call, even when ADMIN_API_KEY is unconfigured, so an attacker cannot
+    distinguish "unconfigured" from "wrong key" by timing (B4)."""
+
+    def test_admin_key_compare_runs_when_unconfigured(self):
+        with patch.object(main_module, "ADMIN_API_KEY", None), \
+             patch("secrets.compare_digest", wraps=secrets.compare_digest) as spy:
+            result = main_module._verify_admin_api_key("some-provided-key")
+
+        self.assertFalse(result)
+        spy.assert_called_once()
+
+    def test_admin_key_compare_runs_when_unconfigured_and_key_also_missing(self):
+        """Both sides absent must still run the comparison, not short-circuit."""
+        with patch.object(main_module, "ADMIN_API_KEY", None), \
+             patch("secrets.compare_digest", wraps=secrets.compare_digest) as spy:
+            result = main_module._verify_admin_api_key(None)
+
+        self.assertFalse(result)
+        spy.assert_called_once()
+
+    def test_admin_key_valid_still_passes(self):
+        with patch.object(main_module, "ADMIN_API_KEY", "secret-key-123"):
+            result = main_module._verify_admin_api_key("secret-key-123")
+
+        self.assertTrue(result)
+
+    def test_admin_key_wrong_value_still_fails(self):
+        with patch.object(main_module, "ADMIN_API_KEY", "secret-key-123"):
+            result = main_module._verify_admin_api_key("wrong-key")
+
+        self.assertFalse(result)
 
 
 if __name__ == '__main__':

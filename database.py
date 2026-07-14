@@ -693,20 +693,21 @@ async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bo
 
     try:
         async with pool.acquire() as conn:
-            await conn.execute(
-                """UPDATE lead_assignments
-                   SET outcome = $1, outcome_reported_at = NOW()
-                   WHERE id = $2""",
-                outcome, assignment_id
-            )
-
-            # If outcome is 'won', increment garage's leads_converted
-            if outcome == 'won':
+            async with conn.transaction():
                 await conn.execute(
-                    """UPDATE garages SET leads_converted = leads_converted + 1
-                       WHERE id = (SELECT garage_id FROM lead_assignments WHERE id = $1)""",
-                    assignment_id
+                    """UPDATE lead_assignments
+                       SET outcome = $1, outcome_reported_at = NOW()
+                       WHERE id = $2""",
+                    outcome, assignment_id
                 )
+
+                # If outcome is 'won', increment garage's leads_converted
+                if outcome == 'won':
+                    await conn.execute(
+                        """UPDATE garages SET leads_converted = leads_converted + 1
+                           WHERE id = (SELECT garage_id FROM lead_assignments WHERE id = $1)""",
+                        assignment_id
+                    )
 
             return True
     except Exception as e:
