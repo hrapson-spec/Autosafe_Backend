@@ -337,7 +337,7 @@
         "type": "string"
       },
       "MileageSource": {
-        "description": "Provenance of the mileage value used to produce a report.",
+        "description": "Provenance of the mileage value used to produce a report.\n\nUSER_ENTERED and ESTIMATED are RETAINED but write-deprecated as of\nRelease 1 (\"Truthful Population Report\"): already-persisted 2.0\npayloads carrying either value must keep replaying through\n``ReportResponse.model_validate`` (report_routes.py's idempotency\nreplay and GET-by-token paths both do this), but\n``report_service.resolve_mileage`` can now only ever produce\nOBSERVED_MOT (a real recorded MOT odometer reading) or MISSING\n(honestly absent). Do not use USER_ENTERED or ESTIMATED in any new\nwrite path.",
         "enum": [
           "user_entered",
           "observed_mot",
@@ -511,19 +511,6 @@
               }
             ],
             "title": "Idempotency Key"
-          },
-          "mileage_user": {
-            "anyOf": [
-              {
-                "maximum": 500000.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mileage User"
           },
           "postcode": {
             "anyOf": [
@@ -787,6 +774,29 @@
               }
             ],
             "title": "Observed At"
+          },
+          "original_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Unit"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Value"
           },
           "source": {
             "$ref": "#/components/schemas/MileageSource"

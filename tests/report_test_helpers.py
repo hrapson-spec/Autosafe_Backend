@@ -59,8 +59,12 @@ def make_history(
 ) -> VehicleHistory:
     """Build a real VehicleHistory with real MOTTest entries.
 
-    readings: a list of (date_str 'YYYY-MM-DD', odometer_value_or_None,
-    odometer_unit 'mi'|'km') tuples, given in *latest-first* order.
+    readings: a list of (date_str_or_None 'YYYY-MM-DD', odometer_value_or_None,
+    odometer_unit 'mi'|'km'|None) tuples, given in *latest-first* order.
+    date_str may be None to build a test with no recorded test_date at all
+    (an odometer reading present but undated) -- exercises
+    report_service.resolve_odometer's "a reading with no date is not
+    displayable" scan rule.
 
     dvsa_client.DVSAClient._parse_response does NOT sort mot_tests itself
     -- it appends them in the order the DVSA API returns them and trusts
@@ -71,7 +75,7 @@ def make_history(
     """
     tests = []
     for i, (date_str, odometer_value, unit) in enumerate(readings):
-        test_date = datetime.strptime(date_str, '%Y-%m-%d')
+        test_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str is not None else None
         result = results[i] if results and i < len(results) else 'PASSED'
         tests.append(MOTTest(
             test_date=test_date,

@@ -69,7 +69,7 @@ class MOTTest:
     test_result: str  # 'PASSED' or 'FAILED'
     expiry_date: Optional[datetime]
     odometer_value: Optional[int]
-    odometer_unit: str  # 'mi' or 'km'
+    odometer_unit: Optional[str]  # 'mi', 'km', or None if DVSA omitted it
     test_number: str
     defects: List[Dict[str, Any]]  # Advisory/failure items
 
@@ -443,6 +443,18 @@ class DVSAClient:
         # All retries exhausted
         raise last_error or DVSAAPIError("DVSA API request failed after retries")
 
+    @staticmethod
+    def _parse_odometer(raw: Any) -> Optional[int]:
+        """Parse a raw DVSA odometerValue field into a clean int, or None
+        if it's absent or unparseable. The new DVSA API returns this as a
+        string (occasionally with commas/whitespace); never raises."""
+        if not raw:
+            return None
+        try:
+            return int(str(raw).strip().replace(',', ''))
+        except (ValueError, TypeError):
+            return None
+
     def _parse_response(self, vrm: str, data: Dict[str, Any]) -> VehicleHistory:
         """Parse DVSA API response into VehicleHistory object."""
         # Handle array response (API returns array of vehicles)
@@ -464,13 +476,6 @@ class DVSAClient:
         # Parse MOT tests
         mot_tests = []
         for test_data in vehicle_data.get('motTests', []):
-            # Parse odometer value - new API returns as string
-            odometer_raw = test_data.get('odometerValue')
-            try:
-                odometer_value = int(odometer_raw) if odometer_raw else None
-            except (ValueError, TypeError):
-                odometer_value = None
-
             # Fix: Properly handle defects vs rfrAndComments
             # If defects is explicitly None, use rfrAndComments; if defects is [] use []
             defects = test_data.get('defects')
@@ -481,8 +486,12 @@ class DVSAClient:
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
                 expiry_date=self._parse_date(test_data.get('expiryDate')),
-                odometer_value=odometer_value,
-                odometer_unit=test_data.get('odometerUnit', 'mi'),
+                odometer_value=self._parse_odometer(test_data.get('odometerValue')),
+                # No default: an absent unit must surface as None, never a
+                # silently-guessed 'mi' -- report_service.resolve_odometer
+                # treats a missing unit as UNAVAILABLE/UNKNOWN_UNIT rather
+                # than trusting an assumed one.
+                odometer_unit=test_data.get('odometerUnit'),
                 test_number=test_data.get('motTestNumber', ''),
                 defects=defects or []
             )

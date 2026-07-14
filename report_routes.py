@@ -650,7 +650,6 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
     assessment = await report_service.build_assessment(
         identity,
         history,
-        mileage_user=body.mileage_user,
         sqlite_conn_factory=sqlite_conn_factory,
         now=None,
     )

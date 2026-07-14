@@ -25,12 +25,16 @@ from report_contract import (
     REPORT_CONTRACT_VERSION,
     REPORT_TTL_DAYS,
     SHARE_URL_PATH,
+    CohortMatchLevel,
     ComponentRiskItem,
     ConfidenceLevel,
     ErrorCode,
     ErrorEnvelope,
+    LookupPredictionSource,
     MatchScope,
     MileageSource,
+    OdometerStatus,
+    OdometerUnavailableReason,
     PredictionSource,
     ReportComponents,
     ReportCreateRequest,
@@ -113,22 +117,6 @@ class TestRequestBoundaryValidation(unittest.TestCase):
         with self.assertRaises(ValidationError):
             ReportCreateRequest(registration="A" * 13)
 
-    def test_mileage_user_negative_rejected(self):
-        with self.assertRaises(ValidationError):
-            ReportCreateRequest(registration="AB12CDE", mileage_user=-1)
-
-    def test_mileage_user_over_max_rejected(self):
-        with self.assertRaises(ValidationError):
-            ReportCreateRequest(registration="AB12CDE", mileage_user=500001)
-
-    def test_mileage_user_zero_accepted(self):
-        req = ReportCreateRequest(registration="AB12CDE", mileage_user=0)
-        self.assertEqual(req.mileage_user, 0)
-
-    def test_mileage_user_max_accepted(self):
-        req = ReportCreateRequest(registration="AB12CDE", mileage_user=500000)
-        self.assertEqual(req.mileage_user, 500000)
-
     def test_empty_or_whitespace_idempotency_key_is_rejected(self):
         for key in ("", "   "):
             with self.subTest(key=repr(key)), self.assertRaises(ValidationError):
@@ -172,9 +160,37 @@ class TestEnumValuesExact(unittest.TestCase):
     """Spec pins exact wire values; guard against accidental renames."""
 
     def test_mileage_source_values(self):
+        # user_entered/estimated members are RETAINED (already-persisted 2.0
+        # payloads replay through ReportResponse.model_validate) but are
+        # write-deprecated as of Release 1: resolve_mileage() can now only
+        # ever produce observed_mot or missing for a freshly built report.
         self.assertEqual(
             {m.value for m in MileageSource},
             {"user_entered", "observed_mot", "estimated", "missing"},
+        )
+
+    def test_odometer_status_values(self):
+        self.assertEqual(
+            {m.value for m in OdometerStatus},
+            {"available", "unavailable"},
+        )
+
+    def test_odometer_unavailable_reason_values(self):
+        self.assertEqual(
+            {m.value for m in OdometerUnavailableReason},
+            {"no_reading", "rollback", "implausible_increase", "unknown_unit"},
+        )
+
+    def test_lookup_prediction_source_values(self):
+        self.assertEqual(
+            {m.value for m in LookupPredictionSource},
+            {"population_exact", "population_broad", "population_global", "unavailable"},
+        )
+
+    def test_cohort_match_level_values(self):
+        self.assertEqual(
+            {m.value for m in CohortMatchLevel},
+            {"exact_band", "age_band_only", "model_average", "dataset"},
         )
 
     def test_match_scope_values(self):

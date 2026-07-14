@@ -87,8 +87,8 @@ def test_postgres_exact_band_field_mapping(monkeypatch):
     mock_dict = _postgres_dict('exact_band')
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    history = make_history([], year=2022)
-    assessment = run(build_assessment(_identity(), history, mileage_user=30000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 30000, 'mi')], year=2022)
+    assessment = run(build_assessment(_identity(), history, now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.POSTGRES
     assert assessment.evidence.match_scope == MatchScope.EXACT_BAND
@@ -126,7 +126,8 @@ def test_postgres_age_band_only_field_mapping(monkeypatch):
     mock_dict = _postgres_dict('age_band_only', total_tests=150, total_failures=20, failure_risk=0.133)
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(), None, mileage_user=15000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(), history, now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.POSTGRES
     assert assessment.evidence.match_scope == MatchScope.AGE_BAND_ONLY
@@ -139,7 +140,8 @@ def test_postgres_model_average_field_mapping(monkeypatch):
     mock_dict = _postgres_dict('model_average', total_tests=15, total_failures=3, failure_risk=0.2)
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(), None, mileage_user=15000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(), history, now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.POSTGRES
     assert assessment.evidence.match_scope == MatchScope.MODEL_AVERAGE
@@ -154,7 +156,8 @@ def test_postgres_total_failures_none_stays_none(monkeypatch):
     mock_dict = _postgres_dict('exact_band', total_tests=500, total_failures=None, failure_risk=0.20)
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(), None, mileage_user=15000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(), history, now=FIXED_NOW))
 
     assert assessment.evidence.total_tests == 500
     assert assessment.evidence.total_failures is None
@@ -170,7 +173,8 @@ def test_postgres_components_unavailable_hides_items_and_repair_even_with_failur
                                 components_available=False)
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(), None, mileage_user=15000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(), history, now=FIXED_NOW))
 
     assert assessment.risk.failure_risk == 0.20
     assert assessment.components.available is False
@@ -193,7 +197,8 @@ def test_postgres_model_absent_returns_population_default(monkeypatch):
         sqlite_calls.append(1)
         raise AssertionError("sqlite fallback must not be attempted when postgres answers None")
 
-    assessment = run(build_assessment(_identity(), None, mileage_user=15000,
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(), history,
                                        sqlite_conn_factory=factory, now=FIXED_NOW))
 
     assert not sqlite_calls
@@ -238,7 +243,8 @@ def test_sqlite_fallback_exact_band_matches_postgres_weighted_aggregate(monkeypa
     total_failures = sum(row[4] for row in contributing)
 
     identity = _identity(make='TESTMAKE', model='TESTMODEL', year=2022)  # age 4 -> '3-5'
-    assessment = run(build_assessment(identity, None, mileage_user=45000,  # '30k-60k'
+    history = make_history([('2025-06-01', 45000, 'mi')])  # '30k-60k'
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.SQLITE
@@ -276,7 +282,8 @@ def test_sqlite_fallback_age_band_only_matches_postgres_weighted_aggregate(monke
     conn = seeded_sqlite()
 
     identity = _identity(make='TESTMAKE', model='TESTMODEL', year=2016)  # age 10 -> '6-10'
-    assessment = run(build_assessment(identity, None, mileage_user=70000,  # '60k-100k': no exact row
+    history = make_history([('2025-06-01', 70000, 'mi')])  # '60k-100k': no exact row
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.SQLITE
@@ -311,7 +318,8 @@ def test_sqlite_fallback_model_average_weighted_aggregate(monkeypatch):
     expected_risk_brakes = sum(row[6] * row[3] for row in contributing) / total_tests  # column 6 = Risk_Brakes
 
     identity = _identity(make='TESTMAKE', model='TESTMODEL', year=2025)  # age 1 -> '0-2': no data at all
-    assessment = run(build_assessment(identity, None, mileage_user=15000,  # '0-30k': also no 0-2 row
+    history = make_history([('2025-06-01', 15000, 'mi')])  # '0-30k': also no 0-2 row
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.SQLITE
@@ -338,7 +346,8 @@ def test_sqlite_fallback_components_null_row(monkeypatch):
     conn = seeded_sqlite()
 
     identity = _identity(make='TESTMAKE', model='NULLMODEL', year=2022)  # age 4 -> '3-5'
-    assessment = run(build_assessment(identity, None, mileage_user=45000,  # '30k-60k'
+    history = make_history([('2025-06-01', 45000, 'mi')])  # '30k-60k'
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.evidence.match_scope == MatchScope.EXACT_BAND
@@ -365,10 +374,10 @@ def test_sqlite_partial_component_coverage_is_not_presented_as_complete(monkeypa
     conn.commit()
 
     identity = _identity(make='TESTMAKE', model='NULLMODEL', year=2022)
+    history = make_history([('2025-06-01', 45000, 'mi')])
     assessment = run(build_assessment(
         identity,
-        None,
-        mileage_user=45000,
+        history,
         sqlite_conn_factory=sqlite_factory(conn),
         now=FIXED_NOW,
     ))
@@ -390,7 +399,7 @@ def test_sqlite_fallback_step1_skipped_for_unknown_mileage_band(monkeypatch):
 
     history = make_history([('2025-06-01', 600000, 'mi')], make='TESTMAKE', model='TESTMODEL', year=2022)
     identity = _identity(make='TESTMAKE', model='TESTMODEL', year=2022)  # age 4 -> '3-5'
-    assessment = run(build_assessment(identity, history, mileage_user=None,
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.mileage.effective_value == 600000
@@ -412,7 +421,8 @@ def test_sqlite_fallback_model_absent_is_population_default_not_unavailable(monk
     conn = seeded_sqlite()
 
     identity = _identity(make='NOPE', model='NOPE', year=2022)
-    assessment = run(build_assessment(identity, None, mileage_user=45000,
+    history = make_history([('2025-06-01', 45000, 'mi')])
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=sqlite_factory(conn), now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
@@ -434,7 +444,7 @@ def test_sqlite_factory_none_is_unavailable(monkeypatch):
     _postgres_unavailable_mock(monkeypatch)
 
     identity = _identity(year=None)
-    assessment = run(build_assessment(identity, None, mileage_user=None,
+    assessment = run(build_assessment(identity, None,
                                        sqlite_conn_factory=None, now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
@@ -462,7 +472,7 @@ def test_sqlite_exception_is_unavailable(monkeypatch):
 
     identity = _identity(year=2022)
     assessment = run(build_assessment(
-        identity, None, mileage_user=15000,
+        identity, None,
         sqlite_conn_factory=raising_sqlite_factory(sqlite3.OperationalError("disk I/O error")),
         now=FIXED_NOW,
     ))
@@ -484,7 +494,7 @@ def test_sqlite_pool_exhaustion_yields_none_is_unavailable(monkeypatch):
         yield None
 
     identity = _identity(year=2022)
-    assessment = run(build_assessment(identity, None, mileage_user=15000,
+    assessment = run(build_assessment(identity, None,
                                        sqlite_conn_factory=empty_pool_factory, now=FIXED_NOW))
 
     assert assessment.prediction_source == PredictionSource.DATASET_REFERENCE
@@ -498,7 +508,7 @@ def test_sqlite_pool_exhaustion_yields_none_is_unavailable(monkeypatch):
 def test_mot_is_none_safe_when_history_is_none(monkeypatch):
     _postgres_unavailable_mock(monkeypatch)
     identity = _identity(year=None)
-    assessment = run(build_assessment(identity, None, mileage_user=None,
+    assessment = run(build_assessment(identity, None,
                                        sqlite_conn_factory=None, now=FIXED_NOW))
 
     assert assessment.mot.expiry_date is None
@@ -511,7 +521,7 @@ def test_mot_is_none_safe_when_history_has_no_tests(monkeypatch):
     _postgres_unavailable_mock(monkeypatch)
     history = make_history([], year=2020)
     identity = _identity(year=2020)
-    assessment = run(build_assessment(identity, history, mileage_user=None,
+    assessment = run(build_assessment(identity, history,
                                        sqlite_conn_factory=None, now=FIXED_NOW))
 
     assert assessment.mot.expiry_date is None
@@ -525,7 +535,7 @@ def test_mot_reflects_latest_test(monkeypatch):
 
     history = make_history([('2025-06-01', 45000, 'mi')], results=['PASSED'], year=2022)
     identity = _identity(year=2022)
-    assessment = run(build_assessment(identity, history, mileage_user=None, now=FIXED_NOW))
+    assessment = run(build_assessment(identity, history, now=FIXED_NOW))
 
     assert assessment.mot.last_test_date == datetime(2025, 6, 1).isoformat()
     assert assessment.mot.last_result == 'PASSED'
@@ -535,7 +545,8 @@ def test_age_band_unknown_when_year_missing(monkeypatch):
     mock_dict = _postgres_dict('model_average')
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(year=None), None, mileage_user=15000, now=FIXED_NOW))
+    history = make_history([('2025-06-01', 15000, 'mi')])
+    assessment = run(build_assessment(_identity(year=None), history, now=FIXED_NOW))
     assert assessment.evidence.age_band is None
     assert assessment.vehicle.year is None
 
@@ -544,7 +555,11 @@ def test_mileage_band_none_when_effective_value_none(monkeypatch):
     mock_dict = _postgres_dict('model_average')
     monkeypatch.setattr(report_service.db, 'get_risk_v2_banded', AsyncMock(return_value=mock_dict), raising=False)
 
-    assessment = run(build_assessment(_identity(year=None), None, mileage_user=None, now=FIXED_NOW))
+    # No history and no observed reading -> mileage genuinely resolves to
+    # missing; must NOT be fed a synthetic reading here, unlike the other
+    # call sites in this file that only need a mileage BAND to route the
+    # ladder query.
+    assessment = run(build_assessment(_identity(year=None), None, now=FIXED_NOW))
     assert assessment.mileage.effective_value is None
     assert assessment.evidence.age_band is None
     assert assessment.evidence.mileage_band is None

@@ -28,7 +28,7 @@ This is a pure data module: pydantic and the standard library only. No
 I/O, no web-framework imports, no database imports.
 """
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -49,7 +49,18 @@ SHARE_URL_PATH = "/app/report/{token}"
 
 
 class MileageSource(str, Enum):
-    """Provenance of the mileage value used to produce a report."""
+    """Provenance of the mileage value used to produce a report.
+
+    USER_ENTERED and ESTIMATED are RETAINED but write-deprecated as of
+    Release 1 ("Truthful Population Report"): already-persisted 2.0
+    payloads carrying either value must keep replaying through
+    ``ReportResponse.model_validate`` (report_routes.py's idempotency
+    replay and GET-by-token paths both do this), but
+    ``report_service.resolve_mileage`` can now only ever produce
+    OBSERVED_MOT (a real recorded MOT odometer reading) or MISSING
+    (honestly absent). Do not use USER_ENTERED or ESTIMATED in any new
+    write path.
+    """
 
     USER_ENTERED = "user_entered"
     OBSERVED_MOT = "observed_mot"
@@ -103,6 +114,42 @@ class VehicleDataSource(str, Enum):
     DEMO = "demo"
 
 
+class OdometerStatus(str, Enum):
+    """Whether report_service.resolve_odometer found a displayable,
+    trustworthy MOT odometer reading."""
+
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class OdometerUnavailableReason(str, Enum):
+    """Why no odometer reading is being shown -- always explicit, never
+    silently absent."""
+
+    NO_READING = "no_reading"                       # no test carries a displayable reading
+    ROLLBACK = "rollback"                            # negative movement vs adjacent prior reading
+    IMPLAUSIBLE_INCREASE = "implausible_increase"     # > 50,000 annualised miles/yr
+    UNKNOWN_UNIT = "unknown_unit"                     # unit absent or not 'mi'/'km'
+
+
+class LookupPredictionSource(str, Enum):
+    """/api/risk's honest source of the displayed rate (RiskLookupResponse)."""
+
+    POPULATION_EXACT = "population_exact"
+    POPULATION_BROAD = "population_broad"
+    POPULATION_GLOBAL = "population_global"
+    UNAVAILABLE = "unavailable"
+
+
+class CohortMatchLevel(str, Enum):
+    """How closely a LookupCohort matches the requested vehicle."""
+
+    EXACT_BAND = "exact_band"
+    AGE_BAND_ONLY = "age_band_only"
+    MODEL_AVERAGE = "model_average"
+    DATASET = "dataset"
+
+
 class ErrorCode(str, Enum):
     """Machine-readable error codes for the v2 report API."""
 
@@ -152,7 +199,6 @@ class ReportCreateRequest(BaseModel):
     # envelope rather than pydantic's generic 422 (staging check 4h).
     registration: str = Field(min_length=1, max_length=12)
     postcode: Optional[str] = Field(default=None, max_length=10)
-    mileage_user: Optional[int] = Field(default=None, ge=0, le=500000)
     idempotency_key: Optional[str] = Field(
         default=None,
         min_length=1,
@@ -193,6 +239,12 @@ class ReportMileage(BaseModel):
     observed_at: Optional[str] = None
     unit_converted: bool = False
     anomaly: bool = False
+    # Additive (Release 1): the verbatim DVSA reading behind effective_value,
+    # before any km->mi conversion. Optional with a None default so old
+    # persisted 2.0 payloads (recorded before these fields existed) still
+    # validate under this model unchanged.
+    original_value: Optional[int] = Field(default=None, ge=0)
+    original_unit: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_source_value_consistency(self):
@@ -200,6 +252,58 @@ class ReportMileage(BaseModel):
             raise ValueError("missing mileage cannot have an effective value")
         if self.source != MileageSource.MISSING and self.effective_value is None:
             raise ValueError("known mileage source requires an effective value")
+        # original_unit is None-tolerant here (not just != 'km' -> reject):
+        # an old payload persisted before original_value/original_unit
+        # existed has unit_converted possibly True with original_unit
+        # absent entirely (defaulted to None), and that must still replay
+        # per the additive-optional contract guarantee. None means
+        # "unknown", not "known and not km" -- only an explicitly wrong
+        # unit is rejected.
+        if self.unit_converted and self.original_unit is not None and self.original_unit != 'km':
+            raise ValueError("unit-converted mileage must record a km original unit")
+        return self
+
+
+class OdometerReading(BaseModel):
+    """A single resolved odometer reading, produced by
+    report_service.resolve_odometer, with honest availability.
+
+    AVAILABLE requires every one of value_miles/recorded_at/original_value/
+    original_unit/source to be present (source pinned to OBSERVED_MOT --
+    this model is only ever produced from a real DVSA-recorded reading)
+    and unavailable_reason absent. UNAVAILABLE requires the mirror image:
+    all five detail fields None and unavailable_reason present. There is
+    no partial state -- either every reading detail is known, or none is
+    invented in its place.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    value_miles: Optional[int] = Field(ge=0)
+    recorded_at: Optional[str]
+    original_value: Optional[int] = Field(ge=0)
+    original_unit: Optional[str]
+    source: Optional[MileageSource]
+    status: OdometerStatus
+    unavailable_reason: Optional[OdometerUnavailableReason]
+
+    @model_validator(mode="after")
+    def validate_status_consistency(self):
+        detail_fields = (self.value_miles, self.recorded_at, self.original_value, self.original_unit, self.source)
+        if self.status == OdometerStatus.AVAILABLE:
+            if any(field is None for field in detail_fields):
+                raise ValueError(
+                    "available odometer reading requires value, date, original reading, and source"
+                )
+            if self.source != MileageSource.OBSERVED_MOT:
+                raise ValueError("available odometer reading must be sourced from an observed MOT reading")
+            if self.unavailable_reason is not None:
+                raise ValueError("available odometer reading cannot carry an unavailable_reason")
+        else:
+            if any(field is not None for field in detail_fields):
+                raise ValueError("unavailable odometer reading cannot carry reading detail")
+            if self.unavailable_reason is None:
+                raise ValueError("unavailable odometer reading requires an unavailable_reason")
         return self
 
 
@@ -353,6 +457,100 @@ class ReportResponse(BaseModel):
                 raise ValueError("share URL does not match report token")
         elif self.report_token is not None or self.share_url is not None:
             raise ValueError("non-shareable report cannot expose share credentials")
+        return self
+
+
+class LookupCohort(BaseModel):
+    """The comparison cohort backing a /api/risk lookup's displayed rate,
+    when one is available.
+
+    total_tests uses ``gt=0`` (not ReportEvidence's null-means-unknown
+    ``ge=0`` pattern) because a LookupCohort, when present at all, always
+    represents real evidence -- the fully-unavailable case is
+    ``RiskLookupResponse.cohort is None``, not a LookupCohort with a null
+    count. Zero tests are not evidence, mirroring ReportEvidence's own
+    rule (report_contract.py's ``validate_counts``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    match_level: CohortMatchLevel
+    age_band: Optional[str]
+    mileage_band: Optional[str]
+    total_tests: int = Field(gt=0)
+    total_failures: Optional[int] = Field(ge=0)
+
+
+class RiskLookupResponse(BaseModel):
+    """/api/risk's response shape (T3 wires the route onto the v2
+    Postgres-then-SQLite evidence ladder; this module defines and fully
+    tests the model now).
+
+    Preserves the legacy 15-key surface exactly -- vehicle/year/mileage/
+    last_mot_date/last_mot_result/failure_risk/confidence_level/the seven
+    risk_* components/repair_cost_estimate -- so existing legacy consumers
+    keep working, while adding honest truth fields (prediction_source/
+    cohort/note) describing exactly how the displayed rate was produced.
+    last_mot_date and last_mot_result are pinned null: this lookup route
+    never populated them even before this task, and it still never
+    resolves DVSA history at all.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # --- Legacy 15-key surface (unchanged shape/semantics). ---
+    vehicle: str
+    year: int
+    mileage: Optional[int]
+    last_mot_date: None = None
+    last_mot_result: None = None
+    failure_risk: Optional[float] = Field(ge=0, le=1)
+    confidence_level: Optional[str]
+    risk_brakes: Optional[float]
+    risk_suspension: Optional[float]
+    risk_tyres: Optional[float]
+    risk_steering: Optional[float]
+    risk_visibility: Optional[float]
+    risk_lamps: Optional[float]
+    risk_body: Optional[float]
+    repair_cost_estimate: Optional[Dict[str, Any]]
+
+    # --- Additive truth fields. ---
+    prediction_source: LookupPredictionSource
+    cohort: Optional[LookupCohort]
+    note: Optional[str]
+
+    @model_validator(mode="after")
+    def validate_source_shape(self):
+        components = (
+            self.risk_brakes, self.risk_suspension, self.risk_tyres, self.risk_steering,
+            self.risk_visibility, self.risk_lamps, self.risk_body,
+        )
+        if self.prediction_source == LookupPredictionSource.UNAVAILABLE:
+            if self.failure_risk is not None or self.cohort is not None or self.confidence_level is not None:
+                raise ValueError("unavailable lookup cannot carry a rate, cohort, or confidence level")
+            if any(component is not None for component in components):
+                raise ValueError("unavailable lookup cannot carry component risks")
+            if self.repair_cost_estimate is not None:
+                raise ValueError("unavailable lookup cannot carry a repair cost estimate")
+        elif self.prediction_source == LookupPredictionSource.POPULATION_GLOBAL:
+            if self.cohort is None or self.cohort.match_level != CohortMatchLevel.DATASET:
+                raise ValueError("population_global lookup requires a dataset-level cohort")
+            if (
+                self.cohort.total_tests != DATASET_TOTAL_TESTS
+                or self.cohort.total_failures != DATASET_TOTAL_FAILURES
+            ):
+                raise ValueError("population_global lookup must pin the checked-in dataset totals")
+        elif self.prediction_source == LookupPredictionSource.POPULATION_EXACT:
+            if self.cohort is None or self.cohort.match_level != CohortMatchLevel.EXACT_BAND:
+                raise ValueError("population_exact lookup requires an exact-band cohort")
+            if self.cohort.age_band is None or self.cohort.mileage_band is None:
+                raise ValueError("exact-band cohort requires both matched bands")
+        elif self.prediction_source == LookupPredictionSource.POPULATION_BROAD:
+            if self.cohort is None or self.cohort.match_level not in {
+                CohortMatchLevel.AGE_BAND_ONLY, CohortMatchLevel.MODEL_AVERAGE,
+            }:
+                raise ValueError("population_broad lookup requires an age-band-only or model-average cohort")
         return self
 
 

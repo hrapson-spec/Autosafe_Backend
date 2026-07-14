@@ -1,5 +1,6 @@
 """Regression checks for release-gating GitHub Actions lifecycle semantics."""
 
+import re
 from pathlib import Path
 
 
@@ -49,6 +50,18 @@ def test_backend_ci_matches_the_release_python_runtime():
 
     assert "python-version: '3.11'" in workflow
     assert "python-version: '3.9'" not in workflow
+
+
+def test_ci_python_is_3_11():
+    """Every python-version: occurrence in ci.yml must be '3.11' -- not
+    just that 3.11 appears somewhere and 3.9 is absent (the check above),
+    but that there is no OTHER stray version (e.g. a forgotten '3.10')
+    hiding in a job this repo's local venv doesn't match."""
+    workflow = WORKFLOW.read_text()
+    versions = re.findall(r"python-version:\s*(\S+)", workflow)
+
+    assert versions, "no python-version occurrences found in ci.yml"
+    assert all(v == "'3.11'" for v in versions), versions
 
 
 def test_python_dependency_audit_is_a_hard_ci_gate():

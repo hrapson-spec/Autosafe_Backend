@@ -178,6 +178,14 @@ class TestCreateReportErrors(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()["error_code"], "undeclared_parameter")
 
+    def test_mileage_user_field_rejected_as_unknown(self):
+        """mileage_user was deleted from ReportCreateRequest entirely
+        (Release 1 removed the user-entered-mileage fabrication path); the
+        model's extra="forbid" now rejects a client that still sends it
+        with a generic 422, not the old ge/le boundary validation."""
+        resp = client.post("/api/v2/reports", json={"registration": VALID_VRM, "mileage_user": 45000})
+        self.assertEqual(resp.status_code, 422)
+
     def test_deep_unexpected_exception_returns_500_without_stack_trace(self):
         broken = AsyncMock(side_effect=RuntimeError("boom-secret-detail"))
         with patch("report_routes.report_service.build_assessment", new=broken):

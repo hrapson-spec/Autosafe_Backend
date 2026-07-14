@@ -1,13 +1,20 @@
 """
 AutoSafe v2 report API business core.
 
-Two responsibilities live here:
+Three responsibilities live here:
 
-1. Mileage provenance resolution (``resolve_mileage``): decide which
-   mileage figure to show for a vehicle, and be honest about where it
-   came from (user entry, an observed MOT odometer reading, an age-based
-   estimate, or nothing at all).
-2. Evidence-ladder orchestration (``build_assessment``): turn a vehicle
+1. Odometer resolution (``resolve_odometer``): the single shared parser
+   that finds the most trustworthy recorded MOT odometer reading for a
+   vehicle, honestly -- real observed data or an explicit, typed
+   UNAVAILABLE, never a fabricated number.
+2. Mileage provenance resolution (``resolve_mileage``): a thin adapter
+   from ``resolve_odometer`` onto the report contract's ``ReportMileage``
+   shape. The mileage shown is either a real observed MOT reading
+   (``observed_mot``) or honestly absent (``missing``) -- there is no
+   user-entry priority tier and no age-based estimate; both were
+   ratified-but-rejected fabrication paths, removed for Release 1
+   ("Truthful Population Report").
+3. Evidence-ladder orchestration (``build_assessment``): turn a vehicle
    identity + MOT history into an ``Assessment`` by walking the
    Postgres-then-SQLite evidence ladder (exact band -> age-band-only ->
    model average -> population default -> unavailable).
@@ -35,6 +42,9 @@ from report_contract import (
     ConfidenceLevel,
     MatchScope,
     MileageSource,
+    OdometerReading,
+    OdometerStatus,
+    OdometerUnavailableReason,
     POPULATION_DEFAULT_FAILURE_RISK,
     PredictionSource,
     ReportComponents,
@@ -132,115 +142,126 @@ def _test_miles(test: Any) -> float:
     return float(test.odometer_value)
 
 
-def resolve_mileage(
-    mileage_user: Optional[int],
-    history: Any,
-    vehicle_year: Optional[int],
-    now: Optional[datetime] = None,
-) -> ReportMileage:
-    """Resolve the mileage figure to display, with honest provenance.
+def resolve_odometer(history: Any) -> OdometerReading:
+    """The single shared DVSA odometer parser: find the most trustworthy
+    recorded MOT odometer reading for a vehicle, honestly.
 
-    Priority order:
+    1. Scan tests newest-first for the first one that is *displayable*: a
+       parseable ``odometer_value`` AND a non-null ``test_date``. A
+       reading with no date it was recorded on is not displayable and is
+       skipped, not silently mis-dated.
+    2. That test's ``odometer_unit`` must be exactly ``'mi'`` or
+       ``'km'`` -- anything else (including a missing unit) is
+       UNAVAILABLE / UNKNOWN_UNIT rather than a guessed default.
+    3. ``value_miles`` is the reading itself when the unit is ``'mi'``,
+       or ``round(odometer_value * MILES_PER_KM)`` when it is ``'km'``.
+       ``original_value``/``original_unit`` preserve the verbatim DVSA
+       reading; ``recorded_at`` is that test's own date -- never a
+       fabricated or borrowed date.
+    4. Plausibility is checked against the adjacent (index-next) older
+       test -- the same pairing legacy code used -- only when BOTH tests
+       have a ``test_date`` and the older reading's unit is also
+       ``'mi'``/``'km'`` (both converted to miles before comparing, so a
+       mixed-unit pair compares fairly). A negative delta (rollback) or
+       an annualised rate over 50,000 miles/year (implausible increase)
+       makes the CHOSEN reading UNAVAILABLE -- **the older reading is
+       never substituted in its place**; there is no "corrected" value to
+       fall back to, only an honest gap. Otherwise (including
+       days_diff <= 0, delta == 0, or no comparable older reading at
+       all) the reading stands.
+    5. No displayable reading anywhere -> UNAVAILABLE / NO_READING.
 
-    1. ``mileage_user`` (an explicit user entry) -> ``user_entered``.
-       Used exactly as given; history is not consulted at all.
-    2. The latest MOT test that has a recorded odometer reading ->
-       ``observed_mot``. km readings are converted to miles (rounded)
-       with ``unit_converted=True``. The anomaly check mirrors
-       ``main.py._get_display_mileage`` exactly: compare the chosen
-       reading against the immediately-preceding test's reading (both
-       converted to miles first, so a mixed-unit pair compares fairly).
-       Quoting the legacy logic being mirrored::
-
-           if days_diff > 0:
-               if mileage_diff < 0:
-                   return prev_mileage, True  # negative mileage anomaly
-               if mileage_diff > 0:
-                   annualized = (mileage_diff / days_diff) * 365
-                   if annualized > 50000:  # physically implausible
-                       return prev_mileage, True
-
-       i.e. a negative delta, or an annualised rate over 50,000
-       miles/year, is judged implausible; the *preceding* reading is
-       shown instead, with ``anomaly=True`` and ``observed_at`` set to
-       that preceding test's date (the date the displayed figure was
-       actually recorded on -- never fabricate a date pairing).
-       Generalisation beyond the legacy function: legacy only ever looks
-       at tests[0]/tests[1] and gives up (no mileage) if tests[0] lacks a
-       reading. Here we scan forward from the latest test for the first
-       one that *has* a reading, then compare it against the very next
-       test chronologically (mirroring legacy's adjacency rule, not
-       re-scanning further for the "previous" side) -- this uses real
-       observed evidence when it exists rather than falling through to
-       an estimate, per the no-fabricated-evidence invariant.
-    3. ``vehicle_year`` known -> ``estimated`` at 8,000 miles per year of
-       age (floored at 0; age 0 legitimately estimates to 0 miles for a
-       brand-new car).
-    4. Otherwise -> ``missing`` (``effective_value=None``).
-
-    ``now`` is exposed purely so tests can pin "today" deterministically;
-    production callers should leave it as ``None``.
+    There is no numeric estimate fallback of any kind here.
     """
-    now = now or datetime.now()
-
-    if mileage_user is not None:
-        return ReportMileage(
-            effective_value=mileage_user,
-            source=MileageSource.USER_ENTERED,
-            observed_at=None,
-            unit_converted=False,
-            anomaly=False,
-        )
-
     tests = list(getattr(history, 'mot_tests', None) or []) if history is not None else []
 
-    latest_idx = None
-    for i, t in enumerate(tests):
-        if t.odometer_value is not None:
-            latest_idx = i
-            break
-
-    if latest_idx is not None:
-        latest_test = tests[latest_idx]
-        latest_miles = _test_miles(latest_test)
-
-        chosen_test = latest_test
-        chosen_miles = latest_miles
-        anomaly = False
-
-        prev_idx = latest_idx + 1
-        if prev_idx < len(tests) and tests[prev_idx].odometer_value is not None:
-            prev_test = tests[prev_idx]
-            if latest_test.test_date is not None and prev_test.test_date is not None:
-                days_diff = (latest_test.test_date - prev_test.test_date).days
-                prev_miles = _test_miles(prev_test)
-                mileage_diff = latest_miles - prev_miles
-
-                if days_diff > 0:
-                    if mileage_diff < 0:
-                        chosen_test, chosen_miles, anomaly = prev_test, prev_miles, True
-                    elif mileage_diff > 0:
-                        annualized = (mileage_diff / days_diff) * 365
-                        if annualized > 50000:
-                            chosen_test, chosen_miles, anomaly = prev_test, prev_miles, True
-
-        observed_at = chosen_test.test_date.isoformat() if chosen_test.test_date else None
-        return ReportMileage(
-            effective_value=round(chosen_miles),
-            source=MileageSource.OBSERVED_MOT,
-            observed_at=observed_at,
-            unit_converted=(chosen_test.odometer_unit == 'km'),
-            anomaly=anomaly,
+    def _unavailable(reason: OdometerUnavailableReason) -> OdometerReading:
+        return OdometerReading(
+            value_miles=None,
+            recorded_at=None,
+            original_value=None,
+            original_unit=None,
+            source=None,
+            status=OdometerStatus.UNAVAILABLE,
+            unavailable_reason=reason,
         )
 
-    if vehicle_year is not None:
-        age = max(now.year - vehicle_year, 0)
+    idx = None
+    for i, t in enumerate(tests):
+        if t.odometer_value is not None and t.test_date is not None:
+            idx = i
+            break
+
+    if idx is None:
+        return _unavailable(OdometerUnavailableReason.NO_READING)
+
+    test = tests[idx]
+    unit = test.odometer_unit
+    if unit not in ('mi', 'km'):
+        return _unavailable(OdometerUnavailableReason.UNKNOWN_UNIT)
+
+    value_miles = test.odometer_value if unit == 'mi' else round(test.odometer_value * MILES_PER_KM)
+
+    prev_idx = idx + 1
+    if prev_idx < len(tests):
+        prev_test = tests[prev_idx]
+        if (
+            prev_test.odometer_value is not None
+            and prev_test.test_date is not None
+            and prev_test.odometer_unit in ('mi', 'km')
+        ):
+            days_diff = (test.test_date - prev_test.test_date).days
+            delta = _test_miles(test) - _test_miles(prev_test)
+            if days_diff > 0:
+                if delta < 0:
+                    return _unavailable(OdometerUnavailableReason.ROLLBACK)
+                if delta > 0 and (delta / days_diff) * 365 > 50000:
+                    return _unavailable(OdometerUnavailableReason.IMPLAUSIBLE_INCREASE)
+
+    return OdometerReading(
+        value_miles=value_miles,
+        recorded_at=test.test_date.isoformat(),
+        original_value=test.odometer_value,
+        original_unit=unit,
+        source=MileageSource.OBSERVED_MOT,
+        status=OdometerStatus.AVAILABLE,
+        unavailable_reason=None,
+    )
+
+
+# Reasons that mean real MOT data existed but couldn't be trusted (as
+# opposed to NO_READING/UNKNOWN_UNIT, where there was simply nothing to
+# distrust) -- these map to ReportMileage.anomaly=True.
+_ANOMALOUS_ODOMETER_REASONS = {
+    OdometerUnavailableReason.ROLLBACK,
+    OdometerUnavailableReason.IMPLAUSIBLE_INCREASE,
+}
+
+
+def resolve_mileage(history: Any) -> ReportMileage:
+    """Resolve the mileage figure to display, with honest provenance.
+
+    A thin adapter from ``resolve_odometer`` onto the report contract's
+    ``ReportMileage`` shape -- all decision logic (which reading, unit
+    conversion, plausibility) lives in ``resolve_odometer``:
+
+    * AVAILABLE -> ``observed_mot``, with the original verbatim reading
+      preserved.
+    * UNAVAILABLE -> ``missing`` (``effective_value=None`` -- never a
+      substituted or estimated number), with ``anomaly=True`` exactly
+      when the reason was a rollback or implausible-rate rejection.
+    """
+    reading = resolve_odometer(history)
+
+    if reading.status == OdometerStatus.AVAILABLE:
         return ReportMileage(
-            effective_value=age * 8000,
-            source=MileageSource.ESTIMATED,
-            observed_at=None,
-            unit_converted=False,
+            effective_value=reading.value_miles,
+            source=MileageSource.OBSERVED_MOT,
+            observed_at=reading.recorded_at,
+            unit_converted=(reading.original_unit == 'km'),
             anomaly=False,
+            original_value=reading.original_value,
+            original_unit=reading.original_unit,
         )
 
     return ReportMileage(
@@ -248,7 +269,9 @@ def resolve_mileage(
         source=MileageSource.MISSING,
         observed_at=None,
         unit_converted=False,
-        anomaly=False,
+        anomaly=reading.unavailable_reason in _ANOMALOUS_ODOMETER_REASONS,
+        original_value=None,
+        original_unit=None,
     )
 
 
@@ -508,7 +531,6 @@ def _build_mot(history: Any) -> ReportMot:
 async def build_assessment(
     identity: Dict[str, Any],
     history: Any,
-    mileage_user: Optional[int],
     sqlite_conn_factory: Optional[Callable[[], Any]] = None,
     now: Optional[datetime] = None,
 ) -> Assessment:
@@ -533,7 +555,7 @@ async def build_assessment(
     )
 
     mot = _build_mot(history)
-    mileage = resolve_mileage(mileage_user, history, year, now=now)
+    mileage = resolve_mileage(history)
 
     # Mirror main.py's model_id normalization exactly (get_risk / _fallback_prediction):
     # model_id = f"{make.strip().upper()} {model.strip().upper()}"
