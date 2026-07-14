@@ -92,10 +92,11 @@ async function parseReportResponse(response: Response): Promise<ReportV2> {
  * postcode is sent only when truthy -- an empty string means "not given"
  * and is omitted entirely rather than sent as "" or null, matching
  * ReportCreateRequest.postcode's Optional[str] semantics on the backend.
- * mileageUser is sent whenever the caller actually passed a value,
- * including 0 -- checked with `!== undefined`, not truthiness, so a
- * genuine 0-mile entry (a brand-new car) is never dropped the way
- * `mileageUser || ...` would drop it.
+ *
+ * There is no mileage_user parameter: the backend now 422s any sender of
+ * that field, so this client never emits the key at all (removed as part
+ * of the R1-T6 mileage_user cleanup -- it was the last vestigial pathway
+ * for a client-supplied mileage override).
  *
  * registration and postcode are never placed in the URL -- both travel
  * only in the POST body.
@@ -103,13 +104,11 @@ async function parseReportResponse(response: Response): Promise<ReportV2> {
 export async function createReport(
   registration: string,
   postcode: string,
-  mileageUser?: number,
   idempotencyKey?: string
 ): Promise<ReportV2> {
   const body: {
     registration: string;
     postcode?: string;
-    mileage_user?: number;
     idempotency_key: string;
   } = {
     registration,
@@ -117,9 +116,6 @@ export async function createReport(
   };
   if (postcode) {
     body.postcode = postcode;
-  }
-  if (mileageUser !== undefined) {
-    body.mileage_user = mileageUser;
   }
 
   const response = await safeFetch(`${API_BASE}/api/v2/reports`, {

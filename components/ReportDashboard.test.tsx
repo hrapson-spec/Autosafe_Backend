@@ -8,6 +8,9 @@ import {
   fixturePopulationDefault,
   fixtureUnavailableDegraded,
   fixtureModelAverageLow,
+  fixtureAnomalyMissing,
+  fixtureLegacyEstimated2_0,
+  fixtureObservedHighMileage,
 } from '../fixtures/reportResponses';
 import { riskPercentDisplay } from './ReportCopy';
 import ReportDashboard from './ReportDashboard';
@@ -76,7 +79,7 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
     expect(screen.getByText('Tyres')).toBeInTheDocument();
     expect(screen.getByText('Suspension')).toBeInTheDocument();
     expect(container.textContent).toContain(
-      'Components most often linked to MOT failure for similar vehicles'
+      'Indicative estimates: components most often linked to MOT failure among similar vehicles'
     );
 
     // Repair estimate card: control-only by design (unchanged from the
@@ -129,6 +132,37 @@ describe.each(VARIANTS)('ReportDashboard (%s)', (variant) => {
     shareButtons.forEach(btn => expect(btn).toBeDisabled());
 
     expect(screen.getAllByText("Sharing isn't available for this report").length).toBeGreaterThan(0);
+  });
+
+  it('renders the population-average badge next to the displayed rate for every match scope (exact_band, age_band_only, legacy estimated)', () => {
+    const badgeReports: ReportV2[] = [fixtureExactHigh, fixtureAnomalyMissing, fixtureLegacyEstimated2_0];
+    badgeReports.forEach(report => {
+      const { unmount } = render(<ReportDashboard report={report} onReset={vi.fn()} />);
+      const badges = screen.getAllByTestId('population-badge');
+      expect(badges.length).toBeGreaterThan(0);
+      badges.forEach(badge => {
+        expect(badge).toHaveTextContent('Population average');
+        expect(badge).toHaveAttribute(
+          'title',
+          'A recorded failure rate for a group of similar vehicles — not a prediction for this vehicle.'
+        );
+      });
+      unmount();
+    });
+  });
+
+  it('renders the last-recorded-mileage line for an observed reading, and omits it entirely when mileage is missing', () => {
+    const { unmount: unmountObserved } = render(
+      <ReportDashboard report={fixtureObservedHighMileage} onReset={vi.fn()} />
+    );
+    expect(screen.getByText('Last recorded MOT mileage: 112,406 miles on 2 Nov 2025')).toBeInTheDocument();
+    unmountObserved();
+
+    const { container, unmount: unmountMissing } = render(
+      <ReportDashboard report={fixturePopulationDefault} onReset={vi.fn()} />
+    );
+    expect(container.textContent).not.toContain('Last recorded MOT mileage');
+    unmountMissing();
   });
 
   it('shows the mileage anomaly and unit-conversion suffixes for an observed-but-flagged reading', () => {

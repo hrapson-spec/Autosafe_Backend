@@ -177,6 +177,33 @@ export type PredictionSource = 'postgres' | 'sqlite' | 'dataset_reference' | 'un
  * report_contract.VehicleDataSource. */
 export type VehicleDataSource = 'dvsa' | 'demo';
 
+/** Whether report_service.resolve_odometer found a displayable, trustworthy
+ * MOT odometer reading. Mirrors report_contract.OdometerStatus. */
+export type OdometerStatusV2 = 'available' | 'unavailable';
+
+/** Why no odometer reading is being shown -- always explicit, never
+ * silently absent. Mirrors report_contract.OdometerUnavailableReason. */
+export type OdometerUnavailableReasonV2 =
+  | 'no_reading'
+  | 'rollback'
+  | 'implausible_increase'
+  | 'unknown_unit';
+
+/** /api/risk's honest source of its displayed rate. A distinct union from
+ * PredictionSource above: that one records which backing store served the
+ * v2 report response; this one records how closely /api/risk's legacy
+ * population-comparison ladder could match the requested vehicle. Mirrors
+ * report_contract.LookupPredictionSource. */
+export type LookupPredictionSourceV2 =
+  | 'population_exact'
+  | 'population_broad'
+  | 'population_global'
+  | 'unavailable';
+
+/** How closely a CohortEvidenceV2 matches the requested vehicle. Mirrors
+ * report_contract.CohortMatchLevel. */
+export type CohortMatchLevelV2 = 'exact_band' | 'age_band_only' | 'model_average' | 'dataset';
+
 /** Machine-readable error codes for the v2 report API. Mirrors
  * report_contract.ErrorCode.
  *
@@ -225,6 +252,36 @@ export interface ReportMileageV2 {
   observed_at?: string | null;
   unit_converted: boolean;
   anomaly: boolean;
+  /** Additive (Release 1): the verbatim DVSA reading behind
+   * effective_value, before any km->mi conversion. Optional because old
+   * persisted 2.0 payloads (recorded before these fields existed) lack
+   * them entirely -- absent, not a fabricated 0 or a copy of
+   * effective_value. Mirrors report_contract.ReportMileage.original_value. */
+  original_value?: number | null;
+  /** Paired with original_value; when unit_converted is true and this is
+   * present, it must be 'km' (report_contract.ReportMileage enforces this
+   * on write). Mirrors report_contract.ReportMileage.original_unit. */
+  original_unit?: string | null;
+}
+
+/** A single resolved odometer reading, produced by
+ * report_service.resolve_odometer, with honest availability. AVAILABLE
+ * requires every one of value_miles/recorded_at/original_value/
+ * original_unit/source to be present (source pinned to the observed-MOT
+ * mileage source -- this shape is only ever produced from a real
+ * DVSA-recorded reading) and unavailable_reason absent; UNAVAILABLE
+ * requires the mirror image: every detail field null and
+ * unavailable_reason present. There is no partial state -- either every
+ * reading detail is known, or none is invented in its place. Mirrors
+ * report_contract.OdometerReading. */
+export interface OdometerReadingV2 {
+  value_miles: number | null;
+  recorded_at: string | null;
+  original_value: number | null;
+  original_unit: string | null;
+  source: MileageSource | null;
+  status: OdometerStatusV2;
+  unavailable_reason: OdometerUnavailableReasonV2 | null;
 }
 
 /** Evidence backing the report's risk figure. total_tests / total_failures
@@ -235,6 +292,20 @@ export interface ReportEvidenceV2 {
   age_band: string | null;
   mileage_band: string | null;
   total_tests: number | null;
+  total_failures: number | null;
+}
+
+/** The comparison cohort backing a RiskLookupV2's displayed rate, when one
+ * is available. total_tests is required and always positive -- unlike
+ * ReportEvidenceV2's null-means-unknown total_tests, a CohortEvidenceV2
+ * only ever exists to represent real evidence; the fully-unavailable case
+ * is RiskLookupV2.cohort === null, not a cohort with a zero/null count.
+ * Mirrors report_contract.LookupCohort. */
+export interface CohortEvidenceV2 {
+  match_level: CohortMatchLevelV2;
+  age_band: string | null;
+  mileage_band: string | null;
+  total_tests: number;
   total_failures: number | null;
 }
 
@@ -303,3 +374,68 @@ export interface ApiErrorEnvelope {
   message: string;
   correlation_id: string;
 }
+
+// ============================================================================
+// /api/risk lookup contract (services/reportValidation.ts)
+//
+// RiskLookupV2 mirrors report_contract.RiskLookupResponse: it is a
+// different endpoint's contract from ReportV2 above, not a v2 report field.
+// /api/risk's legacy 15-key surface (vehicle/year/mileage/failure_risk/
+// confidence_level/the seven risk_* components/repair_cost_estimate) is
+// preserved unchanged, plus the additive truth fields (prediction_source/
+// cohort/note) describing exactly how the displayed rate was produced.
+//
+// Modelled as a discriminated union on prediction_source, not one
+// interface with optional fields: 'unavailable' genuinely cannot carry a
+// rate, cohort, or confidence/component detail, so a separate variant
+// makes that impossible state unrepresentable instead of merely
+// discouraged by a comment.
+// ============================================================================
+
+/** RiskLookupV2 when a rate was actually produced -- prediction_source
+ * pins which tier of the population comparison ladder supplied it. */
+export interface RiskLookupAvailableV2 {
+  prediction_source: 'population_exact' | 'population_broad' | 'population_global';
+  failure_risk: number;
+  cohort: CohortEvidenceV2;
+  vehicle: string;
+  year: number;
+  mileage: number | null;
+  confidence_level: string | null;
+  risk_brakes: number | null;
+  risk_suspension: number | null;
+  risk_tyres: number | null;
+  risk_steering: number | null;
+  risk_visibility: number | null;
+  risk_lamps: number | null;
+  risk_body: number | null;
+  repair_cost_estimate: Record<string, unknown> | null;
+  note: string | null;
+}
+
+/** RiskLookupV2 when no rate could be produced at all -- every risk/cohort/
+ * confidence field is honestly null rather than a fabricated default.
+ * repair_cost_estimate is included (always null here) because real backend
+ * responses carry the key as null rather than omitting it -- this lets
+ * components read it type-safely without an `in` check. */
+export interface RiskLookupUnavailableV2 {
+  prediction_source: 'unavailable';
+  failure_risk: null;
+  cohort: null;
+  vehicle: string;
+  year: number;
+  mileage: number | null;
+  confidence_level: null;
+  risk_brakes: null;
+  risk_suspension: null;
+  risk_tyres: null;
+  risk_steering: null;
+  risk_visibility: null;
+  risk_lamps: null;
+  risk_body: null;
+  repair_cost_estimate: null;
+  note: string | null;
+}
+
+/** /api/risk's response shape. Mirrors report_contract.RiskLookupResponse. */
+export type RiskLookupV2 = RiskLookupAvailableV2 | RiskLookupUnavailableV2;

@@ -135,6 +135,12 @@ BANNED = [
     (r"\b(?:UK|national)\s+(?:avg|average)\b", "relabels the checked-in dataset reference as a national statistic"),
     (r"\bUK\s+MOT\s+tests\b", "claims geographic coverage not encoded by the checked-in artifact"),
     (r"\bUK\s+DVSA\b", "uses an imprecise source label; DVSA coverage should not be relabelled UK-wide"),
+    # R1-T6 wording-review additions: counts are MOT tests, never vehicles,
+    # and a recorded MOT odometer reading is never presented as current.
+    (r"\bvehicles\s+analysed\b", "mislabels the recorded MOT test count as vehicles analysed"),
+    (r"\b0\s+vehicles\b", "renders an unknown/zero count as a fabricated '0 vehicles' figure"),
+    (r"\bsimilar\s+vehicles\s+tested\b", "mislabels the recorded MOT test count as vehicles tested"),
+    (r"\bcurrent\s+mileage\b", "calls the last recorded MOT reading 'current mileage', overstating its freshness"),
 ]
 
 # Lines that are allowed to match (documentation of the ban itself, comments

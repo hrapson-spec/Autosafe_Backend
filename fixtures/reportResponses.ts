@@ -84,8 +84,19 @@ export const fixtureExactHigh: ReportV2 = {
 //    null), so mileage falls back to the age*8000mi/yr estimate and the
 //    evidence ladder only matches on age band -- report_service.py's
 //    NOTE_AGE_BAND_ONLY copy, reused verbatim.
+//
+//    Renamed from fixtureAgeOnlyMedium (Release 1): source: 'estimated' is
+//    RETAINED but write-deprecated as of report_contract.MileageSource --
+//    report_service.resolve_mileage can no longer produce it, but an
+//    already-persisted 2.0 payload carrying it (from before
+//    original_value/original_unit existed, and lacking both keys entirely,
+//    exactly as this fixture's mileage object still does below) must keep
+//    replaying through the report guards unchanged. That is this fixture's
+//    job now: prove the additive original_value/original_unit tolerance in
+//    both directions. Payload is byte-identical to the old
+//    fixtureAgeOnlyMedium -- only the name and this comment changed.
 // ----------------------------------------------------------------------------
-export const fixtureAgeOnlyMedium: ReportV2 = {
+export const fixtureLegacyEstimated2_0: ReportV2 = {
   contract_version: '2.0',
   report_id: 'rpt_1a2b3c4d5e6f',
   report_token: '3d9e7c5b1a4f6082d4c7b9a1e6f3d8c2',
@@ -346,7 +357,226 @@ export const fixtureUnavailableDegraded: ReportV2 = {
 };
 
 // ----------------------------------------------------------------------------
-// 6. One ApiErrorEnvelope example per ApiErrorCode. correlation_id values
+// 6. exact_band / observed_mot, unconverted / High confidence -- a
+//    high-mileage vehicle whose latest MOT recorded a plain miles reading
+//    (no unit conversion needed), landing an exact age+mileage band match.
+//    Release 1 fixture: demonstrates original_value/original_unit on a
+//    freshly-authored payload where they simply mirror effective_value
+//    unchanged (mirrors report_contract.EXACT_BAND's None note -- exact
+//    matches carry no caveat).
+// ----------------------------------------------------------------------------
+const observedHighMileageToken = '5e7c9b1a3d6f8024b6d8a0c2e4f6b8d0';
+export const fixtureObservedHighMileage: ReportV2 = {
+  contract_version: '2.0',
+  report_id: 'rpt_9f1e3d5c7b0a',
+  report_token: observedHighMileageToken,
+  share_url: `https://www.autosafe.one/app/report/${observedHighMileageToken}`,
+  created_at: '2026-07-10T09:00:00Z',
+  expires_at: '2026-10-08T09:00:00Z',
+  registration: 'IJ90KLM',
+  vehicle: {
+    make: 'TESTMAKE',
+    model: 'HIGHMILEAGEMODEL',
+    year: 2015,
+    fuel_type: 'DIESEL',
+    colour: 'BLACK',
+  },
+  mot: {
+    expiry_date: '2026-11-02T00:00:00',
+    last_test_date: '2025-11-02T00:00:00',
+    last_result: 'PASSED',
+  },
+  mileage: {
+    effective_value: 112406,
+    source: 'observed_mot',
+    observed_at: '2025-11-02',
+    unit_converted: false,
+    anomaly: false,
+    original_value: 112406,
+    original_unit: 'mi',
+  },
+  evidence: {
+    match_scope: 'exact_band',
+    age_band: '11-15',
+    mileage_band: '100k+',
+    total_tests: 1204,
+    total_failures: 388,
+  },
+  risk: {
+    failure_risk: 0.31,
+    confidence: 'High',
+  },
+  components: {
+    available: true,
+    items: [
+      { key: 'brakes', label: 'Brakes', risk: 0.28 },
+      { key: 'suspension', label: 'Suspension', risk: 0.24 },
+      { key: 'body', label: 'Body & Chassis', risk: 0.19 },
+    ],
+  },
+  repair_estimate: {
+    expected: 410,
+    range_low: 240,
+    range_high: 640,
+  },
+  persistence: {
+    saved: true,
+    share_available: true,
+  },
+  prediction_source: 'postgres',
+  vehicle_data_source: 'dvsa',
+  note: null,
+};
+
+// ----------------------------------------------------------------------------
+// 7. age_band_only / missing mileage with a rejected anomalous reading --
+//    the vehicle's only odometer reading was flagged anomalous (e.g. a
+//    rollback or implausible jump per report_contract.OdometerUnavailableReason)
+//    and rejected outright, so there is no usable mileage at all
+//    (source: 'missing', effective_value: null) even though anomaly: true
+//    records that a reading was seen and distrusted, not simply absent.
+//    original_value/original_unit are omitted entirely -- there is no
+//    verbatim DVSA reading to report when the resolved mileage itself is
+//    missing. Falls back to the age-band-only evidence match; note reuses
+//    report_service.py's NOTE_AGE_BAND_ONLY verbatim, same as
+//    fixtureLegacyEstimated2_0 -- the note is keyed to match_scope alone,
+//    not to why the exact band wasn't reached.
+// ----------------------------------------------------------------------------
+const anomalyMissingToken = '7f9b1d3c5a8e2046c8e0b2d4f6a8c0e2';
+export const fixtureAnomalyMissing: ReportV2 = {
+  contract_version: '2.0',
+  report_id: 'rpt_3a5c7e9f1b2d',
+  report_token: anomalyMissingToken,
+  share_url: `https://www.autosafe.one/app/report/${anomalyMissingToken}`,
+  created_at: '2026-07-12T13:20:00Z',
+  expires_at: '2026-10-10T13:20:00Z',
+  registration: 'KL12MNO',
+  vehicle: {
+    make: 'TESTMAKE',
+    model: 'ANOMALYMODEL',
+    year: 2017,
+    fuel_type: 'PETROL',
+    colour: 'WHITE',
+  },
+  mot: {
+    expiry_date: '2027-06-20T00:00:00',
+    last_test_date: '2026-06-20T00:00:00',
+    last_result: 'PASSED',
+  },
+  mileage: {
+    effective_value: null,
+    source: 'missing',
+    observed_at: null,
+    unit_converted: false,
+    anomaly: true,
+  },
+  evidence: {
+    match_scope: 'age_band_only',
+    age_band: '6-10',
+    mileage_band: null,
+    total_tests: 512,
+    total_failures: 140,
+  },
+  risk: {
+    failure_risk: 0.27,
+    confidence: 'Medium',
+  },
+  components: {
+    available: true,
+    items: [
+      { key: 'tyres', label: 'Tyres', risk: 0.14 },
+      { key: 'lamps', label: 'Lamps & Electrical', risk: 0.08 },
+    ],
+  },
+  repair_estimate: {
+    expected: 180,
+    range_low: 90,
+    range_high: 260,
+  },
+  persistence: {
+    saved: true,
+    share_available: true,
+  },
+  prediction_source: 'sqlite',
+  vehicle_data_source: 'dvsa',
+  note: "Exact mileage band unavailable for this vehicle's age group — showing the closest match for vehicles of a similar age.",
+};
+
+// ----------------------------------------------------------------------------
+// 8. exact_band / observed_mot, km->mi converted / Medium confidence -- the
+//    latest MOT recorded the odometer in kilometres (report_service.py's
+//    MILES_PER_KM = 0.621371 conversion factor); 180000 km * 0.621371 =
+//    111846.78, rounding to the effective_value shown here. original_value/
+//    original_unit preserve the verbatim pre-conversion reading.
+//    match_scope is exact_band, so -- same as fixtureObservedHighMileage --
+//    the note is None (report_service.py's _NOTE_BY_SCOPE has no caveat for
+//    an exact match; the note is keyed to match_scope, never to whether a
+//    unit conversion happened).
+// ----------------------------------------------------------------------------
+const kmConvertedToken = 'b3d5f7a9c1e4062a4c6e8a0c2e4f6a80';
+export const fixtureKmConverted: ReportV2 = {
+  contract_version: '2.0',
+  report_id: 'rpt_6c8e0f2a4b7d',
+  report_token: kmConvertedToken,
+  share_url: `https://www.autosafe.one/app/report/${kmConvertedToken}`,
+  created_at: '2026-07-05T09:00:00Z',
+  expires_at: '2026-10-03T09:00:00Z',
+  registration: 'MN34OPQ',
+  vehicle: {
+    make: 'TESTMAKE',
+    model: 'IMPORTMODEL',
+    year: 2016,
+    fuel_type: 'DIESEL',
+    colour: 'GREY',
+  },
+  mot: {
+    expiry_date: '2027-07-01T00:00:00',
+    last_test_date: '2026-07-01T00:00:00',
+    last_result: 'PASSED',
+  },
+  mileage: {
+    effective_value: 111847,
+    source: 'observed_mot',
+    observed_at: '2026-07-01T00:00:00',
+    unit_converted: true,
+    anomaly: false,
+    original_value: 180000,
+    original_unit: 'km',
+  },
+  evidence: {
+    match_scope: 'exact_band',
+    age_band: '6-10',
+    mileage_band: '100k+',
+    total_tests: 268,
+    total_failures: 79,
+  },
+  risk: {
+    failure_risk: 0.29,
+    confidence: 'Medium',
+  },
+  components: {
+    available: true,
+    items: [
+      { key: 'brakes', label: 'Brakes', risk: 0.2 },
+      { key: 'steering', label: 'Steering', risk: 0.1 },
+    ],
+  },
+  repair_estimate: {
+    expected: 260,
+    range_low: 140,
+    range_high: 400,
+  },
+  persistence: {
+    saved: true,
+    share_available: true,
+  },
+  prediction_source: 'postgres',
+  vehicle_data_source: 'dvsa',
+  note: null,
+};
+
+// ----------------------------------------------------------------------------
+// 9. One ApiErrorEnvelope example per ApiErrorCode. correlation_id values
 //    mirror main.py's generate_correlation_id() shape (a 12-character
 //    lowercase hex string) purely for realism -- none of these are derived
 //    from a real request.

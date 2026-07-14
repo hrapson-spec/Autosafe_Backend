@@ -206,7 +206,6 @@ const App: React.FC = () => {
       const report = await createReport(
         registration,
         postcode,
-        undefined,
         pendingSubmission.current.idempotencyKey,
       );
       // The logical operation completed. A later deliberate check, even for
