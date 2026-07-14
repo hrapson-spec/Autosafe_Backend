@@ -18,23 +18,25 @@
  *   4. A DVSA outage at report-creation time renders the established error
  *      UX and never a fabricated report.
  *
- * Every mocked fixture used here for a dated assertion carries a date-only
- * observed_at ('YYYY-MM-DD'), per this wave's mock-authoring rule: a
- * zone-less 'T00:00:00' timestamp is parsed as local time by
- * ReportCopy.tsx's formatDateGB, which renders a day early on a BST host --
- * a known, pre-existing bug this suite works around by construction rather
- * than asserting around. fixtureObservedHighMileage's and
- * fixtureAnomalyMissing's own observed_at fields are already safe
- * (date-only / null); test 3 below deliberately asserts only
- * fixtureKmConverted's unit-conversion suffix (which never reads
- * observed_at), never the dated portion of its line, since that fixture's
- * own observed_at is a full zone-less timestamp.
+ * formatDateGB (components/ReportCopy.tsx) previously parsed a zone-less
+ * 'T00:00:00' timestamp as local time, rendering a day early on a BST host;
+ * this is now fixed (see this task's Must-fix section). Test 1 below
+ * deliberately overrides fixtureObservedHighMileage's observed_at to the
+ * realistic zone-less wire format dvsa_client._parse_date actually emits
+ * ('2025-11-02T00:00:00', not the fixture's own date-only '2025-11-02'),
+ * to prove that fix end-to-end rather than mock around it.
+ * fixtureAnomalyMissing's observed_at is null (not applicable). Test 3
+ * below is unchanged and still asserts only fixtureKmConverted's
+ * unit-conversion suffix, never the dated portion of its line (out of
+ * scope for this fix; that fixture's exact date is pinned at the unit
+ * level in ReportCopy.test.tsx instead).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/setup';
 import { mockCreateReport, mockGetReport } from './helpers/mockApi';
 import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
+import type { ReportV2 } from '../types';
 import {
   fixtureObservedHighMileage,
   fixtureAnomalyMissing,
@@ -59,17 +61,28 @@ async function driveToReport(page: Page, registration: string, postcode: string)
 
 test('high-mileage exact-band reading: dated last-recorded-mileage line and population badge render', async ({ page }) => {
   await forceVariant(page, 'control');
-  await mockCreateReport(page, fixtureObservedHighMileage, 200);
-  await mockGetReport(page, fixtureObservedHighMileage.report_token as string, fixtureObservedHighMileage, 200);
+  // Realified per this task's Must-fix section: the real DVSA wire format
+  // for observed_at is a zone-less midnight timestamp
+  // (dvsa_client._parse_date truncates to date_str[:10] and parses
+  // '%Y-%m-%d'), not the date-only string the fixture ships with.
+  // Overridden here -- not in fixtures/reportResponses.ts -- so this
+  // flagship spec proves formatDateGB's UTC-normalization fix end-to-end
+  // against the actual wire shape.
+  const wireAccurateReport: ReportV2 = {
+    ...fixtureObservedHighMileage,
+    mileage: { ...fixtureObservedHighMileage.mileage, observed_at: '2025-11-02T00:00:00' },
+  };
+  await mockCreateReport(page, wireAccurateReport, 200);
+  await mockGetReport(page, wireAccurateReport.report_token as string, wireAccurateReport, 200);
 
-  await driveToReport(page, fixtureObservedHighMileage.registration, 'SW1A 1AA');
+  await driveToReport(page, wireAccurateReport.registration, 'SW1A 1AA');
 
-  await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureObservedHighMileage.report_token}$`));
+  await expect(page).toHaveURL(new RegExp(`/app/report/${wireAccurateReport.report_token}$`));
 
   // Anchor: ReportCopy's real function must produce the exact acceptance
   // string for this fixture (regression guard against wording drift)...
   const expectedLine = 'Last recorded MOT mileage: 112,406 miles on 2 Nov 2025';
-  expect(lastRecordedMileageLine(fixtureObservedHighMileage)).toBe(expectedLine);
+  expect(lastRecordedMileageLine(wireAccurateReport)).toBe(expectedLine);
   // ...then confirm the rendered page actually shows it. Rendered exactly
   // once (ReportDashboard.tsx's shared renderHeader(), called once per
   // variant branch), so no .first() is needed here.

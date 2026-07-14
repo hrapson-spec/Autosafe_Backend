@@ -386,14 +386,15 @@ describe('lastRecordedMileageLine', () => {
 
   it('appends the km-conversion suffix when unit_converted and original_value are present', () => {
     const line = lastRecordedMileageLine(fixtureKmConverted) ?? '';
-    // fixtureKmConverted's observed_at ("2026-07-01T00:00:00") has no
-    // explicit UTC marker -- formatDateGB's own documented contract only
-    // commits to bare dates and explicit-UTC timestamps, so the exact
-    // calendar date rendered here is host-timezone-sensitive (see report's
-    // Concerns section). Assert the load-bearing prefix/suffix instead of
-    // pinning the exact date digit.
-    expect(line).toContain('Last recorded MOT mileage: 111,847 miles on');
-    expect(line).toContain('— converted from 180,000 km');
+    // fixtureKmConverted's observed_at ('2026-07-01T00:00:00') is a
+    // zone-less full timestamp -- the real DVSA wire format. This
+    // previously asserted only the load-bearing prefix/suffix, avoiding the
+    // exact date digit because formatDateGB parsed a zone-less timestamp as
+    // local time (host-timezone-sensitive -- one day early on a BST host).
+    // Now that formatDateGB normalizes zone-less timestamps to UTC before
+    // parsing, the rendered date is deterministic regardless of host
+    // timezone, so the previously-avoided exact date is pinned here too.
+    expect(line).toBe('Last recorded MOT mileage: 111,847 miles on 1 Jul 2026 — converted from 180,000 km');
   });
 
   it('is null when the mileage source is missing', () => {
@@ -762,6 +763,10 @@ describe('formatDateGB', () => {
 
   it('is robust to a full ISO timestamp just after UTC midnight rollover', () => {
     expect(formatDateGB('2025-03-13T00:00:01.000Z')).toBe('13 Mar 2025');
+  });
+
+  it('treats a zone-less midnight timestamp -- the real DVSA wire format (dvsa_client._parse_date truncates to date_str[:10] and parses %Y-%m-%d, so observed_at/recorded_at arrive as e.g. "2025-07-02T00:00:00") -- as UTC rather than local time, so a BST host does not render it a day early', () => {
+    expect(formatDateGB('2025-07-02T00:00:00')).toBe('2 Jul 2025');
   });
 });
 

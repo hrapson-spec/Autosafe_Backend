@@ -449,10 +449,19 @@ export function demoBanner(report: ReportV2): string | null {
 /**
  * en-GB short date, e.g. "12 Mar 2025". Forces UTC interpretation so the
  * result is stable regardless of the host machine's timezone — robust to
- * both bare ISO dates ("2025-03-12") and full timestamps
- * ("2025-03-12T23:45:00.000Z").
+ * bare ISO dates ("2025-03-12"), explicit-UTC timestamps
+ * ("2025-03-12T23:45:00.000Z"), and zone-less timestamps
+ * ("2025-03-12T23:45:00") — the shape dvsa_client._parse_date actually puts
+ * on the wire for every observed_at/recorded_at (it truncates to
+ * date_str[:10] and parses '%Y-%m-%d', which serializes back out as a
+ * zone-less midnight datetime). Per ECMAScript's Date Time String Format,
+ * a date-only string parses as UTC but a zone-less date-TIME string parses
+ * as local time — without normalization that mismatch renders every
+ * BST-dated MOT test one day early on a Europe/London host. Offset-carrying
+ * timestamps ("...+01:00") pass through untouched.
  */
 export function formatDateGB(iso: string): string {
-  const date = new Date(iso);
+  const hasZonelessTime = iso.includes('T') && !/(Z|[+-]\d{2}:\d{2})$/.test(iso);
+  const date = new Date(hasZonelessTime ? `${iso}Z` : iso);
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
