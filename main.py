@@ -15,7 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
 from urllib.parse import urlencode
+import asyncio
 import os
+import re
 import time
 import secrets
 
@@ -26,7 +28,13 @@ from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
-from report_contract import DATASET_TOTAL_TESTS, OdometerReading, OdometerStatus, OdometerUnavailableReason
+from report_contract import (
+    DATASET_TOTAL_TESTS,
+    OdometerReading,
+    OdometerStatus,
+    OdometerUnavailableReason,
+    RiskLookupResponse,
+)
 import report_service
 
 # Lead distribution
@@ -678,189 +686,163 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     return []  # No demo models for other makes
 
 
-@app.get("/api/risk")
+# ---------------------------------------------------------------------------
+# /api/risk lookup analytics (R1-T3): dark-by-default, fire-and-forget.
+#
+# LOOKUP_ANALYTICS_ENABLED is read fresh on every call (not cached at
+# import time) so a runtime env change takes effect without a restart, and
+# so tests can flip it per-test via monkeypatch.setenv without reloading
+# this module. Absent/unset means OFF, matching a fresh deployment -- see
+# tests/test_api_lookup_v2.py's `_analytics_dark` autouse fixture.
+# ---------------------------------------------------------------------------
+
+_TRACKING_VRN_PATTERN = re.compile(r'^[A-Z0-9]{2,8}$')
+
+
+def _normalize_tracking_registration(raw: str) -> str:
+    """Strip all whitespace, upper-case, and hard-validate a registration
+    supplied to /api/risk purely for analytics tracking (this route never
+    resolves DVSA history, so the value is never used as a vehicle lookup
+    key). Mirrors report_routes._normalize_vrn's regex and normalization
+    exactly so the two routes reject/accept the same strings, without
+    importing a private name across the module boundary."""
+    normalized = re.sub(r'\s+', '', raw).upper()
+    if not _TRACKING_VRN_PATTERN.match(normalized):
+        raise HTTPException(status_code=400, detail="Invalid registration format")
+    return normalized
+
+
+def _normalize_tracking_postcode(raw: str) -> Optional[str]:
+    """Best-effort postcode normalization for analytics only -- never
+    rejects (postcode is optional and non-gating on this route), mirroring
+    get_risk_v55's existing inline validate_postcode fallback pattern."""
+    if not raw or not raw.strip():
+        return None
+    result = validate_postcode(raw)
+    if result.get('valid'):
+        return result.get('normalized', raw.strip().upper())
+    return raw.strip().upper()
+
+
+# Strong references to in-flight fire-and-forget analytics tasks: asyncio
+# gives no other guarantee that a task survives to completion once its
+# creator has moved on (a task with no referent can be garbage-collected
+# mid-run). Each task removes itself on completion, so this set's
+# emptiness also doubles as a test hook
+# (tests/test_api_lookup_v2.py's _drain_analytics_tasks).
+_LOOKUP_ANALYTICS_TASKS: set = set()
+
+
+def _schedule_lookup_analytics(coro) -> None:
+    task = asyncio.create_task(coro)
+    _LOOKUP_ANALYTICS_TASKS.add(task)
+    task.add_done_callback(_LOOKUP_ANALYTICS_TASKS.discard)
+
+
+async def _log_lookup_risk_check(
+    *,
+    registration: Optional[str],
+    postcode: Optional[str],
+    make: str,
+    model: str,
+    year: int,
+    response: RiskLookupResponse,
+    referrer: Optional[str],
+) -> None:
+    """Fire-and-forget analytics for a /api/risk lookup. Ships DARK, and a
+    logging failure here must never affect the response -- this coroutine
+    only ever runs after the response has already been built (and, in
+    practice, after it has been returned to the client).
+
+    (a) dark by default -- LOOKUP_ANALYTICS_ENABLED is read per-call, not
+        cached, so an unset/absent flag (a fresh deployment) logs nothing.
+    (b) skipped with no tracking identifier at all -- an anonymous lookup
+        has no identifier to key analytics by.
+    """
+    if os.environ.get("LOOKUP_ANALYTICS_ENABLED") != "1":
+        return
+    if not registration and not postcode:
+        return
+
+    payload = {
+        'registration': registration,
+        'postcode': postcode,
+        'vehicle_make': make,
+        'vehicle_model': model,
+        'vehicle_year': year,
+        'mileage': response.mileage,
+        'failure_risk': response.failure_risk,
+        'confidence_level': response.confidence_level,
+        'risk_components': {
+            'brakes': response.risk_brakes,
+            'suspension': response.risk_suspension,
+            'tyres': response.risk_tyres,
+            'steering': response.risk_steering,
+            'visibility': response.risk_visibility,
+            'lamps': response.risk_lamps,
+            'body': response.risk_body,
+        },
+        'repair_cost_estimate': response.repair_cost_estimate,
+        'model_version': 'lookup_v2',
+        'prediction_source': response.prediction_source.value,
+        'is_dvsa_data': False,
+        'referrer': referrer,
+    }
+    try:
+        await db.save_risk_check(payload)
+    except Exception as e:
+        vrm_hash = hash_vrm(registration) if registration else 'none'
+        logger.warning("Failed to log lookup risk check hash_vrm=%s (%s)", vrm_hash, type(e).__name__)
+
+
+@app.get("/api/risk", response_model=RiskLookupResponse)
 @limiter.limit("20/minute")
 async def get_risk(
     request: Request,
     make: str = Query(..., min_length=1, max_length=50, description="Vehicle make (e.g., FORD)"),
     model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1990, description="Year of manufacture")
-):
+    year: int = Query(..., ge=1990, description="Year of manufacture"),
+    mileage: Optional[int] = Query(None, ge=0, le=500000, description="Current vehicle mileage"),
+    registration: Optional[str] = Query(None, max_length=12, description="Vehicle registration (analytics tracking only)"),
+    postcode: str = Query("", max_length=10, description="UK postcode (analytics tracking only)"),
+) -> RiskLookupResponse:
     """
-    Calculate MOT failure risk using lookup table.
+    Honest MOT failure risk lookup over the v2 Postgres-then-SQLite
+    evidence ladder (report_service.build_lookup): a provenance-carrying
+    population comparison, never a fabricated rate or an estimated
+    mileage.
 
-    Interim solution using pre-computed population averages by make/model/age.
-    Returns confidence level based on sample size in the lookup data.
+    registration/postcode are accepted for analytics tracking only, dark
+    by default (see LOOKUP_ANALYTICS_ENABLED) -- this route never resolves
+    DVSA history, and mileage is never treated as an observed reading.
     """
-    # P2-1 fix: Dynamic year validation
+    # P2-1 fix: Dynamic year validation (unchanged from the legacy handler).
     max_year = get_max_year()
     if year > max_year:
         raise HTTPException(status_code=422, detail=f"Year must be <= {max_year}")
-    # Normalize inputs
+
     make_upper = make.strip().upper()
     model_upper = model.strip().upper()
-    model_id = f"{make_upper} {model_upper}"
 
-    # Calculate age band from year
-    age = datetime.now().year - year
-    age_band = get_age_band(age)
+    normalized_registration = (
+        _normalize_tracking_registration(registration) if registration is not None else None
+    )
+    normalized_postcode = _normalize_tracking_postcode(postcode)
+    referrer = safe_referrer(request.headers.get("referer"))
 
-    # Default response (population average)
-    default_response = {
-        "vehicle": model_id,
-        "year": year,
-        "mileage": None,
-        "last_mot_date": None,
-        "last_mot_result": None,
-        "failure_risk": 0.28,  # UK population average
-        "confidence_level": "Low",
-        "risk_brakes": 0.05,
-        "risk_suspension": 0.04,
-        "risk_tyres": 0.03,
-        "risk_steering": 0.02,
-        "risk_visibility": 0.02,
-        "risk_lamps": 0.03,
-        "risk_body": 0.02,
-        "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
-    }
+    response = await report_service.build_lookup(make_upper, model_upper, year, mileage, get_sqlite_connection)
 
-    # Try PostgreSQL first
-    if DATABASE_URL:
-        # Estimate mileage based on age (UK average ~8000 miles/year)
-        # This allows us to use the more precise PostgreSQL lookup
-        est_mileage = age * 8000
-        mileage_band = get_mileage_band(est_mileage)
+    _schedule_lookup_analytics(_log_lookup_risk_check(
+        registration=normalized_registration,
+        postcode=normalized_postcode,
+        make=make_upper,
+        model=model_upper,
+        year=year,
+        response=response,
+        referrer=referrer,
+    ))
 
-        result = await db.get_risk(model_id, age_band, mileage_band)
-        if result and "error" not in result:
-             # Formulate response
-             # Add confidence intervals
-             result = add_confidence_intervals(result)
-             result = add_repair_cost_estimate(result)
-             
-             # Format repair cost
-             repair_cost = result.get('Repair_Cost_Estimate', {})
-             if isinstance(repair_cost, dict):
-                 expected = repair_cost.get('expected', 250)
-                 repair_cost_formatted = {
-                     "expected": f"£{expected}",
-                     "range_low": repair_cost.get('range_low', 100),
-                     "range_high": repair_cost.get('range_high', 500),
-                 }
-             else:
-                 repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
-
-             return {
-                 "vehicle": model_id,
-                 "year": year,
-                 "mileage": None,
-                 "last_mot_date": None,
-                 "last_mot_result": None,
-                 "failure_risk": result.get('Failure_Risk', 0.28),
-                 "confidence_level": result.get('Confidence_Level', "Low"),
-                 "risk_brakes": result.get('Risk_Brakes', 0.05),
-                 "risk_suspension": result.get('Risk_Suspension', 0.04),
-                 "risk_tyres": result.get('Risk_Tyres', 0.03),
-                 "risk_steering": result.get('Risk_Steering', 0.02),
-                 "risk_visibility": result.get('Risk_Visibility', 0.02),
-                 "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                 "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                 "repair_cost_estimate": repair_cost_formatted,
-             }
-
-    # Try SQLite lookup
-    with get_sqlite_connection() as conn:
-        if not conn:
-            logger.warning("No database connection available, returning population average")
-            return default_response
-
-        try:
-            # P0-5 fix: Use exact match first, then match variants with space separator
-            # This prevents "FORD F" from matching "FORD FOCUS"
-            base_model_id = f"{make_upper} {model_upper}"
-
-            # Try exact match first
-            query = """
-                SELECT * FROM risks
-                WHERE model_id = ? AND age_band = ?
-                ORDER BY Total_Tests DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (base_model_id, age_band)).fetchone()
-
-            # If not found, try matching model variants (e.g., "FORD FIESTA" matches "FORD FIESTA ZETEC")
-            if not row:
-                query = """
-                    SELECT * FROM risks
-                    WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
-                    ORDER BY Total_Tests DESC
-                    LIMIT 1
-                """
-                row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
-
-            # If still not found, try just the make (for aggregated make-level data)
-            if not row:
-                query = """
-                    SELECT * FROM risks
-                    WHERE model_id = ? AND age_band = ?
-                    ORDER BY Total_Tests DESC
-                    LIMIT 1
-                """
-                row = conn.execute(query, (make_upper, age_band)).fetchone()
-
-            if not row:
-                logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
-                return default_response
-
-            result = dict(row)
-
-            # Calculate confidence level based on sample size
-            total_tests = result.get('Total_Tests', 0)
-            if total_tests >= 1000:
-                confidence_level = "High"
-            elif total_tests >= 100:
-                confidence_level = "Medium"
-            else:
-                confidence_level = "Low"
-
-            # Add confidence intervals and repair cost estimate
-            result = add_confidence_intervals(result)
-            result = add_repair_cost_estimate(result)
-
-            # Format repair cost for display
-            repair_cost = result.get('Repair_Cost_Estimate', {})
-            if isinstance(repair_cost, dict):
-                expected = repair_cost.get('expected', 250)
-                repair_cost_formatted = {
-                    "expected": f"£{expected}",
-                    "range_low": repair_cost.get('range_low', 100),
-                    "range_high": repair_cost.get('range_high', 500),
-                }
-            else:
-                repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
-
-            return {
-                "vehicle": model_id,
-                "year": year,
-                "mileage": None,
-                "last_mot_date": None,
-                "last_mot_result": None,
-                "failure_risk": result.get('Failure_Risk', 0.28),
-                "confidence_level": confidence_level,
-                "risk_brakes": result.get('Risk_Brakes', 0.05),
-                "risk_suspension": result.get('Risk_Suspension', 0.04),
-                "risk_tyres": result.get('Risk_Tyres', 0.03),
-                "risk_steering": result.get('Risk_Steering', 0.02),
-                "risk_visibility": result.get('Risk_Visibility', 0.02),
-                # Fix: Use correct column names (with "And", without "Exhaust")
-                "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                "repair_cost_estimate": repair_cost_formatted,
-            }
-
-        except Exception as e:
-            logger.error("Database error during lookup (%s)", type(e).__name__)
-            return default_response
+    return response
 
 
 @app.get("/api/risk/v55")

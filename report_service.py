@@ -38,8 +38,13 @@ import database as db
 import repair_costs
 from confidence import classify_confidence
 from report_contract import (
+    CohortMatchLevel,
     ComponentRiskItem,
     ConfidenceLevel,
+    DATASET_TOTAL_FAILURES,
+    DATASET_TOTAL_TESTS,
+    LookupCohort,
+    LookupPredictionSource,
     MatchScope,
     MileageSource,
     OdometerReading,
@@ -54,6 +59,7 @@ from report_contract import (
     ReportRepairEstimate,
     ReportRisk,
     ReportVehicle,
+    RiskLookupResponse,
 )
 from utils import get_age_band, get_mileage_band
 
@@ -618,4 +624,150 @@ async def build_assessment(
         repair_estimate=repair_estimate,
         prediction_source=prediction_source,
         note=note,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Top-level orchestration: /api/risk lookup (R1-T3)
+# ---------------------------------------------------------------------------
+
+# Distinct from NOTE_UNAVAILABLE above: build_assessment's UNAVAILABLE
+# degrades to the checked-in dataset reference rate (a displayed number --
+# ``prediction_source=DATASET_REFERENCE``), while build_lookup's UNAVAILABLE
+# shows no rate at all (``failure_risk=None``). The two routes' degraded
+# shapes differ, so their explanatory copy must too -- this is NOT the same
+# string as NOTE_UNAVAILABLE.
+NOTE_LOOKUP_UNAVAILABLE = (
+    "Comparison data is temporarily unavailable — no rate is shown. "
+    "Try again shortly."
+)
+
+_LOOKUP_SOURCE_BY_MATCH_SCOPE = {
+    'exact_band': LookupPredictionSource.POPULATION_EXACT,
+    'age_band_only': LookupPredictionSource.POPULATION_BROAD,
+    'model_average': LookupPredictionSource.POPULATION_BROAD,
+}
+
+_COHORT_LEVEL_BY_MATCH_SCOPE = {
+    'exact_band': CohortMatchLevel.EXACT_BAND,
+    'age_band_only': CohortMatchLevel.AGE_BAND_ONLY,
+    'model_average': CohortMatchLevel.MODEL_AVERAGE,
+}
+
+_NULL_LOOKUP_COMPONENT_FIELDS: Dict[str, Optional[float]] = {field: None for _, _, field in _COMPONENT_FIELDS}
+
+
+def _lookup_component_fields(components: ReportComponents) -> Dict[str, Optional[float]]:
+    """Flatten ReportComponents.items onto RiskLookupResponse's legacy flat
+    risk_* keys. Both shapes share the same 7 component keys
+    (_COMPONENT_FIELDS), so this is a pure reshape of
+    _build_components_and_repair's output, not new component logic."""
+    fields = dict(_NULL_LOOKUP_COMPONENT_FIELDS)
+    if components.available and components.items:
+        key_to_field = {key: field for key, _, field in _COMPONENT_FIELDS}
+        for item in components.items:
+            fields[key_to_field[item.key]] = item.risk
+    return fields
+
+
+async def build_lookup(
+    make: str,
+    model: str,
+    year: int,
+    mileage: Optional[int],
+    sqlite_conn_factory: Optional[Callable[[], Any]],
+) -> RiskLookupResponse:
+    """Resolve GET /api/risk's honest lookup response over the same
+    Postgres-then-SQLite evidence ladder build_assessment uses.
+
+    mileage selects the mileage band and is echoed back verbatim on the
+    response's ``mileage`` field -- it is never estimated (a missing
+    mileage simply skips the exact rung and starts the ladder at the age
+    band) and never treated as an observed odometer reading (that is
+    resolve_odometer/resolve_mileage's job, for the /api/v2/reports path
+    only -- this lookup route has no vehicle history to read a reading
+    from at all).
+
+    Tier mapping (ladder outcome -> prediction_source/cohort), per
+    task-3-brief.md:
+        exact rung hit           -> population_exact / exact_band
+        age-only rung hit        -> population_broad / age_band_only
+        model-only rung hit      -> population_broad / model_average
+        stores reached, no rows  -> population_global / dataset
+        stores unreachable       -> unavailable / no cohort
+    """
+    make_upper = make.strip().upper()
+    model_upper = model.strip().upper()
+    model_id = "{} {}".format(make_upper, model_upper)
+
+    age = datetime.now().year - year
+    age_band = get_age_band(age)
+    mileage_band = get_mileage_band(mileage) if mileage is not None else None
+
+    ladder_result, ladder_source = await _query_evidence_ladder(
+        model_id, age_band, mileage_band, sqlite_conn_factory
+    )
+
+    if ladder_source == PredictionSource.UNAVAILABLE:
+        return RiskLookupResponse(
+            vehicle=model_id,
+            year=year,
+            mileage=mileage,
+            failure_risk=None,
+            confidence_level=None,
+            **_NULL_LOOKUP_COMPONENT_FIELDS,
+            repair_cost_estimate=None,
+            prediction_source=LookupPredictionSource.UNAVAILABLE,
+            cohort=None,
+            note=NOTE_LOOKUP_UNAVAILABLE,
+        )
+
+    if ladder_result is None:
+        cohort = LookupCohort(
+            match_level=CohortMatchLevel.DATASET,
+            age_band=None,
+            mileage_band=None,
+            total_tests=DATASET_TOTAL_TESTS,
+            total_failures=DATASET_TOTAL_FAILURES,
+        )
+        return RiskLookupResponse(
+            vehicle=model_id,
+            year=year,
+            mileage=mileage,
+            failure_risk=POPULATION_DEFAULT_FAILURE_RISK,
+            confidence_level=ConfidenceLevel.VERY_LOW.value,
+            **_NULL_LOOKUP_COMPONENT_FIELDS,
+            repair_cost_estimate=None,
+            prediction_source=LookupPredictionSource.POPULATION_GLOBAL,
+            cohort=cohort,
+            note=NOTE_POPULATION_DEFAULT,
+        )
+
+    match_scope = ladder_result['match_scope']
+    cohort_age_band = age_band if match_scope in ('exact_band', 'age_band_only') else None
+    cohort_mileage_band = mileage_band if match_scope == 'exact_band' else None
+
+    cohort = LookupCohort(
+        match_level=_COHORT_LEVEL_BY_MATCH_SCOPE[match_scope],
+        age_band=cohort_age_band,
+        mileage_band=cohort_mileage_band,
+        total_tests=ladder_result['total_tests'],
+        total_failures=ladder_result['total_failures'],
+    )
+
+    components, repair_estimate = _build_components_and_repair(ladder_result)
+    component_fields = _lookup_component_fields(components)
+    repair_cost_estimate = repair_estimate.model_dump() if repair_estimate is not None else None
+
+    return RiskLookupResponse(
+        vehicle=model_id,
+        year=year,
+        mileage=mileage,
+        failure_risk=ladder_result['failure_risk'],
+        confidence_level=classify_confidence(ladder_result['total_tests']),
+        repair_cost_estimate=repair_cost_estimate,
+        prediction_source=_LOOKUP_SOURCE_BY_MATCH_SCOPE[match_scope],
+        cohort=cohort,
+        note=_NOTE_BY_SCOPE[MatchScope(match_scope)],
+        **component_fields,
     )

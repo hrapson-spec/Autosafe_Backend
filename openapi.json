@@ -1,6 +1,17 @@
 {
   "components": {
     "schemas": {
+      "CohortMatchLevel": {
+        "description": "How closely a LookupCohort matches the requested vehicle.",
+        "enum": [
+          "exact_band",
+          "age_band_only",
+          "model_average",
+          "dataset"
+        ],
+        "title": "CohortMatchLevel",
+        "type": "string"
+      },
       "ComponentRiskItem": {
         "additionalProperties": false,
         "description": "A single component-level risk entry.",
@@ -323,6 +334,74 @@
         ],
         "title": "LeadSubmission",
         "type": "object"
+      },
+      "LookupCohort": {
+        "additionalProperties": false,
+        "description": "The comparison cohort backing a /api/risk lookup's displayed rate,\nwhen one is available.\n\ntotal_tests uses ``gt=0`` (not ReportEvidence's null-means-unknown\n``ge=0`` pattern) because a LookupCohort, when present at all, always\nrepresents real evidence -- the fully-unavailable case is\n``RiskLookupResponse.cohort is None``, not a LookupCohort with a null\ncount. Zero tests are not evidence, mirroring ReportEvidence's own\nrule (report_contract.py's ``validate_counts``).",
+        "properties": {
+          "age_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Band"
+          },
+          "match_level": {
+            "$ref": "#/components/schemas/CohortMatchLevel"
+          },
+          "mileage_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage Band"
+          },
+          "total_failures": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Failures"
+          },
+          "total_tests": {
+            "exclusiveMinimum": 0.0,
+            "title": "Total Tests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "match_level",
+          "age_band",
+          "mileage_band",
+          "total_tests",
+          "total_failures"
+        ],
+        "title": "LookupCohort",
+        "type": "object"
+      },
+      "LookupPredictionSource": {
+        "description": "/api/risk's honest source of the displayed rate (RiskLookupResponse).",
+        "enum": [
+          "population_exact",
+          "population_broad",
+          "population_global",
+          "unavailable"
+        ],
+        "title": "LookupPredictionSource",
+        "type": "string"
       },
       "MatchScope": {
         "description": "How closely the served evidence matches this specific vehicle.\n\nOrdered from most to least specific; ``UNAVAILABLE`` and\n``POPULATION_DEFAULT`` both signal degraded evidence and must be\nrendered honestly, not hidden behind a narrower-looking scope.",
@@ -1157,6 +1236,196 @@
         "title": "RiskData",
         "type": "object"
       },
+      "RiskLookupResponse": {
+        "additionalProperties": false,
+        "description": "/api/risk's response shape (T3 wires the route onto the v2\nPostgres-then-SQLite evidence ladder; this module defines and fully\ntests the model now).\n\nPreserves the legacy 15-key surface exactly -- vehicle/year/mileage/\nlast_mot_date/last_mot_result/failure_risk/confidence_level/the seven\nrisk_* components/repair_cost_estimate -- so existing legacy consumers\nkeep working, while adding honest truth fields (prediction_source/\ncohort/note) describing exactly how the displayed rate was produced.\nlast_mot_date and last_mot_result are pinned null: this lookup route\nnever populated them even before this task, and it still never\nresolves DVSA history at all.",
+        "properties": {
+          "cohort": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookupCohort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Level"
+          },
+          "failure_risk": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Risk"
+          },
+          "last_mot_date": {
+            "title": "Last Mot Date",
+            "type": "null"
+          },
+          "last_mot_result": {
+            "title": "Last Mot Result",
+            "type": "null"
+          },
+          "mileage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mileage"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "prediction_source": {
+            "$ref": "#/components/schemas/LookupPredictionSource"
+          },
+          "repair_cost_estimate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repair Cost Estimate"
+          },
+          "risk_body": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Body"
+          },
+          "risk_brakes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Brakes"
+          },
+          "risk_lamps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Lamps"
+          },
+          "risk_steering": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Steering"
+          },
+          "risk_suspension": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Suspension"
+          },
+          "risk_tyres": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Tyres"
+          },
+          "risk_visibility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Visibility"
+          },
+          "vehicle": {
+            "title": "Vehicle",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "vehicle",
+          "year",
+          "mileage",
+          "failure_risk",
+          "confidence_level",
+          "risk_brakes",
+          "risk_suspension",
+          "risk_tyres",
+          "risk_steering",
+          "risk_visibility",
+          "risk_lamps",
+          "risk_body",
+          "repair_cost_estimate",
+          "prediction_source",
+          "cohort",
+          "note"
+        ],
+        "title": "RiskLookupResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1963,7 +2232,7 @@
     },
     "/api/risk": {
       "get": {
-        "description": "Calculate MOT failure risk using lookup table.\n\nInterim solution using pre-computed population averages by make/model/age.\nReturns confidence level based on sample size in the lookup data.",
+        "description": "Honest MOT failure risk lookup over the v2 Postgres-then-SQLite\nevidence ladder (report_service.build_lookup): a provenance-carrying\npopulation comparison, never a fabricated rate or an estimated\nmileage.\n\nregistration/postcode are accepted for analytics tracking only, dark\nby default (see LOOKUP_ANALYTICS_ENABLED) -- this route never resolves\nDVSA history, and mileage is never treated as an observed reading.",
         "operationId": "get_risk_api_risk_get",
         "parameters": [
           {
@@ -2003,13 +2272,67 @@
               "title": "Year",
               "type": "integer"
             }
+          },
+          {
+            "description": "Current vehicle mileage",
+            "in": "query",
+            "name": "mileage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Current vehicle mileage",
+              "title": "Mileage"
+            }
+          },
+          {
+            "description": "Vehicle registration (analytics tracking only)",
+            "in": "query",
+            "name": "registration",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 12,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Vehicle registration (analytics tracking only)",
+              "title": "Registration"
+            }
+          },
+          {
+            "description": "UK postcode (analytics tracking only)",
+            "in": "query",
+            "name": "postcode",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "UK postcode (analytics tracking only)",
+              "maxLength": 10,
+              "title": "Postcode",
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RiskLookupResponse"
+                }
               }
             },
             "description": "Successful Response"

@@ -184,8 +184,13 @@ async def check_openapi(client: httpx.AsyncClient) -> Dict:
     risk_params = spec["paths"]["/api/risk"]["get"]["parameters"]
     required_names = sorted(p["name"] for p in risk_params if p.get("required"))
     all_names = sorted(p["name"] for p in risk_params)
-    assert all_names == ["make", "model", "year"], f"legacy /api/risk params changed: {all_names}"
-    assert required_names == ["make", "model", "year"], f"legacy /api/risk required-set changed: {required_names}"
+    # R1-T3: /api/risk gained mileage/registration/postcode (all optional --
+    # mileage drives the evidence-ladder band, registration/postcode are
+    # analytics-tracking-only). make/model/year remain the only required set.
+    assert all_names == ["make", "mileage", "model", "postcode", "registration", "year"], (
+        f"/api/risk params changed: {all_names}"
+    )
+    assert required_names == ["make", "model", "year"], f"/api/risk required-set changed: {required_names}"
 
     assert "post" in spec["paths"].get("/api/v2/reports", {}), "POST /api/v2/reports missing from openapi.json"
     assert "get" in spec["paths"].get("/api/v2/reports/{token}", {}), "GET /api/v2/reports/{token} missing"
@@ -478,7 +483,34 @@ async def check_legacy_parity(client: httpx.AsyncClient, pool: asyncpg.Pool) -> 
     }
     missing = expected_keys - set(body.keys())
     assert not missing, f"legacy /api/risk missing keys: {missing}; got {sorted(body.keys())}"
-    show("GET /api/risk (legacy shape)", body)
+
+    # R1-T3: /api/risk is now a provenance-carrying lookup over the v2
+    # evidence ladder (report_service.build_lookup) -- assert the honest
+    # truth fields alongside the preserved legacy shape, and that the
+    # legacy fabricated 0.28 rate is gone (report_contract.RiskLookupResponse).
+    from report_contract import DATASET_TOTAL_FAILURES, DATASET_TOTAL_TESTS
+
+    prediction_source = body.get("prediction_source")
+    assert prediction_source in (
+        "population_exact", "population_broad", "population_global", "unavailable",
+    ), f"unexpected /api/risk prediction_source: {prediction_source!r}"
+
+    fr = body.get("failure_risk")
+    if fr is not None:
+        is_honest_dataset_rate = (
+            prediction_source == "population_global"
+            and abs(fr - (DATASET_TOTAL_FAILURES / DATASET_TOTAL_TESTS)) < 1e-9
+        )
+        assert abs(fr - 0.28) > 1e-9 or is_honest_dataset_rate, (
+            f"failure_risk={fr!r} matches the legacy fabricated 0.28 constant without "
+            f"being the honest dataset rate (prediction_source={prediction_source!r})"
+        )
+
+    cohort = body.get("cohort")
+    if cohort is not None:
+        assert cohort["total_tests"] > 0, f"cohort present with non-positive total_tests: {cohort}"
+
+    show("GET /api/risk (legacy shape + truth fields)", body)
 
     rv = await client.get("/api/vehicle", params={"registration": "ZZ99ABC"})
     assert rv.status_code == 200, f"/api/vehicle: status={rv.status_code} body={rv.text}"
@@ -546,6 +578,62 @@ async def check_postgres_path(pool: asyncpg.Pool) -> Dict:
     assert abs(result["failure_risk"] - 0.24) < 1e-6, result
     assert result["components_available"] is True, result
     return result
+
+
+# ---------------------------------------------------------------------------
+# 4k: /api/vehicle's typed odometer object (R1-T2)
+# ---------------------------------------------------------------------------
+
+async def check_vehicle_odometer(client: httpx.AsyncClient) -> Dict:
+    """GET /api/vehicle (same seeded VRM as 4i's legacy-parity check) must
+    always carry a typed `odometer` object (report_contract.OdometerReading):
+    status in {available, unavailable}, and -- when unavailable -- a
+    non-null unavailable_reason explaining why, never a silently-absent
+    reading."""
+    r = await client.get("/api/vehicle", params={"registration": "ZZ99ABC"})
+    assert r.status_code == 200, f"/api/vehicle: status={r.status_code} body={r.text}"
+    body = r.json()
+    odometer = body.get("odometer")
+    assert odometer is not None, f"/api/vehicle response missing 'odometer': {body}"
+    assert odometer.get("status") in ("available", "unavailable"), odometer
+    if odometer.get("status") == "unavailable":
+        assert odometer.get("unavailable_reason") is not None, (
+            f"unavailable odometer must carry a non-null unavailable_reason: {odometer}"
+        )
+    show("GET /api/vehicle odometer (R1-T2)", odometer)
+    return odometer
+
+
+# ---------------------------------------------------------------------------
+# 4l: /api/risk's typed `unavailable` tier (optional -- requires a way to
+# simulate a store outage against the target instance)
+# ---------------------------------------------------------------------------
+
+async def check_risk_unavailable_typed(client: httpx.AsyncClient) -> Dict:
+    """Proves /api/risk's typed `unavailable` tier end-to-end: stores
+    unreachable -> prediction_source 'unavailable', failure_risk null,
+    cohort null (report_service.build_lookup's documented tier mapping;
+    see task-3-brief.md's tier-mapping table).
+
+    This script drives a real running instance over HTTP only -- it has no
+    admin endpoint to flip that instance's Postgres/SQLite reachability
+    from here. Wiring this in unconditionally would mean either (a) a
+    check that can never actually exercise the failure path (worse than no
+    check), or (b) this script taking down a shared staging store itself,
+    which it must not do. So this check only runs when the caller passes
+    --simulate-store-outage, after manually pointing --base-url at an
+    instance with both stores genuinely unreachable (e.g. DATABASE_URL
+    unset and no SQLite fallback file) -- never against shared staging
+    with live traffic. See docs/STAGING.md before enabling this flag.
+    """
+    r = await client.get("/api/risk", params={"make": "FORD", "model": "FIESTA", "year": 2018})
+    assert r.status_code == 200, f"/api/risk: status={r.status_code} body={r.text}"
+    body = r.json()
+    assert body.get("prediction_source") == "unavailable", body
+    assert body.get("failure_risk") is None, body
+    assert body.get("cohort") is None, body
+    show("GET /api/risk with stores down -> typed unavailable", body)
+    return body
 
 
 # ---------------------------------------------------------------------------
@@ -623,6 +711,21 @@ async def main_async(args: argparse.Namespace) -> int:
                 "4j-postgres-path", "Postgres exact_band via seeded ZZTEST MODEL fixture",
                 check_postgres_path(pool),
             )
+            await runner.run(
+                "4k-vehicle-odometer", "/api/vehicle typed odometer object (R1-T2)",
+                check_vehicle_odometer(client),
+            )
+            if args.simulate_store_outage:
+                await runner.run(
+                    "4l-risk-unavailable", "/api/risk typed unavailable tier (stores simulated down)",
+                    check_risk_unavailable_typed(client),
+                )
+            else:
+                print(
+                    "\nSKIP [4l-risk-unavailable] /api/risk typed unavailable tier -- "
+                    "pass --simulate-store-outage against an instance with both stores "
+                    "genuinely unreachable to run this (never against shared staging)."
+                )
     finally:
         await pool.close()
 
@@ -647,6 +750,14 @@ def main() -> int:
         "--expected-backend-sha",
         default=None,
         help="Exact commit SHA expected from GET /api/version. CI must pass a concrete value.",
+    )
+    parser.add_argument(
+        "--simulate-store-outage",
+        action="store_true",
+        default=False,
+        help="Enable check 4l (/api/risk typed 'unavailable' tier). Only pass this against an "
+             "instance whose Postgres and SQLite stores are BOTH genuinely unreachable -- never "
+             "against shared staging with live traffic. See docs/STAGING.md.",
     )
     args = parser.parse_args()
     return asyncio.run(main_async(args))

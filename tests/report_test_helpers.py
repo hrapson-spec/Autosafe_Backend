@@ -154,8 +154,19 @@ SEEDED_RISKS_ROWS = [
 def seeded_sqlite() -> sqlite3.Connection:
     """An in-memory sqlite3 connection with a `risks` table seeded from
     SEEDED_RISKS_ROWS, schema-matched to the real production table (see
-    module docstring)."""
-    conn = sqlite3.connect(':memory:')
+    module docstring).
+
+    check_same_thread=False mirrors main.py's real pooled connections
+    (get_sqlite_connection's _init_sqlite_pool uses the same flag): a
+    caller driven through FastAPI's TestClient (tests/test_api_lookup_v2.py)
+    executes the request on a different thread than the one that built
+    this fixture, and sqlite3's default same-thread check would otherwise
+    raise ProgrammingError on first use from that thread. This connection
+    is still only ever touched by one thread at a time (TestClient blocks
+    the caller until the response is back), so there is no concurrent-
+    access hazard from relaxing the check.
+    """
+    conn = sqlite3.connect(':memory:', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute(
         """

@@ -208,6 +208,39 @@ def test_mixed_unit_pair_compared_in_miles():
     assert result.value_miles == 55000
 
 
+def test_prior_without_reading_skips_plausibility():
+    """Edge pin (T1 review): the adjacent prior test exists but carries no
+    parseable odometer reading -- there is nothing to compare against, so
+    the plausibility check is skipped entirely and the latest reading
+    stands, AVAILABLE."""
+    history = make_history([
+        ('2026-01-01', 55000, 'mi'),   # latest: displayable
+        ('2025-01-01', None, 'mi'),    # adjacent prior: no reading at all
+    ])
+    result = resolve_odometer(history)
+
+    assert result.status == OdometerStatus.AVAILABLE
+    assert result.value_miles == 55000
+    assert result.recorded_at == datetime(2026, 1, 1).isoformat()
+    assert result.unavailable_reason is None
+
+
+def test_same_day_pair_reading_stands():
+    """Edge pin (T1 review): the adjacent prior reading shares the same
+    test_date -> days_diff <= 0 -> the plausibility comparison must not
+    fire (no rollback verdict, no rate division), and the latest reading
+    stands -- even though the raw same-day delta happens to be negative."""
+    history = make_history([
+        ('2025-06-01', 45000, 'mi'),   # latest entry for the day
+        ('2025-06-01', 50000, 'mi'),   # same-day prior entry, higher reading
+    ])
+    result = resolve_odometer(history)
+
+    assert result.status == OdometerStatus.AVAILABLE
+    assert result.value_miles == 45000
+    assert result.unavailable_reason is None
+
+
 # ---------------------------------------------------------------------------
 # resolve_odometer: no fabricated numbers, ever -- property-style.
 # ---------------------------------------------------------------------------
