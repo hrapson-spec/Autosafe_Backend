@@ -13,17 +13,26 @@
  * typed `T | null` must be present as either `null` or a valid `T` --
  * `undefined` (key missing, or explicitly set to undefined) is NOT
  * accepted for those; only the handful of fields types.ts marks with `?`
- * (mileage.observed_at, components.items, repair_estimate) tolerate an
- * absent key. See reportApi.ts / reportValidation.test.ts for how this
+ * (mileage.observed_at, mileage.original_value, mileage.original_unit,
+ * components.items, repair_estimate) tolerate an absent key --
+ * mileage.original_value/original_unit are additive (Release 1): old
+ * persisted 2.0 payloads recorded before those fields existed must still
+ * validate. See reportApi.ts / reportValidation.test.ts for how this
  * distinction is exercised.
  */
 import type {
   ApiErrorCode,
   ApiErrorEnvelope,
+  CohortEvidenceV2,
+  CohortMatchLevelV2,
   ComponentRiskItemV2,
   ConfidenceLevel,
+  LookupPredictionSourceV2,
   MatchScope,
   MileageSource,
+  OdometerReadingV2,
+  OdometerStatusV2,
+  OdometerUnavailableReasonV2,
   PredictionSource,
   ReportComponentsV2,
   ReportEvidenceV2,
@@ -34,6 +43,7 @@ import type {
   ReportRiskV2,
   ReportV2,
   ReportVehicleV2,
+  RiskLookupV2,
   VehicleDataSource,
 } from '../types';
 
@@ -80,6 +90,29 @@ export const VALID_API_ERROR_CODES: readonly ApiErrorCode[] = [
   'storage_unavailable',
   'idempotency_conflict',
   'undeclared_parameter',
+];
+
+export const VALID_ODOMETER_STATUSES: readonly OdometerStatusV2[] = ['available', 'unavailable'];
+
+export const VALID_ODOMETER_UNAVAILABLE_REASONS: readonly OdometerUnavailableReasonV2[] = [
+  'no_reading',
+  'rollback',
+  'implausible_increase',
+  'unknown_unit',
+];
+
+export const VALID_LOOKUP_PREDICTION_SOURCES: readonly LookupPredictionSourceV2[] = [
+  'population_exact',
+  'population_broad',
+  'population_global',
+  'unavailable',
+];
+
+export const VALID_COHORT_MATCH_LEVELS: readonly CohortMatchLevelV2[] = [
+  'exact_band',
+  'age_band_only',
+  'model_average',
+  'dataset',
 ];
 
 // ----------------------------------------------------------------------------
@@ -161,17 +194,70 @@ function isReportMotV2(x: unknown): x is ReportMotV2 {
   );
 }
 
-function isReportMileageV2(x: unknown): x is ReportMileageV2 {
+/** Structural guard for ReportMileageV2. original_value/original_unit are
+ * additive (Release 1) and OPTIONAL on the wire -- isOptionalNullable
+ * accepts the key being entirely absent, not just null, so an old
+ * persisted 2.0 payload (recorded before these fields existed) still
+ * passes unchanged. Mirrors
+ * report_contract.ReportMileage.validate_source_value_consistency exactly,
+ * including its None-tolerance: the km-only check on original_unit only
+ * fires when unit_converted is true AND original_unit is an actual
+ * (wrong) string -- an absent or explicitly-null original_unit is treated
+ * as "unknown", not "known and not km". */
+export function isReportMileageV2(x: unknown): x is ReportMileageV2 {
   if (!isPlainObject(x)) return false;
   const structurallyValid = (
     isNullable(x.effective_value, isNonNegativeInteger) &&
     isOneOf(x.source, VALID_MILEAGE_SOURCES) &&
     isOptionalNullable(x.observed_at, isString) &&
     isBoolean(x.unit_converted) &&
-    isBoolean(x.anomaly)
+    isBoolean(x.anomaly) &&
+    isOptionalNullable(x.original_value, isNonNegativeInteger) &&
+    isOptionalNullable(x.original_unit, isString)
   );
   if (!structurallyValid) return false;
-  return x.source === 'missing' ? x.effective_value === null : x.effective_value !== null;
+  const valueSourceConsistent = x.source === 'missing' ? x.effective_value === null : x.effective_value !== null;
+  if (!valueSourceConsistent) return false;
+  if (x.unit_converted === true && typeof x.original_unit === 'string' && x.original_unit !== 'km') {
+    return false;
+  }
+  return true;
+}
+
+/** Structural guard for a single resolved odometer reading. AVAILABLE
+ * requires every one of value_miles/recorded_at/original_value/
+ * original_unit/source to be non-null (source pinned to the observed-MOT
+ * mileage source) and unavailable_reason absent; UNAVAILABLE requires the
+ * mirror image: every detail field null and unavailable_reason present.
+ * There is no partial state -- a payload with e.g. status: 'unavailable'
+ * but a non-null value_miles is rejected outright, never trusted as a
+ * partial reading. Mirrors
+ * report_contract.OdometerReading.validate_status_consistency. */
+export function isOdometerReadingV2(x: unknown): x is OdometerReadingV2 {
+  if (!isPlainObject(x)) return false;
+  const structurallyValid = (
+    isNullable(x.value_miles, isNonNegativeInteger) &&
+    isNullable(x.recorded_at, isString) &&
+    isNullable(x.original_value, isNonNegativeInteger) &&
+    isNullable(x.original_unit, isString) &&
+    isNullable(x.source, (v): v is MileageSource => isOneOf(v, VALID_MILEAGE_SOURCES)) &&
+    isOneOf(x.status, VALID_ODOMETER_STATUSES) &&
+    isNullable(x.unavailable_reason, (v): v is OdometerUnavailableReasonV2 =>
+      isOneOf(v, VALID_ODOMETER_UNAVAILABLE_REASONS)
+    )
+  );
+  if (!structurallyValid) return false;
+
+  const detailFields = [x.value_miles, x.recorded_at, x.original_value, x.original_unit, x.source];
+  if (x.status === 'available') {
+    if (detailFields.some((field) => field === null)) return false;
+    if (x.source !== 'observed_mot') return false;
+    if (x.unavailable_reason !== null) return false;
+  } else {
+    if (detailFields.some((field) => field !== null)) return false;
+    if (x.unavailable_reason === null) return false;
+  }
+  return true;
 }
 
 function isReportEvidenceV2(x: unknown): x is ReportEvidenceV2 {
@@ -205,6 +291,28 @@ function isReportEvidenceV2(x: unknown): x is ReportEvidenceV2 {
     return false;
   }
   return true;
+}
+
+/** Structural guard for the comparison cohort backing a RiskLookupV2's
+ * displayed rate. total_tests is REQUIRED and must be a positive integer --
+ * unlike ReportEvidenceV2.total_tests, a CohortEvidenceV2 only ever exists
+ * to represent real evidence (the fully-unavailable case is
+ * RiskLookupV2.cohort === null, not a cohort with a zero/null count).
+ * Mirrors report_contract.LookupCohort (which, unlike ReportEvidence, has
+ * no age_band/mileage_band-vs-match_level cross validation of its own --
+ * that check is layered on by isRiskLookupV2, keyed to prediction_source,
+ * exactly where report_contract.RiskLookupResponse.validate_source_shape
+ * puts it). */
+export function isCohortEvidenceV2(x: unknown): x is CohortEvidenceV2 {
+  if (!isPlainObject(x)) return false;
+  return (
+    isOneOf(x.match_level, VALID_COHORT_MATCH_LEVELS) &&
+    isNullable(x.age_band, isString) &&
+    isNullable(x.mileage_band, isString) &&
+    isNonNegativeInteger(x.total_tests) &&
+    x.total_tests > 0 &&
+    isNullable(x.total_failures, isNonNegativeInteger)
+  );
 }
 
 function isReportRiskV2(x: unknown): x is ReportRiskV2 {
@@ -290,6 +398,69 @@ export function isReportV2(x: unknown): x is ReportV2 {
     );
   }
   return x.report_token === null && x.share_url === null;
+}
+
+/** Structural guard for /api/risk's response shape. Discriminates on
+ * prediction_source: 'unavailable' requires failure_risk/cohort/
+ * confidence_level and all seven component risks to be null (no rate was
+ * produced -- nothing is fabricated in their place); the three
+ * population_* tiers require a real failure_risk in [0,1] and a cohort
+ * satisfying isCohortEvidenceV2, with the cohort's match_level pinned to
+ * the specific tier that produced it: population_exact -> exact_band with
+ * both matched bands known, population_broad -> age_band_only |
+ * model_average, population_global -> dataset. No consumer should read a
+ * raw /api/risk response except through this guard. Mirrors
+ * report_contract.RiskLookupResponse.validate_source_shape. */
+export function isRiskLookupV2(x: unknown): x is RiskLookupV2 {
+  if (!isPlainObject(x)) return false;
+  if (!isOneOf(x.prediction_source, VALID_LOOKUP_PREDICTION_SOURCES)) return false;
+
+  const structurallyValid = (
+    isString(x.vehicle) &&
+    isNumber(x.year) &&
+    isNullable(x.mileage, isNumber) &&
+    isNullable(x.note, isString) &&
+    isNullable(x.confidence_level, isString) &&
+    isNullable(x.risk_brakes, isNumber) &&
+    isNullable(x.risk_suspension, isNumber) &&
+    isNullable(x.risk_tyres, isNumber) &&
+    isNullable(x.risk_steering, isNumber) &&
+    isNullable(x.risk_visibility, isNumber) &&
+    isNullable(x.risk_lamps, isNumber) &&
+    isNullable(x.risk_body, isNumber)
+  );
+  if (!structurallyValid) return false;
+
+  if (x.prediction_source === 'unavailable') {
+    return (
+      x.failure_risk === null &&
+      x.cohort === null &&
+      x.confidence_level === null &&
+      x.risk_brakes === null &&
+      x.risk_suspension === null &&
+      x.risk_tyres === null &&
+      x.risk_steering === null &&
+      x.risk_visibility === null &&
+      x.risk_lamps === null &&
+      x.risk_body === null
+    );
+  }
+
+  // Available tiers: population_exact | population_broad | population_global.
+  if (!isProbability(x.failure_risk)) return false;
+  if (!isNullable(x.repair_cost_estimate, isPlainObject)) return false;
+  if (!isCohortEvidenceV2(x.cohort)) return false;
+
+  if (x.prediction_source === 'population_global') {
+    if (x.cohort.match_level !== 'dataset') return false;
+  } else if (x.prediction_source === 'population_exact') {
+    if (x.cohort.match_level !== 'exact_band') return false;
+    if (x.cohort.age_band === null || x.cohort.mileage_band === null) return false;
+  } else {
+    // population_broad
+    if (x.cohort.match_level !== 'age_band_only' && x.cohort.match_level !== 'model_average') return false;
+  }
+  return true;
 }
 
 /** Structural guard for the v2 API's error envelope. error_code is checked
