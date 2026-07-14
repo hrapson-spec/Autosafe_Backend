@@ -212,6 +212,17 @@ def test_model_average_rung_returns_population_broad_with_no_bands(monkeypatch):
     assert body["failure_risk"] == pytest.approx(0.20)
 
 
+def test_risk_route_still_requires_year(monkeypatch):
+    """R1-T4 fix note: RiskLookupResponse.year and build_lookup's `year`
+    parameter widen to Optional[int] so _fallback_prediction can pass a
+    None year through to the ladder -- but /api/risk's own route signature
+    is untouched (`year: int = Query(..., ge=1990)` stays required). A
+    request with no year must still 422, never silently reach the ladder
+    with a None year."""
+    r = client.get("/api/risk", params={"make": "FORD", "model": "FIESTA"})
+    assert r.status_code == 422
+
+
 def test_model_absent_returns_population_global_not_028(monkeypatch):
     _mock_postgres(monkeypatch, return_value=None)
 

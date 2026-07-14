@@ -494,13 +494,18 @@ class RiskLookupResponse(BaseModel):
     last_mot_date and last_mot_result are pinned null: this lookup route
     never populated them even before this task, and it still never
     resolves DVSA history at all.
+
+    year is Optional (R1-T4 fix): /api/risk's own route keeps year
+    required (`Query(..., ge=1990)`), but build_lookup is also called by
+    _fallback_prediction (main.py) with a possibly-unknown manufacture
+    year, and must still be able to construct this response.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     # --- Legacy 15-key surface (unchanged shape/semantics). ---
     vehicle: str
-    year: int
+    year: Optional[int]
     mileage: Optional[int]
     last_mot_date: None = None
     last_mot_result: None = None

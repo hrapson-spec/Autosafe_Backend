@@ -220,6 +220,58 @@ def test_stores_down_typed_unavailable(monkeypatch):
     assert result["note"] == report_service.NOTE_LOOKUP_UNAVAILABLE
 
 
+def test_year_unknown_with_make_model_serves_model_average(monkeypatch):
+    """Make/model known but year unknown (e.g. DVSA returned no
+    manufacture_date) must still reach the evidence ladder and can be
+    served a real model_average rung -- NOT the population_global degrade.
+
+    This is the Important-finding regression test: the old gate
+    (`if make and model and year is not None`) routed this exact case to
+    _population_global_fallback, discarding real, ladder-reachable
+    model_average evidence. database.py's model_average rung is queried
+    with age_band=None (_fetch_mot_risk_aggregate(conn, model_id, None,
+    None), database.py:1218) -- it needs no age band at all, so a missing
+    year is not a reason to skip the ladder."""
+    _mock_save_risk_check(monkeypatch)
+    pg_mock = _mock_postgres(monkeypatch, return_value=_rung('model_average'))
+
+    result = run(main_module._fallback_prediction(
+        registration="AB12CDE", make="Ford", model="Fiesta", year=None,
+        postcode="SW1A1AA", note="", utm_data=None,
+    ))
+
+    pg_mock.assert_awaited()  # the ladder WAS queried, unlike the no-make/model case
+    assert result["prediction_source"] == "population_broad"
+    assert result["prediction_source"] != "population_global"
+    assert result["cohort"]["match_level"] == "model_average"
+    assert result["failure_risk"] == pytest.approx(0.25)
+    assert result["cohort"]["total_tests"] == 300
+    assert result["cohort"]["total_failures"] == 75
+
+
+def test_year_unknown_ladder_empty_falls_to_population_global(monkeypatch):
+    """Make/model known, year unknown, AND the ladder legitimately has no
+    rows anywhere for this model -> population_global (the checked-in
+    dataset-wide reference) -- the same honest degrade as the no-make/model
+    case, but reached via a real (empty) ladder query this time, not
+    skipped outright. Distinguishes "ladder queried, found nothing" from
+    "no identity to query the ladder with at all"."""
+    _mock_save_risk_check(monkeypatch)
+    pg_mock = _mock_postgres(monkeypatch, return_value=None)
+
+    result = run(main_module._fallback_prediction(
+        registration="AB12CDE", make="NoSuchMake", model="NoSuchModel", year=None,
+        postcode="SW1A1AA", note="", utm_data=None,
+    ))
+
+    pg_mock.assert_awaited()  # ladder WAS queried and legitimately came back empty
+    assert result["prediction_source"] == "population_global"
+    assert result["cohort"]["match_level"] == "dataset"
+    assert result["cohort"]["total_tests"] == DATASET_TOTAL_TESTS
+    assert result["cohort"]["total_failures"] == DATASET_TOTAL_FAILURES
+    assert result["failure_risk"] == pytest.approx(POPULATION_DEFAULT_FAILURE_RISK)
+
+
 # ---------------------------------------------------------------------------
 # /api/risk/v55 display mileage: report_service.resolve_odometer, no
 # previous-reading substitution.

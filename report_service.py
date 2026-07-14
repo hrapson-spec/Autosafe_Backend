@@ -673,7 +673,7 @@ def _lookup_component_fields(components: ReportComponents) -> Dict[str, Optional
 async def build_lookup(
     make: str,
     model: str,
-    year: int,
+    year: Optional[int],
     mileage: Optional[int],
     sqlite_conn_factory: Optional[Callable[[], Any]],
 ) -> RiskLookupResponse:
@@ -688,6 +688,14 @@ async def build_lookup(
     only -- this lookup route has no vehicle history to read a reading
     from at all).
 
+    year is Optional: /api/risk's own route keeps year required, but this
+    function is also called by main.py's _fallback_prediction with a
+    possibly-unknown manufacture year. A missing year uses the same
+    None-safe pattern as build_assessment (age None -> get_age_band's
+    'Unknown' sentinel), which simply finds no rows at the age-dependent
+    rungs and widens naturally to model_average or population_default --
+    it is never estimated or defaulted to an assumed age.
+
     Tier mapping (ladder outcome -> prediction_source/cohort), per
     task-3-brief.md:
         exact rung hit           -> population_exact / exact_band
@@ -700,7 +708,7 @@ async def build_lookup(
     model_upper = model.strip().upper()
     model_id = "{} {}".format(make_upper, model_upper)
 
-    age = datetime.now().year - year
+    age = (datetime.now().year - year) if year is not None else None
     age_band = get_age_band(age)
     mileage_band = get_mileage_band(mileage) if mileage is not None else None
 

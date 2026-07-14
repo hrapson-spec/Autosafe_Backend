@@ -1238,7 +1238,7 @@
       },
       "RiskLookupResponse": {
         "additionalProperties": false,
-        "description": "/api/risk's response shape (T3 wires the route onto the v2\nPostgres-then-SQLite evidence ladder; this module defines and fully\ntests the model now).\n\nPreserves the legacy 15-key surface exactly -- vehicle/year/mileage/\nlast_mot_date/last_mot_result/failure_risk/confidence_level/the seven\nrisk_* components/repair_cost_estimate -- so existing legacy consumers\nkeep working, while adding honest truth fields (prediction_source/\ncohort/note) describing exactly how the displayed rate was produced.\nlast_mot_date and last_mot_result are pinned null: this lookup route\nnever populated them even before this task, and it still never\nresolves DVSA history at all.",
+        "description": "/api/risk's response shape (T3 wires the route onto the v2\nPostgres-then-SQLite evidence ladder; this module defines and fully\ntests the model now).\n\nPreserves the legacy 15-key surface exactly -- vehicle/year/mileage/\nlast_mot_date/last_mot_result/failure_risk/confidence_level/the seven\nrisk_* components/repair_cost_estimate -- so existing legacy consumers\nkeep working, while adding honest truth fields (prediction_source/\ncohort/note) describing exactly how the displayed rate was produced.\nlast_mot_date and last_mot_result are pinned null: this lookup route\nnever populated them even before this task, and it still never\nresolves DVSA history at all.\n\nyear is Optional (R1-T4 fix): /api/risk's own route keeps year\nrequired (`Query(..., ge=1990)`), but build_lookup is also called by\n_fallback_prediction (main.py) with a possibly-unknown manufacture\nyear, and must still be able to construct this response.",
         "properties": {
           "cohort": {
             "anyOf": [
@@ -1401,8 +1401,15 @@
             "type": "string"
           },
           "year": {
-            "title": "Year",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
           }
         },
         "required": [

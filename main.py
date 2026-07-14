@@ -1117,18 +1117,23 @@ async def _fallback_prediction(
     anywhere on this path; see report_contract.py's module docstring for
     the shared no-fabrication contract this mirrors.
 
-    - No make/model, or a make/model with no manufacture year to band by
-      -> the honest population_global degrade (_population_global_fallback):
-      there is no model_id/age_band to run an evidence-ladder query with at
-      all, so this never touches Postgres/SQLite.
-    - Make + model + year all known -> report_service.build_lookup's
+    - No make/model -> the honest population_global degrade
+      (_population_global_fallback): there is no model_id at all to run an
+      evidence-ladder query with, so this never touches Postgres/SQLite.
+    - Make + model known (year may be None) -> report_service.build_lookup's
       Postgres-then-SQLite evidence ladder. mileage is always None here --
       this function has no odometer reading to offer -- so (exactly like
       /api/risk's own missing-mileage behaviour) the ladder starts at the
-      age rung. Real rung totals/provenance carry straight through;
-      components/repair estimate are populated only when the found rung has
-      all 7 components (report_service._build_components_and_repair), null
-      otherwise.
+      age rung. A missing year is passed straight through to build_lookup,
+      which resolves it to the 'Unknown' age-band sentinel (the same
+      None-safe pattern build_assessment uses) rather than an assumed age
+      -- the age-dependent rungs simply find no rows and the ladder widens
+      naturally to model_average (real, ladder-reachable evidence:
+      database.py's model_average rung is queried with age_band=None, so it
+      needs no age band at all) or population_default. Real rung
+      totals/provenance carry straight through; components/repair estimate
+      are populated only when the found rung has all 7 components
+      (report_service._build_components_and_repair), null otherwise.
     - Both stores unreachable -> build_lookup's typed-unavailable shape
       (rate/components/repair estimate all null), matching /api/risk's
       (T3) semantics exactly.
@@ -1139,7 +1144,7 @@ async def _fallback_prediction(
     """
     utm_data = utm_data or {}
 
-    if make and model and year is not None:
+    if make and model:
         lookup = await report_service.build_lookup(make, model, year, None, get_sqlite_connection)
         response = {
             "registration": registration,
