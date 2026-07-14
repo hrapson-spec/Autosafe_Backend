@@ -26,7 +26,8 @@ from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
-from report_contract import DATASET_TOTAL_TESTS
+from report_contract import DATASET_TOTAL_TESTS, OdometerReading, OdometerStatus, OdometerUnavailableReason
+import report_service
 
 # Lead distribution
 from lead_distributor import distribute_lead
@@ -1354,7 +1355,8 @@ async def get_vehicle(
                     "colour": history.colour,
                 },
                 "mot_expiry": mot_expiry,
-                "source": "dvsa"
+                "source": "dvsa",
+                "odometer": report_service.resolve_odometer(history).model_dump(mode='json')
             }
         except VehicleNotFoundError:
             logger.info(f"Vehicle {vrm_hash} not found in DVSA")
@@ -1374,7 +1376,22 @@ async def get_vehicle(
             "registration": vrm,
             "dvla": demo_data,
             "source": "demo",
-            "demo": True
+            "demo": True,
+            # Additive (R1-T2): no history was fetched on this path, so the
+            # odometer is honestly UNAVAILABLE/NO_READING -- never a
+            # fabricated number. All value fields are None; OdometerReading
+            # requires every field explicit (no implicit Optional default),
+            # mirroring report_service.resolve_odometer's own unavailable
+            # construction without depending on that private helper.
+            "odometer": OdometerReading(
+                value_miles=None,
+                recorded_at=None,
+                original_value=None,
+                original_unit=None,
+                source=None,
+                status=OdometerStatus.UNAVAILABLE,
+                unavailable_reason=OdometerUnavailableReason.NO_READING,
+            ).model_dump(mode='json')
         }
 
     # Vehicle not found in DVSA

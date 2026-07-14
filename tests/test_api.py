@@ -9,11 +9,14 @@ from fastapi.testclient import TestClient
 import unittest
 import os
 import sys
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app
+from report_test_helpers import make_history
 
 client = TestClient(app)
 
@@ -240,6 +243,48 @@ class TestVehicleEndpoint(unittest.TestCase):
             expected_fields = ["make", "yearOfManufacture"]
             for field in expected_fields:
                 self.assertIn(field, dvla, f"Missing DVLA field: {field}")
+
+    def test_vehicle_response_has_typed_odometer(self):
+        """DVSA path (history fetched): a dated miles reading resolves to a
+        typed AVAILABLE odometer object, additive alongside the existing
+        response keys (R1-T2)."""
+        history = make_history([("2024-06-01", 42000, "mi")])
+        fake_client = MagicMock()
+        fake_client.is_configured = True
+        fake_client.normalize_vrm = MagicMock(return_value="AB12CDE")
+        fake_client.fetch_vehicle_history = AsyncMock(return_value=history)
+        with patch("main.get_dvsa_client", return_value=fake_client):
+            response = client.get("/api/vehicle?registration=AB12CDE")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Existing keys stay byte-identical alongside the new one.
+        self.assertIn("registration", data)
+        self.assertIn("dvla", data)
+        self.assertEqual(data["source"], "dvsa")
+
+        self.assertIn("odometer", data)
+        odometer = data["odometer"]
+        self.assertEqual(odometer["status"], "available")
+        self.assertIsInstance(odometer["value_miles"], int)
+        self.assertEqual(odometer["value_miles"], 42000)
+        self.assertEqual(odometer["recorded_at"], datetime(2024, 6, 1).isoformat())
+        self.assertEqual(odometer["original_unit"], "mi")
+
+    def test_vehicle_demo_odometer_unavailable(self):
+        """Demo/fallback path (DVSA not configured in this test env, so this
+        naturally exercises the real demo path like the sibling tests
+        above): an explicit UNAVAILABLE/no_reading odometer object, never a
+        fabricated number (R1-T2)."""
+        response = client.get("/api/vehicle?registration=AB12CDE")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertIn("odometer", data)
+        odometer = data["odometer"]
+        self.assertEqual(odometer["status"], "unavailable")
+        self.assertEqual(odometer["unavailable_reason"], "no_reading")
+        self.assertIsNone(odometer["value_miles"])
 
 
 if __name__ == '__main__':
