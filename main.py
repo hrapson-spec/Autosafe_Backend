@@ -29,10 +29,15 @@ from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
 from report_contract import (
+    CohortMatchLevel,
+    ConfidenceLevel,
+    DATASET_TOTAL_FAILURES,
     DATASET_TOTAL_TESTS,
+    LookupPredictionSource,
     OdometerReading,
     OdometerStatus,
     OdometerUnavailableReason,
+    POPULATION_DEFAULT_FAILURE_RISK,
     RiskLookupResponse,
 )
 import report_service
@@ -758,37 +763,43 @@ async def _log_lookup_risk_check(
         cached, so an unset/absent flag (a fresh deployment) logs nothing.
     (b) skipped with no tracking identifier at all -- an anonymous lookup
         has no identifier to key analytics by.
+    (c) the WHOLE body below is guarded, not just the db call -- a
+        payload-build exception (e.g. a future field access that raises)
+        must never surface as an unretrieved fire-and-forget-task
+        traceback (this coroutine is scheduled via
+        _schedule_lookup_analytics/asyncio.create_task, so nothing else
+        ever observes or awaits its exception).
     """
     if os.environ.get("LOOKUP_ANALYTICS_ENABLED") != "1":
         return
     if not registration and not postcode:
         return
 
-    payload = {
-        'registration': registration,
-        'postcode': postcode,
-        'vehicle_make': make,
-        'vehicle_model': model,
-        'vehicle_year': year,
-        'mileage': response.mileage,
-        'failure_risk': response.failure_risk,
-        'confidence_level': response.confidence_level,
-        'risk_components': {
-            'brakes': response.risk_brakes,
-            'suspension': response.risk_suspension,
-            'tyres': response.risk_tyres,
-            'steering': response.risk_steering,
-            'visibility': response.risk_visibility,
-            'lamps': response.risk_lamps,
-            'body': response.risk_body,
-        },
-        'repair_cost_estimate': response.repair_cost_estimate,
-        'model_version': 'lookup_v2',
-        'prediction_source': response.prediction_source.value,
-        'is_dvsa_data': False,
-        'referrer': referrer,
-    }
     try:
+        payload = {
+            'registration': registration,
+            'postcode': postcode,
+            'vehicle_make': make,
+            'vehicle_model': model,
+            'vehicle_year': year,
+            'mileage': response.mileage,
+            'failure_risk': response.failure_risk,
+            'confidence_level': response.confidence_level,
+            'risk_components': {
+                'brakes': response.risk_brakes,
+                'suspension': response.risk_suspension,
+                'tyres': response.risk_tyres,
+                'steering': response.risk_steering,
+                'visibility': response.risk_visibility,
+                'lamps': response.risk_lamps,
+                'body': response.risk_body,
+            },
+            'repair_cost_estimate': response.repair_cost_estimate,
+            'model_version': 'lookup_v2',
+            'prediction_source': response.prediction_source.value,
+            'is_dvsa_data': False,
+            'referrer': referrer,
+        }
         await db.save_risk_check(payload)
     except Exception as e:
         vrm_hash = hash_vrm(registration) if registration else 'none'
@@ -989,7 +1000,16 @@ async def get_risk_v55(
     # Extract vehicle info
     year = history.manufacture_date.year if history.manufacture_date else None
     last_test = history.mot_tests[0] if history.mot_tests else None
-    display_mileage, mileage_anomaly = _get_display_mileage(history)
+    # R1-T4: display mileage now comes from the same shared odometer parser
+    # Tasks 1/2 built (report_service.resolve_odometer) instead of the
+    # deleted legacy helper. An anomalous reading (rollback / implausible
+    # increase) is honestly None -- never the previous reading that legacy
+    # helper used to substitute in its place.
+    odometer = report_service.resolve_odometer(history)
+    display_mileage = odometer.value_miles
+    mileage_anomaly = odometer.unavailable_reason in (
+        OdometerUnavailableReason.ROLLBACK, OdometerUnavailableReason.IMPLAUSIBLE_INCREASE
+    )
 
     # Calculate repair cost estimate
     repair_cost = _estimate_repair_cost(
@@ -1045,6 +1065,40 @@ async def get_risk_v55(
     return response
 
 
+def _population_global_fallback(vehicle: Optional[Dict], year: Optional[int], note: str) -> Dict:
+    """The honest population_global degrade shared by _fallback_prediction's
+    no-identity branch: the checked-in dataset-wide reference rate, Very Low
+    confidence, no fabricated components or repair estimate. Mirrors
+    report_service.build_lookup's own population_global branch/constants
+    (POPULATION_DEFAULT_FAILURE_RISK, DATASET_TOTAL_TESTS/FAILURES) rather
+    than re-deriving them, and its field names (prediction_source/cohort)
+    for the additive truth fields."""
+    return {
+        "vehicle": vehicle,
+        "year": year,
+        "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
+        "failure_risk": POPULATION_DEFAULT_FAILURE_RISK,
+        "confidence_level": ConfidenceLevel.VERY_LOW.value,
+        "risk_components": {
+            "brakes": None, "suspension": None, "tyres": None, "steering": None,
+            "visibility": None, "lamps": None, "body": None,
+        },
+        "repair_cost_estimate": None,
+        "model_version": "lookup",
+        "note": note,
+        "prediction_source": LookupPredictionSource.POPULATION_GLOBAL.value,
+        "cohort": {
+            "match_level": CohortMatchLevel.DATASET.value,
+            "age_band": None,
+            "mileage_band": None,
+            "total_tests": DATASET_TOTAL_TESTS,
+            "total_failures": DATASET_TOTAL_FAILURES,
+        },
+    }
+
+
 async def _fallback_prediction(
     registration: str,
     make: str,
@@ -1055,150 +1109,73 @@ async def _fallback_prediction(
     utm_data: dict = None,
 ) -> Dict:
     """
-    Fallback prediction using SQLite lookup when DVSA data unavailable.
-    Returns population average if vehicle data insufficient.
+    Fallback prediction for GET /api/risk/v55 when live DVSA history isn't
+    usable. Re-implemented (R1-T4) over the exact v2 evidence-ladder
+    machinery Task 3 built (report_service.build_lookup) instead of the
+    legacy hardcoded-default / SQLite-ORDER-BY-LIMIT-1 path it replaces --
+    no fabricated failure_risk, component breakdown, or repair estimate
+    anywhere on this path; see report_contract.py's module docstring for
+    the shared no-fabrication contract this mirrors.
+
+    - No make/model, or a make/model with no manufacture year to band by
+      -> the honest population_global degrade (_population_global_fallback):
+      there is no model_id/age_band to run an evidence-ladder query with at
+      all, so this never touches Postgres/SQLite.
+    - Make + model + year all known -> report_service.build_lookup's
+      Postgres-then-SQLite evidence ladder. mileage is always None here --
+      this function has no odometer reading to offer -- so (exactly like
+      /api/risk's own missing-mileage behaviour) the ladder starts at the
+      age rung. Real rung totals/provenance carry straight through;
+      components/repair estimate are populated only when the found rung has
+      all 7 components (report_service._build_components_and_repair), null
+      otherwise.
+    - Both stores unreachable -> build_lookup's typed-unavailable shape
+      (rate/components/repair estimate all null), matching /api/risk's
+      (T3) semantics exactly.
+
+    Signature and Dict return shape are unchanged so every existing caller
+    in get_risk_v55 keeps working; only the fabricated numbers behind them
+    are gone.
     """
     utm_data = utm_data or {}
 
-    # If no vehicle data, return population average
-    if not make or not model:
+    if make and model and year is not None:
+        lookup = await report_service.build_lookup(make, model, year, None, get_sqlite_connection)
         response = {
             "registration": registration,
-            "vehicle": None,
+            "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
             "year": year,
             "mileage": None,
             "last_mot_date": None,
             "last_mot_result": None,
-            "failure_risk": 0.28,  # UK population average
-            "confidence_level": "Low",
+            "failure_risk": lookup.failure_risk,
+            "confidence_level": lookup.confidence_level,
             "risk_components": {
-                "brakes": 0.05,
-                "suspension": 0.04,
-                "tyres": 0.03,
-                "steering": 0.02,
-                "visibility": 0.02,
-                "lamps": 0.03,
-                "body": 0.02,
+                "brakes": lookup.risk_brakes,
+                "suspension": lookup.risk_suspension,
+                "tyres": lookup.risk_tyres,
+                "steering": lookup.risk_steering,
+                "visibility": lookup.risk_visibility,
+                "lamps": lookup.risk_lamps,
+                "body": lookup.risk_body,
             },
-            "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+            "repair_cost_estimate": lookup.repair_cost_estimate,
             "model_version": "lookup",
-            "note": note or "Vehicle not found - using UK population average",
+            "note": note or lookup.note,
+            "prediction_source": lookup.prediction_source.value,
+            "cohort": lookup.cohort.model_dump(mode='json') if lookup.cohort is not None else None,
         }
-        # Log fallback prediction
-        try:
-            await db.save_risk_check({
-                'registration': registration,
-                'postcode': postcode,
-                'vehicle_make': None,
-                'vehicle_model': None,
-                'vehicle_year': year,
-                'failure_risk': 0.28,
-                'confidence_level': 'Low',
-                'risk_components': response['risk_components'],
-                'repair_cost_estimate': response['repair_cost_estimate'],
-                'model_version': 'lookup',
-                'prediction_source': 'fallback',
-                'is_dvsa_data': False,
-                **utm_data,
-            })
-        except Exception as e:
-            logger.warning("Failed to log fallback risk check (%s)", type(e).__name__)
-        return response
-
-    model_id = f"{make.upper()} {model.upper()}"
-
-    # Calculate age band if year available (P1-3 fix: use get_age_band for consistency)
-    if year:
-        age = datetime.now().year - year
-        age_band = get_age_band(age)
     else:
-        # Default to middle of typical age range (7 years old)
-        age_band = get_age_band(7)
+        vehicle = {"make": make.upper(), "model": model.upper(), "year": year} if (make and model) else None
+        response = {
+            "registration": registration,
+            **_population_global_fallback(
+                vehicle, year, note or report_service.NOTE_POPULATION_DEFAULT
+            ),
+        }
 
-    # P0-5 fix: Use exact match or variant match pattern instead of broad LIKE
-    # Try SQLite fallback with proper connection handling (P2-4 fix)
-    with get_sqlite_connection() as conn:
-        if conn:
-            base_model_id = f"{make.upper()} {model.upper()}"
-            # Try exact match first, then variants
-            query = """
-                SELECT * FROM risks
-                WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
-                ORDER BY Total_Tests DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
-
-            if row:
-                result = dict(row)
-                result = add_confidence_intervals(result)
-                result = add_repair_cost_estimate(result)
-
-                response = {
-                    "registration": registration,
-                    "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
-                    "mileage": None,
-                    "last_mot_date": None,
-                    "last_mot_result": None,
-                    "failure_risk": result.get('Failure_Risk', 0.28),
-                    "confidence_level": "Medium",
-                    "risk_components": {
-                        "brakes": result.get('Risk_Brakes', 0.05),
-                        "suspension": result.get('Risk_Suspension', 0.04),
-                        "tyres": result.get('Risk_Tyres', 0.03),
-                        "steering": result.get('Risk_Steering', 0.02),
-                        "visibility": result.get('Risk_Visibility', 0.02),
-                        "lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                        "body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                    },
-                    "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
-                    "model_version": "lookup",
-                    "note": note,
-                }
-                # Log lookup prediction
-                try:
-                    await db.save_risk_check({
-                        'registration': registration,
-                        'postcode': postcode,
-                        'vehicle_make': make.upper(),
-                        'vehicle_model': model.upper(),
-                        'vehicle_year': year,
-                        'failure_risk': response['failure_risk'],
-                        'confidence_level': 'Medium',
-                        'risk_components': response['risk_components'],
-                        'repair_cost_estimate': response['repair_cost_estimate'],
-                        'model_version': 'lookup',
-                        'prediction_source': 'lookup',
-                        'is_dvsa_data': False,
-                        **utm_data,
-                    })
-                except Exception as e:
-                    logger.warning("Failed to log lookup risk check (%s)", type(e).__name__)
-                return response
-
-    # Default fallback - population average
-    response = {
-        "registration": registration,
-        "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
-        "mileage": None,
-        "last_mot_date": None,
-        "last_mot_result": None,
-        "failure_risk": 0.28,  # UK average
-        "confidence_level": "Low",
-        "risk_components": {
-            "brakes": 0.05,
-            "suspension": 0.04,
-            "tyres": 0.03,
-            "steering": 0.02,
-            "visibility": 0.02,
-            "lamps": 0.03,
-            "body": 0.02,
-        },
-        "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
-        "model_version": "lookup",
-        "note": note or "Limited data - using population averages",
-    }
-    # Log default fallback prediction
+    # Log fallback prediction for model training data (fire-and-forget,
+    # mirrors the SUCCESS path's own save_risk_check call below).
     try:
         await db.save_risk_check({
             'registration': registration,
@@ -1206,42 +1183,19 @@ async def _fallback_prediction(
             'vehicle_make': make.upper() if make else None,
             'vehicle_model': model.upper() if model else None,
             'vehicle_year': year,
-            'failure_risk': 0.28,
-            'confidence_level': 'Low',
+            'failure_risk': response['failure_risk'],
+            'confidence_level': response['confidence_level'],
             'risk_components': response['risk_components'],
             'repair_cost_estimate': response['repair_cost_estimate'],
             'model_version': 'lookup',
-            'prediction_source': 'fallback',
+            'prediction_source': response['prediction_source'],
             'is_dvsa_data': False,
             **utm_data,
         })
     except Exception as e:
-        logger.warning("Failed to log default fallback risk check (%s)", type(e).__name__)
+        logger.warning("Failed to log fallback risk check (%s)", type(e).__name__)
+
     return response
-
-
-def _get_display_mileage(history) -> tuple:
-    """Return (mileage, is_anomaly) using plausibility check against prior test."""
-    tests = history.mot_tests
-    if not tests or tests[0].odometer_value is None:
-        return None, False
-
-    latest_mileage = tests[0].odometer_value
-
-    if len(tests) >= 2 and tests[1].odometer_value is not None:
-        prev_mileage = tests[1].odometer_value
-        days_diff = (tests[0].test_date - tests[1].test_date).days
-        mileage_diff = latest_mileage - prev_mileage
-
-        if days_diff > 0:
-            if mileage_diff < 0:
-                return prev_mileage, True  # Flag negative mileage as anomaly
-            if mileage_diff > 0:
-                annualized = (mileage_diff / days_diff) * 365
-                if annualized > 50000:  # Physically implausible
-                    return prev_mileage, True
-
-    return latest_mileage, False
 
 
 def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
@@ -1264,8 +1218,11 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
     )
 
     # P1-11 fix: Clamp the scaling factor to avoid extreme values
-    # Scale by overall failure probability relative to average
-    avg_fail_rate = 0.28
+    # Scale by overall failure probability relative to average (R1-T4: the
+    # checked-in dataset-wide reference rate, not a hardcoded literal --
+    # same everywhere-verified constant report_service.py's own
+    # population-default branches use, no behavior invention).
+    avg_fail_rate = POPULATION_DEFAULT_FAILURE_RISK
     if failure_risk > 0:
         # Clamp scaling factor between 0.5x and 3x
         scale_factor = max(0.5, min(3.0, failure_risk / avg_fail_rate))

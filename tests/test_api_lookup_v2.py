@@ -191,6 +191,27 @@ def test_missing_mileage_starts_at_age_rung_no_estimate(monkeypatch):
     assert "50000" not in r.text
 
 
+def test_model_average_rung_returns_population_broad_with_no_bands(monkeypatch):
+    """The missing tier case (Task-3 review Minor #1): a model-only rung
+    (no age-band match at all) maps to the same top-level prediction_source
+    as age_band_only -- population_broad -- but its cohort.match_level is
+    the more specific model_average, and BOTH bands are null (unlike
+    age_band_only, which still carries a matched age_band)."""
+    _mock_postgres(monkeypatch, return_value=_rung('model_average'))
+
+    r = client.get("/api/risk", params={
+        "make": "FORD", "model": "FIESTA", "year": YEAR_AGE_4, "mileage": 45000,
+    })
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    assert body["prediction_source"] == "population_broad"
+    assert body["cohort"]["match_level"] == "model_average"
+    assert body["cohort"]["age_band"] is None
+    assert body["cohort"]["mileage_band"] is None
+    assert body["failure_risk"] == pytest.approx(0.20)
+
+
 def test_model_absent_returns_population_global_not_028(monkeypatch):
     _mock_postgres(monkeypatch, return_value=None)
 

@@ -168,13 +168,18 @@ class TestV55API(unittest.TestCase):
             self.assertIn("confidence_level", data)
             self.assertIn("model_version", data)
 
-            # Check risk_components if present
+            # Check risk_components if present. Values may be honestly None
+            # (R1-T4: a population_global degrade -- no make/model known,
+            # e.g. this DVSA-not-configured path -- carries no fabricated
+            # per-component defaults) rather than always-numeric; only
+            # bounds-check the ones that are actually populated.
             if "risk_components" in data and data["risk_components"]:
                 components = data["risk_components"]
                 self.assertIsInstance(components, dict)
                 for key, value in components.items():
-                    self.assertGreaterEqual(value, 0.0)
-                    self.assertLessEqual(value, 1.0)
+                    if value is not None:
+                        self.assertGreaterEqual(value, 0.0)
+                        self.assertLessEqual(value, 1.0)
 
 
 class TestAPIErrorHandling(unittest.TestCase):
