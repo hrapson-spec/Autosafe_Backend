@@ -537,7 +537,7 @@ def test_mot_reflects_latest_test(monkeypatch):
     identity = _identity(year=2022)
     assessment = run(build_assessment(identity, history, now=FIXED_NOW))
 
-    assert assessment.mot.last_test_date == datetime(2025, 6, 1).isoformat()
+    assert assessment.mot.last_test_date == datetime(2025, 6, 1).date().isoformat()
     assert assessment.mot.last_result == 'PASSED'
 
 

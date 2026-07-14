@@ -275,7 +275,7 @@ class TestVehicleEndpoint(unittest.TestCase):
         self.assertEqual(odometer["status"], "available")
         self.assertIsInstance(odometer["value_miles"], int)
         self.assertEqual(odometer["value_miles"], 42000)
-        self.assertEqual(odometer["recorded_at"], datetime(2024, 6, 1).isoformat())
+        self.assertEqual(odometer["recorded_at"], datetime(2024, 6, 1).date().isoformat())
         self.assertEqual(odometer["original_unit"], "mi")
 
     def test_vehicle_demo_odometer_unavailable(self):

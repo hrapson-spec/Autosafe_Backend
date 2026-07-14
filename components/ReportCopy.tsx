@@ -127,14 +127,23 @@ export function buildScopeDisclosure(report: ReportV2): string {
     case 'exact_band':
       return `This comparison uses ${make} ${model} records in the matched age and mileage bands.`;
     case 'age_band_only': {
-      // Two distinct reasons mileage went unused: genuinely sparse
-      // mileage-matched data (the original case) vs. no reliable recorded
-      // mileage at all (missing or anomalous). Same sentence shape either
-      // way; only the reason clause differs.
-      const reason = report.mileage.source === 'missing'
-        ? 'no reliable recorded mileage was available'
-        : "there wasn't enough mileage-matched data";
-      return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because ${reason}.`;
+      // Option C (owner-decided): three explicit branches, so the scope
+      // line never repeats a mileage statement the mileage disclosure (W4,
+      // buildUnmatchedMileageDisclosure) already makes.
+      if (report.mileage.source === 'missing') {
+        if (report.mileage.anomaly) {
+          // Branch 1 -- an anomalous reading was rejected (W4 present, and
+          // it already states mileage was not used and why). The scope line
+          // must carry NO second mileage statement: name only the scope.
+          return `This comparison uses ${make} ${model} records in the matched age band.`;
+        }
+        // Branch 2 -- mileage is simply absent (anomaly false -> W4 is
+        // null), so this scope line carries the single mileage statement.
+        return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because no reliable recorded mileage was available.`;
+      }
+      // Branch 3 -- reliable recorded/entered mileage exists, but the exact
+      // mileage band was too sparse to use; wording unchanged.
+      return `This comparison uses ${make} ${model} records in the matched age band; mileage was not used because there wasn't enough mileage-matched data.`;
     }
     case 'model_average':
       return `This comparison uses all ${make} ${model} records in the dataset, across all age and mileage bands.`;

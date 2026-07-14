@@ -226,7 +226,15 @@ def resolve_odometer(history: Any) -> OdometerReading:
 
     return OdometerReading(
         value_miles=value_miles,
-        recorded_at=test.test_date.isoformat(),
+        # Canonical wire form: a DVSA MOT test_date is a CALENDAR DATE
+        # (dvsa_client._parse_date truncates to date_str[:10] and parses
+        # '%Y-%m-%d', yielding a midnight datetime), so emit the date-only
+        # ISO string 'YYYY-MM-DD' -- never '...T00:00:00'. A zone-less
+        # midnight timestamp is parsed as *local* time by JS Date and
+        # rendered a day early on a BST host; the date-only form parses as
+        # UTC and renders correctly everywhere. resolve_mileage copies this
+        # verbatim onto ReportMileage.observed_at.
+        recorded_at=test.test_date.date().isoformat(),
         original_value=test.odometer_value,
         original_unit=unit,
         source=MileageSource.OBSERVED_MOT,
@@ -524,8 +532,16 @@ def _build_mot(history: Any) -> ReportMot:
     if latest is None:
         return ReportMot(expiry_date=None, last_test_date=None, last_result=None)
     return ReportMot(
+        # expiry_date is left as-is (see below); last_test_date is a DVSA
+        # test_date (a calendar date), so emit the canonical date-only ISO
+        # form 'YYYY-MM-DD', matching resolve_odometer's recorded_at. NOTE:
+        # expiry_date is deliberately NOT converted here -- it is not a
+        # test_date, and its only frontend consumer is daysUntil() day-math
+        # (bare `new Date()`, not formatDateGB), so changing its emission
+        # would alter an out-of-scope behaviour with no covering evidence;
+        # its legacy '...T00:00:00' form already validates and renders.
         expiry_date=latest.expiry_date.isoformat() if latest.expiry_date else None,
-        last_test_date=latest.test_date.isoformat() if latest.test_date else None,
+        last_test_date=latest.test_date.date().isoformat() if latest.test_date else None,
         last_result=latest.test_result,
     )
 

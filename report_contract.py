@@ -224,6 +224,10 @@ class ReportMot(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    # DVSA calendar dates. last_test_date is emitted in canonical date-only
+    # ISO form 'YYYY-MM-DD' (report_service._build_mot). expiry_date may still
+    # carry a legacy '...T00:00:00' form; both are None-tolerant strings and
+    # any already-persisted payload replays unchanged.
     expiry_date: Optional[str] = None
     last_test_date: Optional[str] = None
     last_result: Optional[str] = None
@@ -236,6 +240,9 @@ class ReportMileage(BaseModel):
 
     effective_value: Optional[int] = Field(ge=0)
     source: MileageSource
+    # Canonical date-only ISO string 'YYYY-MM-DD' (the DVSA MOT test date the
+    # reading came from) for freshly-built reports; already-persisted 2.0
+    # payloads carrying a legacy '...T00:00:00' form still validate and render.
     observed_at: Optional[str] = None
     unit_converted: bool = False
     anomaly: bool = False
@@ -280,6 +287,9 @@ class OdometerReading(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     value_miles: Optional[int] = Field(ge=0)
+    # Canonical date-only ISO string 'YYYY-MM-DD' (resolve_odometer emits
+    # test_date.date().isoformat()) -- the reading's own MOT test date, never
+    # a zone-less '...T00:00:00' timestamp.
     recorded_at: Optional[str]
     original_value: Optional[int] = Field(ge=0)
     original_unit: Optional[str]

@@ -25,8 +25,51 @@ from report_contract import (  # noqa: E402
     OdometerUnavailableReason,
 )
 from report_service import resolve_mileage, resolve_odometer  # noqa: E402
+from dvsa_client import DVSAClient, MOTTest, VehicleHistory  # noqa: E402
 
 from report_test_helpers import make_history  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Regression (a): the canonical date-only wire contract, proven from a real
+# DVSA timestamp string all the way through the actual dvsa_client._parse_date
+# into resolve_mileage.
+# ---------------------------------------------------------------------------
+
+def test_real_dvsa_timestamp_through_parse_date_yields_date_only_wire_form():
+    """A real DVSA completedDate timestamp string, run through the actual
+    dvsa_client._parse_date and then resolve_mileage, must yield the
+    documented canonical wire form 'YYYY-MM-DD' -- never a zone-less
+    '...T00:00:00' timestamp (which a Europe/London browser renders a day
+    early). _parse_date truncates to date_str[:10] and parses '%Y-%m-%d'
+    (a midnight datetime); resolve_odometer emits test_date.date().isoformat()
+    so the wire form stays a bare calendar date.
+    """
+    client = DVSAClient(
+        client_id='id', client_secret='secret',
+        token_url='https://example/token', api_key='key',
+    )
+    # A real DVSA MOT completedDate is a full timestamp; pick a July (BST)
+    # instant -- the season the old zone-less-midnight bug actually bit.
+    parsed = client._parse_date('2025-07-02T10:30:00.000Z')
+    assert parsed == datetime(2025, 7, 2)  # truncated to the calendar date, midnight
+
+    history = VehicleHistory(
+        registration='AB12CDE', make='FORD', model='FIESTA',
+        fuel_type='PETROL', colour='BLUE',
+        registration_date=datetime(2018, 1, 1),
+        manufacture_date=datetime(2018, 1, 1),
+        engine_size=1200,
+        mot_tests=[MOTTest(
+            test_date=parsed, test_result='PASSED', expiry_date=None,
+            odometer_value=45000, odometer_unit='mi',
+            test_number='TEST0', defects=[],
+        )],
+    )
+    result = resolve_mileage(history)
+
+    assert result.observed_at == '2025-07-02'
+    assert 'T' not in (result.observed_at or '')  # never a zone-less timestamp
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +86,7 @@ def test_miles_reading_passthrough():
     assert result.value_miles == 45000
     assert result.original_value == 45000
     assert result.original_unit == 'mi'
-    assert result.recorded_at == datetime(2025, 6, 1).isoformat()
+    assert result.recorded_at == datetime(2025, 6, 1).date().isoformat()
     assert result.source == MileageSource.OBSERVED_MOT
     assert result.unavailable_reason is None
 
@@ -71,8 +114,8 @@ def test_reading_date_is_the_displayed_readings_date():
     result = resolve_odometer(history)
 
     assert result.status == OdometerStatus.AVAILABLE
-    assert result.recorded_at == datetime(2026, 1, 1).isoformat()
-    assert result.recorded_at != datetime(2025, 1, 1).isoformat()
+    assert result.recorded_at == datetime(2026, 1, 1).date().isoformat()
+    assert result.recorded_at != datetime(2025, 1, 1).date().isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +134,7 @@ def test_reading_without_date_is_skipped_in_scan():
 
     assert result.status == OdometerStatus.AVAILABLE
     assert result.value_miles == 45000
-    assert result.recorded_at == datetime(2025, 1, 1).isoformat()
+    assert result.recorded_at == datetime(2025, 1, 1).date().isoformat()
 
 
 def test_scan_skips_missing_latest_odometer():
@@ -106,7 +149,7 @@ def test_scan_skips_missing_latest_odometer():
 
     assert result.status == OdometerStatus.AVAILABLE
     assert result.value_miles == 45000
-    assert result.recorded_at == datetime(2025, 1, 1).isoformat()
+    assert result.recorded_at == datetime(2025, 1, 1).date().isoformat()
 
 
 def test_no_reading_anywhere_is_unavailable_no_reading():
@@ -221,7 +264,7 @@ def test_prior_without_reading_skips_plausibility():
 
     assert result.status == OdometerStatus.AVAILABLE
     assert result.value_miles == 55000
-    assert result.recorded_at == datetime(2026, 1, 1).isoformat()
+    assert result.recorded_at == datetime(2026, 1, 1).date().isoformat()
     assert result.unavailable_reason is None
 
 
@@ -273,7 +316,7 @@ def test_available_maps_to_observed_mot_with_originals():
 
     assert result.source == MileageSource.OBSERVED_MOT
     assert result.effective_value == 11185
-    assert result.observed_at == datetime(2025, 6, 1).isoformat()
+    assert result.observed_at == datetime(2025, 6, 1).date().isoformat()
     assert result.unit_converted is True
     assert result.anomaly is False
     assert result.original_value == 18000

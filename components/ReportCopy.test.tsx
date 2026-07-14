@@ -21,7 +21,6 @@ import {
 } from './ReportCopy';
 import {
   fixtureObservedHighMileage,
-  fixtureKmConverted,
   fixtureAnomalyMissing,
   fixtureLegacyEstimated2_0,
 } from '../fixtures/reportResponses';
@@ -195,13 +194,23 @@ describe('buildScopeDisclosure', () => {
     expect(buildScopeDisclosure(report)).toBe(expected);
   });
 
-  it('uses the no-reliable-mileage reason for age_band_only when mileage is missing (distinct from the sparse-data reason above)', () => {
+  it('Option C branch 2: age_band_only + missing mileage (anomaly false, no W4) keeps the single no-reliable-mileage clause', () => {
     const report = makeReport({
       evidence: { match_scope: 'age_band_only' },
       mileage: { source: 'missing', effective_value: null, observed_at: null, anomaly: false, unit_converted: false },
     });
     expect(buildScopeDisclosure(report)).toBe(
       'This comparison uses Ford Fiesta records in the matched age band; mileage was not used because no reliable recorded mileage was available.'
+    );
+  });
+
+  it('Option C branch 1: age_band_only + rejected anomalous reading (missing, anomaly true, W4 present) drops the mileage clause -- names only the scope', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'age_band_only' },
+      mileage: { source: 'missing', effective_value: null, observed_at: null, anomaly: true, unit_converted: false },
+    });
+    expect(buildScopeDisclosure(report)).toBe(
+      'This comparison uses Ford Fiesta records in the matched age band.'
     );
   });
 });
@@ -384,18 +393,13 @@ describe('lastRecordedMileageLine', () => {
     );
   });
 
-  it('appends the km-conversion suffix when unit_converted and original_value are present', () => {
-    const line = lastRecordedMileageLine(fixtureKmConverted) ?? '';
-    // fixtureKmConverted's observed_at ('2026-07-01T00:00:00') is a
-    // zone-less full timestamp -- the real DVSA wire format. This
-    // previously asserted only the load-bearing prefix/suffix, avoiding the
-    // exact date digit because formatDateGB parsed a zone-less timestamp as
-    // local time (host-timezone-sensitive -- one day early on a BST host).
-    // Now that formatDateGB normalizes zone-less timestamps to UTC before
-    // parsing, the rendered date is deterministic regardless of host
-    // timezone, so the previously-avoided exact date is pinned here too.
-    expect(line).toBe('Last recorded MOT mileage: 111,847 miles on 1 Jul 2026 — converted from 180,000 km');
-  });
+  // The km-conversion line's full dated assertion (fixtureKmConverted's
+  // observed_at is a zone-less July 'T00:00:00' -- a BST-season legacy
+  // timestamp) is a timezone-deterministic regression proof: it lives in
+  // components/formatDateGB.tzspec.ts and runs under TZ=Europe/London (see
+  // that file's header + vitest.tz.config.ts), where the pre-fix formatter
+  // renders it a day early. Asserting it here under an uncontrolled host TZ
+  // would not be meaningful evidence.
 
   it('is null when the mileage source is missing', () => {
     expect(lastRecordedMileageLine(fixtureAnomalyMissing)).toBeNull();
@@ -585,12 +589,12 @@ describe('buildNarrative', () => {
     expect(narrative).not.toContain('40000-50000');
   });
 
-  it('discloses a distrusted mileage history instead of silently omitting it (source missing + anomaly true)', () => {
+  it('Option C branch 1 (source missing + anomaly true): W4 discloses the distrusted mileage; the scope line adds NO second mileage statement', () => {
     expect(buildNarrative(fixtureAnomalyMissing)).toBe(
       'The matched TESTMAKE ANOMALYMODEL age group has a recorded MOT failure rate of 27%. ' +
         "Recorded mileage was not used: the vehicle's MOT mileage history is inconsistent, so no reading could be trusted. " +
         'Based on 512 recorded MOT tests in that comparison group. ' +
-        'This comparison uses TESTMAKE ANOMALYMODEL records in the matched age band; mileage was not used because no reliable recorded mileage was available.'
+        'This comparison uses TESTMAKE ANOMALYMODEL records in the matched age band.'
     );
   });
 
@@ -602,6 +606,44 @@ describe('buildNarrative', () => {
     const narrative = buildNarrative(report);
     expect(narrative).not.toContain('Recorded mileage was not used');
     expect(narrative).not.toContain('mileage history is inconsistent');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Option C (owner-decided): buildScopeDisclosure's age_band_only case must
+// never emit a second mileage statement on top of W4
+// (buildUnmatchedMileageDisclosure). Three branches, each pinned as a
+// COMPLETE composed buildNarrative() output (full string, not a fragment).
+// Branch 1's composed pin is the buildNarrative(fixtureAnomalyMissing) test
+// in the buildNarrative block above (source missing + anomaly true). Only
+// branch 1 changes vs the pre-Option-C wording; branches 2 and 3 are pinned
+// here as regression guards on the intentionally-unchanged strings.
+// ---------------------------------------------------------------------------
+
+describe('Option C: scope disclosure carries no duplicate mileage statement (composed)', () => {
+  it('branch 2 (missing + anomaly false, no W4): single no-reliable-mileage clause on the scope line', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'age_band_only', total_tests: 512, total_failures: 140 },
+      mileage: { source: 'missing', effective_value: null, observed_at: null, anomaly: false, unit_converted: false },
+    });
+    expect(buildNarrative(report)).toBe(
+      'The matched Ford Fiesta age group has a recorded MOT failure rate of 23%. ' +
+        'Based on 512 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age band; mileage was not used because no reliable recorded mileage was available.'
+    );
+  });
+
+  it('branch 3 (reliable observed_mot mileage, sparse exact band): W4 gives mileage context; scope line keeps the sparse-data reason', () => {
+    const report = makeReport({
+      evidence: { match_scope: 'age_band_only', total_tests: 512, total_failures: 140 },
+      mileage: { source: 'observed_mot', effective_value: 45000, observed_at: null, anomaly: false, unit_converted: false },
+    });
+    expect(buildNarrative(report)).toBe(
+      'The matched Ford Fiesta age group has a recorded MOT failure rate of 23%. ' +
+        'Mileage context: 45,000 miles recorded at its MOT. This mileage was not used because the comparison only matched the age band. ' +
+        'Based on 512 recorded MOT tests in that comparison group. ' +
+        'This comparison uses Ford Fiesta records in the matched age band; mileage was not used because there wasn\'t enough mileage-matched data.'
+    );
   });
 });
 
@@ -765,9 +807,13 @@ describe('formatDateGB', () => {
     expect(formatDateGB('2025-03-13T00:00:01.000Z')).toBe('13 Mar 2025');
   });
 
-  it('treats a zone-less midnight timestamp -- the real DVSA wire format (dvsa_client._parse_date truncates to date_str[:10] and parses %Y-%m-%d, so observed_at/recorded_at arrive as e.g. "2025-07-02T00:00:00") -- as UTC rather than local time, so a BST host does not render it a day early', () => {
-    expect(formatDateGB('2025-07-02T00:00:00')).toBe('2 Jul 2025');
-  });
+  // The four-class matrix, including the zone-less-timestamp (legacy DVSA
+  // wire) regression under a summer/BST timezone, is proven deterministically
+  // in components/formatDateGB.tzspec.ts (run via vitest.tz.config.ts under
+  // TZ=Europe/London). The cases above are timezone-independent by
+  // construction (bare dates and explicit-UTC timestamps parse as UTC on any
+  // host); the BST-sensitive class must be exercised under a pinned timezone
+  // to be meaningful, so it is not duplicated here under an uncontrolled TZ.
 });
 
 // Note: an earlier draft of this file also had a "claim-sweep guard rail"

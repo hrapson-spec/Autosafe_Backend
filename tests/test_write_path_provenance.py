@@ -116,3 +116,59 @@ def test_persisted_estimated_payload_still_replays():
     assert restored.mileage.effective_value == 64000
     assert restored.mileage.original_value is None
     assert restored.mileage.original_unit is None
+
+
+def _legacy_timestamp_payload():
+    """A complete, valid v2 report payload shaped as it would have been
+    PERSISTED before this task's date-contract fix: mileage.source
+    'observed_mot' with a legacy zone-less '...T00:00:00' observed_at (the
+    pre-fix wire form of a DVSA calendar date), and mot.* dates in the same
+    legacy form. The fix changes only what FRESH reports emit (date-only
+    'YYYY-MM-DD'); an already-persisted payload carrying the old timestamp
+    shape must still validate and replay unchanged."""
+    return {
+        'contract_version': '2.0',
+        'report_id': '22222222-2222-2222-2222-222222222222',
+        'report_token': 'tok_legacy_ts',
+        'share_url': 'https://www.autosafe.one/app/report/tok_legacy_ts',
+        'created_at': '2025-07-02T00:00:00Z',
+        'expires_at': '2025-09-30T00:00:00Z',
+        'registration': 'AB12CDE',
+        'vehicle': {'make': 'FORD', 'model': 'FIESTA', 'year': 2018, 'fuel_type': 'PETROL', 'colour': 'BLUE'},
+        'mot': {'expiry_date': '2026-07-02T00:00:00', 'last_test_date': '2025-07-02T00:00:00', 'last_result': 'PASSED'},
+        'mileage': {
+            'effective_value': 45000,
+            'source': 'observed_mot',
+            'observed_at': '2025-07-02T00:00:00',  # legacy zone-less timestamp form
+            'unit_converted': False,
+            'anomaly': False,
+            'original_value': 45000,
+            'original_unit': 'mi',
+        },
+        'evidence': {
+            'match_scope': 'exact_band', 'age_band': '6-10', 'mileage_band': '30k-60k',
+            'total_tests': 500, 'total_failures': 100,
+        },
+        'risk': {'failure_risk': 0.2, 'confidence': 'High'},
+        'components': {'available': False, 'items': None},
+        'repair_estimate': None,
+        'persistence': {'saved': True, 'share_available': True},
+        'prediction_source': 'postgres',
+        'vehicle_data_source': 'dvsa',
+        'note': None,
+    }
+
+
+def test_persisted_legacy_timestamp_observed_at_still_replays():
+    """Compat: an already-persisted payload carrying the legacy zone-less
+    '...T00:00:00' observed_at (and mot.* dates) must still validate through
+    ReportResponse and preserve those fields verbatim. The date-contract fix
+    changes only what fresh reports emit; it must never reject old stored
+    payloads."""
+    payload = _legacy_timestamp_payload()
+    restored = ReportResponse.model_validate(payload)
+
+    assert restored.mileage.source == MileageSource.OBSERVED_MOT
+    assert restored.mileage.observed_at == '2025-07-02T00:00:00'
+    assert restored.mot.last_test_date == '2025-07-02T00:00:00'
+    assert restored.mot.expiry_date == '2026-07-02T00:00:00'

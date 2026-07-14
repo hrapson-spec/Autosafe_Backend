@@ -18,25 +18,29 @@
  *   4. A DVSA outage at report-creation time renders the established error
  *      UX and never a fabricated report.
  *
- * formatDateGB (components/ReportCopy.tsx) previously parsed a zone-less
- * 'T00:00:00' timestamp as local time, rendering a day early on a BST host;
- * this is now fixed (see this task's Must-fix section). Test 1 below
- * deliberately overrides fixtureObservedHighMileage's observed_at to the
- * realistic zone-less wire format dvsa_client._parse_date actually emits
- * ('2025-11-02T00:00:00', not the fixture's own date-only '2025-11-02'),
- * to prove that fix end-to-end rather than mock around it.
- * fixtureAnomalyMissing's observed_at is null (not applicable). Test 3
- * below is unchanged and still asserts only fixtureKmConverted's
- * unit-conversion suffix, never the dated portion of its line (out of
- * scope for this fix; that fixture's exact date is pinned at the unit
- * level in ReportCopy.test.tsx instead).
+ * Timezone: this suite pins the browser to Europe/London
+ * (test.use({ timezoneId: 'Europe/London' }) below). That is load-bearing,
+ * not cosmetic -- the DVSA "one day early" defect only reproduces for a
+ * summer/BST date, so a UTC-executed run could never expose this regression
+ * class. The backend now emits observed_at as a canonical date-only
+ * 'YYYY-MM-DD' string (report_service.resolve_mileage), so these mocks use
+ * the real fixture payloads directly -- no hand-built local wire overrides.
+ *
+ * Test 1 uses fixtureObservedHighMileage as-is (canonical date-only
+ * observed_at '2025-11-02') and proves the canonical wire form renders
+ * correctly end to end. Test 3 uses fixtureKmConverted, whose observed_at is
+ * a LEGACY zone-less 'T00:00:00' timestamp ('2026-07-01T00:00:00', a summer
+ * date) -- its full dated line is asserted here as the legacy-payload render
+ * proof under the pinned BST timezone. Test 2's fixtureAnomalyMissing has a
+ * null observed_at (no date to render) but exercises Option C's mileage-free
+ * scope line. The zone-less formatDateGB four-class regression matrix is
+ * proven at the unit level in components/formatDateGB.tzspec.ts.
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/setup';
 import { mockCreateReport, mockGetReport } from './helpers/mockApi';
 import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
-import type { ReportV2 } from '../types';
 import {
   fixtureObservedHighMileage,
   fixtureAnomalyMissing,
@@ -45,6 +49,11 @@ import {
 } from '../fixtures/reportResponses';
 import { lastRecordedMileageLine, populationBadge } from '../components/ReportCopy';
 import { mapErrorToMessage } from '../services/errorMessages';
+
+// Pin the browser timezone so the date-rendering assertions are meaningful:
+// the DVSA one-day-early defect only manifests for a summer/BST date on a
+// Europe/London host. A UTC-executed run (CI's default) could not expose it.
+test.use({ timezoneId: 'Europe/London' });
 
 /**
  * Fills both HeroForm fields and submits -- the real customer flow
@@ -61,28 +70,21 @@ async function driveToReport(page: Page, registration: string, postcode: string)
 
 test('high-mileage exact-band reading: dated last-recorded-mileage line and population badge render', async ({ page }) => {
   await forceVariant(page, 'control');
-  // Realified per this task's Must-fix section: the real DVSA wire format
-  // for observed_at is a zone-less midnight timestamp
-  // (dvsa_client._parse_date truncates to date_str[:10] and parses
-  // '%Y-%m-%d'), not the date-only string the fixture ships with.
-  // Overridden here -- not in fixtures/reportResponses.ts -- so this
-  // flagship spec proves formatDateGB's UTC-normalization fix end-to-end
-  // against the actual wire shape.
-  const wireAccurateReport: ReportV2 = {
-    ...fixtureObservedHighMileage,
-    mileage: { ...fixtureObservedHighMileage.mileage, observed_at: '2025-11-02T00:00:00' },
-  };
-  await mockCreateReport(page, wireAccurateReport, 200);
-  await mockGetReport(page, wireAccurateReport.report_token as string, wireAccurateReport, 200);
+  // Canonical wire shape: fixtureObservedHighMileage's observed_at is already
+  // the date-only 'YYYY-MM-DD' form the backend now emits, so the fixture is
+  // used directly -- no hand-built local override. Renders under the pinned
+  // Europe/London browser timezone (see file header).
+  await mockCreateReport(page, fixtureObservedHighMileage, 200);
+  await mockGetReport(page, fixtureObservedHighMileage.report_token as string, fixtureObservedHighMileage, 200);
 
-  await driveToReport(page, wireAccurateReport.registration, 'SW1A 1AA');
+  await driveToReport(page, fixtureObservedHighMileage.registration, 'SW1A 1AA');
 
-  await expect(page).toHaveURL(new RegExp(`/app/report/${wireAccurateReport.report_token}$`));
+  await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureObservedHighMileage.report_token}$`));
 
   // Anchor: ReportCopy's real function must produce the exact acceptance
   // string for this fixture (regression guard against wording drift)...
   const expectedLine = 'Last recorded MOT mileage: 112,406 miles on 2 Nov 2025';
-  expect(lastRecordedMileageLine(wireAccurateReport)).toBe(expectedLine);
+  expect(lastRecordedMileageLine(fixtureObservedHighMileage)).toBe(expectedLine);
   // ...then confirm the rendered page actually shows it. Rendered exactly
   // once (ReportDashboard.tsx's shared renderHeader(), called once per
   // variant branch), so no .first() is needed here.
@@ -117,11 +119,20 @@ test('anomalous/missing mileage: "not used" disclosure renders and no numeric mi
   // the brief.
   const bodyText = (await page.textContent('body')) ?? '';
   expect(bodyText).toContain(disclosure);
+
+  // Option C (acceptance-ii page copy): with the anomalous reading rejected,
+  // W4 (the disclosure above) already states mileage was not used and why, so
+  // the scope line (W5) must carry NO second mileage statement -- it names
+  // only the comparison scope. Assert the mileage-free scope sentence is on
+  // the page and the pre-Option-C duplicate clause is gone.
+  expect(bodyText).toContain('This comparison uses TESTMAKE ANOMALYMODEL records in the matched age band.');
+  expect(bodyText).not.toContain('mileage was not used because no reliable recorded mileage was available');
+
   const textOutsideDisclosure = bodyText.split(disclosure).join(' ');
   expect(textOutsideDisclosure).not.toMatch(/\d[\d,]* miles/);
 });
 
-test('km-recorded reading: pre-conversion km figure is disclosed alongside the converted miles value', async ({ page }) => {
+test('km-recorded reading: full dated last-recorded-mileage line, incl. the pre-conversion km figure, renders', async ({ page }) => {
   await forceVariant(page, 'control');
   await mockCreateReport(page, fixtureKmConverted, 200);
   await mockGetReport(page, fixtureKmConverted.report_token as string, fixtureKmConverted, 200);
@@ -130,15 +141,16 @@ test('km-recorded reading: pre-conversion km figure is disclosed alongside the c
 
   await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureKmConverted.report_token}$`));
 
-  // Only the unit-conversion suffix is asserted -- never the dated portion
-  // of lastRecordedMileageLine's output, which this fixture's own
-  // non-date-only observed_at ('2026-07-01T00:00:00') would render a day
-  // early on this (BST) host via the pre-existing formatDateGB bug (see
-  // this file's header comment). The numeric part is read from the fixture
-  // itself, not hand-transcribed, so it can never drift from what
-  // ReportCopy.tsx's identical toLocaleString('en-GB') call produces.
-  const kmSuffix = ` — converted from ${fixtureKmConverted.mileage.original_value!.toLocaleString('en-GB')} km`;
-  await expect(page.getByText(kmSuffix)).toBeVisible();
+  // fixtureKmConverted's observed_at is a LEGACY zone-less 'T00:00:00'
+  // timestamp for a July (BST) date ('2026-07-01T00:00:00') -- the exact
+  // shape that rendered a day early pre-fix. Under the pinned Europe/London
+  // browser timezone (file header) this asserts the FULL dated line -- the
+  // date AND the km-conversion suffix -- end to end: the legacy-payload
+  // render proof. Rendered once, as a single <p> in ReportDashboard's
+  // renderHeader(), so { exact: true } (mirrors test 1).
+  const expectedLine = 'Last recorded MOT mileage: 111,847 miles on 1 Jul 2026 — converted from 180,000 km';
+  expect(lastRecordedMileageLine(fixtureKmConverted)).toBe(expectedLine);
+  await expect(page.getByText(expectedLine, { exact: true })).toBeVisible();
 });
 
 test('DVSA outage at report creation: established error UX renders, no fabricated report', async ({ page }) => {
