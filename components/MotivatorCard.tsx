@@ -1,12 +1,14 @@
 import React from 'react';
-import { Recommendation, CarReport, CarSelection } from '../types';
+import { Recommendation } from '../types';
 import { Wrench, Clock, Mail } from './Icons';
 import { Card } from './ui';
 
+// report/selection were accepted but never read (motivatorHeadline /
+// motivatorSupportingLine already arrive fully composed from
+// getRecommendation) -- dropped rather than widened to ReportV2, per the
+// "pass primitives, not a deep ReportV2 drill" steer for dashboard children.
 interface MotivatorCardProps {
   recommendation: Recommendation;
-  report: CarReport;
-  selection: CarSelection;
 }
 
 const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
@@ -21,9 +23,9 @@ const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
           </div>
           <div className="min-w-0">
             <p className="text-2xl font-semibold text-slate-900 leading-tight">
-              {motivatorHeadline.replace('Estimated repair cost: ', '')}
+              {motivatorHeadline.replace('Comparable-vehicle cost range: ', '')}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">Estimated repair cost</p>
+            <p className="text-xs text-slate-500 mt-0.5">Comparable-vehicle cost range</p>
             <p className="text-sm text-slate-600 mt-2">{motivatorSupportingLine}</p>
           </div>
         </div>

@@ -1,73 +1,52 @@
 # AutoSafe Operational Runbook
 
-## Quick Reference
+The authoritative RC1 procedure is
+[`release_rc1/RUNBOOK_DEPLOY_ROLLBACK.md`](release_rc1/RUNBOOK_DEPLOY_ROLLBACK.md).
+This page is the short operational index.
 
-| Action | Command/Location |
-|--------|------------------|
-| Live Site | https://autosafebackend-production.up.railway.app |
-| Railway Dashboard | https://railway.app/dashboard |
-| GitHub Repo | https://github.com/hrapson-spec/Autosafe_Backend |
+## Read-only health and identity
 
----
+```bash
+curl -fsS https://www.autosafe.one/health
+curl -fsS https://www.autosafe.one/api/version
+```
 
-## Deployment
+`/api/version` must show the expected concrete backend and frontend commit,
+full bundle hash, build timestamp, and contract version. A healthy process with
+the wrong SHA is not an accepted deployment.
 
-### Push Updates
-1. Make changes locally
-2. Commit: `git add . && git commit -m "description"`
-3. Push: `git push origin main`
-4. Railway auto-deploys from GitHub
+## Before any production change
 
-### Manual Redeploy
-1. Go to Railway Dashboard
-2. Click on `Autosafe_Backend` service
-3. Click **Deployments** tab
-4. Click **Redeploy** on latest
+1. Obtain explicit owner approval for the named candidate SHA.
+2. Require every GitHub check on that SHA to pass.
+3. Run the additive schema migration against the candidate/production database
+   as specified in the RC1 runbook.
+4. Confirm `VRM_HMAC_KEY`, `BASE_URL`, and release identity configuration.
+5. Complete the Railway candidate checks in
+   `release_rc1/RAILWAY_STRIP_RISK_MEMO.md`.
 
----
-
-## Environment Variables
-
-| Variable | Purpose | Where Set |
-|----------|---------|-----------|
-| `DATABASE_URL` | PostgreSQL connection | Railway (auto-injected) |
-| `PORT` | Server port | Railway (auto-injected) |
-
----
-
-## Checking Logs
-
-1. Go to Railway Dashboard
-2. Click `Autosafe_Backend` service
-3. Click **Logs** tab
-4. Filter by time or search for errors
-
----
+Pushing a branch or passing local staging is not production approval.
 
 ## Rollback
 
-1. Go to Railway Dashboard → Deployments
-2. Find the last working deployment
-3. Click the **⋮** menu → **Rollback**
+Redeploy the last known-good Railway image/commit, then verify `/health`,
+`/api/version`, SPA assets, and one non-destructive compatibility request. The
+v2 migration is additive, so the prior application can run against the expanded
+schema. Do not drop columns during an incident.
 
----
-
-## Health Check
+## Scheduled privacy operations
 
 ```bash
-# Check if site is up
-curl -s -o /dev/null -w "%{http_code}" https://autosafebackend-production.up.railway.app/
-
-# Check API
-curl -s https://autosafebackend-production.up.railway.app/api/makes | head -c 100
+python scripts/retention_sweep.py                 # 24-month check dry-run
+python scripts/lead_retention_sweep.py            # 12-month lead dry-run
+python migrations/pseudonymize_backlog.py --before <notice-live-ISO-time>
 ```
 
----
+Execution forms require the exact options, secrets, owners, and verification
+steps in the RC1 runbook. The backlog cutoff must never be guessed.
 
-## Common Issues
+## Monitoring
 
-| Issue | Solution |
-|-------|----------|
-| 502 Bad Gateway | Check logs, may need redeploy |
-| Database connection failed | Verify DATABASE_URL in Railway |
-| Slow responses | Check Railway metrics for resource limits |
+Use `docs/MONITORING.md`. At minimum alert on health/identity mismatch, 5xx,
+`dvsa_unavailable`, `report_persist_failed`, `report_persist_unavailable`,
+unexpected `report_not_found` spikes, and non-zero post-retention verification.

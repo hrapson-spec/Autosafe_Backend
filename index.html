@@ -4,18 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="4vUVgVy4a6yed0TmE46yMECs6vcSH3m0VmL4dJZNv7k" />
-    <title>AutoSafe | Free MOT History Check & Failure Risk Predictor</title>
-    <meta name="description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours. Free, fast, and simple." />
+    <title>AutoSafe | MOT Records &amp; Comparable Failure Rates</title>
+    <meta name="description" content="Check recorded MOT details and compare your vehicle with official DVSA outcomes for similar vehicles. The report labels its mileage source, comparison scope and sample size." />
     <meta name="theme-color" content="#f8fafc" />
-    <meta property="og:title" content="Will your car pass its MOT? Check your risk score." />
-    <meta property="og:description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours." />
+    <meta property="og:title" content="Compare your car with recorded MOT outcomes." />
+    <meta property="og:description" content="See recorded MOT details and the closest available comparable-vehicle failure rate, with evidence scope shown clearly." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://www.autosafe.one/static/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Will your car pass its MOT? Check your risk score." />
-    <meta name="twitter:description" content="Don't fail your MOT. Check your vehicle's full MOT history and see its failure risk instantly, based on official UK DVSA data for vehicles like yours." />
+    <meta name="twitter:title" content="Compare your car with recorded MOT outcomes." />
+    <meta name="twitter:description" content="See recorded MOT details and the closest available comparable-vehicle failure rate, with evidence scope shown clearly." />
     <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png" />
     <link rel="canonical" href="https://www.autosafe.one/" />
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
@@ -28,12 +28,7 @@
       "@type": "WebSite",
       "name": "AutoSafe",
       "url": "https://www.autosafe.one",
-      "description": "Free MOT history check and failure risk estimates based on official UK DVSA data",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://www.autosafe.one/?reg={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
+      "description": "Free vehicle record and comparable MOT failure-rate report based on official DVSA data"
     }
     </script>
     <script type="application/ld+json">
@@ -43,7 +38,7 @@
       "name": "AutoSafe",
       "url": "https://www.autosafe.one",
       "logo": "https://www.autosafe.one/static/logo_clean.png",
-      "description": "Free MOT history check and failure risk estimates based on official UK DVSA data",
+      "description": "Free vehicle record and comparable MOT failure-rate report based on official DVSA data",
       "email": "autosafehq@gmail.com",
       "sameAs": []
     }
@@ -51,6 +46,18 @@
 
     <!-- Google tag (gtag.js) — PECR: script loads ONLY after explicit consent; no cookies, no pings before Accept -->
     <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var hadSensitiveQuery = false;
+        ['reg', 'registration', 'vrm', 'postcode'].forEach(function (key) {
+          if (params.has(key)) { params.delete(key); hadSensitiveQuery = true; }
+        });
+        if (hadSensitiveQuery) {
+          var cleanQuery = params.toString();
+          history.replaceState(null, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : ''));
+        }
+        window.autosafeAnalyticsAllowed = !/^\/app\/report\//.test(window.location.pathname);
+      })();
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
@@ -59,6 +66,7 @@
         ad_personalization: 'denied', analytics_storage: 'denied'
       });
       function autosafeLoadGtag() {
+        if (!window.autosafeAnalyticsAllowed) return;
         gtag('consent', 'update', {
           ad_storage: 'granted', ad_user_data: 'granted',
           ad_personalization: 'denied', analytics_storage: 'granted'
@@ -67,8 +75,7 @@
         s.async = true;
         s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-17896487388';
         document.head.appendChild(s);
-        gtag('config', 'AW-17896487388');
-        gtag('config', 'G-8PV2HG1QDC');
+        gtag('config', 'AW-17896487388', { send_page_view: false });
       }
       (function () {
         var choice = null;
@@ -98,15 +105,18 @@
       })();
     </script>
 
-    <!-- Umami Analytics -->
-    <script defer src="https://umami-production-cb51.up.railway.app/script.js" data-website-id="0dead4c2-42a2-456c-abc1-42f93e1a991b" data-domains="autosafe.one,www.autosafe.one"></script>
-
-    <!-- Preconnect for faster font loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <!-- Fonts with display swap for better LCP -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+    <!-- Umami is deliberately not loaded on bearer-token report routes. -->
+    <script>
+      if (window.autosafeAnalyticsAllowed) {
+        var umamiScript = document.createElement('script');
+        umamiScript.defer = true;
+        umamiScript.src = 'https://umami-production-cb51.up.railway.app/script.js';
+        umamiScript.setAttribute('data-website-id', '0dead4c2-42a2-456c-abc1-42f93e1a991b');
+        umamiScript.setAttribute('data-domains', 'autosafe.one,www.autosafe.one');
+        umamiScript.setAttribute('data-auto-track', 'false');
+        document.head.appendChild(umamiScript);
+      }
+    </script>
 
     <style>
       body {
@@ -137,17 +147,17 @@
       <!-- Pre-rendered content for SEO crawlers (replaced by React on load) -->
       <noscript>
         <div style="max-width:800px;margin:2rem auto;padding:0 1.5rem;color:#334155;">
-          <h1 style="font-family:'Playfair Display',serif;font-size:2rem;text-align:center;margin-bottom:1rem;">Will your car pass its MOT?</h1>
-          <p style="text-align:center;margin-bottom:2rem;">Enter your reg. Get your risk score in seconds. Free, instant, no signup required.</p>
-          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">How AutoSafe MOT Prediction Works</h2>
-          <p>AutoSafe analyses <strong>142 million official DVSA MOT test records</strong> to show how likely vehicles like yours (same make, model and age) are to pass or fail their next MOT. Simply enter your registration number and postcode to get an instant risk overview covering seven key failure areas.</p>
-          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">Why Check Your MOT Risk Before Your Test?</h2>
-          <p>Every year, around <strong>28% of vehicles fail their MOT</strong> in the UK. A failed MOT means unexpected repair bills, wasted time, and potentially being left without a legal vehicle. By checking your risk score before your test, you can identify the specific components most likely to cause a failure on your car.</p>
+          <h1 style="font-family:'Playfair Display',serif;font-size:2rem;text-align:center;margin-bottom:1rem;">Compare your car with recorded MOT outcomes</h1>
+          <p style="text-align:center;margin-bottom:2rem;">Enter your registration to see recorded MOT details and the closest available comparison group. Free, instant, no signup required.</p>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">How AutoSafe's MOT Comparison Works</h2>
+          <p>AutoSafe uses <strong>148 million recorded DVSA MOT tests</strong> to show the historical failure rate for the closest available group of comparable vehicles. Enter your registration number and postcode to see the recorded MOT context, mileage source, comparison scope and available sample size behind the result.</p>
+          <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">Why Review Comparable MOT Outcomes?</h2>
+          <p>Across the checked-in DVSA aggregate, <strong>about 27% of recorded tests were failures</strong>. AutoSafe lets you compare the submitted vehicle with historical outcomes for the closest supported group; it does not predict the next result.</p>
           <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;margin-top:2rem;">Common MOT Failure Areas</h2>
-          <p>The most common reasons for MOT failure include problems with lighting and signalling, suspension, brakes, and tyres. AutoSafe analyses your car's individual MOT history to give a risk score tailored specifically to your vehicle.</p>
+          <p>The most common reasons for MOT failure include problems with lighting and signalling, suspension, brakes, and tyres. Where the comparison data supports it, AutoSafe shows component patterns for similar vehicles; it does not diagnose your car.</p>
           <p style="margin-top:1rem;">Explore our guides: <a href="/guides/common-mot-failures">Top 10 MOT Failure Points</a> | <a href="/guides/mot-checklist">Pre-MOT Checklist</a> | <a href="/guides/mot-failure-rates-by-car">MOT Failure Rates by Car</a></p>
           <footer style="margin-top:3rem;padding-top:1rem;border-top:1px solid #e2e8f0;font-size:0.875rem;color:#64748b;">
-            <p>Contains public sector information licensed under the Open Government Licence v3.0. Data from UK DVSA.</p>
+            <p>Contains public sector information licensed under the Open Government Licence v3.0. Data from DVSA.</p>
             <p><a href="/terms">Terms</a> | <a href="/privacy">Privacy</a> | <a href="mailto:autosafehq@gmail.com">Send Feedback</a></p>
           </footer>
         </div>

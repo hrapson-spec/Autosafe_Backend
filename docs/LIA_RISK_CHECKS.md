@@ -1,93 +1,147 @@
 # Legitimate Interests Assessment — vehicle check records (`risk_checks`)
 
-**Controller:** AutoSafe (sole trader — Henri Rapson) · **Date:** 2026-07-03
-**Owner approval:** decision D1, 2026-07-03 (privacy Option B) — see
-`work/reviews/REMEDIATION_PLAN_2026-07-03.md` §6.
-**Trigger:** remediation of the notice/practice contradiction identified in
-`work/frontier_engine/memos/LICENSING_PRIVACY_REVIEW_C1.md` §1 (HIGH).
+**Controller:** AutoSafe (sole trader — Henri Rapson)
 
-## 1. The processing
+**Review date:** 2026-07-11
 
-When a user runs a vehicle check we store a check record: VRN and postcode as
-entered, vehicle attributes and MOT history returned by the DVSA MOT History
-API at that time, the risk assessment we generated, model version, and
-referral metadata. VRM is personal data (indirectly identifies the keeper —
-ICO ANPR guidance). Postcode compounds identifiability.
+**Status:** engineering reconciliation for owner/legal review; not legal advice
 
-Purposes:
-- **P1 Service operation & quality** — support queries, abuse prevention,
-  fault diagnosis.
-- **P2 Model accuracy measurement & improvement** — comparing the prediction
-  we served against the vehicle's subsequently published MOT outcome
-  (DVSA anonymised open data, matched by test-date/odometer fingerprint of
-  the history we already hold — no additional DVSA API queries), measuring
-  calibration of served predictions, and improving the model.
-- **P3 Service-quality monitoring** — aggregate funnel and reliability
-  metrics.
+## 1. Processing actually implemented
 
-## 2. Necessity test
+When a user requests a report, RC1 stores a check record containing the
+normalised VRN, optional postcode, selected vehicle attributes, latest recorded
+MOT date/result, mileage and its provenance, the aggregate comparison result and
+evidence scope, safe referrer, saved report payload, opaque share bearer token,
+idempotency key, and expiry. It does not store a claim that the complete MOT
+history or an exact-vehicle diagnosis exists.
 
-- P2 cannot be achieved without retaining the served prediction together with
-  enough vehicle history to identify the same vehicle's next test outcome.
-  Aggregated or immediately-anonymised data would break the prediction↔
-  outcome link that accuracy measurement requires.
-- Retention is bounded by the purpose: a vehicle's next MOT arrives within
-  ~13 months of a check; 24 months covers one full outcome cycle plus
-  publication lag. Beyond that the plaintext VRN/postcode serve no purpose →
-  deleted or irreversibly pseudonymised (HMAC-SHA256 with a key held outside
-  the database).
-- Less intrusive alternative considered (Option A — store nothing): rejected
-  because it makes served-prediction accuracy unmeasurable, i.e. the service
-  could never verify or honestly represent its own quality.
+The browser sends inputs in a POST body. Postcode is not returned, placed in the
+share URL, or used to choose the comparison cohort. The service reports the
+historical failure rate of the closest supported comparable-vehicle group; it
+does not predict or determine the checked vehicle's next MOT result.
 
-## 3. Balancing test
+Purposes recorded for owner review:
 
-- **Nature of data:** vehicle/registration data; not special category; low
-  sensitivity; postcode adds locational granularity but no address.
-- **Reasonable expectations:** users ask for a vehicle risk assessment; that
-  the service keeps the check it produced, and checks its own accuracy, is
-  within reasonable expectations **provided it is disclosed** — the privacy
-  notice (updated 2026-07-03) now states it plainly. The prior notice said
-  the opposite; the backlog collected under it is remediated by immediate
-  pseudonymisation (see §5).
-- **Impact on individuals:** minimal — no marketing use, no sharing (leads
-  are separate, consent-based), no automated decision with legal effect
-  (predictions are informational only, stated in the notice).
-- **Safeguards:** 24-month cap with scheduled purge; HMAC pseudonymisation
-  for analytics joins; access limited to the controller; encrypted-at-rest
-  hosting (Railway PostgreSQL); admin export requires API key; objection →
-  erasure/irreversible pseudonymisation, honoured within one month.
-- **Outcome-linkage specifics (capture-USE gate 2.5):** matching a check
-  record to the vehicle's later result in DVSA's *anonymised* open data is a
-  linkage of data we already lawfully hold to a public dataset about the same
-  vehicle. It does not identify any new individual, contact anyone, or
-  enrich the record with third-party personal data; the output is a
-  prediction-accuracy label. Assessed as within the same legitimate interest
-  and expectations envelope as P2.
+- **P1 — Service operation and support:** create/retrieve a saved report,
+  resolve idempotent retries, investigate failures/abuse, and honour rights
+  requests.
+- **P2 — Comparison quality evaluation:** assess whether the aggregate cohorts
+  and displayed rates remain useful against later lawful outcome evidence.
+- **P3 — Aggregate service monitoring:** measure availability, persistence,
+  evidence-source mix, and funnel health without sending identifiers to
+  analytics.
 
-**Balance: legitimate interests upheld**, conditional on the safeguards above
-remaining in force and the notice remaining accurate.
+Garage enquiries, reminders, and emailed-report requests are separate lead
+records. Garage disclosure is consent-based and is not justified by this LIA.
 
-## 4. Rights and transparency
+## 2. Purpose test
 
-Notice updated (both copies, 2026-07-03): storage disclosed, retention
-stated, objection route (autosafehq@gmail.com), ICO complaint route. Rights
-honoured: access/rectification/erasure/restriction/portability/objection.
-Objection handling: erase or irreversibly pseudonymise the individual's check
-records.
+P1 is a genuine interest: a saved report cannot be restored without a durable
+payload and bearer lookup key, and support/rights handling needs a way to locate
+the record. P2 is a genuine quality interest only if any later outcome source
+and linkage method are lawful, technically validated, proportionate, and
+accurately disclosed. P3 is a genuine service-reliability interest.
 
-## 5. Backlog remediation
+No RC1 code implements a later-outcome linkage pipeline. This LIA therefore does
+not claim that a particular DVSA open-data fingerprint, re-query method, or
+calibration process is already operating or approved. Before implementing one,
+record the source, licence/API terms, fields, matching error rate, access
+controls, opt-out/deletion effect, and a refreshed balancing decision.
 
-All `risk_checks` rows created before the corrected notice went live were
-collected under an inaccurate transparency statement. Remediation (owner
-ruling D1): immediately pseudonymise the backlog — replace plaintext VRN with
-its HMAC and null the postcode — rather than waiting for the 24-month
-horizon. Executed by `migrations/pseudonymize_vrm.py` (task 2.2); this LIA's
-P2 purpose continues on the pseudonymised backlog (fingerprint linkage does
-not require the plaintext VRN).
+## 3. Necessity and minimisation test
 
-## 6. Review
+- The VRN is necessary transiently to obtain vehicle/MOT data.
+- A saved payload and opaque token are necessary only while public share
+  retrieval is offered. The token is a plaintext bearer credential and must be
+  treated as sensitive.
+- Model, age, and available mileage are necessary for cohort selection. Mileage
+  provenance prevents an estimate being presented as an observation.
+- Postcode does not affect the RC1 comparison calculation. Its durable storage
+  is therefore a specific minimisation question for the owner: retain it only
+  while a documented operational/evaluation purpose remains necessary, or
+  remove it earlier. Garage matching can collect postcode in its separate,
+  consented form.
+- Unsupported component and repair fields are omitted rather than inferred.
+- Application access logging is disabled; remaining log correlation uses a
+  keyed digest and safe fixed fields.
 
-Review this LIA on: any new purpose for check records, any sharing of check
-records, any DVSA guidance change on re-query/acceptable use, or 2027-07-03,
-whichever is first.
+Less intrusive controls adopted by RC1 include POST-body transport, stripping
+legacy sensitive query keys, no postcode in responses, analytics suppression on
+saved-report routes, fixed analytics event fields, 90-day report expiry,
+24-month check-record pseudonymisation, and rights-based earlier deletion.
+
+## 4. Balancing test
+
+- **Nature of data:** VRN and postcode can indirectly identify or locate an
+  individual and are personal data in context. The saved report token grants
+  access to vehicle-linked information. The data is not special-category data,
+  but it is not anonymous or harmless.
+- **Expectations:** a user can reasonably expect a report request and an
+  explicitly offered share link to be processed. Longer operational/evaluation
+  retention is acceptable only if the deployed notice is prominent and
+  accurate and objection/deletion is practical.
+- **Impact:** misuse or leakage could reveal vehicle/location-linked
+  information. The comparison is informational and has no legal or similarly
+  significant effect, but false certainty could still influence spending or
+  safety decisions; product copy therefore limits specificity.
+- **Safeguards:** least-specific supported evidence, no diagnosis, typed
+  degradation, bearer-route analytics suppression, log scrubbing, restricted
+  database/secret access, 90-day report expiry, 24-month plaintext removal,
+  12-month lead deletion, and access/erasure/objection handling.
+- **Disclosure:** garage data is shared only after explicit consent. Check
+  records are not sold or shared for another controller's purpose under this
+  design.
+
+**Provisional balance:** legitimate interests can support P1 and proportionate
+P3 if the safeguards operate in production. P2 remains conditional on a
+separately documented lawful outcome source/linkage implementation. Continued
+postcode retention needs explicit owner necessity approval.
+
+## 5. Retention and rights
+
+Check records are retained in identifiable form for no more than 24 calendar
+months under the published policy, subject to earlier rights requests and
+incidents. `scripts/retention_sweep.py` then:
+
+1. creates a keyed HMAC-SHA256 of the normalised VRN where one exists;
+2. nulls registration, postcode, report payload, and report token; and
+3. stamps `pseudonymised_at` and verifies that no plaintext/payload/token
+   remains on processed rows.
+
+The remaining row and HMAC are pseudonymised, not anonymous, and remain within
+the data-protection boundary. Leads and dependent assignments are deleted after
+12 calendar months by `scripts/lead_retention_sweep.py`.
+
+Users can request access, rectification, erasure, restriction, portability
+where applicable, or object to legitimate-interest processing. Requests use
+the contact route in the deployed privacy notice and should be answered within
+the applicable statutory period. Do not place identifiers in ordinary tickets
+or logs while locating a record.
+
+## 6. Earlier-notice backlog
+
+Records created before the corrected notice effective time require an
+owner-approved cutoff and the dry-run-first
+`migrations/pseudonymize_backlog.py` process. Execution against production is
+not established by the existence of the script; record the cutoff, counts,
+operator, verification, and incident-safe evidence separately.
+
+## 7. Operational conditions
+
+This assessment is conditional on:
+
+- successful migration and nullable identifier fields;
+- strong, separately controlled HMAC secrets;
+- scheduled/monitored retention jobs with verified zero-stale results;
+- Railway/processor log and analytics inspection with synthetic values;
+- processor agreements, regions, and international-transfer safeguards
+  matching the notice;
+- a documented rights and bearer-token incident path; and
+- owner review of why postcode remains in check records.
+
+## 8. Review triggers
+
+Review before any new outcome-linkage pipeline, new data source, new purpose,
+new processor or recipient, material model/cohort change, use of postcode in
+scoring, retention change, DVSA/licensing guidance change, security incident,
+or by 2027-07-11, whichever occurs first.

@@ -1,16 +1,12 @@
 {% extends "seo_base.html" %}
 
-{% block title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems & Repair Costs | AutoSafe{%
+{% block title %}{{ make_display }} {{ model_display }} {{ component_name }} MOT Outcomes | AutoSafe{%
 endblock %}
-{% block meta_description %}Common {{ component_name|lower }} problems with the {{ make_display }} {{ model_display }}.
-Failure risk: {{ "%.1f"|format(risk * 100) }}%. Estimated repair cost: &pound;{{ cost_data.typical if cost_data else
-"TBC" }}. Full reliability breakdown.{% endblock %}
-{% block og_title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems{% endblock %}
-{% block og_description %}Deep dive into {{ component_name|lower }} reliability for the {{ make_display }} {{
-model_display }}. Risk analysis and repair costs.{% endblock %}
-{% block twitter_title %}{{ make_display }} {{ model_display }} {{ component_name }} Problems{% endblock %}
-{% block twitter_description %}Deep dive into {{ component_name|lower }} reliability for the {{ make_display }} {{
-model_display }}. Risk analysis and repair costs.{% endblock %}
+{% block meta_description %}Across {{ "{:,}".format(total_tests) }} recorded MOT tests for the {{ make_display }} {{ model_display }}, {{ "%.1f"|format(risk * 100) }}% involved {{ component_name|lower }} defects. Aggregate evidence, not a diagnosis.{% endblock %}
+{% block og_title %}{{ make_display }} {{ model_display }} {{ component_name }} MOT Outcomes{% endblock %}
+{% block og_description %}Recorded {{ component_name|lower }} defect rates for the {{ make_display }} {{ model_display }}, with aggregate sample context.{% endblock %}
+{% block twitter_title %}{{ make_display }} {{ model_display }} {{ component_name }} MOT Outcomes{% endblock %}
+{% block twitter_description %}Recorded {{ component_name|lower }} defect rates for the {{ make_display }} {{ model_display }}, with aggregate sample context.{% endblock %}
 {% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
 {% block robots_meta %}
 <meta name="robots" content="noindex, follow">{% endblock %}
@@ -23,18 +19,18 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "Do {{ make_display }} {{ model_display }} cars have {{ component_name|lower }} problems?",
+      "name": "How often do recorded {{ make_display }} {{ model_display }} MOT tests involve {{ component_name|lower }} defects?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Based on {{ "{:,}".format(total_tests) }} MOT tests, the {{ make_display }} {{ model_display }} has a {{ "%.1f"|format(risk * 100) }}% risk of {{ component_name|lower }} failure. This is a {% if risk > 0.10 %}common issue{% else %}standard wear item{% endif %} for this model."
+        "text": "Across {{ "{:,}".format(total_tests) }} recorded MOT tests for the {{ make_display }} {{ model_display }}, {{ "%.1f"|format(risk * 100) }}% involved {{ component_name|lower }} defects. This is aggregate model-level evidence, not a diagnosis of an individual vehicle."
       }
     },
     {
       "@type": "Question",
-      "name": "How much does it cost to fix {{ component_name|lower }} on a {{ make_display }} {{ model_display }}?",
+      "name": "What can {{ component_name|lower }} repairs cost in the UK?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "{% if cost_data %}Typical repair costs for {{ component_name|lower }} on this vehicle range from &pound;{{ cost_data.range_low }} to &pound;{{ cost_data.range_high }}, with an average cost of &pound;{{ cost_data.typical }}.{% else %}Repair costs vary significantly depending on the specific fault.{% endif %}"
+        "text": "{% if cost_data %}Our generic UK guide for {{ component_name|lower }} repairs ranges from &pound;{{ cost_data.range_low }} to &pound;{{ cost_data.range_high }}. It is not model-specific and is not a quote.{% else %}Repair costs vary significantly depending on the fault, vehicle and garage.{% endif %}"
       }
     }
   ]
@@ -52,7 +48,7 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
     {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
     {"@type": "ListItem", "position": 3, "name": "{{ make_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/"},
     {"@type": "ListItem", "position": 4, "name": "{{ model_display }}", "item": "https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/"},
-    {"@type": "ListItem", "position": 5, "name": "{{ component_name }} Problems"}
+    {"@type": "ListItem", "position": 5, "name": "{{ component_name }} MOT Outcomes"}
   ]
 }
 </script>
@@ -70,11 +66,11 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
 
 {% block content %}
 
-<h1>{{ make_display }} {{ model_display }} {{ component_name }} Problems</h1>
+<h1>{{ make_display }} {{ model_display }} {{ component_name }} MOT Outcomes</h1>
 
 <div class="stat-highlight">
   <div class="risk-meter-container" style="margin-bottom: 1rem;">
-    <div class="risk-label">Failure Risk</div>
+    <div class="risk-label">Recorded Component Failure Rate</div>
     <div class="risk-value {% if risk > 0.10 %}high{% elif risk > 0.05 %}medium{% else %}low{% endif %}">{{
       "%.1f"|format(risk * 100) }}%</div>
     <div class="risk-sub">Of MOTs involve {{ component_name|lower }} defects</div>
@@ -82,27 +78,24 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
 
   {% if cost_data %}
   <div class="cost-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-    <div class="label">Estimated Repair Cost</div>
+    <div class="label">Generic UK Repair-Cost Guide</div>
     <div class="big-number" style="font-size: 2.5rem; color: #e5c07b;">&pound;{{ cost_data.typical }}</div>
-    <div class="label">Typically between &pound;{{ cost_data.range_low }} and &pound;{{ cost_data.range_high }}
+    <div class="label">Usually &pound;{{ cost_data.range_low }}&ndash;&pound;{{ cost_data.range_high }}; not model-specific and not a quote
     </div>
   </div>
   {% endif %}
 </div>
 
-<h2>Is this a common fault?</h2>
+<h2>How common is this in the recorded tests?</h2>
 <p>
   {% if risk > 0.15 %}
-  Yes. <strong>{{ component_name }}</strong> is a major weak point for the {{ make_display }} {{ model_display }}. A
-  failure rate of {{ "%.1f"|format(risk * 100) }}% is significantly high.
+  <strong>{{ component_name }}</strong> defects appear relatively often in this aggregate. The recorded rate is {{ "%.1f"|format(risk * 100) }}%.
   {% elif risk > 0.08 %}
-  It is a frequent issue. With {{ "%.1f"|format(risk * 100) }}% of MOTs flagging {{ component_name|lower }} issues,
-  effective maintenance is key.
+  {{ "%.1f"|format(risk * 100) }}% of the recorded tests flagged {{ component_name|lower }} defects.
   {% else %}
-  It is not unusually high, but {{ component_name|lower }} issues still account for {{ "%.1f"|format(risk * 100) }}%
-  of failures.
+  {{ component_name }} defects were recorded in {{ "%.1f"|format(risk * 100) }}% of the tests.
   {% endif %}
-  This data is based on {{ "{:,}".format(total_tests) }} real MOT tests.
+  This model-level data is based on {{ "{:,}".format(total_tests) }} real MOT tests. It does not establish the condition of any individual vehicle.
 </p>
 
 <h2>Comparison to Other Issues</h2>
@@ -124,27 +117,26 @@ model_display }}. Risk analysis and repair costs.{% endblock %}
 {% endfor %}
 
 <div class="cta-box" style="margin-top: 2rem;">
-  <h3>Check Your Specific Vehicle</h3>
-  <p style="color: #a0a0a0; margin-bottom: 1rem;">See if your {{ make_display }} {{ model_display }} is likely to have
-    {{ component_name|lower }} issues.</p>
+  <h3>Compare Your Vehicle With Recorded Outcomes</h3>
+  <p style="color: #a0a0a0; margin-bottom: 1rem;">See recorded MOT details and the closest available comparison group. The result does not diagnose {{ component_name|lower }} issues on your vehicle.</p>
   <form class="reg-lookup-form" action="/" method="get">
     <input type="hidden" name="utm_source" value="seo_pages">
     <input type="hidden" name="utm_medium" value="organic">
     <input type="hidden" name="utm_campaign" value="{{ make_slug }}_{{ model_slug }}">
     <input type="hidden" name="utm_content" value="component_{{ component_name|lower|replace(' ', '-') }}">
     <div class="reg-plate-wrapper">
-      <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+      <input type="text" data-registration class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
         aria-label="Vehicle registration number">
     </div>
-    <button type="submit" class="reg-lookup-btn">Check My Risk</button>
+    <button type="submit" class="reg-lookup-btn">Compare MOT Outcomes</button>
   </form>
 </div>
 
 <p style="margin-top: 1rem;"><a href="/mot-check/{{ make_slug }}/{{ model_slug }}/" style="color: #e5c07b;">&larr; Back
-    to {{ make_display }} {{ model_display }} reliability overview</a></p>
+    to {{ make_display }} {{ model_display }} MOT overview</a></p>
 
 {% endblock %}
 
-{% block cta_heading %}Avoid {{ component_name }} Bills{% endblock %}
-{% block cta_text %}Get a free predictive health check for your {{ make_display }} {{ model_display }} to spot problems
-early.{% endblock %}
+{% block cta_heading %}Review the {{ component_name }} Evidence{% endblock %}
+{% block cta_text %}See recorded component failure patterns for comparable {{ make_display }} {{ model_display }}
+vehicles when the supporting evidence is available.{% endblock %}

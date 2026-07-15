@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CarSelection, CarReport, GarageLeadSubmission } from '../types';
+import type { ReportV2, GarageLeadSubmission } from '../types';
 import { submitGarageLead } from '../services/autosafeApi';
 import { trackConversion } from '../utils/analytics';
 import { getAllVariants } from '../utils/experiments';
+import { reportRateDisplay } from './ReportCopy';
 import { X, MapPin, Mail, Car, AlertTriangle, Heart, Phone, Clock } from './Icons';
 import { Input, Button } from './ui';
 
@@ -10,24 +11,37 @@ interface GarageFinderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess: () => void;
-  selection: CarSelection;
-  report: CarReport;
-  initialPostcode?: string;
+  report: ReportV2;
+  postcode?: string;
   ctaText?: string;
 }
 
 // UK postcode pattern
 const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}$/i;
 
-// Map fault components to plain-language issue descriptions
+// Magnitude tiers for component-risk display (dot colour, "areas of concern"
+// framing). Not sourced from ReportCopy -- ReportV2's ComponentRiskItem only
+// carries a raw risk fraction (report_service.py's _COMPONENT_FIELDS), not a
+// pre-bucketed category the way the legacy Fault.riskLevel did. These reuse
+// the same cut-offs the legacy transform layer used for its own High/Medium
+// bucketing (services/autosafeApi.ts's getRiskLevel: >=0.15 High, >=0.08
+// Medium) purely for visual weighting -- duplicated in ReportDashboard.tsx
+// for the same reason; not an evidence-backed claim, just a styling/ranking
+// threshold.
+const HIGH_RISK_THRESHOLD = 0.15;
+
+// Map canonical component keys (report_service.py's _COMPONENT_FIELDS: brakes,
+// suspension, tyres, steering, visibility, lamps, body) to plain-language
+// issue descriptions pre-filled into the garage lead's "tell the garage
+// about" list.
 const FAULT_TO_ISSUE: Record<string, string> = {
-  'brakes': 'Brake pads, discs, or hydraulics may need attention',
-  'suspension': 'Suspension components may be worn',
-  'steering': 'Steering system may need inspection',
-  'tyres': 'Tyres may need replacing or checking',
-  'visibility': 'Wipers, windscreen, or mirrors may need attention',
-  'lights & lamps': 'Lights or electrical components may need fixing',
-  'body & structure': 'Bodywork or structural issues may need repair',
+  brakes: 'Inspect brakes — comparison pattern only, not a diagnosed fault',
+  suspension: 'Inspect suspension — comparison pattern only, not a diagnosed fault',
+  steering: 'Inspect steering — comparison pattern only, not a diagnosed fault',
+  tyres: 'Inspect tyres — comparison pattern only, not a diagnosed fault',
+  visibility: 'Inspect visibility items — comparison pattern only, not a diagnosed fault',
+  lamps: 'Inspect lamps and electrics — comparison pattern only, not a diagnosed fault',
+  body: 'Inspect body and chassis — comparison pattern only, not a diagnosed fault',
 };
 
 const URGENCY_OPTIONS = [
@@ -55,17 +69,29 @@ const validatePostcode = (value: string): string | undefined => {
   return undefined;
 };
 
+/** Days from `now` until an ISO date/datetime string. Null-safe: undefined
+ * when the date is unknown. Duplicated from ReportDashboard.tsx /
+ * MotReminderCapture.tsx -- each file that needs MOT-day math computes it
+ * inline from the same source-of-truth date field, per the "compute days
+ * inline, null-safe" instruction; not hoisted into ReportCopy.tsx since that
+ * module is deliberately pure/time-independent copy logic, not owned by this
+ * pass. */
+function daysUntil(dateIso: string | null, now: number = Date.now()): number | undefined {
+  if (!dateIso) return undefined;
+  const diffMs = new Date(dateIso).getTime() - now;
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
 const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   isOpen,
   onClose,
   onSubmitSuccess,
-  selection,
   report,
-  initialPostcode = '',
+  postcode: postcodeProp,
   ctaText,
 }) => {
   const [email, setEmail] = useState('');
-  const [postcode, setPostcode] = useState(initialPostcode);
+  const [postcode, setPostcode] = useState(postcodeProp ?? '');
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
   const [urgency, setUrgency] = useState('');
@@ -81,36 +107,40 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
   const [issueItems, setIssueItems] = useState<string[]>([]);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const failureRisk = (100 - report.reliabilityScore) / 100;
+  // Single failure-rate derivation for display/CTA thresholds. Never rename
+  // a second score derived from the same arithmetic.
+  const risk = reportRateDisplay(report);
 
-  // Get top risks (High or Medium)
-  const topRisks = report.commonFaults
-    .filter(fault => fault.riskLevel === 'High' || fault.riskLevel === 'Medium')
-    .slice(0, 3);
-
+  // components.items arrives in a fixed display order (brakes, suspension,
+  // tyres, steering, visibility, lamps, body), not risk-sorted -- rank
+  // client-side for "top risks" (modal summary + lead payload). Empty
+  // whenever components.available is false, never a fabricated list.
+  const sortedItems = report.components.available && report.components.items
+    ? [...report.components.items].sort((a, b) => b.risk - a.risk)
+    : [];
+  const topRisks = sortedItems.slice(0, 3);
   const hasRisks = topRisks.length > 0;
 
   // Check if step 1 is complete (email + postcode valid)
   const step1Complete = !validateEmail(email) && !validatePostcode(postcode);
 
-  // Build issue items from faults
+  // Build issue items from top risks
   useEffect(() => {
     if (isOpen) {
-      if (initialPostcode) {
-        setPostcode(initialPostcode);
+      if (postcodeProp) {
+        setPostcode(postcodeProp);
       }
 
-      // Map faults to plain-language issues
+      // Map top risks to plain-language issues
       const issues: string[] = [];
-      topRisks.forEach(fault => {
-        const key = fault.component.toLowerCase();
-        const issue = FAULT_TO_ISSUE[key];
+      topRisks.forEach(item => {
+        const issue = FAULT_TO_ISSUE[item.key];
         if (issue) {
           issues.push(issue);
         }
       });
 
-      // Safe fallback when no faults map
+      // Safe fallback when no faults map (includes: no component evidence at all)
       if (issues.length === 0) {
         issues.push('Pre-MOT check / general inspection');
       }
@@ -118,15 +148,17 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
       setIssueItems(issues);
 
       // Set default urgency
-      if (report.daysUntilMotExpiry !== undefined && report.daysUntilMotExpiry <= 30) {
+      const daysUntilMotExpiry = daysUntil(report.mot.expiry_date);
+      if (daysUntilMotExpiry !== undefined && daysUntilMotExpiry <= 30) {
         setUrgency('this_week');
-      } else if (failureRisk > 0.5) {
+      } else if (risk.value > 50) {
         setUrgency('this_week');
       } else {
         setUrgency('exploring');
       }
     }
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Auto-focus email input when modal opens
   useEffect(() => {
@@ -188,6 +220,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
     setError(null);
 
     try {
+      const mileageValue = report.mileage.effective_value;
       const lead: GarageLeadSubmission = {
         email: email.toLowerCase().trim(),
         postcode: postcode.toUpperCase().trim(),
@@ -198,17 +231,24 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
         urgency,
         consent_given: true,
         vehicle: {
-          make: selection.make,
-          model: selection.model,
-          year: selection.year,
-          mileage: selection.mileage
+          make: report.vehicle.make,
+          model: report.vehicle.model,
+          year: report.vehicle.year,
+          // mileage: included only when a real value is known -- a null
+          // effective_value (mileage.source === 'missing') must never become
+          // a fabricated 0 or an omitted-but-still-numeric field.
+          ...(mileageValue !== null ? { mileage: mileageValue } : {}),
+          mileage_source: report.mileage.source,
         },
         risk_data: {
-          failure_risk: failureRisk,
-          reliability_score: report.reliabilityScore,
-          top_risks: topRisks.map(r => r.component.toLowerCase())
+          failure_risk: report.risk.failure_risk,
+          match_scope: report.evidence.match_scope,
+          top_risks: topRisks.map(item => item.key),
         },
         experiment_variant: getAllVariants() || undefined,
+        // NOTE: no registration field -- backend LeadSubmission (main.py) has
+        // none. Known product gap, not filled in here; see the parent
+        // report's flags for the orchestrator.
       };
 
       await submitGarageLead(lead);
@@ -260,41 +300,47 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
             <div>
               <p className="text-sm text-slate-600">Your vehicle</p>
               <p className="font-semibold text-slate-900">
-                {selection.year} {selection.make} {selection.model}
+                {report.vehicle.year ? `${report.vehicle.year} ` : ''}{report.vehicle.make} {report.vehicle.model}
               </p>
             </div>
           </div>
 
           {/* Risk Summary */}
-          {hasRisks ? (
+          {!report.components.available ? (
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-600 mb-2">Areas of concern</p>
+              <p className="text-sm text-slate-600">
+                No component breakdown is available for this report.
+              </p>
+            </div>
+          ) : hasRisks ? (
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-slate-600 mb-2">Comparison patterns, not diagnosed faults</p>
               <div className="space-y-2">
-                {topRisks.map((fault, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                {topRisks.map((item) => (
+                  <div key={item.key} className="flex items-center gap-2">
                     <AlertTriangle className={`w-4 h-4 ${
-                      fault.riskLevel === 'High' ? 'text-red-500' : 'text-yellow-500'
+                      item.risk >= HIGH_RISK_THRESHOLD ? 'text-red-500' : 'text-yellow-500'
                     }`} aria-hidden="true" />
-                    <span className="text-sm text-slate-700">{fault.component}</span>
+                    <span className="text-sm text-slate-700">{item.label}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      fault.riskLevel === 'High'
+                      item.risk >= HIGH_RISK_THRESHOLD
                         ? 'bg-red-100 text-red-700'
                         : 'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {fault.riskLevel} Risk
+                      {Math.round(item.risk * 100)}%
                     </span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="bg-green-50 rounded-lg p-4 mb-6">
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-green-600" aria-hidden="true" />
-                <p className="text-sm text-green-700 font-medium">Your car looks healthy!</p>
+                <Heart className="w-4 h-4 text-slate-600" aria-hidden="true" />
+                <p className="text-sm text-slate-700 font-medium">No component pattern is available</p>
               </div>
-              <p className="text-xs text-green-600 mt-1">
-                No major concerns found. A check-up can help keep it that way.
+              <p className="text-xs text-slate-600 mt-1">
+                This does not confirm the condition of your car; a physical inspection can.
               </p>
             </div>
           )}
@@ -364,7 +410,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
                 icon={<Phone className="w-3.5 h-3.5 text-slate-500" />}
               />
 
-              {/* Issue Bullets from faults */}
+              {/* Issue Bullets from top risks */}
               <div>
                 <p className="text-sm font-medium text-slate-800 mb-2">We'll tell the garage about:</p>
                 <div className="space-y-2">
@@ -523,9 +569,9 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
               disabled={!isFormValid}
               className="mt-2"
             >
-              {ctaText || (failureRisk > 0.5
-                ? 'Reduce your failure risk'
-                : failureRisk > 0.3
+              {ctaText || (risk.value > 50
+                ? 'Request a pre-MOT inspection'
+                : risk.value > 30
                 ? 'Book a pre-MOT check'
                 : 'Find Garages Near Me'
               )}

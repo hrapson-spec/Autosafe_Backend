@@ -79,7 +79,7 @@ def load_model() -> bool:
         # Load Platt calibrator (pickle-free: sigmoid constants from JSON).
         # The legacy platt_calibrator.pkl is kept on disk for provenance only —
         # it was pickled under scikit-learn 1.8.0 and raises at predict time on
-        # the sklearn <=1.6 that python:3.9 production can install, which made
+        # the sklearn <=1.6 that the former python:3.9 production image could install, which made
         # the calibrator silently inert (audit P0 gf2b). The JSON artifact is
         # REQUIRED: failing to load it fails load_model() loudly rather than
         # silently serving raw probabilities.
@@ -134,7 +134,7 @@ def load_model() -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Failed to load V55 model: {e}")
+        logger.error("Failed to load V55 model (%s)", type(e).__name__)
         return False
 
 
@@ -252,7 +252,10 @@ def predict_risk(features: Dict[str, Any]) -> Dict[str, Any]:
                 logger.warning("Non-finite calibrated prob, using raw probability")
                 calibrated_prob = raw_prob
         except Exception as e:
-            logger.warning(f"Calibration failed, using raw probability: {e}")
+            logger.warning(
+                "Calibration failed, using raw probability (%s)",
+                type(e).__name__,
+            )
             calibrated_prob = raw_prob
     else:
         calibrated_prob = raw_prob

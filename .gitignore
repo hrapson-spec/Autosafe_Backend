@@ -8,6 +8,7 @@ __pycache__/
 .vscode/*
 !.vscode/extensions.json
 *.log
+risk_checks_backup.jsonl
 *.suo
 *.ntvs*
 *.njsproj
@@ -42,6 +43,14 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# build outputs — built from source in Docker/CI since RC1 (orchestrator
+# untracks the previously-committed copies)
+/static/index.html
+/static/assets/
+e2e-artifacts/
+playwright-report/
+test-results/
 
 # Logs
 logs

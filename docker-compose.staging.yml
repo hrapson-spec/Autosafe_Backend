@@ -1,0 +1,120 @@
+# Staging stack: the real application Docker image (built from the repo
+# Dockerfile) + a disposable Postgres, wired together the same way the
+# Docker CMD chain expects (build_db.py -> create_leads_table.py ->
+# uvicorn), plus the v2 bootstrap steps (create_risk_checks_table.py,
+# migrations/add_report_contract_columns.py) as one-shot init containers.
+#
+# CI starts the long-lived app stack with `up --build --wait app`, then runs
+# the one-shot acceptance service with `run --rm --build --no-deps acceptance`.
+# A runner needs enough disk/CPU to build the ~multi-GB application image
+# (CatBoost, PaddleOCR, OpenCV, etc. are heavy transitive deps -- see
+# requirements.txt).
+#
+# Local low-disk/low-memory machines (e.g. this repo's own dev laptop) do
+# NOT build or run this file: local staging instead runs a small
+# postgres:16-alpine container plus `uvicorn main:app` invoked directly
+# from the RC worktree's .venv, skipping the multi-GB image build entirely.
+# See docs/STAGING.md "Run locally" for that recipe, and "Run in CI" for
+# how this file is meant to be invoked once the orchestrator wires up the
+# CI job. Locally this file is validated with `docker compose -f
+# docker-compose.staging.yml config` only (schema/interpolation check) --
+# never `up` -- for exactly that disk/CPU reason.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: staging_only_pw
+      POSTGRES_DB: postgres
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot table/column bootstrap, run to completion before the app
+  # starts. Mirrors docs/STAGING.md's manual sequence exactly so the two
+  # paths (CI compose vs. local uvicorn) exercise identical migration code.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    command: >
+      sh -c "
+        python3 create_risk_checks_table.py &&
+        python3 create_leads_table.py &&
+        python3 create_garages_table.py &&
+        python3 migrations/add_report_contract_columns.py
+      "
+    environment:
+      DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    ports:
+      - "8100:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
+      PORT: "8000"
+      BASE_URL: http://127.0.0.1:8100
+      # >= 32 chars, staging-only value -- see docs/STAGING.md. Real
+      # secret management (Railway env / CI secrets) applies outside
+      # this file; this default only exists so the stack is runnable
+      # with zero extra configuration.
+      VRM_HMAC_KEY: ${VRM_HMAC_KEY:-staging_only_hmac_key_min_32_chars_ok}
+      CORS_ORIGINS: "*"
+      # DVSA_* and ADMIN_API_KEY deliberately UNSET: staging runs in demo
+      # mode (vehicle_data_source=demo) and without admin endpoints, per
+      # docs/STAGING.md invariants. Do not add them here.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 10s
+      start_period: 15s
+      retries: 5
+
+  # Runs scripts/staging_acceptance.py against `app` and exits non-zero on
+  # any failed check -- CI gates on `docker compose run`'s exit code after
+  # the long-lived app stack is healthy.
+  acceptance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    command: >
+      sh -c "
+        python3 scripts/seed_staging_data.py &&
+        python3 scripts/staging_acceptance.py --base-url http://app:8000 --expected-share-base-url http://127.0.0.1:8100 --expected-backend-sha ${GIT_SHA:-unknown} &&
+        python3 scripts/retention_sweep.py --months 1 &&
+        python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/lead_retention_sweep.py --months 1 &&
+        python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50 &&
+        python3 scripts/lead_retention_sweep.py --months 1 --execute --batch 50
+      "
+    environment:
+      DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
+      BASE_URL: http://app:8000
+      GIT_SHA: ${GIT_SHA:-unknown}
+      VRM_HMAC_KEY: ${VRM_HMAC_KEY:-staging_only_hmac_key_min_32_chars_ok}
+    depends_on:
+      app:
+        condition: service_healthy

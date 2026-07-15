@@ -161,7 +161,7 @@ def calculate_expected_repair_cost(risk_data: Dict) -> Optional[Dict]:
     
     Range calculation:
     - fail_mid = sum of (risk_i × typical_cost_i) / overall_fail_probability  
-    - fail_min = max(0.6 × fail_mid, £150)  # Floor to avoid absurdly low values
+    - fail_min = min(fail_mid, max(0.6 × fail_mid, £150))
     - fail_max = 1.7 × fail_mid  # Fat range to cover multi-part failures
     
     Args:
@@ -209,8 +209,13 @@ def calculate_expected_repair_cost(risk_data: Dict) -> Optional[Dict]:
     MIN_MULTIPLIER = 0.6
     MAX_MULTIPLIER = 1.7
     
-    fail_min = max(MIN_MULTIPLIER * fail_mid, FLOOR)
-    fail_max = MAX_MULTIPLIER * fail_mid
+    # The legacy floor must never push the lower bound above the midpoint
+    # (which happened for low-cost evidence and produced ranges such as
+    # £150-£170 around a £100 midpoint). Keep the floor where possible, but
+    # clamp it to the actual conditional midpoint; likewise ensure the upper
+    # bound can never fall below the midpoint.
+    fail_min = min(fail_mid, max(MIN_MULTIPLIER * fail_mid, FLOOR))
+    fail_max = max(fail_mid, MAX_MULTIPLIER * fail_mid)
     
     # Round to sensible values
     fail_min = round(fail_min / 10) * 10  # Round to nearest £10

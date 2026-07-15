@@ -29,7 +29,7 @@ def main():
         CREATE TABLE IF NOT EXISTS leads (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             email VARCHAR(255) NOT NULL,
-            postcode VARCHAR(10) NOT NULL,
+            postcode VARCHAR(10),
             name VARCHAR(255),
             phone VARCHAR(50),
             lead_type VARCHAR(50) NOT NULL,
@@ -37,7 +37,9 @@ def main():
             vehicle_model VARCHAR(100),
             vehicle_year INTEGER,
             vehicle_mileage INTEGER,
+            vehicle_mileage_source VARCHAR(20),
             failure_risk REAL,
+            comparison_scope VARCHAR(20),
             reliability_score INTEGER,
             top_risks JSONB,
             description TEXT,
@@ -83,6 +85,12 @@ def main():
             END IF;
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='mot_expiry_date') THEN
                 ALTER TABLE leads ADD COLUMN mot_expiry_date DATE;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='vehicle_mileage_source') THEN
+                ALTER TABLE leads ADD COLUMN vehicle_mileage_source VARCHAR(20);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='leads' AND column_name='comparison_scope') THEN
+                ALTER TABLE leads ADD COLUMN comparison_scope VARCHAR(20);
             END IF;
         END $$;
     """)

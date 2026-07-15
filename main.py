@@ -1,9 +1,8 @@
-"""
-AutoSafe API - MOT Risk Prediction (V55)
-=========================================
+"""AutoSafe API.
 
-Uses V55 CatBoost model with DVSA MOT History API for real-time predictions.
-Falls back to SQLite lookup for vehicles without DVSA history.
+The release-candidate v2 report path serves recorded DVSA vehicle/MOT details
+and explicitly scoped historical comparison evidence. Legacy prediction
+endpoints remain isolated for compatibility and are not used by the web app.
 """
 # Load environment variables FIRST (before other imports read them)
 from dotenv import load_dotenv
@@ -15,17 +14,33 @@ from starlette.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
+from urllib.parse import urlencode
+import asyncio
 import os
+import re
 import time
 import secrets
 
 # Import database module for fallback
 import database as db
-from utils import get_age_band, get_mileage_band
+from utils import get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
 from regional_defaults import validate_postcode, get_corrosion_index
+from report_contract import (
+    CohortMatchLevel,
+    ConfidenceLevel,
+    DATASET_TOTAL_FAILURES,
+    DATASET_TOTAL_TESTS,
+    LookupPredictionSource,
+    OdometerReading,
+    OdometerStatus,
+    OdometerUnavailableReason,
+    POPULATION_DEFAULT_FAILURE_RISK,
+    RiskLookupResponse,
+)
+import report_service
 
 # Lead distribution
 from lead_distributor import distribute_lead
@@ -42,7 +57,6 @@ import model_v55
 
 import logging
 import sys
-import hashlib
 
 # Configure structured logging
 logging.basicConfig(
@@ -122,7 +136,12 @@ async def lifespan(app: FastAPI):
     await db.close_pool()
 
 
-app = FastAPI(title="AutoSafe API", description="MOT Risk Prediction API", lifespan=lifespan)
+app = FastAPI(
+    title="AutoSafe API",
+    description="Recorded MOT details and comparable-vehicle evidence API",
+    lifespan=lifespan,
+    version="2.0.0",
+)
 
 # GZip Compression Middleware - compress responses > 500 bytes
 from starlette.middleware.gzip import GZipMiddleware
@@ -161,6 +180,8 @@ else:
 # Non-WWW to WWW Redirect Middleware
 from starlette.responses import RedirectResponse
 
+_SENSITIVE_QUERY_KEYS = {"reg", "registration", "vrm", "postcode"}
+
 @app.middleware("http")
 async def redirect_non_www(request, call_next):
     """Redirect autosafe.one to www.autosafe.one for SEO canonicalization.
@@ -172,8 +193,13 @@ async def redirect_non_www(request, call_next):
     host = request.headers.get("host", "")
     if host in ("autosafe.one", "autosafe.co.uk", "www.autosafe.co.uk"):
         new_url = f"https://www.autosafe.one{request.url.path}"
-        if request.url.query:
-            new_url += f"?{request.url.query}"
+        safe_query = [
+            (key, value)
+            for key, value in request.query_params.multi_items()
+            if key.lower() not in _SENSITIVE_QUERY_KEYS
+        ]
+        if safe_query:
+            new_url += "?" + urlencode(safe_query)
         return RedirectResponse(url=new_url, status_code=301)
 
     # 301 redirect old /static/ URLs to clean URLs
@@ -201,8 +227,9 @@ async def add_security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # HSTS - enable HTTPS enforcement (1 year)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # CSP - allow self, inline, CDNs, Umami analytics, and Google Ads
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://esm.sh https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://esm.sh https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
+    # CSP - self-host product assets; permit only the disclosed Umami and
+    # consent-gated Google Ads endpoints. Remote font/CDN hosts are excluded.
+    response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
     return response
 
 
@@ -235,7 +262,10 @@ async def global_exception_handler(request, exc):
     """Catch unhandled exceptions and return sanitized error response."""
     correlation_id = generate_correlation_id()
     # Log only the exception type and correlation ID - NOT the full exception or request data
-    logger.error(f"error_id={correlation_id} path={request.url.path} exception_type={type(exc).__name__}", exc_info=exc)
+    logger.error(
+        f"error_id={correlation_id} path={safe_log_path(request.url.path)} "
+        f"exception_type={type(exc).__name__}",
+    )
     return JSONResponse(
         status_code=500,
         content={
@@ -255,7 +285,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 MIN_TESTS_FOR_UI = int(os.environ.get("MIN_TESTS_FOR_UI", "100"))
 
 # Rate Limiting Setup
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
@@ -292,12 +322,17 @@ def get_real_client_ip(request: Request) -> str:
 
 limiter = Limiter(key_func=get_real_client_ip)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# v2 report API (report_routes.py owns all v2-aware logic; main.py's edit
+# surface for the v2 release is limited to this one import, the
+# register_report_routes(...) call below, this handler swap, the
+# GET /api/version route, and the FastAPI(version=...) kwarg above).
+from report_routes import register_report_routes, rate_limit_exceeded_dispatcher, build_version_info
 
-def hash_vrm(vrm: str) -> str:
-    """Hash VRM for logging to protect privacy (P1-10 fix)."""
-    return hashlib.sha256(vrm.encode()).hexdigest()[:8]
+# Dispatches to the v2 ErrorEnvelope shape for /api/v2/* and to slowapi's
+# original _rate_limit_exceeded_handler (byte-identical legacy shape) for
+# every other route -- see report_routes.rate_limit_exceeded_dispatcher.
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_dispatcher)
 
 
 # Dynamic year validation - current year + 1 (P2-1 fix)
@@ -368,6 +403,17 @@ async def health_check(request: Request):
     return response
 
 
+@app.get("/api/version")
+async def get_version():
+    """Build/version identifiers for release verification (backend/frontend
+    SHA, frontend bundle hash, build timestamp, contract/app version, started_at).
+    No rate limit: cheap, near-static data safe for frequent polling by
+    release/monitoring tooling. Payload assembly lives in report_routes.py
+    (build_version_info) -- see this file's v2-import comment near the
+    Limiter setup for why."""
+    return build_version_info(app)
+
+
 @app.get("/ready")
 async def readiness_check():
     """
@@ -432,7 +478,7 @@ def _init_sqlite_pool():
                 conn.execute("SELECT 1 FROM risks LIMIT 1")
                 _sqlite_pool.put(conn)
             except sqlite3.Error as e:
-                logger.error(f"Failed to create SQLite connection: {e}")
+                logger.error("Failed to create SQLite connection (%s)", type(e).__name__)
 
         logger.info(f"SQLite connection pool initialized with {_sqlite_pool.qsize()} connections")
 
@@ -467,7 +513,7 @@ def get_sqlite_connection():
         logger.warning("SQLite connection pool exhausted, timeout waiting for connection")
         yield None
     except Exception as e:
-        logger.error(f"Error getting SQLite connection: {e}")
+        logger.error("Error getting SQLite connection (%s)", type(e).__name__)
         yield None
     finally:
         if conn is not None:
@@ -645,189 +691,169 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
     return []  # No demo models for other makes
 
 
-@app.get("/api/risk")
+# ---------------------------------------------------------------------------
+# /api/risk lookup analytics (R1-T3): dark-by-default, fire-and-forget.
+#
+# LOOKUP_ANALYTICS_ENABLED is read fresh on every call (not cached at
+# import time) so a runtime env change takes effect without a restart, and
+# so tests can flip it per-test via monkeypatch.setenv without reloading
+# this module. Absent/unset means OFF, matching a fresh deployment -- see
+# tests/test_api_lookup_v2.py's `_analytics_dark` autouse fixture.
+# ---------------------------------------------------------------------------
+
+_TRACKING_VRN_PATTERN = re.compile(r'^[A-Z0-9]{2,8}$')
+
+
+def _normalize_tracking_registration(raw: str) -> str:
+    """Strip all whitespace, upper-case, and hard-validate a registration
+    supplied to /api/risk purely for analytics tracking (this route never
+    resolves DVSA history, so the value is never used as a vehicle lookup
+    key). Mirrors report_routes._normalize_vrn's regex and normalization
+    exactly so the two routes reject/accept the same strings, without
+    importing a private name across the module boundary."""
+    normalized = re.sub(r'\s+', '', raw).upper()
+    if not _TRACKING_VRN_PATTERN.match(normalized):
+        raise HTTPException(status_code=400, detail="Invalid registration format")
+    return normalized
+
+
+def _normalize_tracking_postcode(raw: str) -> Optional[str]:
+    """Best-effort postcode normalization for analytics only -- never
+    rejects (postcode is optional and non-gating on this route), mirroring
+    get_risk_v55's existing inline validate_postcode fallback pattern."""
+    if not raw or not raw.strip():
+        return None
+    result = validate_postcode(raw)
+    if result.get('valid'):
+        return result.get('normalized', raw.strip().upper())
+    return raw.strip().upper()
+
+
+# Strong references to in-flight fire-and-forget analytics tasks: asyncio
+# gives no other guarantee that a task survives to completion once its
+# creator has moved on (a task with no referent can be garbage-collected
+# mid-run). Each task removes itself on completion, so this set's
+# emptiness also doubles as a test hook
+# (tests/test_api_lookup_v2.py's _drain_analytics_tasks).
+_LOOKUP_ANALYTICS_TASKS: set = set()
+
+
+def _schedule_lookup_analytics(coro) -> None:
+    task = asyncio.create_task(coro)
+    _LOOKUP_ANALYTICS_TASKS.add(task)
+    task.add_done_callback(_LOOKUP_ANALYTICS_TASKS.discard)
+
+
+async def _log_lookup_risk_check(
+    *,
+    registration: Optional[str],
+    postcode: Optional[str],
+    make: str,
+    model: str,
+    year: int,
+    response: RiskLookupResponse,
+    referrer: Optional[str],
+) -> None:
+    """Fire-and-forget analytics for a /api/risk lookup. Ships DARK, and a
+    logging failure here must never affect the response -- this coroutine
+    only ever runs after the response has already been built (and, in
+    practice, after it has been returned to the client).
+
+    (a) dark by default -- LOOKUP_ANALYTICS_ENABLED is read per-call, not
+        cached, so an unset/absent flag (a fresh deployment) logs nothing.
+    (b) skipped with no tracking identifier at all -- an anonymous lookup
+        has no identifier to key analytics by.
+    (c) the WHOLE body below is guarded, not just the db call -- a
+        payload-build exception (e.g. a future field access that raises)
+        must never surface as an unretrieved fire-and-forget-task
+        traceback (this coroutine is scheduled via
+        _schedule_lookup_analytics/asyncio.create_task, so nothing else
+        ever observes or awaits its exception).
+    """
+    if os.environ.get("LOOKUP_ANALYTICS_ENABLED") != "1":
+        return
+    if not registration and not postcode:
+        return
+
+    try:
+        payload = {
+            'registration': registration,
+            'postcode': postcode,
+            'vehicle_make': make,
+            'vehicle_model': model,
+            'vehicle_year': year,
+            'mileage': response.mileage,
+            'failure_risk': response.failure_risk,
+            'confidence_level': response.confidence_level,
+            'risk_components': {
+                'brakes': response.risk_brakes,
+                'suspension': response.risk_suspension,
+                'tyres': response.risk_tyres,
+                'steering': response.risk_steering,
+                'visibility': response.risk_visibility,
+                'lamps': response.risk_lamps,
+                'body': response.risk_body,
+            },
+            'repair_cost_estimate': response.repair_cost_estimate,
+            'model_version': 'lookup_v2',
+            'prediction_source': response.prediction_source.value,
+            'is_dvsa_data': False,
+            'referrer': referrer,
+        }
+        await db.save_risk_check(payload)
+    except Exception as e:
+        vrm_hash = hash_vrm(registration) if registration else 'none'
+        logger.warning("Failed to log lookup risk check hash_vrm=%s (%s)", vrm_hash, type(e).__name__)
+
+
+@app.get("/api/risk", response_model=RiskLookupResponse)
 @limiter.limit("20/minute")
 async def get_risk(
     request: Request,
     make: str = Query(..., min_length=1, max_length=50, description="Vehicle make (e.g., FORD)"),
     model: str = Query(..., min_length=1, max_length=50, description="Vehicle model (e.g., FIESTA)"),
-    year: int = Query(..., ge=1990, description="Year of manufacture")
-):
+    year: int = Query(..., ge=1990, description="Year of manufacture"),
+    mileage: Optional[int] = Query(None, ge=0, le=500000, description="Current vehicle mileage"),
+    registration: Optional[str] = Query(None, max_length=12, description="Vehicle registration (analytics tracking only)"),
+    postcode: str = Query("", max_length=10, description="UK postcode (analytics tracking only)"),
+) -> RiskLookupResponse:
     """
-    Calculate MOT failure risk using lookup table.
+    Honest MOT failure risk lookup over the v2 Postgres-then-SQLite
+    evidence ladder (report_service.build_lookup): a provenance-carrying
+    population comparison, never a fabricated rate or an estimated
+    mileage.
 
-    Interim solution using pre-computed population averages by make/model/age.
-    Returns confidence level based on sample size in the lookup data.
+    registration/postcode are accepted for analytics tracking only, dark
+    by default (see LOOKUP_ANALYTICS_ENABLED) -- this route never resolves
+    DVSA history, and mileage is never treated as an observed reading.
     """
-    # P2-1 fix: Dynamic year validation
+    # P2-1 fix: Dynamic year validation (unchanged from the legacy handler).
     max_year = get_max_year()
     if year > max_year:
         raise HTTPException(status_code=422, detail=f"Year must be <= {max_year}")
-    # Normalize inputs
+
     make_upper = make.strip().upper()
     model_upper = model.strip().upper()
-    model_id = f"{make_upper} {model_upper}"
 
-    # Calculate age band from year
-    age = datetime.now().year - year
-    age_band = get_age_band(age)
+    normalized_registration = (
+        _normalize_tracking_registration(registration) if registration is not None else None
+    )
+    normalized_postcode = _normalize_tracking_postcode(postcode)
+    referrer = safe_referrer(request.headers.get("referer"))
 
-    # Default response (population average)
-    default_response = {
-        "vehicle": model_id,
-        "year": year,
-        "mileage": None,
-        "last_mot_date": None,
-        "last_mot_result": None,
-        "failure_risk": 0.28,  # UK population average
-        "confidence_level": "Low",
-        "risk_brakes": 0.05,
-        "risk_suspension": 0.04,
-        "risk_tyres": 0.03,
-        "risk_steering": 0.02,
-        "risk_visibility": 0.02,
-        "risk_lamps": 0.03,
-        "risk_body": 0.02,
-        "repair_cost_estimate": {"expected": "£250", "range_low": 100, "range_high": 500},
-    }
+    response = await report_service.build_lookup(make_upper, model_upper, year, mileage, get_sqlite_connection)
 
-    # Try PostgreSQL first
-    if DATABASE_URL:
-        # Estimate mileage based on age (UK average ~8000 miles/year)
-        # This allows us to use the more precise PostgreSQL lookup
-        est_mileage = age * 8000
-        mileage_band = get_mileage_band(est_mileage)
+    _schedule_lookup_analytics(_log_lookup_risk_check(
+        registration=normalized_registration,
+        postcode=normalized_postcode,
+        make=make_upper,
+        model=model_upper,
+        year=year,
+        response=response,
+        referrer=referrer,
+    ))
 
-        result = await db.get_risk(model_id, age_band, mileage_band)
-        if result and "error" not in result:
-             # Formulate response
-             # Add confidence intervals
-             result = add_confidence_intervals(result)
-             result = add_repair_cost_estimate(result)
-             
-             # Format repair cost
-             repair_cost = result.get('Repair_Cost_Estimate', {})
-             if isinstance(repair_cost, dict):
-                 expected = repair_cost.get('expected', 250)
-                 repair_cost_formatted = {
-                     "expected": f"£{expected}",
-                     "range_low": repair_cost.get('range_low', 100),
-                     "range_high": repair_cost.get('range_high', 500),
-                 }
-             else:
-                 repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
-
-             return {
-                 "vehicle": model_id,
-                 "year": year,
-                 "mileage": None,
-                 "last_mot_date": None,
-                 "last_mot_result": None,
-                 "failure_risk": result.get('Failure_Risk', 0.28),
-                 "confidence_level": result.get('Confidence_Level', "Low"),
-                 "risk_brakes": result.get('Risk_Brakes', 0.05),
-                 "risk_suspension": result.get('Risk_Suspension', 0.04),
-                 "risk_tyres": result.get('Risk_Tyres', 0.03),
-                 "risk_steering": result.get('Risk_Steering', 0.02),
-                 "risk_visibility": result.get('Risk_Visibility', 0.02),
-                 "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                 "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                 "repair_cost_estimate": repair_cost_formatted,
-             }
-
-    # Try SQLite lookup
-    with get_sqlite_connection() as conn:
-        if not conn:
-            logger.warning("No database connection available, returning population average")
-            return default_response
-
-        try:
-            # P0-5 fix: Use exact match first, then match variants with space separator
-            # This prevents "FORD F" from matching "FORD FOCUS"
-            base_model_id = f"{make_upper} {model_upper}"
-
-            # Try exact match first
-            query = """
-                SELECT * FROM risks
-                WHERE model_id = ? AND age_band = ?
-                ORDER BY Total_Tests DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (base_model_id, age_band)).fetchone()
-
-            # If not found, try matching model variants (e.g., "FORD FIESTA" matches "FORD FIESTA ZETEC")
-            if not row:
-                query = """
-                    SELECT * FROM risks
-                    WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
-                    ORDER BY Total_Tests DESC
-                    LIMIT 1
-                """
-                row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
-
-            # If still not found, try just the make (for aggregated make-level data)
-            if not row:
-                query = """
-                    SELECT * FROM risks
-                    WHERE model_id = ? AND age_band = ?
-                    ORDER BY Total_Tests DESC
-                    LIMIT 1
-                """
-                row = conn.execute(query, (make_upper, age_band)).fetchone()
-
-            if not row:
-                logger.info(f"No lookup data for {model_id} age_band={age_band}, returning population average")
-                return default_response
-
-            result = dict(row)
-
-            # Calculate confidence level based on sample size
-            total_tests = result.get('Total_Tests', 0)
-            if total_tests >= 1000:
-                confidence_level = "High"
-            elif total_tests >= 100:
-                confidence_level = "Medium"
-            else:
-                confidence_level = "Low"
-
-            # Add confidence intervals and repair cost estimate
-            result = add_confidence_intervals(result)
-            result = add_repair_cost_estimate(result)
-
-            # Format repair cost for display
-            repair_cost = result.get('Repair_Cost_Estimate', {})
-            if isinstance(repair_cost, dict):
-                expected = repair_cost.get('expected', 250)
-                repair_cost_formatted = {
-                    "expected": f"£{expected}",
-                    "range_low": repair_cost.get('range_low', 100),
-                    "range_high": repair_cost.get('range_high', 500),
-                }
-            else:
-                repair_cost_formatted = {"expected": "£250", "range_low": 100, "range_high": 500}
-
-            return {
-                "vehicle": model_id,
-                "year": year,
-                "mileage": None,
-                "last_mot_date": None,
-                "last_mot_result": None,
-                "failure_risk": result.get('Failure_Risk', 0.28),
-                "confidence_level": confidence_level,
-                "risk_brakes": result.get('Risk_Brakes', 0.05),
-                "risk_suspension": result.get('Risk_Suspension', 0.04),
-                "risk_tyres": result.get('Risk_Tyres', 0.03),
-                "risk_steering": result.get('Risk_Steering', 0.02),
-                "risk_visibility": result.get('Risk_Visibility', 0.02),
-                # Fix: Use correct column names (with "And", without "Exhaust")
-                "risk_lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                "risk_body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                "repair_cost_estimate": repair_cost_formatted,
-            }
-
-        except Exception as e:
-            logger.error(f"Database error during lookup: {e}")
-            return default_response
+    return response
 
 
 @app.get("/api/risk/v55")
@@ -853,8 +879,8 @@ async def get_risk_v55(
     # before checking service availability (503)
     try:
         vrm = dvsa_client.normalize_vrm(registration)
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except VRMValidationError:
+        raise HTTPException(status_code=400, detail="Invalid registration format")
 
     # Kill-switch check - allows emergency disabling of predictions
     if not PREDICTIONS_ENABLED:
@@ -889,7 +915,7 @@ async def get_risk_v55(
         utm_data['utm_medium'] = utm_medium
     if utm_campaign:
         utm_data['utm_campaign'] = utm_campaign
-    referrer = request.headers.get("referer", "")
+    referrer = safe_referrer(request.headers.get("referer"))
     if referrer:
         utm_data['referrer'] = referrer
 
@@ -924,14 +950,18 @@ async def get_risk_v55(
         )
 
     except DVSAAPIError as e:
-        logger.warning(f"DVSA API error for {vrm_hash}: {e}, falling back to lookup")
+        logger.warning(
+            "DVSA API error for %s (%s), falling back to lookup",
+            vrm_hash,
+            type(e).__name__,
+        )
         return await _fallback_prediction(
             registration=vrm,
             make="",
             model="",
             year=None,
             postcode=validated_postcode,
-            note=f"DVSA API unavailable: {str(e)}",
+            note="DVSA API temporarily unavailable",
             utm_data=utm_data,
         )
 
@@ -940,7 +970,7 @@ async def get_risk_v55(
         features = engineer_features_with_stats(history, validated_postcode)
         logger.info(f"Engineered {len(features)} features for {vrm_hash}")
     except Exception as e:
-        logger.error(f"Feature engineering failed for {vrm_hash}: {e}")
+        logger.error("Feature engineering failed for %s (%s)", vrm_hash, type(e).__name__)
         # Fall back to lookup with vehicle info from DVSA
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
@@ -949,14 +979,14 @@ async def get_risk_v55(
             model=history.model,
             year=year,
             postcode=validated_postcode,
-            note=f"Feature engineering error: {str(e)}"
+            note="Feature engineering temporarily unavailable"
         )
 
     # Get V55 model prediction
     try:
         prediction = model_v55.predict_risk(features)
     except Exception as e:
-        logger.error(f"V55 prediction failed for {vrm_hash}: {e}")
+        logger.error("V55 prediction failed for %s (%s)", vrm_hash, type(e).__name__)
         year = history.manufacture_date.year if history.manufacture_date else None
         return await _fallback_prediction(
             registration=vrm,
@@ -964,13 +994,22 @@ async def get_risk_v55(
             model=history.model,
             year=year,
             postcode=validated_postcode,
-            note=f"Model prediction error: {str(e)}"
+            note="Model calculation temporarily unavailable"
         )
 
     # Extract vehicle info
     year = history.manufacture_date.year if history.manufacture_date else None
     last_test = history.mot_tests[0] if history.mot_tests else None
-    display_mileage, mileage_anomaly = _get_display_mileage(history)
+    # R1-T4: display mileage now comes from the same shared odometer parser
+    # Tasks 1/2 built (report_service.resolve_odometer) instead of the
+    # deleted legacy helper. An anomalous reading (rollback / implausible
+    # increase) is honestly None -- never the previous reading that legacy
+    # helper used to substitute in its place.
+    odometer = report_service.resolve_odometer(history)
+    display_mileage = odometer.value_miles
+    mileage_anomaly = odometer.unavailable_reason in (
+        OdometerUnavailableReason.ROLLBACK, OdometerUnavailableReason.IMPLAUSIBLE_INCREASE
+    )
 
     # Calculate repair cost estimate
     repair_cost = _estimate_repair_cost(
@@ -1021,9 +1060,43 @@ async def get_risk_v55(
             **utm_data,
         })
     except Exception as e:
-        logger.warning(f"Failed to log risk check: {e}")
+        logger.warning("Failed to log risk check (%s)", type(e).__name__)
 
     return response
+
+
+def _population_global_fallback(vehicle: Optional[Dict], year: Optional[int], note: str) -> Dict:
+    """The honest population_global degrade shared by _fallback_prediction's
+    no-identity branch: the checked-in dataset-wide reference rate, Very Low
+    confidence, no fabricated components or repair estimate. Mirrors
+    report_service.build_lookup's own population_global branch/constants
+    (POPULATION_DEFAULT_FAILURE_RISK, DATASET_TOTAL_TESTS/FAILURES) rather
+    than re-deriving them, and its field names (prediction_source/cohort)
+    for the additive truth fields."""
+    return {
+        "vehicle": vehicle,
+        "year": year,
+        "mileage": None,
+        "last_mot_date": None,
+        "last_mot_result": None,
+        "failure_risk": POPULATION_DEFAULT_FAILURE_RISK,
+        "confidence_level": ConfidenceLevel.VERY_LOW.value,
+        "risk_components": {
+            "brakes": None, "suspension": None, "tyres": None, "steering": None,
+            "visibility": None, "lamps": None, "body": None,
+        },
+        "repair_cost_estimate": None,
+        "model_version": "lookup",
+        "note": note,
+        "prediction_source": LookupPredictionSource.POPULATION_GLOBAL.value,
+        "cohort": {
+            "match_level": CohortMatchLevel.DATASET.value,
+            "age_band": None,
+            "mileage_band": None,
+            "total_tests": DATASET_TOTAL_TESTS,
+            "total_failures": DATASET_TOTAL_FAILURES,
+        },
+    }
 
 
 async def _fallback_prediction(
@@ -1036,150 +1109,78 @@ async def _fallback_prediction(
     utm_data: dict = None,
 ) -> Dict:
     """
-    Fallback prediction using SQLite lookup when DVSA data unavailable.
-    Returns population average if vehicle data insufficient.
+    Fallback prediction for GET /api/risk/v55 when live DVSA history isn't
+    usable. Re-implemented (R1-T4) over the exact v2 evidence-ladder
+    machinery Task 3 built (report_service.build_lookup) instead of the
+    legacy hardcoded-default / SQLite-ORDER-BY-LIMIT-1 path it replaces --
+    no fabricated failure_risk, component breakdown, or repair estimate
+    anywhere on this path; see report_contract.py's module docstring for
+    the shared no-fabrication contract this mirrors.
+
+    - No make/model -> the honest population_global degrade
+      (_population_global_fallback): there is no model_id at all to run an
+      evidence-ladder query with, so this never touches Postgres/SQLite.
+    - Make + model known (year may be None) -> report_service.build_lookup's
+      Postgres-then-SQLite evidence ladder. mileage is always None here --
+      this function has no odometer reading to offer -- so (exactly like
+      /api/risk's own missing-mileage behaviour) the ladder starts at the
+      age rung. A missing year is passed straight through to build_lookup,
+      which resolves it to the 'Unknown' age-band sentinel (the same
+      None-safe pattern build_assessment uses) rather than an assumed age
+      -- the age-dependent rungs simply find no rows and the ladder widens
+      naturally to model_average (real, ladder-reachable evidence:
+      database.py's model_average rung is queried with age_band=None, so it
+      needs no age band at all) or population_default. Real rung
+      totals/provenance carry straight through; components/repair estimate
+      are populated only when the found rung has all 7 components
+      (report_service._build_components_and_repair), null otherwise.
+    - Both stores unreachable -> build_lookup's typed-unavailable shape
+      (rate/components/repair estimate all null), matching /api/risk's
+      (T3) semantics exactly.
+
+    Signature and Dict return shape are unchanged so every existing caller
+    in get_risk_v55 keeps working; only the fabricated numbers behind them
+    are gone.
     """
     utm_data = utm_data or {}
 
-    # If no vehicle data, return population average
-    if not make or not model:
+    if make and model:
+        lookup = await report_service.build_lookup(make, model, year, None, get_sqlite_connection)
         response = {
             "registration": registration,
-            "vehicle": None,
+            "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
             "year": year,
             "mileage": None,
             "last_mot_date": None,
             "last_mot_result": None,
-            "failure_risk": 0.28,  # UK population average
-            "confidence_level": "Low",
+            "failure_risk": lookup.failure_risk,
+            "confidence_level": lookup.confidence_level,
             "risk_components": {
-                "brakes": 0.05,
-                "suspension": 0.04,
-                "tyres": 0.03,
-                "steering": 0.02,
-                "visibility": 0.02,
-                "lamps": 0.03,
-                "body": 0.02,
+                "brakes": lookup.risk_brakes,
+                "suspension": lookup.risk_suspension,
+                "tyres": lookup.risk_tyres,
+                "steering": lookup.risk_steering,
+                "visibility": lookup.risk_visibility,
+                "lamps": lookup.risk_lamps,
+                "body": lookup.risk_body,
             },
-            "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
+            "repair_cost_estimate": lookup.repair_cost_estimate,
             "model_version": "lookup",
-            "note": note or "Vehicle not found - using UK population average",
+            "note": note or lookup.note,
+            "prediction_source": lookup.prediction_source.value,
+            "cohort": lookup.cohort.model_dump(mode='json') if lookup.cohort is not None else None,
         }
-        # Log fallback prediction
-        try:
-            await db.save_risk_check({
-                'registration': registration,
-                'postcode': postcode,
-                'vehicle_make': None,
-                'vehicle_model': None,
-                'vehicle_year': year,
-                'failure_risk': 0.28,
-                'confidence_level': 'Low',
-                'risk_components': response['risk_components'],
-                'repair_cost_estimate': response['repair_cost_estimate'],
-                'model_version': 'lookup',
-                'prediction_source': 'fallback',
-                'is_dvsa_data': False,
-                **utm_data,
-            })
-        except Exception as e:
-            logger.warning(f"Failed to log fallback risk check: {e}")
-        return response
-
-    model_id = f"{make.upper()} {model.upper()}"
-
-    # Calculate age band if year available (P1-3 fix: use get_age_band for consistency)
-    if year:
-        age = datetime.now().year - year
-        age_band = get_age_band(age)
     else:
-        # Default to middle of typical age range (7 years old)
-        age_band = get_age_band(7)
+        vehicle = {"make": make.upper(), "model": model.upper(), "year": year} if (make and model) else None
+        response = {
+            "registration": registration,
+            **_population_global_fallback(
+                vehicle, year, note or report_service.NOTE_POPULATION_DEFAULT
+            ),
+        }
 
-    # P0-5 fix: Use exact match or variant match pattern instead of broad LIKE
-    # Try SQLite fallback with proper connection handling (P2-4 fix)
-    with get_sqlite_connection() as conn:
-        if conn:
-            base_model_id = f"{make.upper()} {model.upper()}"
-            # Try exact match first, then variants
-            query = """
-                SELECT * FROM risks
-                WHERE (model_id = ? OR model_id LIKE ? || ' %') AND age_band = ?
-                ORDER BY Total_Tests DESC
-                LIMIT 1
-            """
-            row = conn.execute(query, (base_model_id, base_model_id, age_band)).fetchone()
-
-            if row:
-                result = dict(row)
-                result = add_confidence_intervals(result)
-                result = add_repair_cost_estimate(result)
-
-                response = {
-                    "registration": registration,
-                    "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
-                    "mileage": None,
-                    "last_mot_date": None,
-                    "last_mot_result": None,
-                    "failure_risk": result.get('Failure_Risk', 0.28),
-                    "confidence_level": "Medium",
-                    "risk_components": {
-                        "brakes": result.get('Risk_Brakes', 0.05),
-                        "suspension": result.get('Risk_Suspension', 0.04),
-                        "tyres": result.get('Risk_Tyres', 0.03),
-                        "steering": result.get('Risk_Steering', 0.02),
-                        "visibility": result.get('Risk_Visibility', 0.02),
-                        "lamps": result.get('Risk_Lamps_Reflectors_And_Electrical_Equipment', 0.03),
-                        "body": result.get('Risk_Body_Chassis_Structure', 0.02),
-                    },
-                    "repair_cost_estimate": result.get('Repair_Cost_Estimate'),
-                    "model_version": "lookup",
-                    "note": note,
-                }
-                # Log lookup prediction
-                try:
-                    await db.save_risk_check({
-                        'registration': registration,
-                        'postcode': postcode,
-                        'vehicle_make': make.upper(),
-                        'vehicle_model': model.upper(),
-                        'vehicle_year': year,
-                        'failure_risk': response['failure_risk'],
-                        'confidence_level': 'Medium',
-                        'risk_components': response['risk_components'],
-                        'repair_cost_estimate': response['repair_cost_estimate'],
-                        'model_version': 'lookup',
-                        'prediction_source': 'lookup',
-                        'is_dvsa_data': False,
-                        **utm_data,
-                    })
-                except Exception as e:
-                    logger.warning(f"Failed to log lookup risk check: {e}")
-                return response
-
-    # Default fallback - population average
-    response = {
-        "registration": registration,
-        "vehicle": {"make": make.upper(), "model": model.upper(), "year": year},
-        "mileage": None,
-        "last_mot_date": None,
-        "last_mot_result": None,
-        "failure_risk": 0.28,  # UK average
-        "confidence_level": "Low",
-        "risk_components": {
-            "brakes": 0.05,
-            "suspension": 0.04,
-            "tyres": 0.03,
-            "steering": 0.02,
-            "visibility": 0.02,
-            "lamps": 0.03,
-            "body": 0.02,
-        },
-        "repair_cost_estimate": {"expected": 250, "range_low": 100, "range_high": 500},
-        "model_version": "lookup",
-        "note": note or "Limited data - using population averages",
-    }
-    # Log default fallback prediction
+    # Log fallback prediction for model training data (fire-and-forget,
+    # mirrors the SUCCESS path's own save_risk_check call below).
     try:
         await db.save_risk_check({
             'registration': registration,
@@ -1187,42 +1188,19 @@ async def _fallback_prediction(
             'vehicle_make': make.upper() if make else None,
             'vehicle_model': model.upper() if model else None,
             'vehicle_year': year,
-            'failure_risk': 0.28,
-            'confidence_level': 'Low',
+            'failure_risk': response['failure_risk'],
+            'confidence_level': response['confidence_level'],
             'risk_components': response['risk_components'],
             'repair_cost_estimate': response['repair_cost_estimate'],
             'model_version': 'lookup',
-            'prediction_source': 'fallback',
+            'prediction_source': response['prediction_source'],
             'is_dvsa_data': False,
             **utm_data,
         })
     except Exception as e:
-        logger.warning(f"Failed to log default fallback risk check: {e}")
+        logger.warning("Failed to log fallback risk check (%s)", type(e).__name__)
+
     return response
-
-
-def _get_display_mileage(history) -> tuple:
-    """Return (mileage, is_anomaly) using plausibility check against prior test."""
-    tests = history.mot_tests
-    if not tests or tests[0].odometer_value is None:
-        return None, False
-
-    latest_mileage = tests[0].odometer_value
-
-    if len(tests) >= 2 and tests[1].odometer_value is not None:
-        prev_mileage = tests[1].odometer_value
-        days_diff = (tests[0].test_date - tests[1].test_date).days
-        mileage_diff = latest_mileage - prev_mileage
-
-        if days_diff > 0:
-            if mileage_diff < 0:
-                return prev_mileage, True  # Flag negative mileage as anomaly
-            if mileage_diff > 0:
-                annualized = (mileage_diff / days_diff) * 365
-                if annualized > 50000:  # Physically implausible
-                    return prev_mileage, True
-
-    return latest_mileage, False
 
 
 def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]) -> Dict:
@@ -1245,8 +1223,11 @@ def _estimate_repair_cost(failure_risk: float, risk_components: Dict[str, float]
     )
 
     # P1-11 fix: Clamp the scaling factor to avoid extreme values
-    # Scale by overall failure probability relative to average
-    avg_fail_rate = 0.28
+    # Scale by overall failure probability relative to average (R1-T4: the
+    # checked-in dataset-wide reference rate, not a hardcoded literal --
+    # same everywhere-verified constant report_service.py's own
+    # population-default branches use, no behavior invention).
+    avg_fail_rate = POPULATION_DEFAULT_FAILURE_RISK
     if failure_risk > 0:
         # Clamp scaling factor between 0.5x and 3x
         scale_factor = max(0.5, min(3.0, failure_risk / avg_fail_rate))
@@ -1294,8 +1275,8 @@ async def get_vehicle(
     dvsa_client = get_dvsa_client()
     try:
         vrm = dvsa_client.normalize_vrm(registration)
-    except VRMValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except VRMValidationError:
+        raise HTTPException(status_code=400, detail="Invalid registration format")
 
     vrm_hash = hash_vrm(vrm)
 
@@ -1318,12 +1299,13 @@ async def get_vehicle(
                     "colour": history.colour,
                 },
                 "mot_expiry": mot_expiry,
-                "source": "dvsa"
+                "source": "dvsa",
+                "odometer": report_service.resolve_odometer(history).model_dump(mode='json')
             }
         except VehicleNotFoundError:
             logger.info(f"Vehicle {vrm_hash} not found in DVSA")
         except DVSAAPIError as e:
-            logger.warning(f"DVSA API error for {vrm_hash}: {e}")
+            logger.warning("DVSA API error for %s (%s)", vrm_hash, type(e).__name__)
     else:
         # Demo mode: return sample data when DVSA not configured
         logger.info(f"DVSA not configured, returning demo data for {vrm_hash}")
@@ -1338,7 +1320,22 @@ async def get_vehicle(
             "registration": vrm,
             "dvla": demo_data,
             "source": "demo",
-            "demo": True
+            "demo": True,
+            # Additive (R1-T2): no history was fetched on this path, so the
+            # odometer is honestly UNAVAILABLE/NO_READING -- never a
+            # fabricated number. All value fields are None; OdometerReading
+            # requires every field explicit (no implicit Optional default),
+            # mirroring report_service.resolve_odometer's own unavailable
+            # construction without depending on that private helper.
+            "odometer": OdometerReading(
+                value_miles=None,
+                recorded_at=None,
+                original_value=None,
+                original_unit=None,
+                source=None,
+                status=OdometerStatus.UNAVAILABLE,
+                unavailable_reason=OdometerUnavailableReason.NO_READING,
+            ).model_dump(mode='json')
         }
 
     # Vehicle not found in DVSA
@@ -1349,7 +1346,7 @@ async def get_vehicle(
 # Lead Capture Endpoints
 # ============================================================================
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
 
@@ -1358,6 +1355,7 @@ class VehicleInfo(BaseModel):
     model: Optional[str] = None
     year: Optional[int] = None
     mileage: Optional[int] = None
+    mileage_source: Optional[str] = None
 
     @field_validator('mileage')
     @classmethod
@@ -1384,9 +1382,26 @@ class VehicleInfo(BaseModel):
             raise ValueError(f'Year cannot be greater than {current_year + 1}')
         return v
 
+    @field_validator('mileage_source')
+    @classmethod
+    def validate_mileage_source(cls, v):
+        if v is None:
+            return v
+        allowed = {'user_entered', 'observed_mot', 'estimated', 'missing'}
+        if v not in allowed:
+            raise ValueError('Invalid mileage_source')
+        return v
+
+
+ALLOWED_MATCH_SCOPES = {
+    'exact_band', 'age_band_only', 'model_average',
+    'population_default', 'unavailable',
+}
+
 
 class RiskData(BaseModel):
     failure_risk: Optional[float] = None
+    match_scope: Optional[str] = None
     reliability_score: Optional[int] = None
     top_risks: Optional[List[str]] = None
 
@@ -1398,6 +1413,13 @@ class RiskData(BaseModel):
             return v
         if v < 0.0 or v > 1.0:
             raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
         return v
 
     @field_validator('reliability_score')
@@ -1545,7 +1567,7 @@ async def submit_lead(
         lead_data['utm_medium'] = utm_medium
     if utm_campaign:
         lead_data['utm_campaign'] = utm_campaign
-    referrer = request.headers.get("referer", "")
+    referrer = safe_referrer(request.headers.get("referer"))
     if referrer:
         lead_data['referrer'] = referrer
 
@@ -1566,7 +1588,13 @@ async def submit_lead(
 
     # Distribute lead to matching garages (async, don't block response)
     distribution_result = await distribute_lead(lead_id)
-    logger.info(f"Lead distribution: {distribution_result}")
+    logger.info(
+        "Lead distribution complete: lead_id=%s success=%s garages_matched=%s emails_sent=%s",
+        lead_id,
+        distribution_result.get("success", False),
+        distribution_result.get("garages_matched", 0),
+        distribution_result.get("emails_sent", 0),
+    )
 
     return {
         "success": True,
@@ -1587,10 +1615,17 @@ else:
 def _verify_admin_api_key(api_key: Optional[str]) -> bool:
     """
     Verify admin API key using constant-time comparison.
+
+    The comparison always runs, even when ADMIN_API_KEY or api_key is
+    missing, so response timing can't reveal whether the admin key is
+    configured at all.
     """
-    if not ADMIN_API_KEY or not api_key:
+    expected = ADMIN_API_KEY or ""
+    provided = api_key or ""
+    result = secrets.compare_digest(provided, expected)
+    if not expected:
         return False
-    return secrets.compare_digest(api_key, ADMIN_API_KEY)
+    return result
 
 
 @app.get("/api/leads")
@@ -1819,7 +1854,7 @@ async def test_dvsa_connection(
         except Exception as e:
             result["oauth_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "OAuth token fetch failed"
             }
     else:
@@ -1851,13 +1886,13 @@ async def test_dvsa_connection(
         except DVSAAPIError as e:
             result["api_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "DVSA API call failed"
             }
         except Exception as e:
             result["api_test"] = {
                 "success": False,
-                "error": str(e),
+                "error_type": type(e).__name__,
                 "message": "Unexpected error during API test"
             }
 
@@ -1993,7 +2028,11 @@ async def export_risk_checks(
                         "mileage": row["mileage"],
                         "last_mot_date": str(row["last_mot_date"]) if row["last_mot_date"] else None,
                         "last_mot_result": row["last_mot_result"],
-                        "failure_risk": float(row["failure_risk"]) if row["failure_risk"] else None,
+                        "failure_risk": (
+                            float(row["failure_risk"])
+                            if row["failure_risk"] is not None
+                            else None
+                        ),
                         "confidence_level": row["confidence_level"],
                         "model_version": row["model_version"],
                         "prediction_source": row["prediction_source"],
@@ -2018,7 +2057,7 @@ async def export_risk_checks(
                     row["mileage"],
                     str(row["last_mot_date"]) if row["last_mot_date"] else "",
                     row["last_mot_result"],
-                    float(row["failure_risk"]) if row["failure_risk"] else "",
+                    float(row["failure_risk"]) if row["failure_risk"] is not None else "",
                     row["confidence_level"], row["model_version"], row["prediction_source"]
                 ])
 
@@ -2029,8 +2068,8 @@ async def export_risk_checks(
             )
 
     except Exception as e:
-        logger.error(f"Export risk checks failed: {type(e).__name__}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Export risk checks failed (%s)", type(e).__name__)
+        raise HTTPException(status_code=500, detail="Export failed")
 
 
 # Debug endpoint for testing risk_checks save (admin-only)
@@ -2081,8 +2120,8 @@ async def test_risk_check(request: Request):
             "count_after": count_after
         }
     except Exception as e:
-        logger.error(f"Test risk check failed: {type(e).__name__}: {e}")
-        return {"error": str(e), "type": type(e).__name__}
+        logger.error("Test risk check failed (%s)", type(e).__name__)
+        return {"error": "Test risk check failed", "type": type(e).__name__}
 
 
 # ============================================================================
@@ -2093,12 +2132,13 @@ class MotReminderSubmission(BaseModel):
     """Pydantic model for MOT reminder signup."""
     email: str
     registration: str
-    postcode: str
+    postcode: Optional[str] = None
     vehicle_make: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_year: Optional[int] = None
     mot_expiry_date: Optional[str] = None
     failure_risk: Optional[float] = None
+    match_scope: Optional[str] = None
     experiment_variant: Optional[str] = None
 
     @field_validator('email')
@@ -2123,7 +2163,9 @@ class MotReminderSubmission(BaseModel):
     @field_validator('postcode')
     @classmethod
     def validate_postcode(cls, v):
-        if not v or len(v.strip()) < 3:
+        if v is None or not v.strip():
+            return None
+        if len(v.strip()) < 3:
             raise ValueError('Postcode must be at least 3 characters')
         return v.upper().strip()
 
@@ -2134,19 +2176,25 @@ class MotReminderSubmission(BaseModel):
             raise ValueError('failure_risk must be between 0 and 1')
         return v
 
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
+        return v
+
 
 class ReportEmailSubmission(BaseModel):
     """Pydantic model for email report request."""
     email: str
     registration: str
-    postcode: str
+    postcode: Optional[str] = None
     vehicle_make: Optional[str] = None
     vehicle_model: Optional[str] = None
     vehicle_year: Optional[int] = None
-    reliability_score: int
-    mot_pass_prediction: int
     failure_risk: float
-    common_faults: List[Dict] = []
+    match_scope: Optional[str] = None
+    common_faults: List[Dict] = Field(default_factory=list)
     repair_cost_min: Optional[int] = None
     repair_cost_max: Optional[int] = None
     mot_expiry_date: Optional[str] = None
@@ -2168,29 +2216,31 @@ class ReportEmailSubmission(BaseModel):
     def validate_registration(cls, v):
         import bleach
         v = bleach.clean(v, tags=[], strip=True).strip().upper()
-        if len(v) > 8:
+        if not v or len(v) > 8:
             raise ValueError('Invalid registration')
         return v
 
     @field_validator('postcode')
     @classmethod
     def validate_postcode(cls, v):
-        if not v or len(v.strip()) < 3:
+        if v is None or not v.strip():
+            return None
+        if len(v.strip()) < 3:
             raise ValueError('Postcode must be at least 3 characters')
         return v.upper().strip()
-
-    @field_validator('reliability_score')
-    @classmethod
-    def validate_reliability_score(cls, v):
-        if v < 0 or v > 100:
-            raise ValueError('reliability_score must be between 0 and 100')
-        return v
 
     @field_validator('failure_risk')
     @classmethod
     def validate_failure_risk(cls, v):
         if v < 0.0 or v > 1.0:
             raise ValueError('failure_risk must be between 0 and 1')
+        return v
+
+    @field_validator('match_scope')
+    @classmethod
+    def validate_match_scope(cls, v):
+        if v is not None and v not in ALLOWED_MATCH_SCOPES:
+            raise ValueError('Invalid match_scope')
         return v
 
 
@@ -2218,6 +2268,7 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
         "vehicle_year": data.vehicle_year,
         "mot_expiry_date": data.mot_expiry_date,
         "failure_risk": data.failure_risk,
+        "match_scope": data.match_scope,
     }
     if data.experiment_variant:
         reminder_data["utm_campaign"] = f"exp:{data.experiment_variant}"
@@ -2234,9 +2285,10 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
                 registration=data.registration,
                 vehicle_make=data.vehicle_make or "Unknown",
                 vehicle_model=data.vehicle_model or "Vehicle",
-                vehicle_year=data.vehicle_year or 0,
+                vehicle_year=data.vehicle_year,
                 mot_expiry_date=data.mot_expiry_date,
                 failure_risk=data.failure_risk,
+                match_scope=data.match_scope,
             )
             await send_email(
                 to_email=data.email,
@@ -2246,7 +2298,7 @@ async def submit_mot_reminder(request: Request, data: MotReminderSubmission):
                 tags={"type": "mot_reminder_confirmation"},
             )
         except Exception as e:
-            logger.error(f"Failed to send MOT reminder confirmation: {e}")
+            logger.error("Failed to send MOT reminder confirmation (%s)", type(e).__name__)
 
     return {
         "success": True,
@@ -2275,7 +2327,7 @@ async def email_report(request: Request, data: ReportEmailSubmission):
         "vehicle_model": data.vehicle_model,
         "vehicle_year": data.vehicle_year,
         "failure_risk": data.failure_risk,
-        "reliability_score": data.reliability_score,
+        "match_scope": data.match_scope,
         "common_faults": [{"component": f.get("component"), "risk_level": f.get("risk_level")} for f in data.common_faults],
     })
 
@@ -2290,10 +2342,9 @@ async def email_report(request: Request, data: ReportEmailSubmission):
                 registration=data.registration,
                 vehicle_make=data.vehicle_make or "Unknown",
                 vehicle_model=data.vehicle_model or "Vehicle",
-                vehicle_year=data.vehicle_year or 0,
-                reliability_score=data.reliability_score,
-                mot_pass_prediction=data.mot_pass_prediction,
+                vehicle_year=data.vehicle_year,
                 failure_risk=data.failure_risk,
+                match_scope=data.match_scope,
                 common_faults=data.common_faults,
                 repair_cost_min=data.repair_cost_min,
                 repair_cost_max=data.repair_cost_max,
@@ -2308,7 +2359,7 @@ async def email_report(request: Request, data: ReportEmailSubmission):
                 tags={"type": "report_email"},
             )
         except Exception as e:
-            logger.error(f"Failed to send report email: {e}")
+            logger.error("Failed to send report email (%s)", type(e).__name__)
 
     return {"success": True}
 
@@ -2329,7 +2380,7 @@ async def get_stats(request: Request):
     result = {
         "total_checks": stats.get("total_checks", 0),
         "checks_this_month": stats.get("checks_this_month", 0),
-        "mot_records": "142M+",
+        "mot_records": f"{DATASET_TOTAL_TESTS // 1_000_000}M+",
     }
     _stats_cache[cache_key] = result
     return result
@@ -2384,6 +2435,11 @@ if os.path.isdir("static"):
 from seo_pages import register_seo_routes
 register_seo_routes(app, get_sqlite_connection)
 
+# Register v2 report API routes (must also be before the SPA catch-all;
+# see the v2-import comment near the Limiter setup for why this import
+# lives up there rather than here).
+register_report_routes(app, limiter, get_sqlite_connection)
+
 # IndexNow protocol for faster search engine indexation
 INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "autosafe-indexnow-key")
 
@@ -2425,8 +2481,8 @@ async def ping_indexnow(request: Request):
             )
         return {"success": True, "status_code": resp.status_code, "urls_submitted": len(url_list)}
     except Exception as e:
-        logger.error(f"IndexNow ping failed: {e}")
-        return {"success": False, "error": str(e)}
+        logger.error("IndexNow ping failed (%s)", type(e).__name__)
+        return {"success": False, "error": "IndexNow request failed"}
 
 
 

@@ -171,7 +171,7 @@ class DVLAClient:
 
         # P1-7 fix: Generate varied demo data based on registration hash
         # This provides different mock vehicles for different registrations
-        logger.info(f"Demo mode: generating mock data for {registration}")
+        logger.info("Demo mode: generating mock vehicle data")
 
         # Use registration as seed for deterministic but varied output
         import hashlib
@@ -232,7 +232,7 @@ class DVLAClient:
             except httpx.TimeoutException:
                 raise DVLAError("DVLA API timeout", status_code=504)
             except httpx.RequestError as e:
-                raise DVLAError(f"DVLA API connection error: {e}", status_code=502)
+                raise DVLAError("DVLA API connection error", status_code=502) from e
 
         # Handle response
         if response.status_code == 200:
@@ -257,12 +257,7 @@ class DVLAClient:
             )
 
         # Other errors
-        error_msg = f"DVLA API error: {response.status_code}"
-        try:
-            error_data = response.json()
-            if "message" in error_data:
-                error_msg = f"DVLA API error: {error_data['message']}"
-        except Exception:
-            pass
-
-        raise DVLAError(error_msg, status_code=response.status_code)
+        raise DVLAError(
+            f"DVLA API error: status {response.status_code}",
+            status_code=response.status_code,
+        )

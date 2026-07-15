@@ -2,27 +2,20 @@
 <html lang="en">
 
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17896487388"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', 'AW-17896487388');
-    </script>
+    <script src="/static/consent.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms of Use - AutoSafe</title>
-    <meta name="description" content="Terms of use for AutoSafe's free MOT risk prediction service.">
+    <meta name="description" content="Terms of use for AutoSafe's free MOT record and comparable-vehicle failure-rate service.">
     <meta property="og:title" content="Terms of Use - AutoSafe">
-    <meta property="og:description" content="Terms of use for AutoSafe's free MOT risk prediction service.">
+    <meta property="og:description" content="Terms of use for AutoSafe's free MOT record and comparable-vehicle failure-rate service.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://www.autosafe.one/static/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Terms of Use - AutoSafe">
-    <meta name="twitter:description" content="Terms of use for AutoSafe's free MOT risk prediction service.">
+    <meta name="twitter:description" content="Terms of use for AutoSafe's free MOT record and comparable-vehicle failure-rate service.">
     <meta name="twitter:image" content="https://www.autosafe.one/static/og-image.png">
     <link rel="canonical" href="https://www.autosafe.one/terms">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -104,7 +97,7 @@
 <body>
     <div class="legal-content">
         <h1>Terms of Use</h1>
-        <p class="last-updated">Last updated: 18 January 2026</p>
+        <p class="last-updated">Last updated: 11 July 2026</p>
 
         <h2>1. About these terms</h2>
         <p>These terms govern your use of the AutoSafe website. By using our service, you agree to these terms.</p>
@@ -114,40 +107,39 @@
         </ul>
 
         <h2>2. What our service does</h2>
-        <p>AutoSafe provides a free tool that predicts the likelihood of a vehicle passing or failing its next MOT test.
-            We do this by analysing publicly available vehicle data from the DVSA (Driver and Vehicle Standards Agency).
-        </p>
+        <p>AutoSafe provides recorded MOT details and the failure rate for the closest supported group of comparable
+            vehicles in aggregated DVSA data. It does not inspect or diagnose the submitted vehicle.</p>
         <p>Our service:</p>
         <ul>
-            <li>Generates a risk assessment based on MOT history</li>
-            <li>Shows potential problem areas</li>
-            <li>Provides estimated repair cost ranges</li>
+            <li>Labels the mileage source, comparison scope and sample size</li>
+            <li>Shows component patterns only when the comparison data supports them</li>
+            <li>Provides indicative repair cost ranges only when supporting component data exists</li>
             <li>Is completely free to use</li>
         </ul>
 
-        <h2>3. Predictions are not guarantees</h2>
+        <h2>3. Comparison rates are not guarantees</h2>
         <div class="warning-box">
             <p>This is important - please read carefully.</p>
         </div>
-        <p>Our predictions are for information only. They are not a guarantee of any particular MOT outcome.</p>
+        <p>The displayed rates are aggregate comparison evidence for information only. They are not a guarantee of any particular MOT outcome.</p>
         <p>We cannot guarantee that:</p>
         <ul>
             <li>Your vehicle will pass or fail its MOT</li>
-            <li>Our risk assessments are accurate for your specific vehicle</li>
-            <li>Any identified issues will actually be present</li>
-            <li>Any issues not identified are absent</li>
+            <li>The comparison rate will reflect your vehicle's next result</li>
+            <li>A component pattern means that issue is present on your vehicle</li>
+            <li>The absence of a component pattern means the issue is absent</li>
         </ul>
         <p>Many factors affect MOT results that we cannot assess, including:</p>
         <ul>
             <li>The condition of parts we cannot see from data alone</li>
             <li>Recent repairs or maintenance you have done</li>
-            <li>The specific standards applied by individual MOT testers</li>
+            <li>The vehicle's condition at the time of its next physical test</li>
             <li>Wear and tear since the last MOT</li>
         </ul>
-        <p><strong>You should not rely solely on our predictions when making decisions about your vehicle.</strong></p>
+        <p><strong>You should not rely solely on the comparison report when making decisions about your vehicle.</strong></p>
 
         <h2>4. Repair cost estimates</h2>
-        <p>Any repair cost ranges we show are estimates only, based on typical UK prices.</p>
+        <p>Any repair cost ranges we show are estimates only, based on configured indicative component-price ranges.</p>
         <p>Actual costs vary significantly based on:</p>
         <ul>
             <li>Your location</li>
@@ -159,16 +151,16 @@
         <p>We do not guarantee these estimates are accurate for your situation.</p>
 
         <h2>5. Third-party data</h2>
-        <p>Our predictions are based on data from the DVSA MOT History service. This is publicly available data that we
-            retrieve in real-time.</p>
-        <p>We do not control the accuracy or completeness of DVSA data. If the underlying data is incorrect, our
-            predictions may be affected.</p>
+        <p>Vehicle details and recorded MOT information come from the DVSA MOT History service. Comparison rates come
+            from aggregated official MOT records.</p>
+        <p>We do not control the accuracy or completeness of DVSA data. If the underlying data is incorrect, the
+            report may be affected.</p>
 
         <h2>6. Limitation of liability</h2>
         <p>To the maximum extent permitted by law:</p>
         <ul>
             <li>We provide this service "as is" without any warranties</li>
-            <li>We are not liable for any losses arising from your use of our predictions</li>
+            <li>We are not liable for any losses arising from your use of the comparison report</li>
             <li>We are not liable for any decisions you make based on our service</li>
             <li>Our total liability to you is limited to &pound;100</li>
         </ul>
@@ -195,7 +187,7 @@
         <p>We own all intellectual property rights in:</p>
         <ul>
             <li>The AutoSafe website and its design</li>
-            <li>Our prediction algorithms and models</li>
+            <li>Our comparison logic, evidence presentation and software</li>
             <li>Our content and presentation</li>
         </ul>
         <p>Vehicle data is sourced from DVSA and remains subject to their terms.</p>

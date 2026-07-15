@@ -1,8 +1,8 @@
 """Tests for the pickle-free Platt calibrator (audit P0 gf2b remediation).
 
 The legacy platt_calibrator.pkl was pickled under scikit-learn 1.8.0 and
-raises at predict time on sklearn <=1.6 (the ceiling on python:3.9), which is
-exactly how production served raw probabilities silently. These tests pin the
+raises at predict time on sklearn <=1.6 (the ceiling on the former python:3.9
+image), which is exactly how production served raw probabilities silently. These tests pin the
 replacement to the constants extracted from that pickle and prove the module
 needs no sklearn at all.
 """

@@ -61,7 +61,10 @@ async def _send_single_email(task: EmailTask, lead_id: str) -> Tuple[bool, Email
         )
         return (sent, task)
     except Exception as e:
-        logger.error(f"Exception sending email to {_mask_email(task.garage.email)}: {e}")
+        logger.error(
+            f"Exception sending email to {_mask_email(task.garage.email)}: "
+            f"type={type(e).__name__}"
+        )
         return (False, task)
 
 
@@ -116,7 +119,7 @@ async def distribute_lead(lead_id: str) -> dict:
     result["garages_matched"] = len(garages)
 
     if not garages:
-        result["error"] = f"No garages found near {lead['postcode']}"
+        result["error"] = "No matching garages found"
         logger.warning(result["error"])
         await db.update_lead_distribution_status(lead_id, 'no_garage_found')
         return result
@@ -162,11 +165,11 @@ async def distribute_lead(lead_id: str) -> dict:
             distance_miles=garage.distance_miles,
             vehicle_make=lead.get('vehicle_make', 'Unknown'),
             vehicle_model=lead.get('vehicle_model', 'Unknown'),
-            vehicle_year=lead.get('vehicle_year') or 0,
-            failure_risk=lead.get('failure_risk') or 0,
-            reliability_score=lead.get('reliability_score') or 0,
+            vehicle_year=lead.get('vehicle_year'),
+            failure_risk=lead.get('failure_risk'),
             top_risks=top_risks,
             assignment_id=assignment_id,
+            match_scope=lead.get('comparison_scope'),
             garages_count=len(garages),
         )
 
@@ -195,7 +198,7 @@ async def distribute_lead(lead_id: str) -> dict:
 
     for send_result in send_results:
         if isinstance(send_result, Exception):
-            logger.error(f"Exception in email send task: {send_result}")
+            logger.error(f"Exception in email send task: type={type(send_result).__name__}")
             continue
 
         sent, task = send_result

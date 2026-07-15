@@ -4,7 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AutoSafe is a UK MOT failure risk service. **Current user path (truth):** the React UI calls `/api/vehicle` (DVLA lookup) then `/api/risk` — a make/model/age **population-rate lookup** from DVSA bulk data, NOT a per-vehicle model. The CatBoost path (`/api/risk/v55`, live DVSA history + calibrated model) exists but is NOT wired to the UI. Public copy was aligned to this reality on 2026-07-03 (`scripts/claim_sweep.py` enforces it in CI — do not claim AI/ML per-vehicle prediction until the v58 flip, plan task 3.7). The app also captures leads and matches them to nearby garages. Remediation plan of record: `work/reviews/REMEDIATION_PLAN_2026-07-03.md`.
+AutoSafe is a UK MOT failure risk service. **Current RC1 user path (truth):**
+the React UI calls `POST /api/v2/reports`; the backend resolves recorded MOT
+history and returns the closest supported comparable-vehicle rate with explicit
+mileage/evidence provenance, persistence state, and an opaque share token. It
+is not a diagnosis or an exact-vehicle prediction. `GET /api/v2/reports/{token}`
+restores a persisted share. Legacy `/api/vehicle`, `/api/risk`, and
+`/api/risk/v55` routes remain compatibility surfaces but are not the RC1
+browser flow. `scripts/claim_sweep.py` enforces the public-claim boundary in CI.
+The release packet is `docs/release_rc1/README.md`; the earlier remediation plan
+of record is `work/reviews/REMEDIATION_PLAN_2026-07-03.md`.
 
 **Production URL:** https://www.autosafe.one
 **Deployment:** Railway.app (auto-deploys from `main` branch)
@@ -17,8 +26,8 @@ AutoSafe is a UK MOT failure risk service. **Current user path (truth):** the Re
 uvicorn main:app --reload                    # Dev server on port 8000
 pip install -r requirements.txt              # Install Python deps
 
-# Frontend (from frontend/ or backend/)
-npm install                                  # Install Node deps
+# Frontend (from project root)
+npm ci                                       # Install exact locked Node deps
 npm run dev                                  # Vite dev server on port 3000
 npm run build                                # Production build
 
@@ -26,6 +35,12 @@ npm run build                                # Production build
 pytest tests/ -v                             # All backend tests
 pytest tests/test_api.py -v                  # API endpoint tests
 pytest tests/test_banding.py -v              # Single test file
+npm run typecheck                            # TypeScript gate
+npm run lint                                 # ESLint gate
+npm test                                     # Vitest suite
+npm run test:e2e                             # Playwright against configured server
+python scripts/check_openapi_drift.py        # Contract snapshot gate
+python scripts/claim_sweep.py                # Public truth gate
 
 # Linting
 flake8 main.py database.py --max-line-length=120 --ignore=E501,W503
@@ -41,8 +56,13 @@ pytest tests/property_tests.py -v            # Property-based invariants
 pytest tests/as_of_validation.py -v          # History feature correctness
 
 # Docker
-docker build -t autosafe:latest .
-# Container startup runs: build_db.py → create_leads_table.py → uvicorn
+docker build --build-arg GIT_SHA=$(git rev-parse HEAD) -t autosafe:rc .
+GIT_SHA=$(git rev-parse HEAD) docker compose -f docker-compose.staging.yml config
+# Staging/deploy/rollback: docs/release_rc1/RUNBOOK_DEPLOY_ROLLBACK.md
+
+# Schema and privacy operations (dry-run unless explicitly noted)
+python migrations/add_report_contract_columns.py --dry-run
+python scripts/retention_sweep.py
 ```
 
 ## Architecture
@@ -51,22 +71,23 @@ docker build -t autosafe:latest .
 ```
 Browser (React 19 + Vite + Tailwind)
   → FastAPI backend (main.py)
+    → v2 report contract (report_routes.py + report_service.py)
     → DVSA MOT History API (OAuth 2.0, via dvsa_client.py)
-    → Feature Engineering (104 features, feature_engineering_v55.py)
-    → CatBoost V55 Model (model_v55.py + catboost_production_v55/)
-    → PostgreSQL on Railway (primary) / SQLite fallback (autosafe.db)
-  → JSON response with failure risk, component risks, confidence intervals
+    → explicit comparable-evidence ladder (PostgreSQL / SQLite source data)
+    → PostgreSQL report persistence and opaque-token retrieval
+  → versioned JSON response with provenance, nullable unsupported detail,
+    persistence state, and share URL
 ```
 
 ### Directory Layout
 
 - **Root level** — Production backend Python code (main.py, database.py, model_v55.py, etc.). This is the ONLY deploy source: the root Dockerfile does `COPY . .` and runs `uvicorn main:app`; Railway builds from the GitHub repo.
 - **backend/** — ⚠ UNVERSIONED local shadow copy (not in git: absent from origin/main, untracked, not gitignored — verified 2026-06-11). It is NEVER deployed and is NOT authoritative; do not edit it expecting production effect, and do not trust it as a mirror (it has drifted, e.g. a stale pre-fix model_v55.py until 2026-06-11). Treat root as the single source of truth; delete or formally track backend/ as part of repo-hygiene cleanup.
-- **frontend/** — React frontend (Vite build, components in components/)
+- **App.tsx, index.tsx, components/, services/, utils/** — authoritative React/Vite SPA source at repository root
 - **work/** — ML research: model training, ablation studies, validation scripts, feature experiments
 - **features/** — Feature engineering experiments
 - **docs/** — ARCHITECTURE.md, DATABASE.md, RUNBOOK.md, MONITORING.md, TROUBLESHOOTING.md
-- **static/** — HTML/CSS/JS, SEO assets (sitemap.xml, robots.txt, og-image)
+- **static/** — tracked legal/guide/consent/image sources plus ignored Vite outputs (`index.html`, `assets/`)
 - **components/** — React TypeScript components (HeroForm, ReportDashboard, GarageFinderModal)
 - **catboost_production_v55/** — Trained model artifacts (model.cbm, platt_calibrator.pkl, encoders)
 
@@ -88,7 +109,10 @@ Browser (React 19 + Vite + Tailwind)
 
 ### API Endpoints
 
-- `GET /api/risk?make=&model=&year=&mileage=&postcode=` — Core prediction
+- `POST /api/v2/reports` — RC1 browser report creation and persistence
+- `GET /api/v2/reports/{token}` — Opaque shared-report retrieval
+- `GET /api/version` — Backend/frontend release identity
+- `GET /api/risk?make=&model=&year=&mileage=&postcode=` — Legacy compatibility lookup
 - `GET /api/makes` / `GET /api/models?make=` — Vehicle catalogue
 - `POST /api/submit-lead` — Lead capture
 - `GET /api/find-garages?postcode=&radius_miles=` — Garage finder
@@ -98,7 +122,7 @@ Browser (React 19 + Vite + Tailwind)
 ### Dual Database Strategy
 
 - **PostgreSQL (Railway):** Primary for all reads/writes — mot_risk, leads, garages, risk_checks tables
-- **SQLite (autosafe.db):** Fallback for reads, bootstrapped from `prod_data_clean.csv.gz` via `build_db.py`
+- **SQLite (autosafe.db):** Fallback for comparison-data reads, bootstrapped from `prod_data_clean.csv.gz` via `build_db.py`; it is not report-share persistence
 
 ### ML Architecture (work/ directory)
 
@@ -128,15 +152,34 @@ Features must only use data available at prediction time. Use `filter_prior_rows
 - `MODEL_VERSION` env var enables rollback
 
 ### Environment Variables (see .env.example)
-Required: `DATABASE_URL`, `DVSA_CLIENT_ID`, `DVSA_CLIENT_SECRET`, `DVSA_TOKEN_URL`, `DVSA_SCOPE`, `DVSA_API_KEY`, `ADMIN_API_KEY`, `RESEND_API_KEY`, `CORS_ORIGINS`, `PORT`
+Required as applicable: `DATABASE_URL`, `BASE_URL`, `VRM_HMAC_KEY`,
+`DVSA_CLIENT_ID`, `DVSA_CLIENT_SECRET`, `DVSA_TOKEN_URL`, `DVSA_SCOPE`,
+`DVSA_API_KEY`, `ADMIN_API_KEY`, `RESEND_API_KEY`, `CORS_ORIGINS`, `PORT`.
+Release builds also carry `GIT_SHA`; Railway may expose
+`RAILWAY_GIT_COMMIT_SHA` at runtime.
 
 ## CI/CD
 
 GitHub Actions (`.github/workflows/ci.yml`):
-- **test:** pytest + flake8 linting
-- **security-check:** Secret scanning + pip-audit
-- **build-check:** Docker build validation
+- **frontend-build:** install, typecheck, lint, Vitest, build, untracked-output guard
+- **test:** pytest + public-claim sweep (flake8 is advisory)
+- **contract-drift:** OpenAPI snapshot verification
+- **security-check:** advisory secret-pattern and dependency-audit output
+- **build-check:** source-built Docker image validation
+- **e2e:** Playwright against the built SPA with artifacts
+- **staging-evidence:** exact-SHA real-image/Postgres acceptance
 - Triggers on push to main/staging and all PRs
+
+## RC1 release gotchas
+
+- `static/index.html` and `static/assets/` are generated, ignored outputs. Never
+  stage them. The Docker frontend stage is authoritative.
+- `.railwayignore` is applied before Docker and cannot be proven by a local
+  build. Complete release-packet decision D6 on a Railway candidate service.
+- `npm ci` and the root lockfile are the reproducible frontend install path.
+- OpenAPI and public-claim snapshots are hard gates; update them only when the
+  intended contract/evidence boundary changes.
+- Merging `main` auto-deploys production. Code approval is not deploy approval.
 
 ## Known Gotchas
 

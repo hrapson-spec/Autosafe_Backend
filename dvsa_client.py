@@ -20,12 +20,13 @@ from dataclasses import dataclass
 import asyncio
 import httpx
 from cachetools import TTLCache
+from utils import hash_vrm
 
 logger = logging.getLogger(__name__)
 
 # Configurable timeout and retry settings
 DVSA_TIMEOUT = float(os.environ.get("DVSA_TIMEOUT", "5.0"))  # Default 5 seconds
-DVSA_MAX_RETRIES = int(os.environ.get("DVSA_MAX_RETRIES", "2"))  # Default 2 retries
+DVSA_MAX_RETRIES = int(os.environ.get("DVSA_MAX_RETRIES", "3"))  # Default 3 attempts (matches prior hardcoded loop value)
 DVSA_RETRY_BACKOFF = float(os.environ.get("DVSA_RETRY_BACKOFF", "1.0"))  # Base backoff in seconds
 
 
@@ -68,7 +69,7 @@ class MOTTest:
     test_result: str  # 'PASSED' or 'FAILED'
     expiry_date: Optional[datetime]
     odometer_value: Optional[int]
-    odometer_unit: str  # 'mi' or 'km'
+    odometer_unit: Optional[str]  # 'mi', 'km', or None if DVSA omitted it
     test_number: str
     defects: List[Dict[str, Any]]  # Advisory/failure items
 
@@ -238,7 +239,7 @@ class DVSAClient:
             )
 
             if response.status_code != 200:
-                logger.error(f"OAuth token request failed: {response.status_code} - {response.text}")
+                logger.error(f"OAuth token request failed: status={response.status_code}")
                 raise DVSAAPIError(f"OAuth authentication failed: {response.status_code}")
 
             token_data = response.json()
@@ -251,7 +252,7 @@ class DVSAClient:
             return self._token.access_token
 
         except httpx.RequestError as e:
-            raise DVSAAPIError(f"OAuth token request failed: {str(e)}")
+            raise DVSAAPIError("OAuth token request failed") from e
 
     def normalize_vrm(self, registration: str) -> str:
         """
@@ -342,9 +343,8 @@ class DVSAClient:
         # Normalize VRM
         vrm = self.normalize_vrm(registration)
 
-        # P1-10 fix: Hash VRM for logging
-        import hashlib
-        vrm_hash = hashlib.sha256(vrm.encode()).hexdigest()[:8]
+        # Use the shared keyed digest; an unkeyed VRN hash is enumerable.
+        vrm_hash = hash_vrm(vrm)
 
         # Check cache first
         if vrm in self._cache:
@@ -352,7 +352,7 @@ class DVSAClient:
             return self._cache[vrm]
 
         # P2-6 fix: Add retry logic for transient failures
-        max_retries = 3
+        max_retries = DVSA_MAX_RETRIES
         last_error = None
 
         for attempt in range(max_retries):
@@ -386,14 +386,11 @@ class DVSAClient:
                     raise VehicleNotFoundError(f"Vehicle not found in DVSA database")
 
                 if response.status_code == 403:
-                    # Log response body for debugging (truncated)
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.error(f"DVSA 403 Forbidden: {body_preview}")
+                    logger.error("DVSA 403 Forbidden")
                     raise DVSAAPIError("DVSA API access denied - check API key and OAuth token")
 
                 if response.status_code == 401:
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.warning(f"DVSA 401 Unauthorized: {body_preview} — invalidating token and retrying")
+                    logger.warning("DVSA 401 Unauthorized — invalidating token and retrying")
                     self._token.expires_at = 0  # Force token refresh on next attempt
                     if attempt < max_retries - 1:
                         continue
@@ -404,13 +401,12 @@ class DVSAClient:
                     logger.warning(f"DVSA 429: Rate limited, attempt {attempt+1}/{max_retries}")
                     if attempt < max_retries - 1:
                         import asyncio
-                        await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                        await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))  # Exponential backoff
                         continue
                     raise DVSAAPIError("DVSA API rate limit exceeded")
 
                 if response.status_code != 200:
-                    body_preview = response.text[:200] if response.text else "(empty)"
-                    logger.error(f"DVSA {response.status_code}: {body_preview}")
+                    logger.error(f"DVSA API error: status={response.status_code}")
                     raise DVSAAPIError(f"DVSA API error: {response.status_code}")
 
                 try:
@@ -435,24 +431,36 @@ class DVSAClient:
                 last_error = DVSAAPIError("DVSA API request timed out")
                 if attempt < max_retries - 1:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))
                     continue
-            except httpx.RequestError as e:
-                last_error = DVSAAPIError(f"DVSA API connection error: {str(e)}")
+            except httpx.RequestError:
+                last_error = DVSAAPIError("DVSA API connection error")
                 if attempt < max_retries - 1:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(DVSA_RETRY_BACKOFF * (2 ** attempt))
                     continue
 
         # All retries exhausted
         raise last_error or DVSAAPIError("DVSA API request failed after retries")
+
+    @staticmethod
+    def _parse_odometer(raw: Any) -> Optional[int]:
+        """Parse a raw DVSA odometerValue field into a clean int, or None
+        if it's absent or unparseable. The new DVSA API returns this as a
+        string (occasionally with commas/whitespace); never raises."""
+        if not raw:
+            return None
+        try:
+            return int(str(raw).strip().replace(',', ''))
+        except (ValueError, TypeError):
+            return None
 
     def _parse_response(self, vrm: str, data: Dict[str, Any]) -> VehicleHistory:
         """Parse DVSA API response into VehicleHistory object."""
         # Handle array response (API returns array of vehicles)
         if isinstance(data, list):
             if not data:
-                raise VehicleNotFoundError(f"No data returned for {vrm}")
+                raise VehicleNotFoundError("No vehicle data returned by DVSA")
             vehicle_data = data[0]
         else:
             vehicle_data = data
@@ -468,13 +476,6 @@ class DVSAClient:
         # Parse MOT tests
         mot_tests = []
         for test_data in vehicle_data.get('motTests', []):
-            # Parse odometer value - new API returns as string
-            odometer_raw = test_data.get('odometerValue')
-            try:
-                odometer_value = int(odometer_raw) if odometer_raw else None
-            except (ValueError, TypeError):
-                odometer_value = None
-
             # Fix: Properly handle defects vs rfrAndComments
             # If defects is explicitly None, use rfrAndComments; if defects is [] use []
             defects = test_data.get('defects')
@@ -485,8 +486,12 @@ class DVSAClient:
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
                 expiry_date=self._parse_date(test_data.get('expiryDate')),
-                odometer_value=odometer_value,
-                odometer_unit=test_data.get('odometerUnit', 'mi'),
+                odometer_value=self._parse_odometer(test_data.get('odometerValue')),
+                # No default: an absent unit must surface as None, never a
+                # silently-guessed 'mi' -- report_service.resolve_odometer
+                # treats a missing unit as UNAVAILABLE/UNKNOWN_UNIT rather
+                # than trusting an assumed one.
+                odometer_unit=test_data.get('odometerUnit'),
                 test_number=test_data.get('motTestNumber', ''),
                 defects=defects or []
             )

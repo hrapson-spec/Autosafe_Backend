@@ -30,8 +30,23 @@ def _get_risk_level(failure_risk: float) -> tuple:
         return "LOW", "#059669"
 
 
+_VEHICLE_COMPARISON_SCOPES = {"exact_band", "age_band_only", "model_average"}
+
+
+def _rate_label(match_scope: Optional[str]) -> str:
+    if match_scope in _VEHICLE_COMPARISON_SCOPES:
+        return "Comparable-vehicle MOT failure rate"
+    if match_scope in {"population_default", "unavailable"}:
+        return "Dataset-wide reference MOT failure rate"
+    return "Saved reference MOT failure rate"
+
+
+def _vehicle_label(year: Optional[int], make: str, model: str) -> str:
+    return " ".join(part for part in (str(year) if year is not None else "", make, model) if part)
+
+
 def _build_risk_breakdown(risk_percentages: Dict[str, float], top_risks: List[str]) -> str:
-    """Build risk breakdown HTML with progress bars."""
+    """Build comparable-vehicle component evidence HTML with progress bars."""
     risk_breakdown_html = ""
     risk_components = [
         ("Brakes", risk_percentages.get("brakes", risk_percentages.get("Brakes", 0))),
@@ -92,14 +107,12 @@ def generate_lead_email(
     distance_miles: float,
     vehicle_make: str,
     vehicle_model: str,
-    vehicle_year: int,
-    failure_risk: float,
-    reliability_score: int,
+    vehicle_year: Optional[int],
+    failure_risk: Optional[float],
     top_risks: List[str],
     assignment_id: str,
+    match_scope: Optional[str] = None,
     risk_percentages: Optional[Dict[str, float]] = None,
-    estimated_job_min: int = 150,
-    estimated_job_max: int = 400,
     garages_count: int = 3,
     leads_remaining: int = 5,
     max_leads_per_month: int = 5,
@@ -122,12 +135,9 @@ def generate_lead_email(
         vehicle_model: Vehicle model
         vehicle_year: Vehicle year
         failure_risk: Overall failure risk (0-1)
-        reliability_score: Reliability score (0-100)
         top_risks: List of top risk areas
         assignment_id: UUID for outcome tracking
         risk_percentages: Dict mapping risk areas to percentages
-        estimated_job_min: Minimum estimated job value
-        estimated_job_max: Maximum estimated job value
         garages_count: Number of garages this lead was sent to
         leads_remaining: Free leads remaining this month
         max_leads_per_month: Maximum free leads per month
@@ -139,23 +149,16 @@ def generate_lead_email(
     if risk_percentages is None:
         risk_percentages = {}
 
-    # Determine primary concern for subject line
-    primary_concern = top_risks[0].lower() if top_risks else "repair"
-
-    # Subject line: Job value focused (escape user data in subject)
+    # Subject line stays an enquiry, not a diagnosed repair job.
     subject_template = _jinja_env.from_string(
-        "New Lead: {{ job_min }}-{{ job_max }} {{ concern }} job near you"
+        "New garage enquiry near you: {{ vehicle_make }} {{ vehicle_model }}"
     )
     subject = subject_template.render(
-        job_min=f"£{estimated_job_min}",
-        job_max=f"£{estimated_job_max}",
-        concern=primary_concern
+        vehicle_make=vehicle_make,
+        vehicle_model=vehicle_model,
     )
 
-    # Determine risk level
-    risk_level, risk_color = _get_risk_level(failure_risk)
-
-    # Build risk breakdown HTML
+    # Build comparable-vehicle component evidence HTML
     risk_breakdown_html = _build_risk_breakdown(risk_percentages, top_risks)
 
     # Build customer name HTML (user input - will be escaped)
@@ -187,7 +190,7 @@ def generate_lead_email(
         <tr>
             <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
                 <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 700;">AutoSafe</h1>
-                <p style="margin: 8px 0 0 0; color: #94A3B8; font-size: 14px; letter-spacing: 0.5px;">AI-Powered MOT Predictions</p>
+                <p style="margin: 8px 0 0 0; color: #94A3B8; font-size: 14px; letter-spacing: 0.5px;">MOT Record &amp; Comparable-Vehicle Evidence</p>
             </td>
         </tr>
 
@@ -204,45 +207,45 @@ def generate_lead_email(
         <tr>
             <td style="padding: 24px;">
 
-                <!-- Vehicle + Job Value -->
+                <!-- Vehicle -->
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
                     <tr>
                         <td>
                             <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">New Lead</p>
                             <h2 style="margin: 0 0 8px 0; font-size: 24px; color: #1E293B; font-weight: 700;">
-                                {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }}
+                                {{ vehicle_label }}
                             </h2>
                         </td>
                     </tr>
                 </table>
 
-                <!-- Job Value + Distance Cards -->
+                <!-- Distance -->
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                     <tr>
-                        <td style="padding: 16px; background-color: #F0FDF4; border-radius: 8px; border: 1px solid #BBF7D0;" width="48%">
-                            <p style="margin: 0; font-size: 12px; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">Estimated Job Value</p>
-                            <p style="margin: 4px 0 0 0; font-size: 28px; font-weight: 700; color: #166534;">{{ job_value }}</p>
-                        </td>
-                        <td width="4%"></td>
-                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;" width="48%">
+                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
                             <p style="margin: 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Distance</p>
                             <p style="margin: 4px 0 0 0; font-size: 28px; font-weight: 700; color: #1E293B;">{{ distance_miles }} mi</p>
                         </td>
                     </tr>
                 </table>
 
-                <!-- Risk Breakdown -->
+                {% if risk_breakdown_html or failure_rate is not none %}
+                <!-- Comparison evidence -->
                 <div style="margin-bottom: 24px;">
                     <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
-                        Risk Breakdown
+                        Comparable-Vehicle Component Patterns
                     </h3>
-                    <table width="100%" cellpadding="0" cellspacing="0">
+                    {% if risk_breakdown_html %}<table width="100%" cellpadding="0" cellspacing="0">
                         {{ risk_breakdown_html|safe }}
-                    </table>
+                    </table>{% endif %}
+                    {% if failure_rate is not none %}
                     <p style="margin: 12px 0 0 0; font-size: 13px; color: #64748B;">
-                        Reliability Score: <strong style="color: #1E293B;">{{ reliability_score }}/100</strong>
+                        {{ rate_label }}: <strong style="color: #1E293B;">{{ failure_rate }}%</strong>.
+                        This is comparison evidence, not a diagnosis of the customer's car.
                     </p>
+                    {% endif %}
                 </div>
+                {% endif %}
 
                 <!-- Why This Lead -->
                 <div style="margin-bottom: 24px; padding: 16px; background-color: #FEF3C7; border-radius: 8px; border-left: 4px solid #F59E0B;">
@@ -314,7 +317,7 @@ def generate_lead_email(
                     How We Know This
                 </h3>
                 <p style="margin: 0; font-size: 14px; color: #E2E8F0;">
-                    Our risk checks draw on <strong>millions of real MOT results</strong> from the official DVSA dataset.
+                    The comparison rates draw on <strong>millions of recorded MOT results</strong> from the official DVSA dataset. They do not establish this vehicle's condition.
                 </p>
             </td>
         </tr>
@@ -348,13 +351,11 @@ def generate_lead_email(
     html_body = html_template.render(
         leads_remaining=leads_remaining,
         max_leads_per_month=max_leads_per_month,
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
-        job_value=f"£{estimated_job_min}-{estimated_job_max}",
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         distance_miles=distance_miles,
         risk_breakdown_html=risk_breakdown_html,
-        reliability_score=reliability_score,
+        failure_rate=round(failure_risk * 100) if failure_risk is not None else None,
+        rate_label=_rate_label(match_scope),
         garages_count=garages_count,
         customer_name_html=customer_name_html,
         lead_email=lead_email,
@@ -367,20 +368,20 @@ def generate_lead_email(
     # Plain text version - also use Jinja2 for consistency
     text_template = _jinja_env.from_string("""
 ======================================================================
-  AUTOSAFE - AI-Powered MOT Predictions
+  AUTOSAFE - MOT Record & Comparable-Vehicle Evidence
 ======================================================================
 
 FREE LEAD ({{ leads_remaining }} of {{ max_leads_per_month }} remaining this month)
 
 ----------------------------------------------------------------------
 
-NEW LEAD: {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }}
+NEW LEAD: {{ vehicle_label }}
 
-ESTIMATED JOB VALUE: {{ job_value }}
 DISTANCE: {{ distance_miles }} miles from your garage
-RELIABILITY SCORE: {{ reliability_score }}/100
+{% if failure_rate is not none %}{{ rate_label|upper }}: {{ failure_rate }}%
+Comparison evidence only; not a diagnosis of this car.{% endif %}
 
-RISK AREAS:
+COMPARABLE-VEHICLE COMPONENT PATTERNS:
 {{ risk_list }}
 
 ----------------------------------------------------------------------
@@ -407,7 +408,7 @@ REPORT OUTCOME:
 ----------------------------------------------------------------------
 
 HOW WE KNOW THIS:
-Our risk checks draw on millions of real MOT results from the official DVSA dataset.
+Our comparisons draw on real MOT results from the official DVSA dataset.
 
 ----------------------------------------------------------------------
 
@@ -417,17 +418,15 @@ Want unlimited leads? Visit {{ base_url }}/pricing
 Questions? Reply to this email
 """)
 
-    risk_list = "\n".join(f"  * {risk.title()}" for risk in top_risks[:5]) if top_risks else "  No major concerns identified"
+    risk_list = "\n".join(f"  * {risk.title()}" for risk in top_risks[:5]) if top_risks else "  No component comparison supplied"
 
     text_body = text_template.render(
         leads_remaining=leads_remaining,
         max_leads_per_month=max_leads_per_month,
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
-        job_value=f"£{estimated_job_min}-{estimated_job_max}",
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         distance_miles=distance_miles,
-        reliability_score=reliability_score,
+        failure_rate=round(failure_risk * 100) if failure_risk is not None else None,
+        rate_label=_rate_label(match_scope),
         risk_list=risk_list,
         garages_count=garages_count,
         lead_name=lead_name,
@@ -450,9 +449,10 @@ def generate_mot_reminder_confirmation(
     registration: str,
     vehicle_make: str,
     vehicle_model: str,
-    vehicle_year: int,
+    vehicle_year: Optional[int],
     mot_expiry_date: Optional[str] = None,
     failure_risk: Optional[float] = None,
+    match_scope: Optional[str] = None,
 ) -> Dict[str, str]:
     """
     Generate MOT reminder confirmation email.
@@ -477,19 +477,28 @@ def generate_mot_reminder_confirmation(
         except (ValueError, IndexError):
             mot_display = mot_expiry_date[:10]
 
-    # Risk display
+    # Optional saved comparison-rate display.
     risk_display = ""
+    risk_text = ""
     if failure_risk is not None:
         risk_pct = int(failure_risk * 100)
         risk_level, risk_color = _get_risk_level(failure_risk)
         risk_display_template = _jinja_env.from_string("""
             <div style="margin: 16px 0; padding: 12px 16px; background-color: #F8FAFC; border-radius: 8px; border-left: 4px solid {{ color }};">
                 <p style="margin: 0; font-size: 14px; color: #374151;">
-                    Current failure risk: <strong style="color: {{ color }};">{{ pct }}% ({{ level }})</strong>
+                    {{ rate_label }}: <strong style="color: {{ color }};">{{ pct }}% ({{ level }})</strong><br>
+                    <span style="font-size: 12px; color: #64748B;">A recorded group rate, not a diagnosis of this car.</span>
                 </p>
             </div>
         """)
-        risk_display = risk_display_template.render(color=risk_color, pct=risk_pct, level=risk_level)
+        label = _rate_label(match_scope)
+        risk_display = risk_display_template.render(
+            color=risk_color, pct=risk_pct, level=risk_level, rate_label=label
+        )
+        risk_text = (
+            f"{label}: {risk_pct}% ({risk_level}). "
+            "A recorded group rate, not a diagnosis of this car."
+        )
 
     subject = f"MOT Reminder Set - {vehicle_make} {vehicle_model} ({registration})"
 
@@ -517,7 +526,7 @@ def generate_mot_reminder_confirmation(
                         <td style="padding: 16px;">
                             <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Vehicle</p>
                             <p style="margin: 0 0 12px 0; font-size: 16px; color: #1E293B; font-weight: 600;">
-                                {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+                                {{ vehicle_label }} ({{ registration }})
                             </p>
                             <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">MOT Due</p>
                             <p style="margin: 0; font-size: 16px; color: #1E293B; font-weight: 600;">{{ mot_display }}</p>
@@ -542,7 +551,7 @@ def generate_mot_reminder_confirmation(
         <tr>
             <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
                 <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    AutoSafe &middot; MOT Record &amp; Comparable-Vehicle Evidence &middot;
                     <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
                 </p>
             </td>
@@ -552,9 +561,7 @@ def generate_mot_reminder_confirmation(
 </html>""")
 
     html_body = html_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
         mot_display=mot_display,
         risk_display=risk_display,
@@ -567,8 +574,9 @@ MOT REMINDER SET - AutoSafe
 
 Your MOT reminder is confirmed.
 
-Vehicle: {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+Vehicle: {{ vehicle_label }} ({{ registration }})
 MOT Due: {{ mot_display }}
+{% if risk_text %}{{ risk_text }}{% endif %}
 
 We'll email you 4 weeks before your MOT is due.
 
@@ -580,11 +588,10 @@ AutoSafe - {{ base_url }}
 """)
 
     text_body = text_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
         mot_display=mot_display,
+        risk_text=risk_text,
         base_url=BASE_URL,
     )
 
@@ -600,10 +607,9 @@ def generate_report_email(
     registration: str,
     vehicle_make: str,
     vehicle_model: str,
-    vehicle_year: int,
-    reliability_score: int,
-    mot_pass_prediction: int,
+    vehicle_year: Optional[int],
     failure_risk: float,
+    match_scope: Optional[str],
     common_faults: List[Dict],
     repair_cost_min: Optional[int] = None,
     repair_cost_max: Optional[int] = None,
@@ -616,13 +622,7 @@ def generate_report_email(
     Returns:
         Dict with 'subject', 'html', and 'text' keys
     """
-    # Color for reliability score
-    if reliability_score > 75:
-        score_color = "#059669"
-    elif reliability_score > 50:
-        score_color = "#D97706"
-    else:
-        score_color = "#DC2626"
+    failure_rate_percent = round(failure_risk * 100)
 
     # MOT expiry display
     mot_display = ""
@@ -680,35 +680,32 @@ def generate_report_email(
         <tr>
             <td style="padding: 24px; background: linear-gradient(135deg, #1E293B 0%, #334155 100%); text-align: center;">
                 <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700; font-family: Georgia, serif;">AutoSafe</h1>
-                <p style="margin: 6px 0 0 0; color: #94A3B8; font-size: 13px;">Vehicle Risk Report</p>
+                <p style="margin: 6px 0 0 0; color: #94A3B8; font-size: 13px;">Vehicle Record &amp; Comparison Report</p>
             </td>
         </tr>
         <tr>
             <td style="padding: 24px;">
                 <h2 style="margin: 0 0 4px 0; font-size: 20px; color: #1E293B;">
-                    {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }}
+                    {{ vehicle_label }}
                 </h2>
                 <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748B;">Registration: {{ registration }}</p>
 
-                <!-- Score Cards -->
+                <!-- One evidence-backed number; no renamed complement. -->
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                     <tr>
-                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; text-align: center; border: 1px solid #E2E8F0;" width="48%">
-                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Reliability</p>
-                            <p style="margin: 0; font-size: 32px; font-weight: 700; color: {{ score_color }};">{{ reliability_score }}/100</p>
-                        </td>
-                        <td width="4%"></td>
-                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; text-align: center; border: 1px solid #E2E8F0;" width="48%">
-                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">MOT Pass</p>
-                            <p style="margin: 0; font-size: 32px; font-weight: 700; color: #2563EB;">{{ mot_pass }}%</p>
+                        <td style="padding: 16px; background-color: #F8FAFC; border-radius: 8px; text-align: center; border: 1px solid #E2E8F0;">
+                            <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">{{ rate_label }}</p>
+                            <p style="margin: 0; font-size: 32px; font-weight: 700; color: #1E293B;">{{ failure_rate }}%</p>
+                            <p style="margin: 6px 0 0 0; font-size: 12px; color: #64748B;">A recorded group rate, not a diagnosis or next-MOT result for this car.</p>
                         </td>
                     </tr>
                 </table>
 
                 {% if cost_display %}
                 <div style="margin-bottom: 24px; padding: 12px 16px; background-color: #FFF7ED; border-radius: 8px; border: 1px solid #FED7AA; text-align: center;">
-                    <p style="margin: 0 0 2px 0; font-size: 11px; color: #9A3412; text-transform: uppercase;">Estimated Repair Costs</p>
+                    <p style="margin: 0 0 2px 0; font-size: 11px; color: #9A3412; text-transform: uppercase;">Indicative Comparison-Based Repair Range</p>
                     <p style="margin: 0; font-size: 20px; font-weight: 700; color: #9A3412;">{{ cost_display }}</p>
+                    <p style="margin: 4px 0 0 0; font-size: 11px; color: #9A3412;">Only if related work is needed; not a quote or diagnosis.</p>
                 </div>
                 {% endif %}
 
@@ -732,7 +729,7 @@ def generate_report_email(
 
                 {% if fault_rows %}
                 <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Component Risk Breakdown
+                    Comparable-Vehicle Component Patterns (Not Diagnosed Faults)
                 </h3>
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                     {{ fault_rows|safe }}
@@ -750,7 +747,7 @@ def generate_report_email(
         <tr>
             <td style="padding: 16px 24px; background-color: #1E293B; text-align: center;">
                 <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                    Based on analysis of 142M+ official DVSA MOT test records
+                    Based on 148M+ recorded DVSA MOT tests
                 </p>
             </td>
         </tr>
@@ -768,13 +765,10 @@ def generate_report_email(
 </html>""")
 
     html_body = html_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
-        reliability_score=reliability_score,
-        score_color=score_color,
-        mot_pass=mot_pass_prediction,
+        failure_rate=failure_rate_percent,
+        rate_label=_rate_label(match_scope),
         cost_display=cost_display,
         mot_display=mot_display,
         days_until=days_until_mot_expiry,
@@ -785,35 +779,33 @@ def generate_report_email(
     # Plain text version
     fault_text = ""
     for fault in common_faults[:6]:
-        fault_text += f"  - {fault.get('component', 'Unknown')}: {fault.get('risk_level', 'Low')} Risk\n"
+        fault_text += f"  - {fault.get('component', 'Unknown')}: {fault.get('risk_level', 'Unknown')} recorded rate\n"
 
     text_template = _jinja_env.from_string("""
 AUTOSAFE VEHICLE REPORT
 ========================
 
-{{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+{{ vehicle_label }} ({{ registration }})
 
-RELIABILITY SCORE: {{ reliability_score }}/100
-MOT PASS PROBABILITY: {{ mot_pass }}%
-{% if cost_display %}ESTIMATED REPAIR COSTS: {{ cost_display }}{% endif %}
+{{ rate_label|upper }}: {{ failure_rate }}%
+This is a recorded group rate, not a diagnosis or next-MOT result for this car.
+{% if cost_display %}INDICATIVE COMPARISON-BASED REPAIR RANGE: {{ cost_display }} (not a quote or diagnosis){% endif %}
 {% if mot_display %}MOT EXPIRY: {{ mot_display }}{% endif %}
 
-COMPONENT RISKS:
+COMPARABLE-VEHICLE COMPONENT PATTERNS:
 {{ fault_text }}
 Need a garage? Reply to this email and we'll find one near you.
 
-Based on analysis of 142M+ official DVSA MOT test records.
+Based on 148M+ recorded DVSA MOT tests.
 
 AutoSafe - {{ base_url }}
 """)
 
     text_body = text_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
-        reliability_score=reliability_score,
-        mot_pass=mot_pass_prediction,
+        failure_rate=failure_rate_percent,
+        rate_label=_rate_label(match_scope),
         cost_display=cost_display,
         mot_display=mot_display,
         fault_text=fault_text,
@@ -832,9 +824,10 @@ def generate_mot_reminder_28d(
     registration: str,
     vehicle_make: str,
     vehicle_model: str,
-    vehicle_year: int,
+    vehicle_year: Optional[int],
     mot_expiry_date: str,
     failure_risk: Optional[float] = None,
+    match_scope: Optional[str] = None,
 ) -> Dict[str, str]:
     """
     Generate the 28-day MOT reminder email.
@@ -862,15 +855,16 @@ def generate_mot_reminder_28d(
         risk_level, risk_color = _get_risk_level(failure_risk)
         risk_template = _jinja_env.from_string("""
             <div style="margin: 20px 0; padding: 16px; background-color: #FEF2F2; border-radius: 8px; border-left: 4px solid {{ color }};">
-                <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Your Predicted Failure Risk</p>
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">{{ rate_label }}</p>
                 <p style="margin: 0; font-size: 24px; font-weight: 700; color: {{ color }};">{{ pct }}%</p>
                 <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748B;">
-                    {% if pct > 35 %}A pre-MOT check could save you time and money.{% elif pct > 20 %}Some areas may need attention before your test.{% else %}Your vehicle looks in good shape, but a check never hurts.{% endif %}
+                    This recorded group rate does not diagnose your car. A physical check is needed to identify faults.
                 </p>
             </div>
         """)
-        risk_html = risk_template.render(color=risk_color, pct=risk_pct)
-        risk_text = f"Predicted failure risk: {risk_pct}% ({risk_level})"
+        label = _rate_label(match_scope)
+        risk_html = risk_template.render(color=risk_color, pct=risk_pct, rate_label=label)
+        risk_text = f"{label}: {risk_pct}% ({risk_level}); not a diagnosis of this car."
 
     subject_template = _jinja_env.from_string(
         "Your MOT is due in 4 weeks - {{ make }} {{ model }} ({{ reg }})"
@@ -902,7 +896,7 @@ def generate_mot_reminder_28d(
                     Time to prepare for your MOT
                 </h2>
                 <p style="margin: 0 0 20px 0; font-size: 15px; color: #64748B;">
-                    Your {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }}) has its MOT due on <strong>{{ mot_display }}</strong>.
+                    Your {{ vehicle_label }} ({{ registration }}) has its MOT due on <strong>{{ mot_display }}</strong>.
                 </p>
 
                 {{ risk_html|safe }}
@@ -925,7 +919,7 @@ def generate_mot_reminder_28d(
                 <div style="margin: 24px 0; text-align: center;">
                     <a href="{{ base_url }}?utm_source=reminder&utm_medium=email&utm_campaign=mot_28d"
                        style="display: inline-block; padding: 14px 32px; background-color: #1E293B; color: #FFFFFF; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600;">
-                        Check your latest risk score
+                        Refresh your comparison report
                     </a>
                 </div>
 
@@ -944,7 +938,7 @@ def generate_mot_reminder_28d(
         <tr>
             <td style="padding: 16px 24px; background-color: #F8FAFC; border-top: 1px solid #E5E7EB; text-align: center;">
                 <p style="margin: 0; font-size: 12px; color: #94A3B8;">
-                    AutoSafe &middot; AI-Powered MOT Predictions &middot;
+                    AutoSafe &middot; MOT Record &amp; Comparable-Vehicle Evidence &middot;
                     <a href="{{ base_url }}/privacy" style="color: #64748B; text-decoration: none;">Privacy</a>
                 </p>
             </td>
@@ -954,9 +948,7 @@ def generate_mot_reminder_28d(
 </html>""")
 
     html_body = html_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
         mot_display=mot_display,
         risk_html=risk_html,
@@ -967,7 +959,7 @@ def generate_mot_reminder_28d(
 YOUR MOT IS DUE IN 4 WEEKS - AutoSafe
 =======================================
 
-Your {{ vehicle_year }} {{ vehicle_make }} {{ vehicle_model }} ({{ registration }})
+Your {{ vehicle_label }} ({{ registration }})
 has its MOT due on {{ mot_display }}.
 
 {% if risk_text %}{{ risk_text }}{% endif %}
@@ -979,7 +971,7 @@ QUICK PRE-MOT CHECKLIST:
 [ ] Check windscreen for chips/cracks
 [ ] Test horn and wipers
 
-Check your latest risk score: {{ base_url }}?utm_source=reminder&utm_medium=email&utm_campaign=mot_28d
+Refresh your comparison report: {{ base_url }}?utm_source=reminder&utm_medium=email&utm_campaign=mot_28d
 
 Need a garage? Reply to this email and we'll find one near you.
 
@@ -989,9 +981,7 @@ AutoSafe - {{ base_url }}
 """)
 
     text_body = text_template.render(
-        vehicle_year=vehicle_year,
-        vehicle_make=vehicle_make,
-        vehicle_model=vehicle_model,
+        vehicle_label=_vehicle_label(vehicle_year, vehicle_make, vehicle_model),
         registration=registration,
         mot_display=mot_display,
         risk_text=risk_text,

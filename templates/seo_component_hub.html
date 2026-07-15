@@ -1,11 +1,9 @@
 {% extends "seo_base.html" %}
 
-{% block title %}Most Unreliable Cars for {{ component_name }} | AutoSafe{% endblock %}
-{% block meta_description %}Which cars have the most {{ component_name|lower }} problems? We analysed millions of MOT
-tests to find the 50 worst models for {{ component_name|lower }} reliability.{% endblock %}
-{% block og_title %}{{ component_name }} Reliability Rankings: 50 Worst Cars{% endblock %}
-{% block og_description %}Data-driven ranking of the 50 car models most likely to fail their MOT on {{
-component_name|lower }} issues.{% endblock %}
+{% block title %}Highest Recorded {{ component_name }} MOT Rates by Model | AutoSafe{% endblock %}
+{% block meta_description %}Compare model cohorts with the highest recorded {{ component_name|lower }} involvement rates in official MOT data. Group evidence, not vehicle diagnosis.{% endblock %}
+{% block og_title %}Recorded {{ component_name }} MOT Rates by Model{% endblock %}
+{% block og_description %}A sample-size-filtered ranking of recorded model-group {{ component_name|lower }} rates.{% endblock %}
 {% block canonical_url %}https://www.autosafe.one/mot-check/problems/{{ component_slug }}/{% endblock %}
 
 {% block breadcrumb_data %}
@@ -16,7 +14,7 @@ component_name|lower }} issues.{% endblock %}
   "itemListElement": [
     {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.autosafe.one/"},
     {"@type": "ListItem", "position": 2, "name": "MOT Check", "item": "https://www.autosafe.one/mot-check/"},
-    {"@type": "ListItem", "position": 3, "name": "{{ component_name }} Problems"}
+    {"@type": "ListItem", "position": 3, "name": "{{ component_name }} Recorded Rates"}
   ]
 }
 </script>
@@ -26,25 +24,26 @@ component_name|lower }} issues.{% endblock %}
 <nav class="breadcrumbs" aria-label="Breadcrumb">
     <a href="/">Home</a><span class="sep">/</span>
     <a href="/mot-check/">MOT Check</a><span class="sep">/</span>
-    <span>{{ component_name }} Rankings</span>
+    <span>{{ component_name }} Recorded Rates</span>
 </nav>
 {% endblock %}
 
 {% block content %}
-<h1>Most Unreliable Cars for {{ component_name }}</h1>
+<h1>Highest Recorded {{ component_name }} MOT Rates by Model</h1>
 <p class="intro-text">
-    We analysed official DVSA MOT data to identify the car models with the highest failure rates for <strong>{{
+    This table ranks model cohorts by their recorded MOT involvement rate for <strong>{{
         component_name|lower }}</strong>.
-    These rankings are based on models with at least 5,000 recorded tests to ensure statistical accuracy.
+    Only cohorts with at least 5,000 recorded tests are included. The rate describes a group and does not establish a fault on any submitted vehicle.
 </p>
 
+{% if worst_models %}
 <div class="stat-highlight">
     <div class="big-number" style="font-size: 2.5rem;">{{ worst_models[0].display_name }}</div>
     <div class="label">Highest failure rate for {{ component_name|lower }} ({{ "%.1f"|format(worst_models[0].comp_risk *
         100) }}%)</div>
 </div>
 
-<h2>Top 50 Models with {{ component_name }} Issues</h2>
+<h2>Top 50 Recorded Model-Group Rates</h2>
 <table class="data-table">
     <thead>
         <tr>
@@ -72,11 +71,13 @@ component_name|lower }} issues.{% endblock %}
         {% endfor %}
     </tbody>
 </table>
+{% else %}
+<p>No model cohort currently meets the sample threshold for this component category.</p>
+{% endif %}
 
 <div class="cta-box" style="margin-top: 4rem;">
-    <h3>Check Your Car</h3>
-    <p>Is your car on the list? Enter your reg to check for specific {{
-        component_name|lower }} risks.</p>
+    <h3>Compare a Vehicle With Recorded Outcomes</h3>
+    <p>Enter a registration to see the closest supported comparison cohort and its evidence scope. The report does not diagnose {{ component_name|lower }} issues.</p>
     <form class="reg-lookup-form" action="/" method="get">
         <input type="hidden" name="utm_source" value="seo_pages">
         <input type="hidden" name="utm_medium" value="organic">
@@ -84,20 +85,20 @@ component_name|lower }} issues.{% endblock %}
         <input type="hidden" name="utm_content" value="{{ component_slug }}">
         <div class="reg-plate-wrapper">
             <div class="reg-plate-gb">GB</div>
-            <input type="text" name="reg" class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
+            <input type="text" data-registration class="reg-plate-input" placeholder="AB12 CDE" maxlength="8" required
                 aria-label="Vehicle registration number">
         </div>
-        <button type="submit" class="reg-lookup-btn">Check My Risk</button>
+        <button type="submit" class="reg-lookup-btn">View Comparison</button>
     </form>
 </div>
 
 <div class="methodology">
-    <p><strong>Methodology:</strong> Rankings are based on the specific failure rate for {{ component_name|lower }}
-        items in MOT tests. Data covers all vehicle ages. Only models with a minimum sample size of 5,000 tests are
-        included to exclude statistical outliers.</p>
+    <p><strong>Methodology:</strong> Rates are sample-size-weighted aggregates for recorded {{ component_name|lower }}
+        involvement across all available ages and mileages. Only model cohorts with at least 5,000 tests are included.
+        A larger sample reduces sampling noise but does not make the result vehicle-specific.</p>
 </div>
 {% endblock %}
 
-{% block cta_heading %}Avoid {{ component_name }} Failures{% endblock %}
-{% block cta_text %}Check if your car is at risk of {{ component_name|lower }} failure with our free AI tool.{% endblock
+{% block cta_heading %}Review {{ component_name }} Comparison Context{% endblock %}
+{% block cta_text %}See your vehicle's recorded MOT history and {{ component_name|lower }} failure patterns for comparable vehicles.{% endblock
 %}

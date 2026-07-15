@@ -8,6 +8,8 @@
 *.npy
 *.json
 !package.json
+!package-lock.json
+!tsconfig.json
 !catboost_production_v55/calibrator.json
 !models/v57/*.json
 *.zip
@@ -17,6 +19,9 @@ work/
 backend/
 frontend/
 node_modules/
+e2e-artifacts/
+playwright-report/
+test-results/
 features/
 Planning and Organisation/
 marketing-and-distribution/

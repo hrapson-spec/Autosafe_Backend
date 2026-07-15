@@ -1,95 +1,84 @@
 # AutoSafe Architecture
 
-## System Overview
+## Authoritative RC1 path
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         USER                                │
-│                    (Web Browser)                            │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTPS
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    RAILWAY PLATFORM                         │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │              Autosafe_Backend Service                 │  │
-│  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │              FastAPI Application                │  │  │
-│  │  │  ┌─────────┐  ┌──────────┐  ┌───────────────┐  │  │  │
-│  │  │  │ main.py │  │database.py│  │consolidate_   │  │  │  │
-│  │  │  │ (API)   │  │(DB access)│  │models.py      │  │  │  │
-│  │  │  └────┬────┘  └─────┬────┘  └───────────────┘  │  │  │
-│  │  │       │             │                           │  │  │
-│  │  │       └──────┬──────┘                           │  │  │
-│  │  └──────────────┼──────────────────────────────────┘  │  │
-│  └─────────────────┼─────────────────────────────────────┘  │
-│                    │ Internal connection                    │
-│  ┌─────────────────▼─────────────────────────────────────┐  │
-│  │              PostgreSQL Database                      │  │
-│  │                 (mot_risk table)                      │  │
-│  │              136,757 rows of MOT data                 │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+```text
+Browser (React/Vite)
+  -> POST /api/v2/reports
+     -> DVSA vehicle and latest MOT record lookup
+     -> mileage provenance resolution
+     -> weighted evidence ladder
+        PostgreSQL mot_risk -> SQLite risks -> labelled dataset reference
+     -> typed ReportResponse
+     -> PostgreSQL risk_checks persistence
+  -> GET /api/v2/reports/{opaque token} for saved-report restoration
 ```
 
----
+The v2 result is a historical comparison rate with provenance. The product does
+not call the V55 model in this path and does not present the rate as a vehicle
+diagnosis or future-outcome forecast.
 
-## Key Files
+`prediction_source` names the source of the displayed number. Matched cohort
+figures use `postgres` or `sqlite`; both degraded scopes use
+`dataset_reference` because their number is the checked-in aggregate constant.
+`match_scope` separately distinguishes a missing model cohort
+(`population_default`) from unavailable evidence stores (`unavailable`).
 
-| File | Purpose |
-|------|---------|
-| `main.py` | FastAPI application, API endpoints |
-| `database.py` | PostgreSQL connection, queries |
-| `consolidate_models.py` | Make/model normalization logic |
-| `upload_to_postgres.py` | CSV data uploader |
-| `static/index.html` | Frontend HTML |
-| `static/style.css` | Frontend styling |
-| `static/script.js` | Frontend JavaScript |
-| `Dockerfile` | Container configuration |
-| `requirements.txt` | Python dependencies |
+## Frontend
 
----
+The SPA source lives at repository root (`App.tsx`, `components/`, `services/`,
+`utils/`, `index.tsx`). Vite builds `static/index.html` and hashed files under
+`static/assets/`. Those outputs are ignored and are built inside the Docker
+frontend stage; they are not release inputs from a developer's working tree.
 
-## API Endpoints
+Standalone legal/guide HTML and SEO templates remain source-controlled under
+`static/` and `templates/`. Optional analytics are consent-gated and automatic
+tracking is disabled on bearer-token report routes.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Serve frontend HTML |
-| `/api/makes` | GET | List all vehicle makes |
-| `/api/models?make=X` | GET | List models for a make |
-| `/api/risk?make=X&model=Y&year=Z&mileage=W` | GET | Get risk assessment |
+## Backend boundaries
 
----
+| Module | Responsibility |
+|---|---|
+| `main.py` | FastAPI lifecycle, legacy compatibility routes, lead/reminder endpoints, static serving |
+| `report_contract.py` | Strict v2 request/response/error models and enums |
+| `report_routes.py` | Typed errors, idempotency, persistence ordering, token retrieval, `/api/version` |
+| `report_service.py` | Vehicle/MOT mapping, mileage provenance, evidence fallback ladder |
+| `database.py` | PostgreSQL pool, v2 weighted queries, saved-report persistence, lead persistence |
+| `dvsa_client.py` / `dvla_client.py` | External vehicle-data clients |
 
-## Data Flow
+Legacy `/api/risk`, `/api/risk/v55`, and `/api/vehicle` endpoints are isolated
+compatibility surfaces. They are not the browser's RC1 report flow.
 
-1. **User selects make** → Frontend calls `/api/makes`
-2. **User selects model** → Frontend calls `/api/models?make=X`
-3. **User submits form** → Frontend calls `/api/risk` with all params
-4. **Backend queries PostgreSQL** → Aggregates risk across model variants
-5. **Backend returns JSON** → Frontend displays results
+## Evidence stores
 
----
+- `mot_risk` in PostgreSQL is the primary aggregate comparison store.
+- `prod_data_clean.csv.gz` is the checked-in primary artifact used to build the
+  SQLite `risks` fallback via `build_db.py`.
+- Both stores use sample-size-weighted exact-band, age-band, and model-level
+  aggregation. Component evidence is suppressed unless every contributing row
+  has complete component values.
+- `risk_checks` stores saved report payloads, idempotency keys, provenance,
+  expiry, and opaque share tokens.
+- `leads` stores explicitly requested reminder, email, or garage-contact data.
 
-## Technology Stack
+## Persistence and privacy
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | HTML, CSS, JavaScript |
-| Backend | Python 3.11, FastAPI, Uvicorn |
-| Database | PostgreSQL (Railway) |
-| Hosting | Railway.app |
-| CI/CD | GitHub → Railway auto-deploy |
+A report ID and token are minted before insertion so the successful POST body
+and stored GET replay are identical. If persistence fails, the live response is
+degraded to `saved=false` and contains no durable ID, token, URL, or expiry.
 
----
+Application access logging is disabled in the release image. Runtime logs use
+correlation IDs, safe route shapes, and keyed VRN digests where correlation is
+necessary. Check records are pseudonymised after 24 calendar months; leads are
+deleted after 12 calendar months. The one-time historical backlog operation is
+separate and requires an owner-supplied notice-live cutoff.
 
-## Data Model
+## Release identity
 
-The `mot_risk` table contains pre-aggregated MOT test results:
+`GET /api/version` reports backend SHA, frontend build SHA, full JavaScript
+bundle SHA-256, build timestamp, contract version, application version, and
+process start time. Acceptance requires both source SHAs to equal the candidate
+commit. Railway-specific build-context filtering still requires a real
+candidate deployment before production approval.
 
-- **Grain:** One row per (model_id, age_band, mileage_band)
-- **Metrics:** Total tests, failures, failure probabilities
-- **Components:** Risk breakdown by brakes, suspension, tyres, etc.
-
-Age bands: `0-3`, `3-6`, `6-10`, `10+` years
-Mileage bands: `0-30k`, `30k-60k`, `60k-100k`, `100k+`
+See `docs/release_rc1/README.md` for the release packet and current gates.

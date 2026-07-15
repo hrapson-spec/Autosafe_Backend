@@ -28,7 +28,7 @@ DEFAULT_KEY = "autosafe-indexnow-key"
 INDEXNOW_API_URL = "https://api.indexnow.org/indexnow"
 BATCH_SIZE = 10_000
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-PRIORITY_PREFIXES = ("/insights/", "/will-my-car-pass-mot/")
+PRIORITY_PREFIXES = ("/will-my-car-pass-mot/", "/mot-check/")
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ def fetch_sitemap_urls(client: httpx.Client) -> list[str]:
 
 
 def prioritize_urls(urls: list[str]) -> list[str]:
-    """Sort URLs so high-value pages (insights, will-my-car-pass) come first."""
+    """Sort URLs so the live comparison/check pages come first."""
     priority = []
     rest = []
     for url in urls:
@@ -146,8 +146,8 @@ def submit_to_indexnow(client: httpx.Client, key: str, urls: list[str]) -> None:
 def print_gsc_instructions() -> None:
     """Print manual Google Search Console steps for top priority pages."""
     pages = [
-        "https://www.autosafe.one/insights/march-mot-rush-2026/",
         "https://www.autosafe.one/will-my-car-pass-mot/",
+        "https://www.autosafe.one/guides/mot-failure-rates-by-car",
         "https://www.autosafe.one/mot-check/ford/fiesta/",
         "https://www.autosafe.one/mot-check/vauxhall/corsa/",
         "https://www.autosafe.one/mot-check/volkswagen/golf/",

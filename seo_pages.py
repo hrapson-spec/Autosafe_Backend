@@ -26,6 +26,12 @@ from cachetools import TTLCache
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
+from report_contract import (
+    DATASET_ARTIFACT_REVISION,
+    DATASET_TOTAL_FAILURES,
+    DATASET_TOTAL_TESTS,
+    POPULATION_DEFAULT_FAILURE_RISK,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +56,12 @@ def _display_name(text: str) -> str:
 # --- Jinja2 setup ---
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
+jinja_env.globals.update(
+    dataset_total_failures=DATASET_TOTAL_FAILURES,
+    dataset_total_tests=DATASET_TOTAL_TESTS,
+    dataset_artifact_revision=DATASET_ARTIFACT_REVISION,
+    dataset_reference_rate=POPULATION_DEFAULT_FAILURE_RISK,
+)
 
 # --- Dedicated SEO cache (separate from API cache in main.py) ---
 _seo_cache: TTLCache = TTLCache(maxsize=2000, ttl=3600)
@@ -66,9 +78,6 @@ _models_for_make: dict = {}
 _model_fail_rates: dict = {}
 # Models with enough tests for age-band pages (staged rollout)
 _age_band_eligible: set = set()  # set of (make_slug, model_slug)
-# Data freshness timestamp (set during initialization)
-_data_updated: str = ""
-
 # Age band slug mappings
 AGE_BAND_SLUGS = {
     "0-2-years": "0-2",
@@ -143,27 +152,21 @@ COMPONENTS = [
 ]
 
 
-CITY_CONFIG = {
-    "london": {"display": "London", "prefixes": ["N", "E", "SE", "SW", "W", "NW", "WC", "EC"]},
-    "manchester": {"display": "Manchester", "prefixes": ["M"]},
-    "birmingham": {"display": "Birmingham", "prefixes": ["B"]},
-    "leeds": {"display": "Leeds", "prefixes": ["LS"]},
-    "glasgow": {"display": "Glasgow", "prefixes": ["G"]},
-    "liverpool": {"display": "Liverpool", "prefixes": ["L"]},
-    "bristol": {"display": "Bristol", "prefixes": ["BS"]},
-    "newcastle": {"display": "Newcastle", "prefixes": ["NE"]},
-    "sheffield": {"display": "Sheffield", "prefixes": ["S"]},
-    "edinburgh": {"display": "Edinburgh", "prefixes": ["EH"]},
-    "cardiff": {"display": "Cardiff", "prefixes": ["CF"]},
-    "belfast": {"display": "Belfast", "prefixes": ["BT"]},
-}
+RETIRED_LOCAL_CITY_SLUGS = frozenset({
+    "london", "manchester", "birmingham", "leeds", "glasgow", "liverpool",
+    "bristol", "newcastle", "sheffield", "edinburgh", "cardiff", "belfast",
+})
 
 # Mapping for component slugs to (db_column, display_name)
 COMPONENT_SLUGS = {
     _slugify(name): (col, name) for col, name in COMPONENTS
 }
 
-UK_AVERAGE_FAIL_RATE = 0.28
+DATASET_REFERENCE_FAIL_RATE = POPULATION_DEFAULT_FAILURE_RISK
+# Source-controlled page-copy revision for non-dataset sitemap entries. Unlike
+# ``date.today()``, this does not claim every URL changed whenever a worker
+# restarts. Update deliberately when those public pages materially change.
+SITE_CONTENT_REVISION = "2026-07-11"
 
 
 
@@ -228,7 +231,12 @@ def initialize_seo_data(get_sqlite_connection):
                     if row and row[0] and row[0] >= 100:
                         valid_models.add((make, model))
                 except sqlite3.Error as e:
-                    logger.warning(f"SEO: Error checking {make} {model}: {e}")
+                    logger.warning(
+                        "SEO model check failed: make=%s model=%s type=%s",
+                        make,
+                        model,
+                        type(e).__name__,
+                    )
 
     # Identify top models eligible for age-band pages (>= 10,000 total tests)
     age_band_candidates = set()
@@ -298,10 +306,6 @@ def initialize_seo_data(get_sqlite_connection):
                 except sqlite3.Error:
                     pass
 
-    global _data_updated
-    _data_updated = date.today().isoformat()
-    jinja_env.globals["data_updated"] = _data_updated
-
     total_pages = len(_make_by_slug) + len(_model_by_slug)
     logger.info(
         f"SEO: Initialized {len(_make_by_slug)} makes, "
@@ -359,7 +363,8 @@ def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
     """Query age-band breakdown for a model (weighted average across mileage bands)."""
     where, params = _model_where_clause(make, model)
     comp_cols = ", ".join(
-        f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
+        f"CASE WHEN COUNT({col}) = COUNT(*) "
+        f"THEN ROUND(SUM({col} * Total_Tests) / NULLIF(SUM(Total_Tests), 0), 4) END as {col}"
         for col, _ in COMPONENTS
     )
     rows = conn.execute(
@@ -386,6 +391,8 @@ def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
 
     result = []
     for row in rows:
+        if row["fail_rate"] is None or row["total_failures"] is None:
+            continue
         # Find worst component for this age band
         comp_risks = {}
         for col, name in COMPONENTS:
@@ -399,7 +406,7 @@ def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
             "age_band": row["age_band"],
             "total_tests": int(row["total_tests"]),
             "total_failures": int(row["total_failures"]),
-            "fail_rate": float(row["fail_rate"]) if row["fail_rate"] else 0,
+            "fail_rate": float(row["fail_rate"]),
             "worst_component": worst,
             "components": comp_risks,
         })
@@ -410,7 +417,8 @@ def _query_model_overall(conn, make: str, model: str) -> Optional[dict]:
     """Query overall failure rate for a model."""
     where, params = _model_where_clause(make, model)
     comp_cols = ", ".join(
-        f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
+        f"CASE WHEN COUNT({col}) = COUNT(*) "
+        f"THEN ROUND(SUM({col} * Total_Tests) / NULLIF(SUM(Total_Tests), 0), 4) END as {col}"
         for col, _ in COMPONENTS
     )
     row = conn.execute(
@@ -425,20 +433,31 @@ def _query_model_overall(conn, make: str, model: str) -> Optional[dict]:
         params,
     ).fetchone()
 
-    if not row or not row["total_tests"]:
+    if not row or not row["total_tests"] or row["fail_rate"] is None or row["total_failures"] is None:
         return None
 
     components = []
     for col, name in COMPONENTS:
-        val = row[col] if row[col] else 0
-        components.append({"name": name, "risk": float(val), "col": col})
+        val = row[col]
+        if val is not None:
+            components.append({"name": name, "risk": float(val), "col": col})
 
     return {
         "total_tests": int(row["total_tests"]),
         "total_failures": int(row["total_failures"]),
-        "fail_rate": float(row["fail_rate"]) if row["fail_rate"] else 0,
+        "fail_rate": float(row["fail_rate"]),
         "components": sorted(components, key=lambda c: c["risk"], reverse=True),
     }
+
+
+def _align_component_rates(left: list[dict], right: list[dict]) -> list[dict]:
+    """Return only component categories supported for both model groups."""
+    right_by_name = {item["name"]: item["risk"] for item in right}
+    return [
+        {"name": item["name"], "risk1": item["risk"], "risk2": right_by_name[item["name"]]}
+        for item in left
+        if item["name"] in right_by_name
+    ]
 
 
 def _query_make_models(conn, make: str, model_ids: list[str]) -> list[dict]:
@@ -453,10 +472,22 @@ def _query_make_models(conn, make: str, model_ids: list[str]) -> list[dict]:
                 "slug": _slugify(model),
                 "fail_rate": overall["fail_rate"],
                 "total_tests": overall["total_tests"],
+                "total_failures": overall["total_failures"],
             })
     # Sort by failure rate descending
     results.sort(key=lambda m: m["fail_rate"], reverse=True)
     return results
+
+
+def _summarise_models(models: list[dict]) -> dict:
+    """Return a sample-size-weighted summary for the included model groups."""
+    total_tests = sum(model["total_tests"] for model in models)
+    total_failures = sum(model["total_failures"] for model in models)
+    return {
+        "total_tests": total_tests,
+        "total_failures": total_failures,
+        "fail_rate": total_failures / total_tests if total_tests else 0.0,
+    }
 
 
 def _html_response(content: str) -> HTMLResponse:
@@ -479,9 +510,6 @@ def _not_found_html(message: str) -> HTMLResponse:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Not Found | AutoSafe</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         .guide-content {{ max-width: 800px; margin: 0 auto; padding: 2rem; }}
         .guide-content h1 {{ font-family: 'Playfair Display', serif; font-size: 2.5rem; margin-bottom: 1rem; }}
@@ -562,6 +590,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         if not overall1 or not overall2:
             return _not_found_html("Not enough data for this comparison.")
 
+        component_comparisons = _align_component_rates(
+            overall1["components"], overall2["components"]
+        )
+
         # Determine verdict
         if overall1["fail_rate"] < overall2["fail_rate"]:
             winner = display1
@@ -586,6 +618,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             overall1=overall1, overall2=overall2,
             age_bands1=age_bands1, age_bands2=age_bands2,
             winner=winner, loser=loser, diff=diff,
+            component_comparisons=component_comparisons,
             canonical_url=canonical_url,
             slug1=slug1, slug2=slug2,
         )
@@ -631,11 +664,11 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             query = f"""
                 SELECT model_id,
                        SUM(Total_Tests) as total_tests,
-                       ROUND(SUM({db_col} * Total_Tests) / SUM(Total_Tests), 4) as comp_risk
+                       ROUND(SUM({db_col} * Total_Tests) / NULLIF(SUM(Total_Tests), 0), 4) as comp_risk
                 FROM risks
                 WHERE age_band != 'Unknown'
                 GROUP BY model_id
-                HAVING SUM(Total_Tests) >= 5000
+                HAVING SUM(Total_Tests) >= 5000 AND COUNT({db_col}) = COUNT(*)
                 ORDER BY comp_risk DESC
                 LIMIT 50
             """
@@ -697,6 +730,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             old_factory = conn.row_factory
             conn.row_factory = sqlite3.Row
             models = _query_make_models(conn, make, model_ids)
+            make_summary = _summarise_models(models)
             conn.row_factory = old_factory
 
         other_makes = sorted(
@@ -710,6 +744,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             make_display=make_info["display"],
             make_slug=make_slug,
             models=models,
+            make_summary=make_summary,
             other_makes=other_makes,
         )
         _seo_cache[cache_key] = html
@@ -804,16 +839,17 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             competitors=competitors,
             comparisons=comparisons,
             similar_models=similar_models,
-            uk_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
+            dataset_reference_rate=DATASET_REFERENCE_FAIL_RATE,
             best_age_band=best_age,
             worst_age_band=worst_age,
         )
         _seo_cache[cache_key] = html
         return _html_response(html)
 
-    # --- Year-specific AND age-band pages: /mot-check/{make}/{model}/{detail_slug}/ ---
-    # Unified handler: if detail_slug is a valid year (int), show year page;
-    # if it matches an age-band slug, show age-band page.
+    # --- Age-band pages and legacy year URLs: /mot-check/{make}/{model}/{detail_slug}/ ---
+    # The dataset contains age bands, not model-year cohorts. Year-looking URLs
+    # therefore redirect to the stable model-group page instead of inventing
+    # year-level precision or a permanent redirect that ages incorrectly.
 
     # Legacy age-band slugs that were renamed — 301 redirect to current slug
     LEGACY_AGE_SLUGS = {
@@ -841,7 +877,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return _not_found_html("Detailed data not available for this model yet.")
 
         # --- Determine whether this is a year or age-band request ---
-        specific_year = None
         age_band_raw = None
         age_slug = None
 
@@ -851,17 +886,14 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             current_year = date.today().year
             if year < 1980 or year > current_year + 1:
                 return _not_found_html("Invalid year.")
-            specific_year = year
-            age = current_year - year
-            from utils import get_age_band
-            age_band_raw = get_age_band(age)
-            # Find the matching slug
-            for slug, raw in AGE_BAND_SLUGS.items():
-                if raw == age_band_raw:
-                    age_slug = slug
-                    break
-            if not age_slug:
-                return _not_found_html("Data not available for this vehicle age.")
+            # Model-year pages previously relabelled a broad, moving age band
+            # as year-specific evidence. Retire them to the stable model-group
+            # page; a permanent redirect to a computed age band would become
+            # wrong as the calendar advances.
+            return RedirectResponse(
+                url=f"/mot-check/{make_slug}/{model_slug}/",
+                status_code=301,
+            )
         except ValueError:
             # Not an int — try age-band slug (e.g. "3-5-years")
             age_band_raw = AGE_BAND_SLUGS.get(detail_slug)
@@ -895,41 +927,36 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 break
 
         if not current_band:
-            label = str(specific_year) if specific_year else AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw)
+            label = AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw)
             return _not_found_html(
                 f"Not enough test data for {label} {make_info['display']} {model_info['display']}."
             )
 
         # Build component list sorted by risk
         components = sorted(
-            [{"name": name, "risk": current_band["components"].get(name, 0)}
-             for _, name in COMPONENTS],
+            [{"name": name, "risk": current_band["components"][name]}
+             for _, name in COMPONENTS if name in current_band["components"]],
             key=lambda c: c["risk"],
             reverse=True,
         )
 
-        # Get competitor models (for age-band pages)
+        # Get competitor models for navigation only; no equivalence is claimed.
         competitors = []
-        if not specific_year:
-            rival_list = COMPETITOR_MODELS.get(model, [])
-            for rival_make, rival_model in rival_list:
-                rival_make_slug = _slugify(rival_make)
-                rival_model_slug = _slugify(rival_model)
-                if (rival_make_slug, rival_model_slug) in _model_by_slug:
-                    rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
-                    competitors.append({
-                        "make_slug": rival_make_slug,
-                        "model_slug": rival_model_slug,
-                        "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
-                        "model_display": rival_info["display"],
-                    })
+        rival_list = COMPETITOR_MODELS.get(model, [])
+        for rival_make, rival_model in rival_list:
+            rival_make_slug = _slugify(rival_make)
+            rival_model_slug = _slugify(rival_model)
+            if (rival_make_slug, rival_model_slug) in _model_by_slug:
+                rival_info = _model_by_slug[(rival_make_slug, rival_model_slug)]
+                competitors.append({
+                    "make_slug": rival_make_slug,
+                    "model_slug": rival_model_slug,
+                    "make_display": _make_by_slug.get(rival_make_slug, {}).get("display", rival_make),
+                    "model_display": rival_info["display"],
+                })
 
-        if specific_year:
-            canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{specific_year}/"
-            template_name = "seo_model_year.html"
-        else:
-            canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{age_slug}/"
-            template_name = "seo_model_age.html"
+        canonical_url = f"https://www.autosafe.one/mot-check/{make_slug}/{model_slug}/{age_slug}/"
+        template_name = "seo_model_age.html"
 
         template = jinja_env.get_template(template_name)
         html = template.render(
@@ -940,7 +967,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             age_band_display=AGE_BAND_DISPLAY.get(age_band_raw, age_band_raw),
             age_band_raw=age_band_raw,
             age_slug=age_slug,
-            specific_year=specific_year,
             fail_rate=current_band["fail_rate"],
             total_tests=current_band["total_tests"],
             components=components,
@@ -1001,12 +1027,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         if not overall:
              return _not_found_html("Data not available.")
 
-        # Find the specific component risk
-        comp_risk = 0.0
+            # Find the recorded component-category rate.
+        comp_risk = None
         for c in overall["components"]:
             if c["name"] == target_component:
                 comp_risk = c["risk"]
                 break
+
+        if comp_risk is None:
+            return _not_found_html("Complete component evidence is not available for this model group.")
         
         # Threshold check: Is this actually a problem?
         # If risk is very low (< 2%), maybe don't index this page to avoid thin content
@@ -1062,48 +1091,13 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     @app.get("/local-mot/{city_slug}/", response_class=HTMLResponse)
     def seo_local_page(city_slug: str):
         city_slug = city_slug.lower()
-        if city_slug not in CITY_CONFIG:
-            return _not_found_html("City not found. We currently cover major UK cities.")
+        if city_slug not in RETIRED_LOCAL_CITY_SLUGS:
+            return _not_found_html("City page not found.")
 
-        city_data = CITY_CONFIG[city_slug]
-        city_display = city_data["display"]
-        prefixes = city_data["prefixes"]
-
-        cache_key = f"seo:local:{city_slug}"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        garages = []
-        with get_sqlite_connection() as conn:
-            if conn:
-                try:
-                    # Build OR clauses for prefixes
-                    # postcode LIKE 'N%' OR postcode LIKE 'E%' ...
-                    conditions = " OR ".join([f"postcode LIKE '{p}%'" for p in prefixes])
-                    query = f"""
-                        SELECT id, name, postcode, phone, tier, status
-                        FROM garages
-                        WHERE status = 'active' AND ({conditions})
-                        ORDER BY tier DESC, RANDOM()
-                        LIMIT 20
-                    """
-                    conn.row_factory = sqlite3.Row
-                    rows = conn.execute(query).fetchall()
-                    for row in rows:
-                        garages.append(dict(row))
-                except sqlite3.OperationalError:
-                    # If table doesn't exist (e.g. strict sqlite mode without migration), fail gracefully
-                    # Or verify table existence first.
-                    pass
-
-        template = jinja_env.get_template("seo_local.html")
-        html = template.render(
-            city_display=city_display,
-            city_slug=city_slug,
-            garages=garages,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
+        # These pages inferred local failure rates from the dataset-wide
+        # reference and labelled unranked database entries as approved/top
+        # rated. Preserve known URLs without preserving unsupported claims.
+        return RedirectResponse(url="/", status_code=301)
 
 
     # --- K7 Pillar Page: "Will My Car Pass Its MOT?" ---
@@ -1140,9 +1134,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             top_models.sort(key=lambda m: m["total_tests"], reverse=True)
             top_models = top_models[:20]
 
-            # National average component risks
+            # Dataset-wide weighted component-category rates.
             comp_cols = ", ".join(
-                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
+                f"CASE WHEN COUNT({col}) = COUNT(*) "
+                f"THEN ROUND(SUM({col} * Total_Tests) / NULLIF(SUM(Total_Tests), 0), 4) END as {col}"
                 for col, _ in COMPONENTS
             )
             row = conn.execute(
@@ -1152,13 +1147,17 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                     WHERE age_band != 'Unknown'"""
             ).fetchone()
 
-            total_tests_analysed = int(row["total_tests"]) if row and row["total_tests"] else 142000000
+            if not row or not row["total_tests"]:
+                conn.row_factory = old_factory
+                return HTMLResponse("Service temporarily unavailable", status_code=503)
+            total_tests_analysed = int(row["total_tests"])
 
             top_components = []
             if row:
                 for col, name in COMPONENTS:
-                    val = row[col] if row[col] else 0
-                    top_components.append({"name": name, "avg_risk": float(val)})
+                    val = row[col]
+                    if val is not None:
+                        top_components.append({"name": name, "avg_risk": float(val)})
                 top_components.sort(key=lambda c: c["avg_risk"], reverse=True)
 
             conn.row_factory = old_factory
@@ -1166,7 +1165,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         template = jinja_env.get_template("seo_pillar_k7.html")
         html = template.render(
             top_models=top_models,
-            national_avg_fail_rate=UK_AVERAGE_FAIL_RATE,
+            dataset_reference_rate=DATASET_REFERENCE_FAIL_RATE,
             top_components=top_components,
             total_tests_analysed=total_tests_analysed,
         )
@@ -1177,236 +1176,41 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     @app.get("/insights/unreliable-3-year-old-cars-2026/", response_class=HTMLResponse)
     def seo_unreliable_cars():
-        cache_key = "seo:unreliable-cars-2026"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-
-            # Top 10 most unreliable 3-year-old cars (5,000+ tests for statistical significance)
-            rows = conn.execute("""
-                SELECT model_id,
-                       SUM(Total_Tests) as total_tests,
-                       SUM(Total_Failures) as total_failures,
-                       ROUND(CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests), 4) as fail_rate
-                FROM risks
-                WHERE age_band = '0-3'
-                GROUP BY model_id
-                HAVING SUM(Total_Tests) >= 1000
-                ORDER BY fail_rate DESC
-                LIMIT 10
-            """).fetchall()
-
-            cars = []
-            for rank, row in enumerate(rows, 1):
-                model_id = row["model_id"]
-                # Get component breakdown
-                comp_row = conn.execute(f"""
-                    SELECT {', '.join(f'ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}' for col, _ in COMPONENTS)}
-                    FROM risks
-                    WHERE model_id = ? AND age_band = '0-3'
-                """, (model_id,)).fetchone()
-
-                comp_risks = []
-                if comp_row:
-                    for col, name in COMPONENTS:
-                        val = comp_row[col] if comp_row[col] else 0
-                        comp_risks.append({"name": name, "risk": float(val)})
-                    comp_risks.sort(key=lambda c: c["risk"], reverse=True)
-
-                # Try to find AutoSafe page link for this model
-                page_link = None
-                for (ms, mds), info in _model_by_slug.items():
-                    full_id = f"{info['make']} {info['model_id']}"
-                    if full_id == model_id or model_id.startswith(full_id):
-                        page_link = f"/mot-check/{ms}/{mds}/"
-                        break
-
-                cars.append({
-                    "rank": rank,
-                    "model_id": model_id,
-                    "display_name": _display_name(model_id),
-                    "total_tests": int(row["total_tests"]),
-                    "total_failures": int(row["total_failures"]),
-                    "fail_rate": float(row["fail_rate"]),
-                    "top_components": comp_risks[:3],
-                    "all_components": comp_risks,
-                    "page_link": page_link,
-                })
-
-            # Total tests in the 0-3 age band for methodology note
-            total_row = conn.execute("""
-                SELECT SUM(Total_Tests) as total FROM risks WHERE age_band = '0-3'
-            """).fetchone()
-            total_young_tests = int(total_row["total"]) if total_row and total_row["total"] else 0
-
-            conn.row_factory = old_factory
-
-        template = jinja_env.get_template("seo_unreliable_cars.html")
-        html = template.render(
-            cars=cars,
-            total_young_tests=total_young_tests,
+        # The historical page queried a non-existent ``0-3`` band and then
+        # described it as first-MOT evidence. Preserve inbound links without
+        # serving that invalid interpretation.
+        return RedirectResponse(
+            url="/guides/mot-failure-rates-by-car",
+            status_code=301,
         )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
+
 
     # --- March 2026 MOT Rush insight page ---
 
     @app.get("/insights/march-mot-rush-2026/", response_class=HTMLResponse)
     def seo_march_rush():
-        cache_key = "seo:march-rush-2026"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
-
-        with get_sqlite_connection() as conn:
-            if conn is None:
-                return HTMLResponse("Service temporarily unavailable", status_code=503)
-            old_factory = conn.row_factory
-            conn.row_factory = sqlite3.Row
-
-            # Query top failing 0-3 year old cars (March 2023 plates hitting first MOT in 2026)
-            rows = conn.execute("""
-                SELECT model_id,
-                       SUM(Total_Tests) as total_tests,
-                       SUM(Total_Failures) as total_failures,
-                       ROUND(CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests), 4) as fail_rate
-                FROM risks
-                WHERE age_band = '0-3'
-                GROUP BY model_id
-                HAVING SUM(Total_Tests) >= 1000
-                ORDER BY fail_rate DESC
-                LIMIT 20
-            """).fetchall()
-
-            # Build cars list with component breakdown
-            cars = []
-            for row in rows:
-                model_id = row["model_id"]
-                # Get component risks for this model at 0-3 age band
-                comp_row = conn.execute(f"""
-                    SELECT {', '.join(f'ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}' for col, _ in COMPONENTS)}
-                    FROM risks
-                    WHERE model_id = ? AND age_band = '0-3'
-                """, (model_id,)).fetchone()
-
-                comp_risks = []
-                if comp_row:
-                    for col, name in COMPONENTS:
-                        val = comp_row[col] if comp_row[col] else 0
-                        comp_risks.append({"name": name, "risk": float(val)})
-                    comp_risks.sort(key=lambda c: c["risk"], reverse=True)
-
-                cars.append({
-                    "model_id": model_id,
-                    "display_name": _display_name(model_id),
-                    "total_tests": int(row["total_tests"]),
-                    "fail_rate": float(row["fail_rate"]),
-                    "top_components": comp_risks[:3],
-                })
-
-            # Get top 5 failure areas across all 0-3 year old vehicles
-            comp_cols = ", ".join(
-                f"ROUND(SUM({col} * Total_Tests) / SUM(Total_Tests), 4) as {col}"
-                for col, _ in COMPONENTS
-            )
-            overall_comp = conn.execute(f"""
-                SELECT {comp_cols}, SUM(Total_Tests) as total_tests
-                FROM risks
-                WHERE age_band = '0-3'
-            """).fetchone()
-
-            top_failure_areas = []
-            if overall_comp:
-                for col, name in COMPONENTS:
-                    val = overall_comp[col] if overall_comp[col] else 0
-                    top_failure_areas.append({"name": name, "risk": float(val)})
-                top_failure_areas.sort(key=lambda c: c["risk"], reverse=True)
-
-            conn.row_factory = old_factory
-
-        # Popular 2023 sellers to link to
-        popular_models = [
-            ("ford", "fiesta"), ("vauxhall", "corsa"), ("volkswagen", "golf"),
-            ("nissan", "qashqai"), ("ford", "focus"), ("toyota", "yaris"),
-            ("kia", "sportage"), ("hyundai", "tucson"), ("peugeot", "208"),
-            ("volkswagen", "polo"),
-        ]
-        model_links = []
-        for make_slug, model_slug in popular_models:
-            if (make_slug, model_slug) in _model_by_slug:
-                info = _model_by_slug[(make_slug, model_slug)]
-                make_info = _make_by_slug.get(make_slug, {})
-                model_links.append({
-                    "make_slug": make_slug,
-                    "model_slug": model_slug,
-                    "make_display": make_info.get("display", make_slug.title()),
-                    "model_display": info["display"],
-                })
-
-        template = jinja_env.get_template("seo_march_rush.html")
-        html = template.render(
-            cars=cars,
-            top_failure_areas=top_failure_areas[:5],
-            model_links=model_links,
-        )
-        _seo_cache[cache_key] = html
-        return _html_response(html)
-
-        _seo_cache[cache_key] = html
-        return _html_response(html)
+        # Retired for the same invalid ``0-3``-band/first-MOT assumption as
+        # the ranking page above. The general guide is the honest successor.
+        return RedirectResponse(url="/guides/first-mot-guide", status_code=301)
 
 
     # --- /insights/ routes (Data PR stories) ---
 
     @app.get("/insights/", response_class=HTMLResponse)
     def insights_index():
-        cache_key = "seo:insights:index"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
+        return RedirectResponse(
+            url="/guides/mot-failure-rates-by-car",
+            status_code=301,
+        )
 
-        from data_stories.query_engine import STORY_QUERIES
-        stories = []
-        for name, query_fn in STORY_QUERIES.items():
-            try:
-                story = query_fn()
-                stories.append(story)
-            except Exception as e:
-                logger.warning(f"Insights: Failed to load story '{name}': {e}")
-
-        template = jinja_env.get_template("seo_insights.html")
-        html = template.render(stories=stories)
-        _seo_cache[cache_key] = html
-        return _html_response(html)
 
     @app.get("/insights/{story_slug}/", response_class=HTMLResponse)
     def insights_story(story_slug: str):
-        cache_key = f"seo:insights:{story_slug}"
-        if cache_key in _seo_cache:
-            return _html_response(_seo_cache[cache_key])
+        return RedirectResponse(
+            url="/guides/mot-failure-rates-by-car",
+            status_code=301,
+        )
 
-        from data_stories.query_engine import STORY_QUERIES
-        # Find the story by slug
-        story_data = None
-        for name, query_fn in STORY_QUERIES.items():
-            try:
-                candidate = query_fn()
-                if candidate["slug"] == story_slug:
-                    story_data = candidate
-                    break
-            except Exception as e:
-                logger.warning(f"Insights: Failed to query story '{name}': {e}")
-
-        if not story_data:
-            return _not_found_html("Insight report not found.")
-
-        from data_stories.story_templates import render_html
-        html = render_html(story_data)
-        _seo_cache[cache_key] = html
-        return _html_response(html)
 
     @app.get("/sitemap.xml", response_class=Response)
     def sitemap_index():
@@ -1419,22 +1223,20 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                 headers={"Cache-Control": "public, max-age=3600"},
             )
 
-        today = date.today().isoformat()
         base = "https://www.autosafe.one"
         sitemaps = [
-            f"{base}/sitemap-content.xml",
-            f"{base}/sitemap-makes.xml",
-            f"{base}/sitemap-models.xml",
-            f"{base}/sitemap-comparisons.xml",
-            f"{base}/sitemap-local.xml",
+            (f"{base}/sitemap-content.xml", SITE_CONTENT_REVISION),
+            (f"{base}/sitemap-makes.xml", DATASET_ARTIFACT_REVISION),
+            (f"{base}/sitemap-models.xml", DATASET_ARTIFACT_REVISION),
+            (f"{base}/sitemap-comparisons.xml", DATASET_ARTIFACT_REVISION),
         ]
 
         entries = []
-        for loc in sitemaps:
+        for loc, lastmod in sitemaps:
             entries.append(
                 f"  <sitemap>\n"
                 f"    <loc>{loc}</loc>\n"
-                f"    <lastmod>{today}</lastmod>\n"
+                f"    <lastmod>{lastmod}</lastmod>\n"
                 f"  </sitemap>"
             )
 
@@ -1479,7 +1281,6 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
                             headers={"Cache-Control": "public, max-age=3600"})
 
-        today = date.today().isoformat()
         base = "https://www.autosafe.one"
         urls = []
 
@@ -1498,28 +1299,13 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             ("/guides/first-mot-guide", "0.8", "monthly"),
             ("/privacy", "0.3", "yearly"),
             ("/terms", "0.3", "yearly"),
-            ("/insights/unreliable-3-year-old-cars-2026/", "0.7", "monthly"),
-            ("/insights/march-mot-rush-2026/", "0.7", "monthly"),
         ]
         for path, priority, freq in static_pages:
-            urls.append(_url_entry(f"{base}{path}", today, priority, freq))
-
-        # Insights hub
-        urls.append(_url_entry(f"{base}/insights/", today, "0.8", "weekly"))
-        try:
-            from data_stories.query_engine import STORY_QUERIES
-            for name, query_fn in STORY_QUERIES.items():
-                try:
-                    story = query_fn()
-                    urls.append(_url_entry(f"{base}/insights/{story['slug']}/", today, "0.7", "monthly"))
-                except Exception:
-                    pass
-        except ImportError:
-            pass
+            urls.append(_url_entry(f"{base}{path}", SITE_CONTENT_REVISION, priority, freq))
 
         # Component hubs (top-level aggregation — indexable)
         for comp_slug in COMPONENT_SLUGS:
-            urls.append(_url_entry(f"{base}/mot-check/problems/{comp_slug}/", today, "0.7", "monthly"))
+            urls.append(_url_entry(f"{base}/mot-check/problems/{comp_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
 
         xml = _build_urlset(urls)
         _sitemap_cache[cache_key] = xml
@@ -1534,11 +1320,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
                             headers={"Cache-Control": "public, max-age=3600"})
 
-        today = date.today().isoformat()
         base = "https://www.autosafe.one"
         urls = []
         for make_slug in sorted(_make_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/", today, "0.8", "monthly"))
+            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/", DATASET_ARTIFACT_REVISION, "0.8", "monthly"))
 
         xml = _build_urlset(urls)
         _sitemap_cache[cache_key] = xml
@@ -1553,11 +1338,10 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
                             headers={"Cache-Control": "public, max-age=3600"})
 
-        today = date.today().isoformat()
         base = "https://www.autosafe.one"
         urls = []
         for (make_slug, model_slug) in sorted(_model_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/{model_slug}/", today, "0.7", "monthly"))
+            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/{model_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
 
         xml = _build_urlset(urls)
         _sitemap_cache[cache_key] = xml
@@ -1572,13 +1356,12 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
                             headers={"Cache-Control": "public, max-age=3600"})
 
-        today = date.today().isoformat()
         base = "https://www.autosafe.one"
         urls = []
         for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
             s1 = f"{_slugify(make1)}-{_slugify(model1)}"
             s2 = f"{_slugify(make2)}-{_slugify(model2)}"
-            urls.append(_url_entry(f"{base}/mot-check/compare/{s1}-vs-{s2}/", today, "0.6", "monthly"))
+            urls.append(_url_entry(f"{base}/mot-check/compare/{s1}-vs-{s2}/", DATASET_ARTIFACT_REVISION, "0.6", "monthly"))
 
         xml = _build_urlset(urls)
         _sitemap_cache[cache_key] = xml
@@ -1587,21 +1370,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     @app.get("/sitemap-local.xml", response_class=Response)
     def sitemap_local():
-        """Sub-sitemap: local MOT pages."""
-        cache_key = "sitemap:local"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        today = date.today().isoformat()
-        base = "https://www.autosafe.one"
-        urls = []
-        for city_slug in CITY_CONFIG.keys():
-            urls.append(_url_entry(f"{base}/local-mot/{city_slug}/", today, "0.7", "weekly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        """Retired local-page sitemap; point crawlers to the live index."""
+        return RedirectResponse(url="/sitemap.xml", status_code=301)
 
     logger.info("SEO: Routes registered (/mot-check/, /mot-check/{make}/{model}/{age}/, /sitemap.xml index)")
