@@ -83,11 +83,11 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             {/* Text Section - Centered */}
             <div className="text-center space-y-6">
               <h1 className="text-5xl md:text-7xl font-serif font-medium text-slate-900 tracking-tight leading-tight">
-                See what the MOT evidence says.
+                Fix it before they find it.
               </h1>
 
               <p className="text-lg md:text-xl text-slate-500 font-light tracking-wide max-w-lg mx-auto font-sans">
-                Recorded MOT details and comparable-vehicle outcomes, with every fallback explained.
+                Taking the stress out of MOTs and repairs.
               </p>
             </div>
 
