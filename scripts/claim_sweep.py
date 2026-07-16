@@ -153,6 +153,13 @@ ALLOWLIST = [
     r"per REMEDIATION_PLAN", # provenance comments
 ]
 
+# Owner-approved brand copy exception (2026-07-16). Keep this path- and
+# line-specific so the slogan can appear only as the homepage headline;
+# all diagnosis/prediction claims remain banned everywhere else.
+OWNER_APPROVED_EXCEPTIONS = {
+    "App.tsx": [r"^\s*Fix it before they find it\.\s*$"],
+}
+
 def main() -> int:
     violations = []
     dataset_path = ROOT / "prod_data_clean.csv.gz"
@@ -195,6 +202,11 @@ def main() -> int:
             except OSError:
                 continue
             for i, line in enumerate(text.splitlines(), 1):
+                if any(
+                    re.search(pattern, line, re.I)
+                    for pattern in OWNER_APPROVED_EXCEPTIONS.get(relative.as_posix(), [])
+                ):
+                    continue
                 if any(re.search(a, line, re.I) for a in ALLOWLIST):
                     continue
                 for match in re.finditer(r"\b(\d{3})\s*(?:million|M\+?)\b", line, re.I):

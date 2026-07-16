@@ -79,7 +79,14 @@ describe('App: home page rendering', () => {
   it.each([['/'], ['/app']])('renders the check form at %s', async (path) => {
     renderApp([path]);
 
-    expect(await screen.findByText('See what the MOT evidence says.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Fix it before they find it.',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Taking the stress out of MOTs and repairs.')).toBeInTheDocument();
+    expect(screen.queryByText('See what the MOT evidence says.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Registration Number', { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText('Post Code', { exact: false })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /check this car/i })).toBeInTheDocument();
