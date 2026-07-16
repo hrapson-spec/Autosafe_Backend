@@ -65,7 +65,7 @@ test('happy path: submit -> persisted report -> evidence facts present -> back t
   await page.goBack();
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText('See what the MOT evidence says.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fix it before they find it.' })).toBeVisible();
   await expect(registrationInput(page)).toBeEditable();
   await expect(page.getByRole('button', { name: /check this car/i })).toBeVisible();
 });
