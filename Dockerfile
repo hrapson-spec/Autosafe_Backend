@@ -1,6 +1,7 @@
 # One commit identity feeds both build stages. Each stage must redeclare the
 # ARG after FROM before it can use the global default.
 ARG GIT_SHA=unknown
+ARG RAILWAY_GIT_COMMIT_SHA
 
 # ---- Stage 1: frontend build ----
 # Builds the React SPA from source. Nothing from this stage's filesystem
@@ -8,6 +9,7 @@ ARG GIT_SHA=unknown
 # copied into the runtime image below.
 FROM node:20-slim AS frontend
 ARG GIT_SHA
+ARG RAILWAY_GIT_COMMIT_SHA
 WORKDIR /build
 
 # Copy the minimal set needed for `npm ci` first so this layer stays cached
@@ -34,7 +36,9 @@ RUN npm run build
 
 # Release identity produced by the same stage that built the SPA. These
 # files are copied into the runtime image and surfaced by /api/version.
-RUN printf '%s\n' "$GIT_SHA" > /build/.frontend_sha \
+COPY scripts/write_frontend_identity.sh ./scripts/write_frontend_identity.sh
+RUN RAILWAY_GIT_COMMIT_SHA="$RAILWAY_GIT_COMMIT_SHA" GIT_SHA="$GIT_SHA" \
+    sh ./scripts/write_frontend_identity.sh /build/.frontend_sha \
     && date -u +'%Y-%m-%dT%H:%M:%SZ' > /build/.build_timestamp
 
 # ---- Stage 2: runtime ----
@@ -87,6 +91,7 @@ ENV PORT=8000
 # runtime. GIT_SHA is the local-docker fallback, e.g.:
 #   docker build --build-arg GIT_SHA=$(git rev-parse HEAD) -t autosafe:rc .
 ARG GIT_SHA
+ARG RAILWAY_GIT_COMMIT_SHA
 ENV GIT_SHA=${GIT_SHA}
 
 # Health check for container monitoring

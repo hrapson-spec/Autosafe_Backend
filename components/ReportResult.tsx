@@ -8,8 +8,8 @@ import {
   Check,
   ChevronRight,
   CircleAlert,
-  CircleDot,
   Lightbulb,
+  Tyre,
   Wrench,
 } from './Icons';
 import { hasVehicleComparison, reportRateDisplay } from './ReportCopy';
@@ -37,7 +37,7 @@ const COMPONENT_GUIDANCE: Record<string, string> = {
   visibility: 'Check the windscreen, washers and wipers',
 };
 
-function formatRegistration(registration: string): string {
+export function formatRegistration(registration: string): string {
   const compact = registration.replace(/\s/g, '').toUpperCase();
   if (compact.length <= 3) return compact;
   return `${compact.slice(0, -3)} ${compact.slice(-3)}`;
@@ -73,7 +73,7 @@ function formatMotDate(date: Date, month: 'short' | 'long'): string {
   return date.toLocaleDateString('en-GB', {
     day: 'numeric',
     month,
-    ...(month === 'short' ? { year: 'numeric' as const } : {}),
+    year: 'numeric',
     timeZone: 'UTC',
   });
 }
@@ -85,19 +85,66 @@ function preparationDate(expiryDate: Date | null): string | null {
   return formatMotDate(date, 'long');
 }
 
+function greatestCommonDivisor(a: number, b: number): number {
+  return b === 0 ? a : greatestCommonDivisor(b, a % b);
+}
+
+// Express a probability as the nicest small "X in Y" fraction. We score each
+// candidate by approximation error plus a mild penalty on the denominator, so
+// simple human fractions (1 in 3, 2 in 5) win over marginally-closer but
+// clunkier ones (3 in 8). Denominators run 2..10; anything that rounds to 0 or
+// 100% at every denominator falls back to the "fewer than 1 in 100" floor.
 function failureFrequency(failureRisk: number): { text: string; predictionSummary: string } {
+  const floor = {
+    text: 'fewer than 1 in 100',
+    predictionSummary: 'That’s a chance of fewer than 1 in 100.',
+  };
+
   if (!Number.isFinite(failureRisk) || failureRisk <= 0) {
-    return {
-      text: 'fewer than 1 in 100',
-      predictionSummary: 'That’s a chance of fewer than 1 in 100.',
-    };
+    return floor;
   }
 
-  const frequency = Math.max(1, Math.round(1 / failureRisk));
+  let best: { numerator: number; denominator: number; score: number } | null = null;
+  for (let denominator = 2; denominator <= 10; denominator += 1) {
+    const numerator = Math.round(failureRisk * denominator);
+    if (numerator <= 0 || numerator >= denominator) continue;
+    const score = Math.abs(failureRisk - numerator / denominator) + denominator / 100;
+    if (!best || score < best.score) {
+      best = { numerator, denominator, score };
+    }
+  }
+
+  if (!best) {
+    return floor;
+  }
+
+  const divisor = greatestCommonDivisor(best.numerator, best.denominator);
+  const numerator = best.numerator / divisor;
+  const denominator = best.denominator / divisor;
+  const text = `about ${numerator} in ${denominator}`;
   return {
-    text: `about 1 in ${frequency}`,
-    predictionSummary: `That’s about a 1 in ${frequency} chance.`,
+    text,
+    predictionSummary: `That’s ${text}.`,
   };
+}
+
+interface RiskBand {
+  label: string;
+  textColour: string;
+  pillColour: string;
+}
+
+// Single source of truth for the % → risk-band mapping. Thresholds match the
+// design: below 30 low, 30–49 medium, 50+ high. Replaces the old duplicated
+// text-vs-bar colour logic.
+function riskBand(value: number): RiskBand {
+  if (value >= 50) {
+    return { label: 'High chance', textColour: 'text-red-600', pillColour: 'bg-red-50 text-red-700' };
+  }
+  if (value >= 30) {
+    return { label: 'Medium chance', textColour: 'text-amber-600', pillColour: 'bg-amber-50 text-amber-700' };
+  }
+  return { label: 'Low chance', textColour: 'text-green-600', pillColour: 'bg-green-50 text-green-700' };
 }
 
 function componentIcon(key: string): React.ReactNode {
@@ -111,7 +158,7 @@ function componentIcon(key: string): React.ReactNode {
     case 'body':
       return <CarFront className={className} aria-hidden="true" />;
     case 'tyres':
-      return <CircleDot className={className} aria-hidden="true" />;
+      return <Tyre className={className} aria-hidden="true" />;
     default:
       return <Wrench className={className} aria-hidden="true" />;
   }
@@ -172,16 +219,7 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
   const motExpiryDate = parseMotExpiryDate(report.mot.expiry_date);
   const prepareBy = preparationDate(motExpiryDate);
 
-  const riskTextColour = risk.value >= 50
-    ? 'text-red-600'
-    : risk.value >= 30
-      ? 'text-amber-600'
-      : 'text-green-600';
-  const riskBarColour = risk.value >= 50
-    ? 'bg-red-500'
-    : risk.value >= 30
-      ? 'bg-amber-500'
-      : 'bg-green-500';
+  const band = riskBand(risk.value);
 
   return (
     <section
@@ -193,19 +231,11 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
           <div className="space-y-6">
             <div className="space-y-2">
               {isVehiclePrediction ? (
-                <>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                    AutoSafe prediction for {registration}
-                  </p>
-                  <h2 className="max-w-xl text-2xl font-semibold leading-tight text-slate-900 md:text-3xl">
-                    Your car’s predicted chance of failing its next MOT
-                  </h2>
-                </>
+                <h2 className="max-w-xl text-2xl font-semibold leading-tight text-slate-900 md:text-3xl">
+                  Your car’s predicted chance of failing its next MOT
+                </h2>
               ) : (
                 <>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                    {registration}
-                  </p>
                   <h2 className="max-w-xl text-2xl font-semibold leading-tight text-slate-900 md:text-3xl">
                     This result isn’t a prediction for {registration}
                   </h2>
@@ -217,25 +247,20 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
             </div>
 
             <div className="space-y-3">
-              <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
-                <span className={`text-6xl font-semibold leading-none tracking-tight md:text-7xl ${riskTextColour}`}>
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className={`text-6xl font-semibold leading-none tracking-tight md:text-7xl ${band.textColour}`}
+                >
                   {risk.text}
                 </span>
-                <span className="pb-1 text-base text-slate-600">{frequency.text}</span>
-              </div>
-              <div
-                role="progressbar"
-                aria-label={isVehiclePrediction ? 'Predicted failure chance' : 'Comparison failure rate'}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={risk.value}
-                aria-valuetext={risk.text}
-                className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
-              >
-                <div
-                  className={`h-full rounded-full ${riskBarColour}`}
-                  style={{ width: `${Math.min(100, Math.max(0, risk.value))}%` }}
-                />
+                <span
+                  aria-hidden="true"
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${band.pillColour}`}
+                >
+                  {band.label}
+                </span>
+                <span className="sr-only">{`${risk.text}, ${band.label}`}</span>
               </div>
               <p className="text-base font-medium text-slate-900">
                 {isVehiclePrediction
@@ -258,14 +283,16 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
                   MOT due {formatMotDate(motExpiryDate, 'short')}
                 </span>
               )}
-              <Button variant="secondary" size="sm" onClick={onReminder}>
-                <BellRing className="h-4 w-4" aria-hidden="true" />
-                Set an MOT reminder
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onGarage}>
-                <Wrench className="h-4 w-4" aria-hidden="true" />
-                Find a local garage
-              </Button>
+              <div className="flex flex-nowrap items-center gap-3">
+                <Button variant="secondary" size="sm" className="shrink-0" onClick={onReminder}>
+                  <BellRing className="h-4 w-4" aria-hidden="true" />
+                  Set an MOT reminder
+                </Button>
+                <Button variant="ghost" size="sm" className="shrink-0" onClick={onGarage}>
+                  <Wrench className="h-4 w-4" aria-hidden="true" />
+                  Find a local garage
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
@@ -291,35 +318,32 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
         </aside>
       </div>
 
-      <Card
-        variant="dark"
-        className="grid grid-cols-1 items-center gap-5 md:grid-cols-[minmax(0,1fr)_auto]"
-      >
+      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           {isVehiclePrediction ? (
-            <CalendarDays className="mt-1 h-6 w-6 shrink-0 text-blue-300" aria-hidden="true" />
+            <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
           ) : (
-            <CircleAlert className="mt-1 h-6 w-6 shrink-0 text-amber-300" aria-hidden="true" />
+            <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
           )}
           <div>
-            <h2 className="text-xl font-semibold text-white">
-              {prepareBy ? `Get ready before ${prepareBy}` : 'Get ready before your MOT'}
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-slate-300">
+            <p className="font-semibold text-slate-900">
+              {prepareBy ? `Prepare from ${prepareBy}` : 'Prepare before your MOT'}
+            </p>
+            <p className="mt-0.5 text-sm leading-relaxed text-slate-600">
               {prepareBy
-                ? 'That gives you four weeks to deal with anything you find.'
+                ? 'That gives you about four weeks to deal with anything you find.'
                 : 'Use the checklist to catch simple problems before test day.'}
             </p>
           </div>
         </div>
         <a
           href="/app/guides/mot-checklist"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-slate-900"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
         >
-          Open the 10-minute checklist
+          Start the 10-minute checklist
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </a>
-      </Card>
+      </div>
     </section>
   );
 };

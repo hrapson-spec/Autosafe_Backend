@@ -1,12 +1,15 @@
 """Regression checks for release-gating GitHub Actions lifecycle semantics."""
 
+import os
 import re
+import subprocess
 from pathlib import Path
 
 
 WORKFLOW = Path(__file__).parents[1] / ".github" / "workflows" / "ci.yml"
 DOCKERFILE = Path(__file__).parents[1] / "Dockerfile"
 STAGING_COMPOSE = Path(__file__).parents[1] / "docker-compose.staging.yml"
+IDENTITY_WRITER = Path(__file__).parents[1] / "scripts" / "write_frontend_identity.sh"
 
 
 def _staging_job() -> str:
@@ -34,6 +37,36 @@ def test_release_image_redacts_access_paths_and_carries_frontend_identity():
     assert "--no-access-log" in dockerfile
     assert ".frontend_sha" in dockerfile
     assert ".build_timestamp" in dockerfile
+
+
+def _write_frontend_identity(tmp_path, *, railway_sha=None, git_sha=None):
+    output = tmp_path / ".frontend_sha"
+    env = {"PATH": os.environ["PATH"]}
+    if railway_sha is not None:
+        env["RAILWAY_GIT_COMMIT_SHA"] = railway_sha
+    if git_sha is not None:
+        env["GIT_SHA"] = git_sha
+    subprocess.run(["sh", str(IDENTITY_WRITER), str(output)], check=True, env=env)
+    return output.read_text(encoding="utf-8")
+
+
+def test_frontend_identity_prefers_railway_git_commit_sha(tmp_path):
+    assert _write_frontend_identity(
+        tmp_path, railway_sha="railway-sha", git_sha="local-sha"
+    ) == "railway-sha\n"
+
+
+def test_frontend_identity_falls_back_to_local_git_sha(tmp_path):
+    assert _write_frontend_identity(tmp_path, git_sha="local-sha") == "local-sha\n"
+
+
+def test_dockerfile_consumes_railway_git_commit_in_frontend_stage():
+    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+    frontend_stage = dockerfile.split("FROM node:20-slim AS frontend", 1)[1].split(
+        "FROM python:3.11-slim", 1
+    )[0]
+    assert "ARG RAILWAY_GIT_COMMIT_SHA" in frontend_stage
+    assert "write_frontend_identity.sh" in frontend_stage
 
 
 def test_frontend_dependency_audit_is_a_hard_ci_gate():
