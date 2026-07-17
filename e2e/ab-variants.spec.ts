@@ -24,18 +24,23 @@ test('final report layout: honest comparison, actions, and collapsed methodology
   ).toBeVisible();
 
   const risk = reportRateDisplay(fixtureExactHigh);
+  const bandLabel = risk.value >= 50 ? 'High chance' : risk.value >= 30 ? 'Medium chance' : 'Low chance';
   await expect(result.getByText(risk.text, { exact: true })).toBeVisible();
-  await expect(result.getByRole('progressbar', { name: 'Comparison failure rate' })).toHaveAttribute(
-    'aria-valuenow',
-    String(risk.value)
-  );
+  // The progress bar was replaced by a status pill plus a combined
+  // screen-reader label; no progressbar role remains.
+  await expect(result.getByRole('progressbar')).toHaveCount(0);
+  // exact:true so the visible pill ("Low chance") is not conflated with the
+  // sr-only combined label ("12%, Low chance"); Playwright getByText defaults
+  // to substring matching, unlike Testing Library.
+  await expect(result.getByText(bandLabel, { exact: true })).toBeVisible();
+  await expect(result.getByText(`${risk.text}, ${bandLabel}`, { exact: true })).toBeVisible();
   await expect(page.getByTestId('vehicle-prediction-result')).toHaveCount(0);
 
   await expect(page.getByRole('button', { name: 'Share on WhatsApp' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Copy report link' })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Set an MOT reminder' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Find a local garage' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open the 10-minute checklist' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Start the 10-minute checklist' })).toHaveAttribute(
     'href',
     '/app/guides/mot-checklist'
   );
@@ -68,7 +73,9 @@ test('final report layout: prediction language requires the explicit prediction 
 
   const result = page.getByTestId('vehicle-prediction-result');
   await expect(result).toBeVisible();
-  await expect(result.getByText('AutoSafe prediction for AB12 CDE')).toBeVisible();
+  // The in-card registration eyebrow moved to the header identity line.
+  await expect(result.getByText('AutoSafe prediction for AB12 CDE')).toHaveCount(0);
+  await expect(page.getByText(/AB12 CDE/)).toBeVisible();
   await expect(
     result.getByRole('heading', { name: 'Your car’s predicted chance of failing its next MOT' })
   ).toBeVisible();

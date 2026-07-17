@@ -283,12 +283,12 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
                   MOT due {formatMotDate(motExpiryDate, 'short')}
                 </span>
               )}
-              <div className="flex flex-nowrap items-center gap-3">
-                <Button variant="secondary" size="sm" className="shrink-0" onClick={onReminder}>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="secondary" size="sm" onClick={onReminder}>
                   <BellRing className="h-4 w-4" aria-hidden="true" />
                   Set an MOT reminder
                 </Button>
-                <Button variant="ghost" size="sm" className="shrink-0" onClick={onGarage}>
+                <Button variant="ghost" size="sm" onClick={onGarage}>
                   <Wrench className="h-4 w-4" aria-hidden="true" />
                   Find a local garage
                 </Button>
