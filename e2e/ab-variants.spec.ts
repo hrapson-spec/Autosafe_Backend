@@ -8,6 +8,7 @@ import { mockGetReport } from './helpers/mockApi';
 import { fixtureExactHigh, fixtureVehiclePrediction } from '../fixtures/reportResponses';
 import {
   buildScopeDisclosure,
+  buildWhatsAppMessage,
   reportRateDisplay,
   sampleSizeBadge,
 } from '../components/ReportCopy';
@@ -73,4 +74,86 @@ test('final report layout: prediction language requires the explicit prediction 
   ).toBeVisible();
   await expect(result.getByRole('heading', { name: 'Check these first' })).toBeVisible();
   await expect(page.getByTestId('comparison-result')).toHaveCount(0);
+
+  // Methodology: vehicle-history disclosure, never cohort sample sizes.
+  const methodology = page.getByText('How this result was calculated');
+  await methodology.click();
+  await expect(
+    page.getByText(buildScopeDisclosure(fixtureVehiclePrediction), { exact: true })
+  ).toBeVisible();
+  await expect(page.getByText('Vehicle-specific result', { exact: true })).toBeVisible();
+  await expect(page.getByText(/\d[\d,]* tests\b/)).toHaveCount(0);
+
+  await page.screenshot({ path: 'e2e-artifacts/report-prediction-layout.png', fullPage: true });
+});
+
+test('prediction report: WhatsApp share says AutoSafe predicts with a non-guarantee', async ({ page }) => {
+  await mockGetReport(
+    page,
+    fixtureVehiclePrediction.report_token as string,
+    fixtureVehiclePrediction,
+    200
+  );
+  await page.goto(`/app/report/${fixtureVehiclePrediction.report_token}`);
+  await expect(page.getByTestId('vehicle-prediction-result')).toBeVisible();
+
+  await page.context().route('https://wa.me/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>wa.me stub</title>' });
+  });
+
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByRole('button', { name: 'Share on WhatsApp' }).click(),
+  ]);
+  await popup.waitForLoadState();
+  const text = new URL(popup.url()).searchParams.get('text');
+  expect(text).toBe(buildWhatsAppMessage(fixtureVehiclePrediction));
+  expect(text).toMatch(/^AutoSafe predicts/);
+  expect(text).toContain('not a guarantee');
+  expect(text).not.toContain('Comparable');
+  await popup.close();
+});
+
+test('prediction report: garage modal frames priorities as inspection items', async ({ page }) => {
+  await mockGetReport(
+    page,
+    fixtureVehiclePrediction.report_token as string,
+    fixtureVehiclePrediction,
+    200
+  );
+  await page.goto(`/app/report/${fixtureVehiclePrediction.report_token}`);
+  await page.getByRole('button', { name: 'Find a local garage' }).click();
+  await expect(page.getByText('Inspection priorities, not diagnosed faults')).toBeVisible();
+  await expect(page.getByText('Comparison patterns, not diagnosed faults')).toHaveCount(0);
+});
+
+test('prediction report renders without horizontal overflow on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockGetReport(
+    page,
+    fixtureVehiclePrediction.report_token as string,
+    fixtureVehiclePrediction,
+    200
+  );
+  await page.goto(`/app/report/${fixtureVehiclePrediction.report_token}`);
+  await expect(page.getByTestId('vehicle-prediction-result')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your car’s predicted chance of failing its next MOT' })
+  ).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  await page.screenshot({ path: 'e2e-artifacts/report-prediction-mobile.png', fullPage: true });
+});
+
+test('comparison report renders without horizontal overflow on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
+  await page.goto(`/app/report/${fixtureExactHigh.report_token}`);
+  await expect(page.getByTestId('comparison-result')).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
 });
