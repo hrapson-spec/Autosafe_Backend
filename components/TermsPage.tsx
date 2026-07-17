@@ -51,11 +51,11 @@ const TermsPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">2. What our service does</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              AutoSafe provides recorded MOT details and the failure rate for the closest supported group of comparable vehicles in aggregated DVSA data. It does not inspect or diagnose the submitted vehicle.
+              AutoSafe provides recorded MOT details together with either the submitted vehicle's predicted chance of failing its next MOT (produced automatically from its recorded MOT history and details, when available) or the failure rate for the closest supported group of comparable vehicles in aggregated DVSA data, clearly labelled. It does not inspect or diagnose the submitted vehicle.
             </p>
             <p className="text-slate-600 leading-relaxed mb-2">Our service:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside">
-              <li>Labels the mileage source, comparison scope and sample size</li>
+              <li>Labels whether the result is a per-vehicle assessment or a comparison, with the mileage source, scope and sample size where applicable</li>
               <li>Shows component patterns only when the comparison data supports them</li>
               <li>Provides indicative repair cost ranges only when supporting component data exists</li>
               <li>Is completely free to use</li>
@@ -63,17 +63,17 @@ const TermsPage: React.FC = () => {
           </section>
 
           <section className="mb-8">
-            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">3. Comparison rates are not guarantees</h2>
+            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">3. Results are not guarantees</h2>
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
               <p className="font-medium text-amber-900">This is important - please read carefully.</p>
             </div>
             <p className="text-slate-600 leading-relaxed mb-4">
-              The displayed rates are aggregate comparison evidence for information only. They are not a guarantee of any particular MOT outcome.
+              The displayed figures — whether a predicted chance for the submitted vehicle or aggregate comparison evidence — are for information only. They are not a guarantee of any particular MOT outcome.
             </p>
             <p className="text-slate-600 leading-relaxed mb-2">We cannot guarantee that:</p>
             <ul className="text-slate-600 space-y-1 list-disc list-inside mb-4">
               <li>Your vehicle will pass or fail its MOT</li>
-              <li>The comparison rate will reflect your vehicle's next result</li>
+              <li>The displayed rate or predicted chance will reflect your vehicle's next result</li>
               <li>A component pattern means that issue is present on your vehicle</li>
               <li>The absence of a component pattern means the issue is absent</li>
             </ul>

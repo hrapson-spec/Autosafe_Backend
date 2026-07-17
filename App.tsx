@@ -49,10 +49,10 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>
-        <title>AutoSafe | MOT Records &amp; Comparable Failure Rates</title>
-        <meta name="description" content="Check recorded MOT details and compare your vehicle with official DVSA outcomes for similar vehicles. The report labels its mileage source, comparison scope and sample size." />
-        <meta property="og:title" content="Compare your car with recorded MOT outcomes." />
-        <meta property="og:description" content="See recorded MOT details and the closest available comparable-vehicle failure rate, with evidence scope shown clearly." />
+        <title>AutoSafe | MOT Records &amp; Next-MOT Failure Insight</title>
+        <meta name="description" content="Check recorded MOT details. When AutoSafe can assess the vehicle's recorded MOT history, it shows a predicted chance of failing the next MOT; otherwise a clearly labelled comparison with similar vehicles." />
+        <meta property="og:title" content="Check your car's MOT record — and, where available, its predicted chance of failing the next test." />
+        <meta property="og:description" content="Recorded MOT details with a predicted failing chance where available — and a clearly labelled comparable-vehicle failure rate when it isn't." />
         <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}
@@ -120,7 +120,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </div>
               <h3 className="font-serif text-2xl text-slate-900 font-medium">Trusted Evidence</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                We compare your vehicle with official DVSA MOT outcomes and state clearly when only broader make-and-model data is available.
+                We assess your vehicle from its official recorded DVSA MOT history, and state clearly when only comparable-vehicle or broader make-and-model data is available.
               </p>
             </div>
 
@@ -131,7 +131,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </div>
               <h3 className="font-serif text-2xl text-slate-900 font-medium">Matched Context</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Every report labels its mileage source, comparison scope and available sample size, so you can see exactly what supports the result.
+                Every report labels exactly what supports the result — a per-vehicle assessment from recorded history, or a comparison with its mileage source, scope and sample size.
               </p>
             </div>
 

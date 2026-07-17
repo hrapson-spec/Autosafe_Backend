@@ -38,6 +38,7 @@ unparseable) is 404/410/503, never a reconstructed report. Demo mode is
 the one deliberate exception: it is a clearly-labelled synthetic path
 (``vehicle_data_source='demo'``), never presented as real DVSA evidence.
 """
+import asyncio
 import functools
 import hashlib
 import logging
@@ -58,6 +59,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
 import database as db
+import prediction_service
 import report_service
 from dvsa_client import (
     DVSAAPIError,
@@ -74,6 +76,7 @@ from report_contract import (
     SHARE_URL_PATH,
     ErrorCode,
     ErrorEnvelope,
+    PredictionSource,
     ReportCreateRequest,
     ReportPersistence,
     ReportResponse,
@@ -196,9 +199,11 @@ def _normalize_vrn(raw: str) -> str:
 
 def _normalize_postcode(raw: Optional[str]) -> Optional[str]:
     """Best-effort postcode normalization. Never rejects -- postcode is
-    optional on the v2 contract and only ever used for the DB row's
-    analytics field (LIA-covered) and, if regional_defaults has an
-    opinion, its normalized form; it is never a gate on report creation
+    optional on the v2 contract and is used for (a) the DB row's analytics
+    field (LIA-covered) and (b) the V55 prediction path's regional
+    corrosion-index input (prediction_service.build_v55_assessment; an
+    unresolvable or missing postcode falls back to the default index, it
+    never blocks the prediction). It is never a gate on report creation
     and never appears in the response payload at all (ReportResponse has
     no postcode field)."""
     if not raw or not raw.strip():
@@ -581,7 +586,9 @@ def _build_persist_record(
         'confidence_level': assessment.risk.confidence.value,
         'risk_components': components_dict,
         'repair_cost_estimate': repair_dict,
-        'model_version': 'lookup_v2',
+        'model_version': (
+            'v55' if assessment.prediction_source == PredictionSource.MODEL_V55 else 'lookup_v2'
+        ),
         'prediction_source': assessment.prediction_source.value,
         'is_dvsa_data': vehicle_data_source == VehicleDataSource.DVSA,
         'referrer': safe_referrer(request.headers.get('referer')),
@@ -647,12 +654,39 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
 
     identity, history, vehicle_data_source = await _resolve_vehicle_and_history(vrm)
 
-    assessment = await report_service.build_assessment(
-        identity,
-        history,
-        sqlite_conn_factory=sqlite_conn_factory,
-        now=None,
-    )
+    # V55 prediction first, on real DVSA data with at least one recorded MOT
+    # test: a synthetic demo history must never be presented as a per-vehicle
+    # prediction, and a zero-history vehicle must not receive a result whose
+    # copy claims it was produced from recorded MOT history. Only the typed
+    # PredictionUnavailable failures fall back to the comparison assessment;
+    # a contract/programming error propagates to the 500 guard instead of
+    # being silently relabelled as a comparison. Inference is CPU-bound
+    # (feature engineering + CatBoost), so it runs in a worker thread rather
+    # than blocking the event loop.
+    assessment = None
+    if vehicle_data_source == VehicleDataSource.DVSA and getattr(history, 'mot_tests', None):
+        try:
+            assessment = await asyncio.to_thread(
+                prediction_service.build_v55_assessment,
+                identity, history, postcode,
+            )
+            logger.info(
+                "v55_prediction outcome=success model_version=v55 correlation_id=%s hash_vrm=%s",
+                _correlation_id(), vrm_hash,
+            )
+        except prediction_service.PredictionUnavailable as exc:
+            logger.warning(
+                "v55_prediction outcome=fallback reason=%s correlation_id=%s hash_vrm=%s",
+                type(exc).__name__, _correlation_id(), vrm_hash,
+            )
+
+    if assessment is None:
+        assessment = await report_service.build_assessment(
+            identity,
+            history,
+            sqlite_conn_factory=sqlite_conn_factory,
+            now=None,
+        )
 
     now_dt = datetime.now(timezone.utc)
     token = secrets.token_urlsafe(16)
@@ -660,6 +694,7 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
     expires_dt = now_dt + timedelta(days=REPORT_TTL_DAYS)
 
     response = ReportResponse(
+        result_kind=assessment.result_kind,
         report_id=str(report_uuid),
         report_token=token,
         share_url=_share_url(token),

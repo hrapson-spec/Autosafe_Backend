@@ -118,6 +118,24 @@ describe('ReportDashboard final layout', () => {
     expect(screen.queryByTestId('comparison-result')).not.toBeInTheDocument();
   });
 
+  it('methodology for a prediction discloses the vehicle-history basis with no cohort sample sizes', () => {
+    const { container } = render(
+      <ReportDashboard report={fixtureVehiclePrediction} onReset={vi.fn()} />
+    );
+
+    const methodology = screen.getByText('How this result was calculated').closest('details');
+    expect(methodology).not.toBeNull();
+    const scoped = within(methodology as HTMLDetailsElement);
+    expect(
+      scoped.getByText(buildScopeDisclosure(fixtureVehiclePrediction), { exact: true })
+    ).toBeInTheDocument();
+    expect(scoped.getByText('Vehicle-specific result', { exact: true })).toBeInTheDocument();
+    const methodologyText = (methodology as HTMLDetailsElement).textContent ?? '';
+    expect(methodologyText).not.toMatch(/\d+ tests/);
+    expect(methodologyText).not.toMatch(/comparison uses/);
+    expect(container.textContent).not.toMatch(/recorded MOT failure rate of/);
+  });
+
   it('preserves sharing and reset without exposing the postcode', async () => {
     const user = userEvent.setup();
     const writeText = stubClipboard();

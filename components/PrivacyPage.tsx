@@ -75,7 +75,7 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3">Yes - kept with the check record for up to 24 months, then removed</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">Vehicle details, latest recorded MOT information, mileage provenance and comparison result</td>
+                    <td className="py-3 pr-4">Vehicle details, latest recorded MOT information, mileage provenance and the report result (predicted chance or comparison)</td>
                     <td className="py-3 pr-4">DVSA public records + our system</td>
                     <td className="py-3">Yes - kept with your check record (same retention as above)</td>
                   </tr>
@@ -103,7 +103,7 @@ const PrivacyPage: React.FC = () => {
               </table>
             </div>
             <p className="text-slate-600 mt-4 p-4 bg-slate-50 rounded-lg">
-              <strong>Important:</strong> When you run a check, we keep the normalised VRN and postcode, the latest recorded MOT details used by the report, provenance fields and the comparable-vehicle result. We use the record to operate and monitor the service. We do not currently link reports to later MOT outcomes; that would require a separate source, privacy review and notice update before it began. After 24 months, the plaintext VRN, postcode, report payload and share token are removed; a keyed VRN pseudonym may remain where necessary for restricted aggregate monitoring or rights handling. You can object or ask us to erase your record - see "Your rights" below.
+              <strong>Important:</strong> When you run a check, we keep the normalised VRN and postcode, the latest recorded MOT details used by the report, provenance fields and the report result (the predicted chance or the comparable-vehicle comparison). We use the record to operate and monitor the service. We do not currently link reports to later MOT outcomes; that would require a separate source, privacy review and notice update before it began. After 24 months, the plaintext VRN, postcode, report payload and share token are removed; a keyed VRN pseudonym may remain where necessary for restricted aggregate monitoring or rights handling. You can object or ask us to erase your record - see "Your rights" below.
             </p>
           </section>
 
@@ -223,7 +223,7 @@ const PrivacyPage: React.FC = () => {
                 </thead>
                 <tbody className="text-slate-600">
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">Check records: VRN, postcode, vehicle/MOT details, provenance, comparison result and saved-report payload</td>
+                    <td className="py-3 pr-4">Check records: VRN, postcode, vehicle/MOT details, provenance, report result (predicted chance or comparison) and saved-report payload</td>
                     <td className="py-3">Up to 24 months; plaintext identifiers and the report payload/token are then removed, with a keyed VRN pseudonym retained only where needed for restricted aggregate monitoring or rights handling</td>
                   </tr>
                   <tr className="border-b border-slate-100">
@@ -246,12 +246,12 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Automated decision-making</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              Our service automatically matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data. It reports that group's recorded failure rate; it does not diagnose this vehicle or determine its next MOT result.
+              Our service processes the vehicle's recorded MOT history and details automatically. When AutoSafe can assess the vehicle's recorded MOT history and details (together with any postcode provided, used for regional context), it produces the vehicle's predicted chance of failing its next MOT; otherwise it matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data and reports that group's recorded failure rate. Neither result diagnoses this vehicle or determines its next MOT result.
             </p>
             <div className="p-4 bg-slate-50 rounded-lg">
               <p className="font-medium text-slate-900 mb-2">Important:</p>
               <ul className="text-slate-600 space-y-1 list-disc list-inside">
-                <li>The comparison is for information only</li>
+                <li>The result — predicted chance or comparison — is for information only</li>
                 <li>It does not guarantee any particular MOT outcome</li>
                 <li>It has no legal effect on you</li>
                 <li>Many factors affect MOT results that we cannot assess</li>

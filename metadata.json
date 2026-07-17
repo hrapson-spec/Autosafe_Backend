@@ -1,5 +1,5 @@
 {
   "name": "AutoSafe",
-  "description": "Recorded MOT history and comparable-vehicle failure-rate evidence.",
+  "description": "Recorded MOT history with a predicted next-MOT failing chance when available, and clearly labelled comparable-vehicle evidence otherwise.",
   "requestFramePermissions": []
 }

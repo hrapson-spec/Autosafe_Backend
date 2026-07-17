@@ -220,3 +220,108 @@ def test_reminder_query_preserves_a_real_zero_percent_rate():
         reminders = asyncio.run(get_due_reminders())
 
     assert reminders[0]["failure_risk"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Prediction (match_scope='model_prediction') emails: prediction framing with
+# a non-guarantee, and no borrowed comparison/cohort claims.
+# ---------------------------------------------------------------------------
+
+def _assert_prediction_truth(message: dict[str, str]) -> None:
+    copy = _all_copy(message)
+    assert "predict" in copy
+    assert "not a guarantee" in copy
+    for borrowed_claim in (
+        "comparable",
+        "comparison",
+        "group rate",
+        "dataset-wide",
+    ):
+        assert borrowed_claim not in copy, borrowed_claim
+    for misleading in (
+        "reliability score",
+        "pass probability",
+        "predicted failure risk",
+        "looks healthy",
+        "no major concerns",
+    ):
+        assert misleading not in copy, misleading
+
+
+def test_report_email_prediction_uses_prediction_framing():
+    message = generate_report_email(
+        email="owner@example.com",
+        registration="AB12CDE",
+        vehicle_make="FORD",
+        vehicle_model="FIESTA",
+        vehicle_year=2018,
+        failure_risk=0.31,
+        match_scope="model_prediction",
+        common_faults=[{"component": "Brakes", "risk_level": "18%"}],
+        repair_cost_min=80,
+        repair_cost_max=200,
+    )
+    copy = _all_copy(message)
+    _assert_prediction_truth(message)
+    assert "predicted chance of failing the next mot" in copy
+    assert "inspection priorities" in copy
+    assert "diagnos" in copy  # still explicitly not a diagnosis
+
+
+def test_garage_lead_email_prediction_labels_inspection_priorities():
+    message = generate_lead_email(
+        garage_name="Example Garage",
+        lead_name=None,
+        lead_email="owner@example.com",
+        lead_phone=None,
+        lead_postcode="SW1A 1AA",
+        distance_miles=2.0,
+        vehicle_make="FORD",
+        vehicle_model="FIESTA",
+        vehicle_year=2018,
+        failure_risk=0.31,
+        match_scope="model_prediction",
+        top_risks=["brakes", "tyres"],
+        assignment_id="assignment-1",
+        risk_percentages={"brakes": 0.18, "tyres": 0.09},
+    )
+    copy = _all_copy(message)
+    _assert_prediction_truth(message)
+    assert "inspection priorit" in copy
+    assert "not a diagnosis" in copy
+
+
+def test_reminder_emails_prediction_keep_prediction_label():
+    for factory in (generate_mot_reminder_confirmation, generate_mot_reminder_28d):
+        message = factory(
+            email="owner@example.com",
+            registration="AB12CDE",
+            vehicle_make="FORD",
+            vehicle_model="FIESTA",
+            vehicle_year=2018,
+            mot_expiry_date="2026-08-08",
+            failure_risk=0.31,
+            match_scope="model_prediction",
+        )
+        copy = _all_copy(message)
+        assert "predicted chance of failing the next mot" in copy
+        assert "not a guarantee" in copy
+        assert "comparable" not in copy
+        assert "group rate" not in copy
+        assert "comparison report" not in copy
+
+
+def test_comparison_emails_unchanged_by_prediction_support():
+    message = generate_report_email(
+        email="owner@example.com",
+        registration="AB12CDE",
+        vehicle_make="FORD",
+        vehicle_model="FIESTA",
+        vehicle_year=2018,
+        failure_risk=0.27,
+        match_scope="exact_band",
+        common_faults=[{"component": "Brakes", "risk_level": "12%"}],
+    )
+    copy = _all_copy(message)
+    assert "comparable-vehicle mot failure rate" in copy
+    assert "predict" not in copy

@@ -95,22 +95,56 @@ describe('isReportV2', () => {
     expect(isReportV2({ ...fixtureExactHigh, vehicle_data_source: 'mock' })).toBe(false);
   });
 
-  it('accepts result kinds only with the matching prediction source', () => {
+  it('accepts result kinds only with the matching prediction source and evidence scope', () => {
+    const predictionEvidence = {
+      match_scope: 'model_prediction',
+      age_band: null,
+      mileage_band: null,
+      total_tests: null,
+      total_failures: null,
+    } as const;
     expect(isReportV2({ ...fixtureExactHigh, result_kind: 'comparison' })).toBe(true);
     expect(isReportV2({
       ...fixtureExactHigh,
       result_kind: 'vehicle_prediction',
       prediction_source: 'model_v55',
+      evidence: predictionEvidence,
     })).toBe(true);
+    // A prediction may not claim a cohort evidence scope.
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'model_v55',
+    })).toBe(false);
     expect(isReportV2({
       ...fixtureExactHigh,
       result_kind: 'vehicle_prediction',
       prediction_source: 'postgres',
+      evidence: predictionEvidence,
     })).toBe(false);
     expect(isReportV2({
       ...fixtureExactHigh,
       result_kind: 'comparison',
       prediction_source: 'model_v55',
+    })).toBe(false);
+    // A comparison may not claim the model_prediction evidence scope.
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'comparison',
+      evidence: predictionEvidence,
+    })).toBe(false);
+    // model_prediction evidence never carries bands or cohort counts.
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'model_v55',
+      evidence: { ...predictionEvidence, age_band: '3-5' },
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'model_v55',
+      evidence: { ...predictionEvidence, total_tests: 100, total_failures: 20 },
     })).toBe(false);
   });
 
@@ -322,6 +356,7 @@ describe('enum membership consts', () => {
       'model_average',
       'population_default',
       'unavailable',
+      'model_prediction',
     ]);
     expect(VALID_MILEAGE_SOURCES).toEqual(['user_entered', 'observed_mot', 'estimated', 'missing']);
     expect(VALID_CONFIDENCE_LEVELS).toEqual(['High', 'Medium', 'Low', 'Very Low']);

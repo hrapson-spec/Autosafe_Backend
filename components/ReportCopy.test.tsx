@@ -4,6 +4,7 @@ import {
   riskPercentDisplay,
   reportRateDisplay,
   buildScopeDisclosure,
+  failureRateLabel,
   buildSampleSizeClause,
   sampleSizeBadge,
   buildMileagePhrase,
@@ -23,6 +24,7 @@ import {
   fixtureObservedHighMileage,
   fixtureAnomalyMissing,
   fixtureLegacyEstimated2_0,
+  fixtureVehiclePrediction,
 } from '../fixtures/reportResponses';
 
 // ---------------------------------------------------------------------------
@@ -412,11 +414,18 @@ describe('lastRecordedMileageLine', () => {
 // ---------------------------------------------------------------------------
 
 describe('populationBadge', () => {
-  it('returns the fixed label and title', () => {
-    expect(populationBadge()).toEqual({
+  it('returns the comparison label and title for every comparison report', () => {
+    expect(populationBadge(makeReport({}))).toEqual({
       label: 'Population average',
       title: 'A recorded failure rate for a group of similar vehicles — not a prediction for this vehicle.',
     });
+  });
+
+  it('returns a vehicle-specific label for a prediction report and never claims a group rate', () => {
+    const badge = populationBadge(fixtureVehiclePrediction);
+    expect(badge.label).toBe('Vehicle-specific result');
+    expect(badge.title).not.toMatch(/group of similar vehicles/);
+    expect(badge.title).toMatch(/not a guarantee/i);
   });
 });
 
@@ -715,8 +724,76 @@ describe('componentsSectionCopy', () => {
 });
 
 describe('repairEstimateCaption', () => {
-  it('returns the fixed caption', () => {
-    expect(repairEstimateCaption()).toBe('Indicative repair-cost range for similar vehicles, not a quote.');
+  it('returns the comparison caption for every comparison report', () => {
+    expect(repairEstimateCaption(makeReport({}))).toBe('Indicative repair-cost range for similar vehicles, not a quote.');
+  });
+
+  it('returns a vehicle-specific caption for a prediction report', () => {
+    const caption = repairEstimateCaption(fixtureVehiclePrediction);
+    expect(caption).not.toMatch(/similar vehicles/);
+    expect(caption).toMatch(/not a quote/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prediction copy (result_kind: vehicle_prediction). The prediction state
+// must never borrow cohort/comparison claims, and the comparison state must
+// never borrow prediction claims — the exact boundary claim_sweep enforces.
+// ---------------------------------------------------------------------------
+
+describe('prediction copy (vehicle_prediction)', () => {
+  it('scope disclosure describes the vehicle-history basis, never a cohort or sample size', () => {
+    const disclosure = buildScopeDisclosure(fixtureVehiclePrediction);
+    expect(disclosure).toMatch(/recorded MOT history/);
+    expect(disclosure).not.toMatch(/comparison uses/);
+    expect(disclosure).not.toMatch(/dataset-wide/);
+    expect(disclosure).not.toMatch(/\d+ (recorded )?(MOT )?tests/);
+  });
+
+  it('sample-size badge never claims or laments a cohort sample for a prediction', () => {
+    expect(sampleSizeBadge(fixtureVehiclePrediction)).toBe('Vehicle-specific result');
+  });
+
+  it('failureRateLabel labels the figure as a predicted chance, not a recorded rate', () => {
+    expect(failureRateLabel(fixtureVehiclePrediction)).toBe('Predicted chance of failing the next MOT');
+    expect(failureRateLabel(makeReport({}))).toBe('Comparable-vehicle MOT failure rate');
+  });
+
+  it('narrative opens with the per-vehicle predicted chance and carries no cohort claims', () => {
+    const narrative = buildNarrative(fixtureVehiclePrediction);
+    expect(narrative).toMatch(/^AutoSafe predicts/);
+    expect(narrative).not.toMatch(/Comparable/);
+    expect(narrative).not.toMatch(/Based on [\d,]+ recorded MOT/);
+    expect(narrative).not.toMatch(/dataset-wide/);
+  });
+
+  it('confidence caveat for a prediction never claims missing vehicle-matched evidence', () => {
+    expect(buildConfidenceCaveat(fixtureVehiclePrediction)).toBeNull();
+    const lowConfidence = {
+      ...fixtureVehiclePrediction,
+      risk: { ...fixtureVehiclePrediction.risk, confidence: 'Low' as const },
+    };
+    const caveat = buildConfidenceCaveat(lowConfidence);
+    expect(caveat).toMatch(/limited/);
+    expect(caveat).not.toMatch(/No vehicle-matched evidence/);
+  });
+
+  it('components caption frames items as inspection priorities, not similar-vehicle patterns', () => {
+    const copy = componentsSectionCopy(fixtureVehiclePrediction);
+    expect(copy.show).toBe(true);
+    expect(copy.caption).toMatch(/inspection priorities/i);
+    expect(copy.caption).toMatch(/not .*(diagnos|fault)/i);
+    expect(copy.caption).not.toMatch(/similar vehicles/);
+  });
+
+  it('WhatsApp message says AutoSafe predicts, names the registration, and keeps a non-guarantee', () => {
+    const message = buildWhatsAppMessage(fixtureVehiclePrediction);
+    expect(message).toMatch(/^AutoSafe predicts/);
+    expect(message).toContain(fixtureVehiclePrediction.registration);
+    expect(message).toMatch(/not a guarantee/i);
+    expect(message).toContain(fixtureVehiclePrediction.share_url as string);
+    expect(message).not.toMatch(/Comparable/);
+    expect(message).not.toMatch(/recorded MOT failure rate/);
   });
 });
 

@@ -331,3 +331,34 @@ class TestVerifyAdminApiKey(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestModelPredictionMatchScopeAccepted(unittest.TestCase):
+    """Downstream submissions from a vehicle_prediction report carry
+    match_scope='model_prediction'; all three shared-scope validators must
+    accept it (and still reject unknown scopes)."""
+
+    def test_risk_data_accepts_model_prediction(self):
+        risk = main_module.RiskData(match_scope='model_prediction')
+        self.assertEqual(risk.match_scope, 'model_prediction')
+
+    def test_mot_reminder_accepts_model_prediction(self):
+        sub = main_module.MotReminderSubmission(
+            email='user@example.com',
+            registration='AB12CDE',
+            match_scope='model_prediction',
+        )
+        self.assertEqual(sub.match_scope, 'model_prediction')
+
+    def test_report_email_accepts_model_prediction(self):
+        sub = main_module.ReportEmailSubmission(
+            email='user@example.com',
+            registration='AB12CDE',
+            failure_risk=0.31,
+            match_scope='model_prediction',
+        )
+        self.assertEqual(sub.match_scope, 'model_prediction')
+
+    def test_unknown_scope_still_rejected(self):
+        with self.assertRaises(Exception):
+            main_module.RiskData(match_scope='cohort_prediction')

@@ -157,7 +157,7 @@
                     <td>Yes - kept with the check record for up to 24 months, then removed</td>
                 </tr>
                 <tr>
-                    <td>Vehicle details, latest recorded MOT information, mileage provenance and comparison result</td>
+                    <td>Vehicle details, latest recorded MOT information, mileage provenance and the report result (predicted chance or comparison)</td>
                     <td>DVSA public records + our system</td>
                     <td>Yes - kept with your check record (same retention as above)</td>
                 </tr>
@@ -184,7 +184,7 @@
             </tbody>
         </table>
         <div class="info-box">
-            <p><strong>Important:</strong> When you run a check, we keep the normalised VRN and postcode, the latest recorded MOT details used by the report, provenance fields and the comparable-vehicle result. We use the record to operate and monitor the service. We do not currently link reports to later MOT outcomes; that would require a separate source, privacy review and notice update before it began. After 24 months, the plaintext VRN, postcode, report payload and share token are removed; a keyed VRN pseudonym may remain where necessary for restricted aggregate monitoring or rights handling. You can object or ask us to erase your record - see "Your rights" below.</p>
+            <p><strong>Important:</strong> When you run a check, we keep the normalised VRN and postcode, the latest recorded MOT details used by the report, provenance fields and the report result (the predicted chance or the comparable-vehicle comparison). We use the record to operate and monitor the service. We do not currently link reports to later MOT outcomes; that would require a separate source, privacy review and notice update before it began. After 24 months, the plaintext VRN, postcode, report payload and share token are removed; a keyed VRN pseudonym may remain where necessary for restricted aggregate monitoring or rights handling. You can object or ask us to erase your record - see "Your rights" below.</p>
         </div>
 
         <h2>Why we use your data</h2>
@@ -282,7 +282,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>Check records: VRN, postcode, vehicle/MOT details, provenance, comparison result and saved-report payload</td>
+                    <td>Check records: VRN, postcode, vehicle/MOT details, provenance, report result (predicted chance or comparison) and saved-report payload</td>
                     <td>Up to 24 months; plaintext identifiers and the report payload/token are then removed, with a keyed VRN pseudonym retained only where needed for restricted aggregate monitoring or rights handling</td>
                 </tr>
                 <tr>
@@ -301,11 +301,11 @@
         </table>
 
         <h2>Automated decision-making</h2>
-        <p>Our service automatically matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data. It reports that group's recorded failure rate; it does not diagnose this vehicle or determine its next MOT result.</p>
+        <p>Our service processes the vehicle's recorded MOT history and details automatically. When AutoSafe can assess the vehicle's recorded MOT history and details (together with any postcode provided, used for regional context), it produces the vehicle's predicted chance of failing its next MOT; otherwise it matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data and reports that group's recorded failure rate. Neither result diagnoses this vehicle or determines its next MOT result.</p>
         <div class="info-box">
             <p><strong>Important:</strong></p>
             <ul>
-                <li>The comparison is for information only</li>
+                <li>The result — predicted chance or comparison — is for information only</li>
                 <li>It does not guarantee any particular MOT outcome</li>
                 <li>It has no legal effect on you</li>
                 <li>Many factors affect MOT results that we cannot assess</li>
