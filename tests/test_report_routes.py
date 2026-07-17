@@ -688,3 +688,230 @@ class TestLegacyRouteUnaffected(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# V55 prediction integration (POST /api/v2/reports)
+# ---------------------------------------------------------------------------
+
+def _dvsa_history():
+    from report_test_helpers import make_history
+    return make_history([('2025-03-01', 41000, 'mi'), ('2024-03-01', 36000, 'mi')])
+
+
+def _fake_dvsa_client(history):
+    fake = MagicMock()
+    fake.is_configured = True
+    fake.fetch_vehicle_history = AsyncMock(return_value=history)
+    return fake
+
+
+V55_PREDICTION = {
+    'failure_risk': 0.31,
+    'raw_probability': 0.29,
+    'confidence_level': 'Medium',
+    'risk_components': {
+        'brakes': 0.18, 'suspension': 0.07, 'tyres': 0.09, 'steering': 0.02,
+        'visibility': 0.03, 'lamps': 0.05, 'body': 0.02,
+    },
+}
+
+
+class PredictionRouteCase(unittest.TestCase):
+    """Base: configured DVSA client, model mocked healthy, Postgres save
+    mocked. Runs the REAL prediction_service between route and model."""
+
+    def setUp(self):
+        # This file's POST volume now exceeds the route's 20/minute limit;
+        # reset the shared limiter per-test (same pattern as
+        # tests/test_fallback_v55.py::_reset_rate_limiter).
+        app.state.limiter.reset()
+        self.history = _dvsa_history()
+        self.fake_client = _fake_dvsa_client(self.history)
+
+        patchers = [
+            patch.dict(os.environ, {'PREDICTIONS_ENABLED': 'true'}),
+            patch('report_routes.get_dvsa_client', return_value=self.fake_client),
+            patch('prediction_service.model_v55.is_model_loaded', return_value=True),
+            patch('prediction_service.model_v55.engineer_features_with_stats',
+                  return_value={'feature': 1}),
+            patch('prediction_service.model_v55.predict_risk',
+                  return_value=dict(V55_PREDICTION)),
+            patch('report_routes.db.save_report', new=AsyncMock(return_value='row-id-123')),
+        ]
+        mocks = [p.start() for p in patchers]
+        for p in patchers:
+            self.addCleanup(p.stop)
+        self.mock_engineer = mocks[3]
+        self.mock_predict = mocks[4]
+        self.mock_save = mocks[5]
+
+    def _post(self):
+        return client.post(
+            '/api/v2/reports',
+            json={'registration': VALID_VRM, 'postcode': 'SW1A 1AA'},
+        )
+
+
+class TestCreateReportPredictionSuccess(PredictionRouteCase):
+
+    def test_success_semantics_and_single_calls(self):
+        comparison_spy = AsyncMock(side_effect=AssertionError('comparison path must not run'))
+        with patch('report_routes.report_service.build_assessment', new=comparison_spy):
+            resp = self._post()
+
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['result_kind'], 'vehicle_prediction')
+        self.assertEqual(body['prediction_source'], 'model_v55')
+        self.assertEqual(body['evidence']['match_scope'], 'model_prediction')
+        self.assertIsNone(body['evidence']['total_tests'])
+        self.assertIsNone(body['evidence']['age_band'])
+        self.assertIsNone(body['note'])
+        self.assertEqual(body['risk']['failure_risk'], 0.31)
+
+        # Exactly one DVSA fetch, one feature build, one inference.
+        self.assertEqual(self.fake_client.fetch_vehicle_history.await_count, 1)
+        self.assertEqual(self.mock_engineer.call_count, 1)
+        self.assertEqual(self.mock_predict.call_count, 1)
+        comparison_spy.assert_not_awaited()
+        # The route's normalized postcode reaches feature engineering.
+        self.assertEqual(self.mock_engineer.call_args.args[1], 'SW1A 1AA')
+
+    def test_persisted_record_and_payload_identity(self):
+        resp = self._post()
+        body = resp.json()
+
+        record = self.mock_save.call_args[0][0]
+        self.assertEqual(record['model_version'], 'v55')
+        self.assertEqual(record['prediction_source'], 'model_v55')
+        self.assertEqual(record['match_scope'], 'model_prediction')
+        self.assertIsNone(record['total_tests'])
+        self.assertIsNone(record['total_failures'])
+        self.assertTrue(record['is_dvsa_data'])
+        self.assertEqual(record['failure_risk'], 0.31)
+        self.assertEqual(record['risk_components']['brakes'], 0.18)
+        # Byte-identity invariant holds for predictions too.
+        self.assertEqual(body, record['report_payload'])
+        self.assertEqual(body['report_id'], str(record['id']))
+
+    def test_degraded_persistence_keeps_prediction_semantics(self):
+        with patch('report_routes.db.save_report',
+                   new=AsyncMock(side_effect=db.PostgresUnavailable('down'))):
+            resp = self._post()
+        body = resp.json()
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(body['result_kind'], 'vehicle_prediction')
+        self.assertFalse(body['persistence']['saved'])
+        self.assertIsNone(body['report_token'])
+
+
+class TestCreateReportPredictionFallback(PredictionRouteCase):
+
+    def _assert_comparison_fallback(self, resp, expected_reason):
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['result_kind'], 'comparison')
+        self.assertNotEqual(body['prediction_source'], 'model_v55')
+        self.assertNotEqual(body['evidence']['match_scope'], 'model_prediction')
+        record = self.mock_save.call_args[0][0]
+        self.assertEqual(record['model_version'], 'lookup_v2')
+        return body
+
+    def test_kill_switch_falls_back_to_comparison(self):
+        with patch.dict(os.environ, {'PREDICTIONS_ENABLED': 'false'}):
+            with self.assertLogs('report_routes', level='WARNING') as logs:
+                resp = self._post()
+        self._assert_comparison_fallback(resp, 'PredictionDisabled')
+        joined = '\n'.join(logs.output)
+        self.assertIn('reason=PredictionDisabled', joined)
+        self.assertNotIn(VALID_VRM, joined)
+        self.assertNotIn('SW1A', joined)
+
+    def test_model_unloaded_falls_back(self):
+        with patch('prediction_service.model_v55.is_model_loaded', return_value=False):
+            with self.assertLogs('report_routes', level='WARNING') as logs:
+                resp = self._post()
+        self._assert_comparison_fallback(resp, 'ModelUnavailable')
+        self.assertIn('reason=ModelUnavailable', '\n'.join(logs.output))
+
+    def test_feature_failure_falls_back(self):
+        self.mock_engineer.side_effect = KeyError('boom')
+        with self.assertLogs('report_routes', level='WARNING') as logs:
+            resp = self._post()
+        self._assert_comparison_fallback(resp, 'FeatureEngineeringFailed')
+        self.assertIn('reason=FeatureEngineeringFailed', '\n'.join(logs.output))
+
+    def test_inference_failure_falls_back(self):
+        self.mock_predict.side_effect = RuntimeError('boom')
+        with self.assertLogs('report_routes', level='WARNING') as logs:
+            resp = self._post()
+        self._assert_comparison_fallback(resp, 'InferenceFailed')
+        self.assertIn('reason=InferenceFailed', '\n'.join(logs.output))
+
+    def test_fallback_report_is_still_saved_and_shareable(self):
+        self.mock_predict.side_effect = RuntimeError('boom')
+        resp = self._post()
+        body = resp.json()
+        self.assertTrue(body['persistence']['saved'])
+        self.assertTrue(body['persistence']['share_available'])
+        self.assertIsNotNone(body['report_token'])
+
+    def test_unexpected_programming_error_is_a_500_not_a_fallback(self):
+        comparison_spy = AsyncMock(side_effect=AssertionError('must not fall back'))
+        with patch('report_routes.prediction_service.build_v55_assessment',
+                   side_effect=TypeError('contract bug')), \
+             patch('report_routes.report_service.build_assessment', new=comparison_spy):
+            resp = self._post()
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.json()['error_code'], 'internal_error')
+        comparison_spy.assert_not_awaited()
+
+
+class TestCreateReportPredictionGates(unittest.TestCase):
+
+    def setUp(self):
+        app.state.limiter.reset()
+
+    def test_demo_source_never_attempts_prediction(self):
+        # No DVSA client configured -> demo history. Prediction must not run.
+        prediction_spy = MagicMock(side_effect=AssertionError('demo must not predict'))
+        with patch('report_routes.prediction_service.build_v55_assessment', prediction_spy), \
+             patch('report_routes.db.save_report', new=AsyncMock(return_value='row-id-123')):
+            resp = client.post('/api/v2/reports', json={'registration': VALID_VRM})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['result_kind'], 'comparison')
+        self.assertEqual(body['vehicle_data_source'], 'demo')
+        prediction_spy.assert_not_called()
+
+    def test_idempotent_replay_of_prediction_never_reruns_the_model(self):
+        token = 'replay-token-1234'
+        stored = _fixture_response(
+            token,
+            result_kind='vehicle_prediction',
+            prediction_source=PredictionSource.MODEL_V55,
+            evidence=ReportEvidence(
+                match_scope=MatchScope.MODEL_PREDICTION,
+                age_band=None, mileage_band=None,
+                total_tests=None, total_failures=None,
+            ),
+        )
+        fake_get = AsyncMock(return_value={
+            'report_payload': stored,
+            'registration': VALID_VRM,
+            'expires_at': _naive_future(),
+            'pseudonymised_at': None,
+        })
+        prediction_spy = MagicMock(side_effect=AssertionError('replay must not predict'))
+        with patch('report_routes.db.get_report_by_idempotency_key', new=fake_get), \
+             patch('report_routes.prediction_service.build_v55_assessment', prediction_spy):
+            resp = client.post(
+                '/api/v2/reports',
+                json={'registration': VALID_VRM, 'idempotency_key': 'idem-key-1'},
+            )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['result_kind'], 'vehicle_prediction')
+        self.assertEqual(body['evidence']['match_scope'], 'model_prediction')
+        prediction_spy.assert_not_called()
