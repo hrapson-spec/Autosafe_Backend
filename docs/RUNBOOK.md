@@ -27,6 +27,16 @@ the wrong SHA is not an accepted deployment.
 
 Pushing a branch or passing local staging is not production approval.
 
+## Production canary data
+
+For a live DVSA/V55 canary, use a vehicle from a current public dealer listing
+only after release-owner approval. It must not be supplied by an
+AutoSafe customer or user. Keep the registration, listing URL, approval, and
+check timestamp only in restricted release evidence; never put them in Git,
+public tickets, analytics, or unrestricted logs. Staging and automated fixtures
+remain synthetic. Follow the complete procedure in the authoritative RC1
+runbook linked above.
+
 ## Rollback
 
 Redeploy the last known-good Railway image/commit, then verify `/health`,

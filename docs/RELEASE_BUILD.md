@@ -33,10 +33,11 @@ is a real source file and stays tracked.
 docker build --build-arg GIT_SHA=$(git rev-parse HEAD) -t autosafe:rc .
 ```
 
-`GIT_SHA` is baked into the runtime identity and into the frontend-stage
-`.frontend_sha` file. Railway also injects `RAILWAY_GIT_COMMIT_SHA` at runtime;
-the candidate must configure the build/runtime identities so `/api/version`
-reports the same exact commit for both backend and frontend.
+`RAILWAY_GIT_COMMIT_SHA` is consumed during Railway builds and baked into the
+frontend-stage `.frontend_sha` file. Local and CI Docker builds fall back to
+the explicit `GIT_SHA` build argument. Railway also injects
+`RAILWAY_GIT_COMMIT_SHA` at runtime, so `/api/version` must report the same
+exact commit for both backend and frontend.
 
 ## Railway caveat
 

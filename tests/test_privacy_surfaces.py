@@ -1,9 +1,27 @@
 """Source-level guards for browser/log transport privacy boundaries."""
 
+import re
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def test_production_canary_policy_keeps_real_registrations_out_of_git():
+    runbook = (ROOT / "docs" / "release_rc1" / "RUNBOOK_DEPLOY_ROLLBACK.md").read_text(
+        encoding="utf-8"
+    )
+    canary = runbook.split("## 8. Production canary", 1)[1].split(
+        "## 9. Rollback triggers", 1
+    )[0]
+    canary_text = " ".join(canary.split())
+
+    assert "current public dealer listing" in canary_text
+    assert "must not be supplied by an AutoSafe customer or user" in canary_text
+    assert "restricted release evidence" in canary_text
+    assert "release-owner approval" in canary_text
+    assert "Create one synthetic report" not in canary_text
+    assert re.search(r"\b[A-Z]{2}[0-9]{2}\s?[A-Z]{3}\b", canary_text) is None
 
 
 def test_public_sources_never_generate_registration_query_links():

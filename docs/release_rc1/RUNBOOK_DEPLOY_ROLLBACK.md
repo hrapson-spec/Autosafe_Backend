@@ -136,7 +136,12 @@ authorise merging PR #32.
 
 1. Verify Railway and `/api/version` identify the merged SHA and bundle.
 2. Verify `/health`, `/ready`, `/`, `/app`, and static assets.
-3. Create one synthetic report using approved non-customer test data.
+3. For a live DVSA/V55 canary, use a vehicle from a current public dealer
+   listing only after release-owner approval. It must not be supplied by
+   an AutoSafe customer or user. Keep the registration, listing URL, approval,
+   and check timestamp only in restricted release evidence; never put them in
+   Git, public tickets, analytics, or unrestricted logs. Staging and automated
+   fixtures remain synthetic.
 4. Open the share URL in a fresh context and after reload.
 5. Confirm the row exists, expiry is set, and no URL/log/analytics event leaks
    identifiers or the bearer token.
