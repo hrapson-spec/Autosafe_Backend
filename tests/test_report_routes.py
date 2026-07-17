@@ -135,6 +135,12 @@ def _fixture_response(token, **overrides):
     return ReportResponse(**defaults).model_dump(mode='json')
 
 
+def _legacy_fixture_response(token, **overrides):
+    payload = _fixture_response(token, **overrides)
+    payload.pop('result_kind')
+    return payload
+
+
 # ---------------------------------------------------------------------------
 # POST /api/v2/reports -- error matrix
 # ---------------------------------------------------------------------------
@@ -352,6 +358,32 @@ class TestCreateReportIdempotency(unittest.TestCase):
         dvsa_mock.assert_not_called()
         save_mock.assert_not_called()
 
+    def test_idempotent_replay_defaults_legacy_payload_to_comparison(self):
+        stored = _legacy_fixture_response(token="legacy-idempotent-token")
+        lookup = AsyncMock(return_value={
+            'id': 'row-legacy-idempotent',
+            'registration': VALID_VRM,
+            'report_payload': stored,
+        })
+        build_mock = AsyncMock(side_effect=AssertionError("build_assessment should not be called on replay"))
+        dvsa_mock = MagicMock(side_effect=AssertionError("get_dvsa_client should not be called on replay"))
+        save_mock = AsyncMock(side_effect=AssertionError("save_report should not be called on replay"))
+
+        with patch("report_routes.db.get_report_by_idempotency_key", new=lookup), \
+             patch("report_routes.report_service.build_assessment", new=build_mock), \
+             patch("report_routes.get_dvsa_client", new=dvsa_mock), \
+             patch("report_routes.db.save_report", new=save_mock):
+            resp = client.post(
+                "/api/v2/reports",
+                json={"registration": VALID_VRM, "idempotency_key": "legacy-idem-key"},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {**stored, "result_kind": "comparison"})
+        build_mock.assert_not_called()
+        dvsa_mock.assert_not_called()
+        save_mock.assert_not_called()
+
     def test_unique_violation_race_refetches_and_returns_winner(self):
         fixture = _fixture_assessment()
         winner_payload = _fixture_response(token="winner-token-1")
@@ -470,6 +502,20 @@ class TestGetReport(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["result_kind"], "comparison")
         self.assertEqual(resp.json(), payload)
+
+    def test_200_defaults_legacy_payload_to_comparison(self):
+        payload = _legacy_fixture_response(token="legacy-get-token-01")
+        row = {
+            'id': 'row-legacy-get',
+            'report_payload': payload,
+            'expires_at': _naive_future(),
+            'pseudonymised_at': None,
+        }
+        with patch("report_routes.db.get_report_by_token", new=AsyncMock(return_value=row)):
+            resp = client.get("/api/v2/reports/legacy-get-token-01")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {**payload, "result_kind": "comparison"})
 
     def test_404_when_token_unknown(self):
         with patch("report_routes.db.get_report_by_token", new=AsyncMock(return_value=None)):

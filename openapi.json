@@ -539,6 +539,7 @@
           "postgres",
           "sqlite",
           "dataset_reference",
+          "model_v55",
           "unavailable"
         ],
         "title": "PredictionSource",
@@ -1071,6 +1072,10 @@
             ],
             "title": "Report Token"
           },
+          "result_kind": {
+            "$ref": "#/components/schemas/ResultKind",
+            "default": "comparison"
+          },
           "risk": {
             "$ref": "#/components/schemas/ReportRisk"
           },
@@ -1182,6 +1187,15 @@
         ],
         "title": "ReportVehicle",
         "type": "object"
+      },
+      "ResultKind": {
+        "description": "Semantic meaning of the report's displayed risk figure.",
+        "enum": [
+          "comparison",
+          "vehicle_prediction"
+        ],
+        "title": "ResultKind",
+        "type": "string"
       },
       "RiskData": {
         "properties": {
