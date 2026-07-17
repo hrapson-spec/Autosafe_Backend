@@ -24,7 +24,14 @@ import {
   Clock,
   Share2,
   Link2,
-  MessageCircle
+  MessageCircle,
+  BellRing,
+  CalendarDays,
+  CarFront,
+  ChevronRight,
+  CircleAlert,
+  CircleDot,
+  Lightbulb
 } from 'lucide-react';
 
 export {
@@ -52,5 +59,12 @@ export {
   Clock,
   Share2,
   Link2,
-  MessageCircle
+  MessageCircle,
+  BellRing,
+  CalendarDays,
+  CarFront,
+  ChevronRight,
+  CircleAlert,
+  CircleDot,
+  Lightbulb
 };
