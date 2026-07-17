@@ -11,6 +11,8 @@ import os
 import sys
 import unittest
 
+import pytest
+
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -36,6 +38,7 @@ from report_contract import (
     OdometerStatus,
     OdometerUnavailableReason,
     PredictionSource,
+    ResultKind,
     ReportComponents,
     ReportCreateRequest,
     ReportEvidence,
@@ -79,6 +82,13 @@ def _full_response_kwargs():
     )
 
 
+@pytest.fixture
+def valid_report_dict():
+    payload = ReportResponse(**_full_response_kwargs()).model_dump(mode="json")
+    payload["result_kind"] = "comparison"
+    return payload
+
+
 class TestExtraForbid(unittest.TestCase):
     """model_config = ConfigDict(extra="forbid") must reject unknown fields."""
 
@@ -91,6 +101,38 @@ class TestExtraForbid(unittest.TestCase):
         kwargs["bogus_field"] = "nope"
         with self.assertRaises(ValidationError):
             ReportResponse(**kwargs)
+
+
+class TestResultSemanticContract:
+
+    def test_result_kind_values(self):
+        assert {member.value for member in ResultKind} == {
+            "comparison",
+            "vehicle_prediction",
+        }
+
+    def test_result_kind_defaults_to_comparison(self, valid_report_dict):
+        valid_report_dict.pop("result_kind", None)
+        report = ReportResponse.model_validate(valid_report_dict)
+        assert report.result_kind == ResultKind.COMPARISON
+
+    def test_vehicle_prediction_requires_model_source(self, valid_report_dict):
+        valid_report_dict["result_kind"] = "vehicle_prediction"
+        with pytest.raises(ValidationError, match="vehicle prediction requires model_v55"):
+            ReportResponse.model_validate(valid_report_dict)
+
+    def test_vehicle_prediction_accepts_model_v55(self, valid_report_dict):
+        valid_report_dict.update(result_kind="vehicle_prediction", prediction_source="model_v55")
+        report = ReportResponse.model_validate(valid_report_dict)
+        assert report.result_kind == ResultKind.VEHICLE_PREDICTION
+
+    def test_model_v55_prediction_source_requires_vehicle_prediction(self, valid_report_dict):
+        valid_report_dict["prediction_source"] = "model_v55"
+        with pytest.raises(
+            ValidationError,
+            match="model_v55 prediction source requires vehicle_prediction",
+        ):
+            ReportResponse.model_validate(valid_report_dict)
 
 
 class TestRequestBoundaryValidation(unittest.TestCase):
@@ -208,7 +250,7 @@ class TestEnumValuesExact(unittest.TestCase):
     def test_prediction_source_values(self):
         self.assertEqual(
             {m.value for m in PredictionSource},
-            {"postgres", "sqlite", "dataset_reference", "unavailable"},
+            {"postgres", "sqlite", "dataset_reference", "model_v55", "unavailable"},
         )
 
     def test_vehicle_data_source_values(self):

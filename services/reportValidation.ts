@@ -34,6 +34,7 @@ import type {
   OdometerStatusV2,
   OdometerUnavailableReasonV2,
   PredictionSource,
+  ResultKind,
   ReportComponentsV2,
   ReportEvidenceV2,
   ReportMileageV2,
@@ -70,10 +71,13 @@ export const VALID_MILEAGE_SOURCES: readonly MileageSource[] = [
 
 export const VALID_CONFIDENCE_LEVELS: readonly ConfidenceLevel[] = ['High', 'Medium', 'Low', 'Very Low'];
 
+export const VALID_RESULT_KINDS: readonly ResultKind[] = ['comparison', 'vehicle_prediction'];
+
 export const VALID_PREDICTION_SOURCES: readonly PredictionSource[] = [
   'postgres',
   'sqlite',
   'dataset_reference',
+  'model_v55',
   'unavailable',
 ];
 
@@ -355,6 +359,7 @@ export function isReportV2(x: unknown): x is ReportV2 {
   if (!isPlainObject(x)) return false;
   const structurallyValid = (
     x.contract_version === '2.0' &&
+    isOneOf(x.result_kind, VALID_RESULT_KINDS) &&
     isNullable(x.report_id, isString) &&
     isNullable(x.report_token, isString) &&
     isNullable(x.share_url, isString) &&
@@ -374,6 +379,12 @@ export function isReportV2(x: unknown): x is ReportV2 {
     isNullable(x.note, isString)
   );
   if (!structurallyValid) return false;
+
+  if (x.result_kind === 'vehicle_prediction') {
+    if (x.prediction_source !== 'model_v55') return false;
+  } else if (x.prediction_source === 'model_v55') {
+    return false;
+  }
 
   // Repeat this guard to give TypeScript a direct narrowing point after the
   // aliased compound condition above.

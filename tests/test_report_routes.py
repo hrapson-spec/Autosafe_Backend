@@ -219,6 +219,7 @@ class TestCreateReportDemoHappyPath(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
+        self.assertEqual(body["result_kind"], "comparison")
         self.assertEqual(body["vehicle_data_source"], "demo")
         self.assertEqual(body["mileage"]["source"], "observed_mot")
         self.assertIsNotNone(body["mileage"]["effective_value"])
@@ -467,6 +468,7 @@ class TestGetReport(unittest.TestCase):
         with patch("report_routes.db.get_report_by_token", new=AsyncMock(return_value=row)):
             resp = client.get("/api/v2/reports/get-token-0001")
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["result_kind"], "comparison")
         self.assertEqual(resp.json(), payload)
 
     def test_404_when_token_unknown(self):

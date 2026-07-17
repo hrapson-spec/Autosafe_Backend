@@ -95,12 +95,20 @@ class ConfidenceLevel(str, Enum):
     VERY_LOW = "Very Low"
 
 
+class ResultKind(str, Enum):
+    """Semantic meaning of the report's displayed risk figure."""
+
+    COMPARISON = "comparison"
+    VEHICLE_PREDICTION = "vehicle_prediction"
+
+
 class PredictionSource(str, Enum):
     """Exact source of the report's displayed risk figure."""
 
     POSTGRES = "postgres"
     SQLITE = "sqlite"
     DATASET_REFERENCE = "dataset_reference"
+    MODEL_V55 = "model_v55"
     # Retained for backwards compatibility with already-saved payloads.
     # New degraded reports display the checked-in dataset reference and
     # therefore use DATASET_REFERENCE; MatchScope records why they degraded.
@@ -426,6 +434,7 @@ class ReportResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     contract_version: str = REPORT_CONTRACT_VERSION
+    result_kind: ResultKind = ResultKind.COMPARISON
     report_id: Optional[str] = None
     report_token: Optional[str] = None
     share_url: Optional[str] = None
@@ -448,6 +457,12 @@ class ReportResponse(BaseModel):
     def validate_report_consistency(self):
         if self.contract_version != REPORT_CONTRACT_VERSION:
             raise ValueError("unsupported report contract version")
+
+        if self.result_kind == ResultKind.VEHICLE_PREDICTION:
+            if self.prediction_source != PredictionSource.MODEL_V55:
+                raise ValueError("vehicle prediction requires model_v55 prediction source")
+        elif self.prediction_source == PredictionSource.MODEL_V55:
+            raise ValueError("model_v55 prediction source requires vehicle_prediction result kind")
 
         if self.repair_estimate is not None and not self.components.available:
             raise ValueError("repair estimate requires supported component evidence")
