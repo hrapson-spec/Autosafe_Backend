@@ -158,7 +158,10 @@ export type MatchScope =
   | 'age_band_only'
   | 'model_average'
   | 'population_default'
-  | 'unavailable';
+  | 'unavailable'
+  // A per-vehicle model output, not a cohort match: valid only on
+  // vehicle_prediction reports and never carries bands or sample counts.
+  | 'model_prediction';
 
 /** Provenance of the mileage value used to produce a report. Mirrors
  * report_contract.MileageSource. */

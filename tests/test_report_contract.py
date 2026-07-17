@@ -123,6 +123,15 @@ class TestResultSemanticContract:
 
     def test_vehicle_prediction_accepts_model_v55(self, valid_report_dict):
         valid_report_dict.update(result_kind="vehicle_prediction", prediction_source="model_v55")
+        # A prediction must also claim the model_prediction evidence scope
+        # (see TestModelPredictionScope for the full biconditional).
+        valid_report_dict["evidence"] = dict(
+            match_scope="model_prediction",
+            age_band=None,
+            mileage_band=None,
+            total_tests=None,
+            total_failures=None,
+        )
         report = ReportResponse.model_validate(valid_report_dict)
         assert report.result_kind == ResultKind.VEHICLE_PREDICTION
 
@@ -132,6 +141,100 @@ class TestResultSemanticContract:
             ValidationError,
             match="model_v55 prediction source requires vehicle_prediction",
         ):
+            ReportResponse.model_validate(valid_report_dict)
+
+
+class TestModelPredictionScope:
+    """model_prediction evidence scope: valid only on vehicle_prediction
+    reports, and carries no cohort bands or counts (a per-vehicle model
+    output is not a cohort match)."""
+
+    def _prediction_evidence(self, **overrides):
+        fields = dict(
+            match_scope=MatchScope.MODEL_PREDICTION,
+            age_band=None,
+            mileage_band=None,
+            total_tests=None,
+            total_failures=None,
+        )
+        fields.update(overrides)
+        return fields
+
+    def test_match_scope_has_model_prediction_member(self):
+        assert MatchScope.MODEL_PREDICTION.value == "model_prediction"
+
+    def test_all_null_prediction_evidence_validates(self):
+        evidence = ReportEvidence(**self._prediction_evidence())
+        assert evidence.match_scope == MatchScope.MODEL_PREDICTION
+
+    def test_prediction_evidence_rejects_bands(self):
+        for overrides in (
+            dict(age_band="3-5"),
+            dict(mileage_band="30k-60k"),
+            dict(age_band="3-5", mileage_band="30k-60k"),
+        ):
+            with pytest.raises(ValidationError):
+                ReportEvidence(**self._prediction_evidence(**overrides))
+
+    def test_prediction_evidence_rejects_cohort_counts(self):
+        with pytest.raises(ValidationError, match="carries no cohort counts"):
+            ReportEvidence(**self._prediction_evidence(total_tests=100))
+        with pytest.raises(ValidationError):
+            ReportEvidence(**self._prediction_evidence(total_tests=100, total_failures=20))
+
+    def _prediction_response_dict(self, valid_report_dict):
+        valid_report_dict.update(
+            result_kind="vehicle_prediction",
+            prediction_source="model_v55",
+        )
+        valid_report_dict["evidence"] = dict(
+            match_scope="model_prediction",
+            age_band=None,
+            mileage_band=None,
+            total_tests=None,
+            total_failures=None,
+        )
+        valid_report_dict["risk"] = dict(failure_risk=0.31, confidence="Medium")
+        return valid_report_dict
+
+    def test_full_prediction_response_validates(self, valid_report_dict):
+        report = ReportResponse.model_validate(self._prediction_response_dict(valid_report_dict))
+        assert report.result_kind == ResultKind.VEHICLE_PREDICTION
+        assert report.evidence.match_scope == MatchScope.MODEL_PREDICTION
+        assert report.note is None
+
+    def test_prediction_response_validates_with_components_and_repair(self, valid_report_dict):
+        payload = self._prediction_response_dict(valid_report_dict)
+        payload["components"] = dict(
+            available=True,
+            items=[dict(key="brakes", label="Brakes", risk=0.18)],
+        )
+        payload["repair_estimate"] = dict(expected=120, range_low=80, range_high=200)
+        report = ReportResponse.model_validate(payload)
+        assert report.components.available is True
+        assert report.repair_estimate.expected == 120
+
+    def test_vehicle_prediction_requires_model_prediction_scope(self, valid_report_dict):
+        payload = self._prediction_response_dict(valid_report_dict)
+        payload["evidence"] = dict(
+            match_scope="exact_band",
+            age_band="3-5",
+            mileage_band="30k-60k",
+            total_tests=100,
+            total_failures=20,
+        )
+        with pytest.raises(ValidationError, match="model_prediction evidence scope"):
+            ReportResponse.model_validate(payload)
+
+    def test_comparison_cannot_claim_model_prediction_scope(self, valid_report_dict):
+        valid_report_dict["evidence"] = dict(
+            match_scope="model_prediction",
+            age_band=None,
+            mileage_band=None,
+            total_tests=None,
+            total_failures=None,
+        )
+        with pytest.raises(ValidationError, match="model_prediction evidence scope"):
             ReportResponse.model_validate(valid_report_dict)
 
 
@@ -238,7 +341,8 @@ class TestEnumValuesExact(unittest.TestCase):
     def test_match_scope_values(self):
         self.assertEqual(
             {m.value for m in MatchScope},
-            {"exact_band", "age_band_only", "model_average", "population_default", "unavailable"},
+            {"exact_band", "age_band_only", "model_average", "population_default",
+             "unavailable", "model_prediction"},
         )
 
     def test_confidence_level_values(self):

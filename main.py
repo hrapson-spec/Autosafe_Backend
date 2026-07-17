@@ -1395,7 +1395,7 @@ class VehicleInfo(BaseModel):
 
 ALLOWED_MATCH_SCOPES = {
     'exact_band', 'age_band_only', 'model_average',
-    'population_default', 'unavailable',
+    'population_default', 'unavailable', 'model_prediction',
 }
 
 

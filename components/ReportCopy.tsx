@@ -57,20 +57,32 @@ export function hasVehicleComparison(report: ReportV2): boolean {
   return ['exact_band', 'age_band_only', 'model_average'].includes(report.evidence.match_scope);
 }
 
+export function isVehiclePrediction(report: ReportV2): boolean {
+  return report.result_kind === 'vehicle_prediction';
+}
+
 export function failureRateLabel(report: ReportV2): string {
+  if (isVehiclePrediction(report)) {
+    return 'Predicted chance of failing the next MOT';
+  }
   return hasVehicleComparison(report)
     ? 'Comparable-vehicle MOT failure rate'
     : 'Dataset-wide reference MOT failure rate';
 }
 
 /**
- * Fixed badge shown next to every displayed rate, regardless of match
- * scope: every served rate is a population/cohort lookup, never a
- * per-vehicle prediction, so this badge and its tooltip apply uniformly —
- * unlike failureRateLabel, which varies its wording by match scope, this
- * is one constant pair for every report.
+ * Badge shown next to the displayed rate. Every comparison rate is a
+ * population/cohort lookup, so all comparison scopes share one constant
+ * pair; a vehicle_prediction report is the single exception and must not
+ * be labelled as a group rate.
  */
-export function populationBadge(): { label: string; title: string } {
+export function populationBadge(report: ReportV2): { label: string; title: string } {
+  if (isVehiclePrediction(report)) {
+    return {
+      label: 'Vehicle-specific result',
+      title: "AutoSafe's predicted chance for this vehicle, from its recorded MOT history and details — not a diagnosis and not a guarantee.",
+    };
+  }
   return {
     label: 'Population average',
     title: 'A recorded failure rate for a group of similar vehicles — not a prediction for this vehicle.',
@@ -151,6 +163,8 @@ export function buildScopeDisclosure(report: ReportV2): string {
       return `We don't have enough ${make} ${model} group data, so this is the dataset-wide reference rate.`;
     case 'unavailable':
       return `Our comparison data is temporarily unavailable, so this is the dataset-wide reference rate — not a ${make} ${model} result.`;
+    case 'model_prediction':
+      return `AutoSafe produced this result from this vehicle's recorded MOT history and details. It is a predicted chance for this vehicle, not a recorded failure rate for a group of similar vehicles, and not a diagnosis.`;
     default:
       return assertUnreachable(scope, 'evidence.match_scope');
   }
@@ -172,6 +186,10 @@ export function buildSampleSizeClause(report: ReportV2): string | null {
  * chips) that must always render something rather than being omitted.
  */
 export function sampleSizeBadge(report: ReportV2): string {
+  if (isVehiclePrediction(report)) {
+    // A prediction has no cohort sample to disclose or lament.
+    return 'Vehicle-specific result';
+  }
   const total = report.evidence.total_tests;
   if (total === null || total <= 0) {
     return hasVehicleComparison(report)
@@ -328,10 +346,22 @@ function buildUnmatchedMileageDisclosure(report: ReportV2): string | null {
  * direct language about how much weight to put on the figure.
  */
 export function buildConfidenceCaveat(report: ReportV2): string | null {
+  const confidence = report.risk.confidence;
+  if (isVehiclePrediction(report)) {
+    switch (confidence) {
+      case 'High':
+      case 'Medium':
+        return null;
+      case 'Low':
+      case 'Very Low':
+        return 'This vehicle has limited recorded history to draw on — treat the result as broad context rather than a precise figure.';
+      default:
+        return assertUnreachable(confidence, 'risk.confidence');
+    }
+  }
   if (!hasVehicleComparison(report)) {
     return 'No vehicle-matched evidence is available — treat this dataset reference as general context only.';
   }
-  const confidence = report.risk.confidence;
   switch (confidence) {
     case 'High':
     case 'Medium':
@@ -387,11 +417,16 @@ export function buildNarrative(report: ReportV2): string {
     case 'unavailable':
       sentence1 = `The dataset-wide reference MOT failure rate shown here is ${riskText}; it is not a vehicle-matched result.`;
       break;
+    case 'model_prediction':
+      sentence1 = `AutoSafe predicts a ${riskText} chance that this ${vehicle.make} ${vehicle.model} fails its next MOT, based on its recorded MOT history and details.`;
+      break;
     default:
       return assertUnreachable(scope, 'evidence.match_scope');
   }
 
-  const unmatchedMileageDisclosure = scope === 'exact_band'
+  // exact_band used the mileage in the match; model_prediction feeds it to
+  // the model — neither may claim "mileage was not used".
+  const unmatchedMileageDisclosure = scope === 'exact_band' || scope === 'model_prediction'
     ? null
     : buildUnmatchedMileageDisclosure(report);
 
@@ -418,7 +453,9 @@ export function componentsSectionCopy(report: ReportV2): ComponentsSectionCopy {
   if (items && items.length > 0) {
     return {
       show: true,
-      caption: 'Indicative estimates: components most often linked to MOT failure among similar vehicles — not a diagnosis of this vehicle.',
+      caption: isVehiclePrediction(report)
+        ? 'Inspection priorities for this vehicle — where to look first, not diagnosed faults.'
+        : 'Indicative estimates: components most often linked to MOT failure among similar vehicles — not a diagnosis of this vehicle.',
       emptyStateText: null,
     };
   }
@@ -429,9 +466,11 @@ export function componentsSectionCopy(report: ReportV2): ComponentsSectionCopy {
   };
 }
 
-/** Fixed caption for the repair-estimate section. */
-export function repairEstimateCaption(): string {
-  return 'Indicative repair-cost range for similar vehicles, not a quote.';
+/** Caption for the repair-estimate section, per result kind. */
+export function repairEstimateCaption(report: ReportV2): string {
+  return isVehiclePrediction(report)
+    ? 'Indicative repair-cost range if these components need attention, not a quote.'
+    : 'Indicative repair-cost range for similar vehicles, not a quote.';
 }
 
 /**
@@ -443,6 +482,9 @@ export function buildWhatsAppMessage(report: ReportV2): string | null {
   if (!report.persistence.share_available || report.share_url === null) return null;
   const { vehicle } = report;
   const riskText = reportRateDisplay(report).text;
+  if (isVehiclePrediction(report)) {
+    return `AutoSafe predicts a ${riskText} chance that ${report.registration} fails its next MOT, from its recorded MOT history — not a guarantee or diagnosis. View the report: ${report.share_url}`;
+  }
   if (!hasVehicleComparison(report)) {
     return `This report shows a dataset-wide reference MOT failure rate of ${riskText}, not a vehicle-matched result. View it: ${report.share_url}`;
   }

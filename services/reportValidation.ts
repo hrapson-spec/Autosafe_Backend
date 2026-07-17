@@ -60,6 +60,7 @@ export const VALID_MATCH_SCOPES: readonly MatchScope[] = [
   'model_average',
   'population_default',
   'unavailable',
+  'model_prediction',
 ];
 
 export const VALID_MILEAGE_SOURCES: readonly MileageSource[] = [
@@ -280,6 +281,9 @@ function isReportEvidenceV2(x: unknown): x is ReportEvidenceV2 {
     ['exact_band', 'age_band_only', 'model_average'].includes(x.match_scope as string) &&
     x.total_tests === null
   ) return false;
+  // A model prediction carries no cohort counts (mirrors
+  // report_contract.ReportEvidence.validate_counts).
+  if (x.match_scope === 'model_prediction' && x.total_tests !== null) return false;
   if (
     typeof x.total_tests === 'number' &&
     typeof x.total_failures === 'number' &&
@@ -382,8 +386,14 @@ export function isReportV2(x: unknown): x is ReportV2 {
 
   if (x.result_kind === 'vehicle_prediction') {
     if (x.prediction_source !== 'model_v55') return false;
-  } else if (x.prediction_source === 'model_v55') {
-    return false;
+    if (!isReportEvidenceV2(x.evidence) || x.evidence.match_scope !== 'model_prediction') {
+      return false;
+    }
+  } else {
+    if (x.prediction_source === 'model_v55') return false;
+    if (isReportEvidenceV2(x.evidence) && x.evidence.match_scope === 'model_prediction') {
+      return false;
+    }
   }
 
   // Repeat this guard to give TypeScript a direct narrowing point after the

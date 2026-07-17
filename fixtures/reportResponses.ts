@@ -83,6 +83,15 @@ export const fixtureVehiclePrediction: ReportV2 = {
   ...fixtureExactHigh,
   result_kind: 'vehicle_prediction',
   prediction_source: 'model_v55',
+  // A prediction is a per-vehicle model output, not a cohort match: it
+  // claims the model_prediction scope and carries no bands or sample counts.
+  evidence: {
+    match_scope: 'model_prediction',
+    age_band: null,
+    mileage_band: null,
+    total_tests: null,
+    total_failures: null,
+  },
 };
 
 // ----------------------------------------------------------------------------

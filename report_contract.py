@@ -81,6 +81,9 @@ class MatchScope(str, Enum):
     MODEL_AVERAGE = "model_average"
     POPULATION_DEFAULT = "population_default"
     UNAVAILABLE = "unavailable"
+    # A per-vehicle model output, not a cohort match: valid only on
+    # vehicle_prediction reports and never carries bands or sample counts.
+    MODEL_PREDICTION = "model_prediction"
 
 
 class ConfidenceLevel(str, Enum):
@@ -355,6 +358,8 @@ class ReportEvidence(BaseModel):
             and self.total_tests is None
         ):
             raise ValueError("matched evidence requires sample counts")
+        if self.match_scope == MatchScope.MODEL_PREDICTION and self.total_tests is not None:
+            raise ValueError("a model prediction carries no cohort counts")
 
         if self.match_scope == MatchScope.EXACT_BAND:
             if self.age_band is None or self.mileage_band is None:
@@ -461,8 +466,13 @@ class ReportResponse(BaseModel):
         if self.result_kind == ResultKind.VEHICLE_PREDICTION:
             if self.prediction_source != PredictionSource.MODEL_V55:
                 raise ValueError("vehicle prediction requires model_v55 prediction source")
-        elif self.prediction_source == PredictionSource.MODEL_V55:
-            raise ValueError("model_v55 prediction source requires vehicle_prediction result kind")
+            if self.evidence.match_scope != MatchScope.MODEL_PREDICTION:
+                raise ValueError("vehicle prediction requires the model_prediction evidence scope")
+        else:
+            if self.prediction_source == PredictionSource.MODEL_V55:
+                raise ValueError("model_v55 prediction source requires vehicle_prediction result kind")
+            if self.evidence.match_scope == MatchScope.MODEL_PREDICTION:
+                raise ValueError("only a vehicle prediction may claim the model_prediction evidence scope")
 
         if self.repair_estimate is not None and not self.components.available:
             raise ValueError("repair estimate requires supported component evidence")
