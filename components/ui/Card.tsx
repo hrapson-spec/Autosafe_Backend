@@ -40,7 +40,7 @@ const Card: React.FC<CardProps> & {
   };
 
   return (
-    <div className={`rounded-2xl shadow-sm ${variantStyles[variant]} ${paddingStyles[padding]} ${className}`}>
+    <div className={`rounded-xl shadow-sm ${variantStyles[variant]} ${paddingStyles[padding]} ${className}`}>
       {children}
     </div>
   );

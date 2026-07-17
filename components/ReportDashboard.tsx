@@ -15,8 +15,9 @@ import {
 } from './ReportCopy';
 import GarageFinderModal from './GarageFinderModal';
 import { AlertTriangle, ArrowRight, Check, ChevronDown, Link2, Mail, MessageCircle } from './Icons';
+import { Logo } from './Logo';
 import MotReminderCapture from './MotReminderCapture';
-import ReportResult from './ReportResult';
+import ReportResult, { formatRegistration } from './ReportResult';
 import StickyCta from './StickyCta';
 import { Button } from './ui';
 
@@ -146,62 +147,78 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
 
       <div className="flex flex-col items-start justify-between gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">Vehicle Report</h1>
+          <div className="flex items-center gap-2">
+            <a
+              href="/"
+              aria-label="AutoSafe home"
+              className="rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+            >
+              <Logo className="h-7 w-7" />
+            </a>
+            <h1 className="text-2xl font-semibold text-slate-900">Vehicle report</h1>
+          </div>
           <p className="mt-1 text-slate-600">
             {report.vehicle.year ? `${report.vehicle.year} ` : ''}
             {report.vehicle.make} {report.vehicle.model}
-            {mileageDisplay ? ` • ${mileageDisplay}` : ''}
+            {` · ${formatRegistration(report.registration)}`}
+            {mileageDisplay ? ` · ${mileageDisplay}` : ''}
           </p>
           {lastRecordedMileageText && (
             <p className="mt-0.5 text-sm text-slate-500">{lastRecordedMileageText}</p>
           )}
         </div>
         <Button variant="ghost" size="md" onClick={onReset} aria-label="Check another vehicle">
-          Check Another Vehicle <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          Check another vehicle <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
 
-      <div className="-mt-2 flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleWhatsAppShare}
-            disabled={!whatsAppMessage}
-            title={whatsAppMessage ? undefined : shareDisabledLabel}
-            aria-label={whatsAppMessage ? 'Share on WhatsApp' : shareDisabledLabel}
-            className={`flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100 ${
-              !whatsAppMessage ? 'cursor-not-allowed opacity-50 hover:bg-green-50' : ''
-            }`}
-          >
-            <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-            WhatsApp
-          </button>
-          <button
-            onClick={handleCopyLink}
-            disabled={!shareUrl}
-            title={shareUrl ? undefined : shareDisabledLabel}
-            aria-label={shareUrl ? 'Copy report link' : shareDisabledLabel}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              linkCopied
-                ? 'bg-green-50 text-green-700'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            } ${!shareUrl ? 'cursor-not-allowed opacity-50 hover:bg-slate-100' : ''}`}
-          >
-            {linkCopied ? (
-              <>
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-                Copy link
-              </>
-            )}
-          </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-slate-700">Share report</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleWhatsAppShare}
+              disabled={!whatsAppMessage}
+              title={whatsAppMessage ? undefined : shareDisabledLabel}
+              aria-label={whatsAppMessage ? 'Share on WhatsApp' : shareDisabledLabel}
+              className={`flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100 ${
+                !whatsAppMessage ? 'cursor-not-allowed opacity-50 hover:bg-green-50' : ''
+              }`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              Share on WhatsApp
+            </button>
+            <button
+              onClick={handleCopyLink}
+              disabled={!shareUrl}
+              title={shareUrl ? undefined : shareDisabledLabel}
+              aria-label={shareUrl ? 'Copy report link' : shareDisabledLabel}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                linkCopied
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              } ${!shareUrl ? 'cursor-not-allowed opacity-50 hover:bg-slate-100' : ''}`}
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  Copy link
+                </>
+              )}
+            </button>
+          </div>
         </div>
-        {sharingUnavailable && (
-          <p className="text-right text-xs text-slate-400">{shareDisabledLabel}</p>
-        )}
+        <p className="text-xs text-slate-500">
+          {sharingUnavailable ? shareDisabledLabel : 'Anyone with the link can view this report.'}
+        </p>
+        <span aria-live="polite" className="sr-only">
+          {linkCopied ? 'Report link copied to clipboard.' : ''}
+        </span>
       </div>
     </>
   );

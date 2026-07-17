@@ -48,20 +48,19 @@ describe('ReportResult', () => {
     );
 
     expect(screen.getByTestId('vehicle-prediction-result')).toBeInTheDocument();
-    expect(screen.getByText('AutoSafe prediction for AB12 CDE')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
         name: 'Your car’s predicted chance of failing its next MOT',
       })
     ).toBeInTheDocument();
     expect(screen.getByText('12%')).toBeInTheDocument();
-    expect(screen.getByText('about 1 in 8')).toBeInTheDocument();
+    // Low band (<30%): visible status pill plus a combined screen-reader label,
+    // replacing the removed progress bar.
+    expect(screen.getByText('Low chance')).toBeInTheDocument();
+    expect(screen.getByText('12%, Low chance')).toBeInTheDocument();
+    expect(screen.getByText('That’s about 1 in 8.')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Check these first' })).toBeInTheDocument();
-    const progressbar = screen.getByRole('progressbar', { name: 'Predicted failure chance' });
-    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
-    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
-    expect(progressbar).toHaveAttribute('aria-valuenow', '12');
-    expect(progressbar).toHaveAttribute('aria-valuetext', '12%');
   });
 
   it('renders the honest comparison fallback for current reports', () => {
@@ -83,11 +82,10 @@ describe('ReportResult', () => {
       screen.getByText(/TESTMAKE RAREMODEL comparison: about 1 in 3 failed their MOT/i)
     ).toBeInTheDocument();
     expect(screen.getByText('36%')).toBeInTheDocument();
-    const progressbar = screen.getByRole('progressbar', { name: 'Comparison failure rate' });
-    expect(progressbar).toHaveAttribute('aria-valuemin', '0');
-    expect(progressbar).toHaveAttribute('aria-valuemax', '100');
-    expect(progressbar).toHaveAttribute('aria-valuenow', '36');
-    expect(progressbar).toHaveAttribute('aria-valuetext', '36%');
+    // Medium band (30–49%) pill + combined screen-reader label; no progress bar.
+    expect(screen.getByText('Medium chance')).toBeInTheDocument();
+    expect(screen.getByText('36%, Medium chance')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByText(/AutoSafe prediction for/i)).not.toBeInTheDocument();
   });
 
@@ -112,7 +110,7 @@ describe('ReportResult', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders zero risk as a finite human frequency in both the support line and summary', () => {
+  it('renders zero risk as a finite human frequency in the summary', () => {
     const zeroRiskReport = {
       ...fixtureVehiclePrediction,
       risk: {
@@ -124,9 +122,23 @@ describe('ReportResult', () => {
     render(<ReportResult report={zeroRiskReport} onReminder={vi.fn()} onGarage={vi.fn()} />);
 
     expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('fewer than 1 in 100')).toBeInTheDocument();
     expect(screen.getByText('That’s a chance of fewer than 1 in 100.')).toBeInTheDocument();
     expect(screen.queryByText(/Infinity|NaN/i)).not.toBeInTheDocument();
+  });
+
+  it('expresses the predicted chance as the nearest simple X-in-Y fraction', () => {
+    const report = {
+      ...fixtureVehiclePrediction,
+      risk: { ...fixtureVehiclePrediction.risk, failure_risk: 0.39 },
+    };
+
+    render(<ReportResult report={report} onReminder={vi.fn()} onGarage={vi.fn()} />);
+
+    expect(screen.getByText('39%')).toBeInTheDocument();
+    expect(screen.getByText('That’s about 2 in 5.')).toBeInTheDocument();
+    // 39% sits in the medium band.
+    expect(screen.getByText('Medium chance')).toBeInTheDocument();
+    expect(screen.getByText('39%, Medium chance')).toBeInTheDocument();
   });
 
   it.each([
@@ -145,7 +157,7 @@ describe('ReportResult', () => {
     render(<ReportResult report={report} onReminder={vi.fn()} onGarage={vi.fn()} />);
 
     expect(screen.queryByText(/^MOT due /i)).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Get ready before your MOT' })).toBeInTheDocument();
+    expect(screen.getByText('Prepare before your MOT')).toBeInTheDocument();
     expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/2 Mar 2027|2 February/i)).not.toBeInTheDocument();
   });
@@ -169,7 +181,7 @@ describe('ReportResult', () => {
     expect(onReminder).toHaveBeenCalledTimes(1);
     expect(onGarage).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByRole('link', { name: 'Open the 10-minute checklist' })
+      screen.getByRole('link', { name: 'Start the 10-minute checklist' })
     ).toHaveAttribute('href', '/app/guides/mot-checklist');
   });
 

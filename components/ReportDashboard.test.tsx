@@ -68,9 +68,10 @@ describe('ReportDashboard final layout', () => {
     ).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-prediction-result')).not.toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Vehicle Report' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle report' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'AutoSafe home' })).toHaveAttribute('href', '/');
     expect(
-      screen.getByText('2021 TESTMAKE TESTMODEL • 62,411 miles (last recorded MOT mileage)')
+      screen.getByText('2021 TESTMAKE TESTMODEL · AB12 CDE · 62,411 miles (last recorded MOT mileage)')
     ).toBeInTheDocument();
     expect(screen.getByText('Last recorded MOT mileage: 62,411 miles on 18 Apr 2026')).toBeInTheDocument();
 
@@ -111,7 +112,9 @@ describe('ReportDashboard final layout', () => {
     render(<ReportDashboard report={fixtureVehiclePrediction} onReset={vi.fn()} />);
 
     expect(screen.getByTestId('vehicle-prediction-result')).toBeInTheDocument();
-    expect(screen.getByText('AutoSafe prediction for AB12 CDE')).toBeInTheDocument();
+    // The registration moved from an in-card eyebrow to the header identity line.
+    expect(screen.queryByText('AutoSafe prediction for AB12 CDE')).not.toBeInTheDocument();
+    expect(screen.getByText(/AB12 CDE/)).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Your car’s predicted chance of failing its next MOT' })
     ).toBeInTheDocument();
@@ -145,6 +148,9 @@ describe('ReportDashboard final layout', () => {
     const { container } = render(
       <ReportDashboard report={fixtureExactHigh} postcode="SW1A 1AA" onReset={onReset} />
     );
+
+    expect(screen.getByText('Share report')).toBeInTheDocument();
+    expect(screen.getByText('Anyone with the link can view this report.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /copy report link/i }));
     expect(writeText).toHaveBeenCalledWith(fixtureExactHigh.share_url);
