@@ -1,74 +1,59 @@
 # AutoSafe browser E2E suite (Playwright)
 
-Wave 5. Fully mocked — no backend process, no real network. `page.route`
-intercepts every `/api/*` call the app makes; fixtures come from
-`fixtures/reportResponses.ts` (the same fixtures the frontend unit tests
-use). Requests to anything that isn't `localhost` (Google Fonts, the Umami
-script, gtag) are aborted outright — see `helpers/network.ts`.
+Fully mocked: no backend process and no real external network. `page.route`
+intercepts every `/api/*` call the app makes; report fixtures come from
+`fixtures/reportResponses.ts`, the same typed fixtures used by frontend unit
+tests. Requests to non-local hosts are blocked by `helpers/network.ts`.
 
 ## Running
 
 ```bash
-npm run build          # static/ must be current — vite preview serves it
-npx playwright install chromium   # first run only; ~/Library/Caches/ms-playwright
-npx playwright test               # headless, chromium only
+npm run build
+npx playwright install chromium   # first run only
+npx playwright test
 ```
 
-`playwright.config.ts`'s `webServer` runs `npm run preview -- --port 4173
---strictPort` and reuses an already-running server outside CI. Vite's
-preview server already serves `index.html` for unmatched paths (verified by
-curling a deep link before writing these specs) — deep links like
-`/app/report/<token>` resolve correctly with no config changes needed.
+`playwright.config.ts` starts `npm run preview -- --port 4173 --strictPort`
+and reuses an existing preview server outside CI. Vite preview serves deep
+links such as `/app/report/<token>` through `index.html`.
 
 ## Layout
 
-- `helpers/setup.ts` — re-exports `test`/`expect` from `@playwright/test`
-  with an auto-fixture that runs before every test: seeds consent as
-  declined, blocks non-localhost requests, and mocks `GET /api/stats`.
-  Specs import `test`/`expect` from here, not from `@playwright/test`
-  directly, so they get this "shared beforeEach" automatically.
-- `helpers/mockApi.ts` — `mockStats`, `gateStats` (stats behind a
-  manually-released gate, for the mid-type remount regression),
-  `mockCreateReport`, `mockGetReport`, `abortGetReport`.
-- `helpers/consent.ts` — `seedConsent`. The consent-banner localStorage key
-  (`autosafe_consent`) lives only in an inline bootstrap `<script>` in root
-  `index.html`, not in any frontend module/constant — found by reading
-  index.html directly. Every spec seeds `'declined'`: it suppresses the
-  banner exactly as well as `'accepted'` would, without also triggering
-  `autosafeLoadGtag()`'s real `<script src="https://www.googletagmanager.com/...">`
-  tag.
-- `helpers/network.ts` — `blockExternalRequests`.
-- `helpers/experiments.ts` — `forceVariant`, for pre-seeding
-  `utils/experiments.ts`'s `autosafe_experiments` localStorage key so
-  `results_page_v1` never falls back to its random 50/50 pick.
+- `helpers/setup.ts` — re-exports `test` and `expect` with shared setup that
+  seeds consent as declined, blocks external requests, and mocks `/api/stats`.
+- `helpers/mockApi.ts` — report, stats, and gated-response route helpers.
+- `helpers/consent.ts` — initializes the consent bootstrap state.
+- `helpers/network.ts` — blocks non-local requests.
+- `helpers/heroForm.ts` — stable registration and postcode field locators.
+- `helpers/experiments.ts` — retains only the historical storage-key constant
+  for migration tests. There is no active report-layout experiment and tests
+  do not force `results_page_v1`.
 - One spec file per release-gate case: `form-lifecycle.spec.ts`,
-  `report-and-reset.spec.ts`, `ab-variants.spec.ts`, `share-flow.spec.ts`,
-  `token-screens.spec.ts`.
+  `report-and-reset.spec.ts`, `ab-variants.spec.ts` (historical filename; now
+  the final-layout contract tests), `share-flow.spec.ts`, `mileage-truth.spec.ts`,
+  and `token-screens.spec.ts`.
 
-Expected copy in assertions is computed by calling the app's own
-`components/ReportCopy.tsx` functions against the exact fixture being
-mocked (e.g. `buildNarrative(fixtureExactHigh)`), rather than hand-transcribed
-string literals — this checks that the rendered page actually shows what
-ReportCopy produces for a given API response (the real integration seam)
-without the specs silently drifting from ReportCopy's own wording, which is
-separately covered by `ReportCopy.test.tsx`.
+## Final report contract
+
+`ReportDashboard` has one layout. Current service responses use
+`result_kind: comparison` and must show the explicit comparison fallback;
+vehicle-prediction language is reserved for an explicit
+`result_kind: vehicle_prediction` response.
+
+The scope and sample-size copy lives inside the collapsed
+`How this result was calculated` disclosure. Browser tests expand that
+disclosure before asserting methodology text. Primary-result assertions also
+guard against the retired visible Evidence Quality/Summary cards, population
+badge, component percentages, repair-cost card, and 148M-test trust line.
+
+Expected methodology and mileage strings are derived from the application’s
+own `components/ReportCopy.tsx` functions against the exact mocked fixture.
+The focused copy module tests remain the source of truth for the wording
+matrix itself.
 
 ## Screenshots
 
-Named moments are captured via `page.screenshot({ path: 'e2e-artifacts/<name>.png', fullPage: true })`.
-`e2e-artifacts/` is gitignored — treat it as a local/CI-artifact directory,
-not something to commit.
-
-## Known gaps (not fixed here — see the Wave 5 run report for exact
-citations)
-
-- `fixtures/reportResponses.ts`'s `share_url` values are relative paths
-  (`/app/report/<token>`); the real backend (`report_routes.py`'s
-  `_share_url`) always returns an absolute, `BASE_URL`-prefixed URL. These
-  specs assert against the fixtures' own values (as instructed), so this
-  never fails a test here — flagging it because a relative `share_url`
-  would not be a usable link outside the app's own origin.
-- `.gitignore` here is scoped to exactly the `e2e-artifacts/` line by this
-  wave's file-ownership rule. Playwright's own default output directories
-  (`test-results/`, `playwright-report/`) are not yet gitignored anywhere
-  in the repo.
+Named moments are captured with
+`page.screenshot({ path: 'e2e-artifacts/<name>.png', fullPage: true })`.
+`e2e-artifacts/` is gitignored and is a local/CI artifact directory, not a
+source directory.

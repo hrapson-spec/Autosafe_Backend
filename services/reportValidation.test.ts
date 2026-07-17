@@ -19,6 +19,7 @@ import {
 } from './reportValidation';
 import {
   fixtureExactHigh,
+  fixtureVehiclePrediction,
   fixtureLegacyEstimated2_0,
   fixtureModelAverageLow,
   fixturePopulationDefault,
@@ -32,6 +33,7 @@ import type { ReportV2 } from '../types';
 
 const ALL_FIXTURES: Array<[string, ReportV2]> = [
   ['fixtureExactHigh', fixtureExactHigh],
+  ['fixtureVehiclePrediction', fixtureVehiclePrediction],
   ['fixtureLegacyEstimated2_0', fixtureLegacyEstimated2_0],
   ['fixtureModelAverageLow', fixtureModelAverageLow],
   ['fixturePopulationDefault', fixturePopulationDefault],
@@ -91,6 +93,31 @@ describe('isReportV2', () => {
     ).toBe(false);
     expect(isReportV2({ ...fixtureExactHigh, prediction_source: 'mysql' })).toBe(false);
     expect(isReportV2({ ...fixtureExactHigh, vehicle_data_source: 'mock' })).toBe(false);
+  });
+
+  it('accepts result kinds only with the matching prediction source', () => {
+    expect(isReportV2({ ...fixtureExactHigh, result_kind: 'comparison' })).toBe(true);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'model_v55',
+    })).toBe(true);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'postgres',
+    })).toBe(false);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'comparison',
+      prediction_source: 'model_v55',
+    })).toBe(false);
+  });
+
+  it('requires result_kind', () => {
+    const withoutResultKind = { ...fixtureExactHigh } as Record<string, unknown>;
+    delete withoutResultKind.result_kind;
+    expect(isReportV2(withoutResultKind)).toBe(false);
   });
 
   it('null/undefined discipline: effective_value accepts null but rejects undefined', () => {
@@ -302,6 +329,7 @@ describe('enum membership consts', () => {
       'postgres',
       'sqlite',
       'dataset_reference',
+      'model_v55',
       'unavailable',
     ]);
     expect(VALID_VEHICLE_DATA_SOURCES).toEqual(['dvsa', 'demo']);

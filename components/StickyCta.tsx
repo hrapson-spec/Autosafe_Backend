@@ -17,8 +17,10 @@ const StickyCta: React.FC<StickyCtaProps> = ({ visible, ctaText, primaryAction, 
 
   return (
     <div
+      aria-hidden={!visible}
+      inert={!visible}
       className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-sm border-t border-slate-200 transition-transform duration-300 ${
-        visible ? 'translate-y-0' : 'translate-y-full'
+        visible ? 'translate-y-0' : 'translate-y-full pointer-events-none'
       }`}
       style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
     >
@@ -27,6 +29,7 @@ const StickyCta: React.FC<StickyCtaProps> = ({ visible, ctaText, primaryAction, 
           variant="primary"
           size="md"
           onClick={handleClick}
+          disabled={!visible}
         >
           {ctaText}
         </Button>

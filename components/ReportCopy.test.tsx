@@ -105,6 +105,7 @@ function makeReport(overrides: ReportOverrides = {}): ReportV2 {
     // required by the ReportV2 type. Fixed, plausible values — no test
     // needs to vary these.
     contract_version: '2.0',
+    result_kind: 'comparison',
     report_id: 'report_test_0001',
     report_token: 'tok_test_0001',
     created_at: '2026-07-01T12:00:00Z',

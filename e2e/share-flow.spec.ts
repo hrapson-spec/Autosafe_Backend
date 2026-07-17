@@ -1,7 +1,7 @@
 /**
  * Sharing: the copy-link and WhatsApp buttons in ReportDashboard's header
- * (components/ReportDashboard.tsx's renderHeader, shared by both A/B
- * variants), plus the two edge cases around it -- reopening a share link
+ * (components/ReportDashboard.tsx's shared header), plus the two edge cases
+ * around it -- reopening a share link
  * with no prior app state at all, and a persistence-degraded report where
  * sharing is honestly disabled rather than pointing at a link that doesn't
  * exist (report.persistence.share_available === false).
@@ -17,10 +17,9 @@ import { test, expect } from './helpers/setup';
 import { seedConsent } from './helpers/consent';
 import { blockExternalRequests } from './helpers/network';
 import { mockCreateReport, mockGetReport } from './helpers/mockApi';
-import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import { fixtureExactHigh, fixtureUnavailableDegraded } from '../fixtures/reportResponses';
-import { buildNarrative, buildScopeDisclosure, sampleSizeBadge, buildWhatsAppMessage } from '../components/ReportCopy';
+import { buildScopeDisclosure, sampleSizeBadge, buildWhatsAppMessage } from '../components/ReportCopy';
 
 const POSTCODE = 'SW1A 1AA';
 
@@ -37,7 +36,6 @@ test('copy-link: clipboard gets exactly the share URL, and the postcode never re
   context,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await forceVariant(page, 'control');
   await mockCreateReport(page, fixtureExactHigh, 200);
   await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
 
@@ -64,7 +62,6 @@ test('fresh context (no prior storage) reopening the share URL renders the same 
   try {
     await seedConsent(page);
     await blockExternalRequests(page);
-    await forceVariant(page, 'control');
     await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
 
     // share_url is absolute (https://www.autosafe.one/...) exactly as the
@@ -72,22 +69,22 @@ test('fresh context (no prior storage) reopening the share URL renders the same 
     // test serves the same path from the preview server.
     await page.goto(new URL(fixtureExactHigh.share_url as string).pathname);
 
-    const narrative = buildNarrative(fixtureExactHigh);
-    await expect(page.getByText(narrative, { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId('comparison-result')).toBeVisible();
+    await expect(page.getByText(buildScopeDisclosure(fixtureExactHigh), { exact: true })).toBeHidden();
+    await page.getByText('How this result was calculated').click();
     await expect(page.getByText(buildScopeDisclosure(fixtureExactHigh), { exact: true })).toBeVisible();
-    await expect(page.getByTestId('evidence-meta')).toContainText(sampleSizeBadge(fixtureExactHigh));
+    await expect(page.getByText(sampleSizeBadge(fixtureExactHigh), { exact: true })).toBeVisible();
 
     await page.screenshot({ path: 'e2e-artifacts/report-fresh-context.png', fullPage: true });
 
     await page.reload();
-    await expect(page.getByText(narrative, { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId('comparison-result')).toBeVisible();
   } finally {
     await context.close();
   }
 });
 
 test('whatsapp share message matches buildWhatsAppMessage and never contains the postcode', async ({ page }) => {
-  await forceVariant(page, 'control');
   await mockCreateReport(page, fixtureExactHigh, 200);
   await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
 
@@ -132,7 +129,6 @@ test('whatsapp share message matches buildWhatsAppMessage and never contains the
 test('share-disabled: persistence-degraded report renders with share buttons disabled and microcopy visible', async ({
   page,
 }) => {
-  await forceVariant(page, 'control');
   await mockCreateReport(page, fixtureUnavailableDegraded, 200);
 
   await page.goto('/');

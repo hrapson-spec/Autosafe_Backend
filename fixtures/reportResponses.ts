@@ -20,6 +20,7 @@ import type { ApiErrorCode, ApiErrorEnvelope, ReportV2 } from '../types';
 // ----------------------------------------------------------------------------
 export const fixtureExactHigh: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_4f8a21c6b9d3',
   report_token: '9c7f2b1a4e6d8035c2f19a7b6e4d3c81',
   share_url: 'https://www.autosafe.one/app/report/9c7f2b1a4e6d8035c2f19a7b6e4d3c81',
@@ -78,6 +79,12 @@ export const fixtureExactHigh: ReportV2 = {
   note: null,
 };
 
+export const fixtureVehiclePrediction: ReportV2 = {
+  ...fixtureExactHigh,
+  result_kind: 'vehicle_prediction',
+  prediction_source: 'model_v55',
+};
+
 // ----------------------------------------------------------------------------
 // 2. age_band_only / estimated mileage / Medium confidence -- no MOT history
 //    at all for this specific vehicle (mot.* and mileage.observed_at are all
@@ -98,6 +105,7 @@ export const fixtureExactHigh: ReportV2 = {
 // ----------------------------------------------------------------------------
 export const fixtureLegacyEstimated2_0: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_1a2b3c4d5e6f',
   report_token: '3d9e7c5b1a4f6082d4c7b9a1e6f3d8c2',
   share_url: 'https://www.autosafe.one/app/report/3d9e7c5b1a4f6082d4c7b9a1e6f3d8c2',
@@ -167,6 +175,7 @@ export const fixtureLegacyEstimated2_0: ReportV2 = {
 // ----------------------------------------------------------------------------
 export const fixtureModelAverageLow: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_7b6a5c4d3e2f',
   report_token: 'a1c3e5f7b9d2846013c5e7a9f1b3d5c7',
   share_url: 'https://www.autosafe.one/app/report/a1c3e5f7b9d2846013c5e7a9f1b3d5c7',
@@ -238,6 +247,7 @@ export const fixtureModelAverageLow: ReportV2 = {
 // ----------------------------------------------------------------------------
 export const fixturePopulationDefault: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_2e4c6a8b0d1f',
   report_token: 'f3b1d5a7c9e2408162a4c6e8f0b2d4a6',
   share_url: 'https://www.autosafe.one/app/report/f3b1d5a7c9e2408162a4c6e8f0b2d4a6',
@@ -299,6 +309,7 @@ export const fixturePopulationDefault: ReportV2 = {
 // ----------------------------------------------------------------------------
 export const fixtureUnavailableDegraded: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: null,
   report_token: null,
   share_url: null,
@@ -368,6 +379,7 @@ export const fixtureUnavailableDegraded: ReportV2 = {
 const observedHighMileageToken = '5e7c9b1a3d6f8024b6d8a0c2e4f6b8d0';
 export const fixtureObservedHighMileage: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_9f1e3d5c7b0a',
   report_token: observedHighMileageToken,
   share_url: `https://www.autosafe.one/app/report/${observedHighMileageToken}`,
@@ -445,6 +457,7 @@ export const fixtureObservedHighMileage: ReportV2 = {
 const anomalyMissingToken = '7f9b1d3c5a8e2046c8e0b2d4f6a8c0e2';
 export const fixtureAnomalyMissing: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_3a5c7e9f1b2d',
   report_token: anomalyMissingToken,
   share_url: `https://www.autosafe.one/app/report/${anomalyMissingToken}`,
@@ -516,6 +529,7 @@ export const fixtureAnomalyMissing: ReportV2 = {
 const kmConvertedToken = 'b3d5f7a9c1e4062a4c6e8a0c2e4f6a80';
 export const fixtureKmConverted: ReportV2 = {
   contract_version: '2.0',
+  result_kind: 'comparison',
   report_id: 'rpt_6c8e0f2a4b7d',
   report_token: kmConvertedToken,
   share_url: `https://www.autosafe.one/app/report/${kmConvertedToken}`,

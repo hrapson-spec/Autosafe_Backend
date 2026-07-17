@@ -169,9 +169,13 @@ export type MileageSource = 'user_entered' | 'observed_mot' | 'estimated' | 'mis
  * exactly, including the space in 'Very Low'). */
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low' | 'Very Low';
 
+/** Semantic meaning of the report's displayed risk figure. Mirrors
+ * report_contract.ResultKind. */
+export type ResultKind = 'comparison' | 'vehicle_prediction';
+
 /** Exact source of the report's displayed risk figure. Mirrors
  * report_contract.PredictionSource. */
-export type PredictionSource = 'postgres' | 'sqlite' | 'dataset_reference' | 'unavailable';
+export type PredictionSource = 'postgres' | 'sqlite' | 'dataset_reference' | 'model_v55' | 'unavailable';
 
 /** Which backing store served the report's vehicle details. Mirrors
  * report_contract.VehicleDataSource. */
@@ -349,6 +353,7 @@ export interface ReportPersistenceV2 {
  * Mirrors report_contract.ReportResponse. */
 export interface ReportV2 {
   contract_version: string;
+  result_kind: ResultKind;
   report_id: string | null;
   report_token: string | null;
   share_url: string | null;

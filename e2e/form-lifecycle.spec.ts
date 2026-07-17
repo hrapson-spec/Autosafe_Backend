@@ -9,7 +9,6 @@
  */
 import { test, expect } from './helpers/setup';
 import { mockCreateReport, mockGetReport, gateCreateReport, gateStats, DEFAULT_STATS } from './helpers/mockApi';
-import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import { fixtureErrorEnvelopes, fixtureExactHigh } from '../fixtures/reportResponses';
 import { mapErrorToMessage } from '../services/errorMessages';
@@ -169,26 +168,23 @@ test.describe('form-lifecycle', () => {
   // brief.
   // ---------------------------------------------------------------------
   for (const entryPath of ENTRY_PATHS) {
-    for (const variant of ['control', 'treatment'] as const) {
-      test(`"Check Another Vehicle" resets to an empty form @ ${entryPath} (${variant})`, async ({ page }) => {
-        await forceVariant(page, variant);
-        await mockCreateReport(page, fixtureExactHigh, 200);
-        await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
-        await page.goto(entryPath);
+    test(`"Check Another Vehicle" resets to an empty form @ ${entryPath}`, async ({ page }) => {
+      await mockCreateReport(page, fixtureExactHigh, 200);
+      await mockGetReport(page, fixtureExactHigh.report_token as string, fixtureExactHigh, 200);
+      await page.goto(entryPath);
 
-        await registrationInput(page).fill('AB12CDE');
-        await postcodeInput(page).fill('SW1A 1AA');
-        await page.getByRole('button', { name: /check this car/i }).click();
+      await registrationInput(page).fill('AB12CDE');
+      await postcodeInput(page).fill('SW1A 1AA');
+      await page.getByRole('button', { name: /check this car/i }).click();
 
-        await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
+      await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureExactHigh.report_token}$`));
 
-        await page.getByRole('button', { name: /check another vehicle/i }).first().click();
+      await page.getByRole('button', { name: /check another vehicle/i }).click();
 
-        await expect(page).toHaveURL(/\/app$/);
-        await expect(page.getByRole('heading', { name: 'Fix it before they find it.' })).toBeVisible();
-        await expect(registrationInput(page)).toHaveValue('');
-        await expect(postcodeInput(page)).toHaveValue('');
-      });
-    }
+      await expect(page).toHaveURL(/\/app$/);
+      await expect(page.getByRole('heading', { name: 'Fix it before they find it.' })).toBeVisible();
+      await expect(registrationInput(page)).toHaveValue('');
+      await expect(postcodeInput(page)).toHaveValue('');
+    });
   }
 });
