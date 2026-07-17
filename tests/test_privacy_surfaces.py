@@ -161,3 +161,18 @@ def test_release_does_not_ship_unreviewed_outbound_publishing_agents():
     assert not (ROOT / "agents" / "data_story_publisher.py").exists()
     assert not any((ROOT / "data_stories").glob("*.py"))
     assert not (ROOT / "config" / "media_contacts.json").exists()
+
+
+def test_public_privacy_notice_discloses_conditional_prediction_processing():
+    """V55 integration: the automated-decision-making notice must describe
+    BOTH states (per-vehicle predicted chance when available, labelled
+    comparison otherwise) and deny diagnosis/outcome determination for both."""
+    sources = [
+        (ROOT / "components" / "PrivacyPage.tsx").read_text(encoding="utf-8"),
+        (ROOT / "static" / "privacy.html").read_text(encoding="utf-8"),
+    ]
+    for source in sources:
+        lowered = source.lower()
+        assert "predicted chance of failing its next mot" in lowered
+        assert "closest supported group" in lowered
+        assert "neither result diagnoses this vehicle" in lowered

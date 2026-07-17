@@ -246,12 +246,12 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Automated decision-making</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              Our service automatically matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data. It reports that group's recorded failure rate; it does not diagnose this vehicle or determine its next MOT result.
+              Our service processes the vehicle's recorded MOT history and details automatically. When enough recorded history is available it produces the vehicle's predicted chance of failing its next MOT; otherwise it matches recorded vehicle details, age and available mileage to the closest supported group in aggregated MOT data and reports that group's recorded failure rate. Neither result diagnoses this vehicle or determines its next MOT result.
             </p>
             <div className="p-4 bg-slate-50 rounded-lg">
               <p className="font-medium text-slate-900 mb-2">Important:</p>
               <ul className="text-slate-600 space-y-1 list-disc list-inside">
-                <li>The comparison is for information only</li>
+                <li>The result — predicted chance or comparison — is for information only</li>
                 <li>It does not guarantee any particular MOT outcome</li>
                 <li>It has no legal effect on you</li>
                 <li>Many factors affect MOT results that we cannot assess</li>
