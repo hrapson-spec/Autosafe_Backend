@@ -17,6 +17,7 @@ import { mockCreateReport, mockGetReport } from './helpers/mockApi';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import { fixtureExactHigh } from '../fixtures/reportResponses';
 import { buildScopeDisclosure, sampleSizeBadge, mileageHeaderValue } from '../components/ReportCopy';
+import { formatRegistration } from '../components/ReportResult';
 
 test('happy path: submit -> final persisted report -> methodology -> back to a working form', async ({ page }) => {
   await mockCreateReport(page, fixtureExactHigh, 200);
@@ -40,15 +41,16 @@ test('happy path: submit -> final persisted report -> methodology -> back to a w
   await expect(page.getByText(buildScopeDisclosure(fixtureExactHigh), { exact: true })).toBeVisible();
   await expect(page.getByText(sampleSizeBadge(fixtureExactHigh), { exact: true })).toBeVisible();
 
-  // Mileage line, in the header's vehicle-identity paragraph. Built to
-  // match ReportDashboard.tsx's renderHeader template exactly
-  // ("{year? }{make} {model}{mileage? ` • ${mileage}` : ''}") rather than a
-  // bare substring search, so the identity and mileage provenance remain
-  // tied to the same header line.
+  // Consolidated vehicle-identity paragraph in the header. Built to match
+  // ReportDashboard.tsx's renderHeader template exactly
+  // ("{year? }{make} {model} · {reg}{mileage? ` · ${mileage}` : ''}") rather
+  // than a bare substring search, so the identity, registration, and mileage
+  // provenance remain tied to the same header line.
   const mileage = mileageHeaderValue(fixtureExactHigh);
   expect(mileage).not.toBeNull();
   const yearPrefix = fixtureExactHigh.vehicle.year ? `${fixtureExactHigh.vehicle.year} ` : '';
-  const headerLine = `${yearPrefix}${fixtureExactHigh.vehicle.make} ${fixtureExactHigh.vehicle.model} • ${mileage}`;
+  const registration = formatRegistration(fixtureExactHigh.registration);
+  const headerLine = `${yearPrefix}${fixtureExactHigh.vehicle.make} ${fixtureExactHigh.vehicle.model} · ${registration} · ${mileage}`;
   await expect(page.getByText(headerLine, { exact: true })).toBeVisible();
 
   await page.screenshot({ path: 'e2e-artifacts/report-happy-path.png', fullPage: true });
