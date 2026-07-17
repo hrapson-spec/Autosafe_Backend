@@ -158,7 +158,7 @@ describe('ReportDashboard final layout', () => {
     expect(screen.getByText("Sharing isn't available for this report")).toBeInTheDocument();
   });
 
-  it('scrolls to and focuses the first email input from reminder actions without double-counting sticky analytics', async () => {
+  it('focuses the first email input and keeps the inactive sticky action out of the accessibility tree', async () => {
     const user = userEvent.setup();
     render(<ReportDashboard report={fixtureModelAverageLow} onReset={vi.fn()} />);
 
@@ -167,12 +167,10 @@ describe('ReportDashboard final layout', () => {
 
     await user.click(screen.getByRole('button', { name: 'Set an MOT reminder' }));
     expect(emailInputs[0]).toHaveFocus();
-
-    emailInputs[0].blur();
-    trackFunnelMock.mockClear();
-    await user.click(screen.getByRole('button', { name: 'Get this report & reminders' }));
-    expect(emailInputs[0]).toHaveFocus();
-    expect(trackFunnelMock.mock.calls.filter(([event]) => event === 'sticky_cta_clicked')).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: 'Get this report & reminders' })
+    ).not.toBeInTheDocument();
+    expect(trackFunnelMock.mock.calls.filter(([event]) => event === 'sticky_cta_clicked')).toHaveLength(0);
   });
 
   it('opens the garage modal, tracks the action once, and keeps a visible success confirmation', async () => {
