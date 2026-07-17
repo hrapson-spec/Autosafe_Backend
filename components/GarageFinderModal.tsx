@@ -34,14 +34,24 @@ const HIGH_RISK_THRESHOLD = 0.15;
 // suspension, tyres, steering, visibility, lamps, body) to plain-language
 // issue descriptions pre-filled into the garage lead's "tell the garage
 // about" list.
-const FAULT_TO_ISSUE: Record<string, string> = {
-  brakes: 'Inspect brakes — comparison pattern only, not a diagnosed fault',
-  suspension: 'Inspect suspension — comparison pattern only, not a diagnosed fault',
-  steering: 'Inspect steering — comparison pattern only, not a diagnosed fault',
-  tyres: 'Inspect tyres — comparison pattern only, not a diagnosed fault',
-  visibility: 'Inspect visibility items — comparison pattern only, not a diagnosed fault',
-  lamps: 'Inspect lamps and electrics — comparison pattern only, not a diagnosed fault',
-  body: 'Inspect body and chassis — comparison pattern only, not a diagnosed fault',
+const FAULT_TO_SUBJECT: Record<string, string> = {
+  brakes: 'Inspect brakes',
+  suspension: 'Inspect suspension',
+  steering: 'Inspect steering',
+  tyres: 'Inspect tyres',
+  visibility: 'Inspect visibility items',
+  lamps: 'Inspect lamps and electrics',
+  body: 'Inspect body and chassis',
+};
+
+// A prediction's components are the model's inspection priorities for this
+// vehicle; a comparison's are cohort patterns. Neither is a diagnosis.
+const faultToIssue = (key: string, isPrediction: boolean): string | undefined => {
+  const subject = FAULT_TO_SUBJECT[key];
+  if (!subject) return undefined;
+  return isPrediction
+    ? `${subject} — inspection priority, not a diagnosed fault`
+    : `${subject} — comparison pattern only, not a diagnosed fault`;
 };
 
 const URGENCY_OPTIONS = [
@@ -134,7 +144,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
       // Map top risks to plain-language issues
       const issues: string[] = [];
       topRisks.forEach(item => {
-        const issue = FAULT_TO_ISSUE[item.key];
+        const issue = faultToIssue(item.key, report.result_kind === 'vehicle_prediction');
         if (issue) {
           issues.push(issue);
         }
@@ -314,7 +324,11 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
             </div>
           ) : hasRisks ? (
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-slate-600 mb-2">Comparison patterns, not diagnosed faults</p>
+              <p className="text-sm text-slate-600 mb-2">
+                {report.result_kind === 'vehicle_prediction'
+                  ? 'Inspection priorities, not diagnosed faults'
+                  : 'Comparison patterns, not diagnosed faults'}
+              </p>
               <div className="space-y-2">
                 {topRisks.map((item) => (
                   <div key={item.key} className="flex items-center gap-2">

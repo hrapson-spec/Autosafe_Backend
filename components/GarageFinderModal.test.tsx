@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { fixtureExactHigh, fixturePopulationDefault } from '../fixtures/reportResponses';
+import { fixtureExactHigh, fixturePopulationDefault, fixtureVehiclePrediction } from '../fixtures/reportResponses';
 import { submitGarageLead } from '../services/autosafeApi';
 import type { GarageLeadSubmission } from '../types';
 import GarageFinderModal from './GarageFinderModal';
@@ -124,6 +124,29 @@ describe('GarageFinderModal', () => {
     expect(payload.risk_data.top_risks).toEqual(['brakes', 'tyres', 'suspension']);
     expect(screen.getByText(/comparison patterns, not diagnosed faults/i)).toBeInTheDocument();
     expect(screen.queryByText(/^areas of concern$/i)).not.toBeInTheDocument();
+  });
+
+  it('labels prediction top risks as inspection priorities, not comparison patterns, and sends model_prediction scope', async () => {
+    const user = userEvent.setup();
+    render(
+      <GarageFinderModal isOpen onClose={vi.fn()} onSubmitSuccess={vi.fn()} report={fixtureVehiclePrediction} />
+    );
+
+    await fillAndSubmit(user);
+
+    const payload = submittedPayload();
+    expect(payload.risk_data.match_scope).toBe('model_prediction');
+    expect(payload.risk_data.top_risks).toEqual(['brakes', 'tyres', 'suspension']);
+    expect(screen.getByText(/inspection priorities, not diagnosed faults/i)).toBeInTheDocument();
+    expect(screen.queryByText(/comparison patterns?,/i)).not.toBeInTheDocument();
+    // Pre-filled issue lines (sent as services_requested) use the
+    // prediction framing, never the comparison framing.
+    const services = (payload.services_requested ?? []) as string[];
+    expect(services.length).toBeGreaterThan(0);
+    for (const service of services) {
+      expect(service).toContain('inspection priority, not a diagnosed fault');
+      expect(service).not.toContain('comparison pattern');
+    }
   });
 
   it('seeds the postcode field from the postcode prop but the field remains user-editable', () => {
