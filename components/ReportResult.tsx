@@ -244,7 +244,9 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
               </p>
               {isVehiclePrediction && (
                 <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-                  A pass is still more likely, but it’s worth checking the most common trouble spots before test day.
+                  {report.risk.failure_risk < 0.5
+                    ? 'A pass is still more likely, but it’s worth checking the most common trouble spots before test day.'
+                    : 'A fail is more likely than not — it’s worth checking the most common trouble spots before test day.'}
                 </p>
               )}
             </div>
