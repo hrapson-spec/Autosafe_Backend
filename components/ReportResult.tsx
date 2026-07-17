@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Wrench,
 } from './Icons';
-import { formatDateGB, reportRateDisplay } from './ReportCopy';
+import { hasVehicleComparison, reportRateDisplay } from './ReportCopy';
 import { Button, Card } from './ui';
 
 interface ReportResultProps {
@@ -43,18 +43,61 @@ function formatRegistration(registration: string): string {
   return `${compact.slice(0, -3)} ${compact.slice(-3)}`;
 }
 
-function preparationDate(expiryDate: string | null): string | null {
+function parseMotExpiryDate(expiryDate: string | null): Date | null {
   if (!expiryDate) return null;
+  const dateParts = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(expiryDate);
+  if (!dateParts) return null;
+
+  const [, yearText, monthText, dayText] = dateParts;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
   const zonedDate = expiryDate.includes('T') && !/(Z|[+-]\d{2}:\d{2})$/.test(expiryDate)
     ? `${expiryDate}Z`
     : expiryDate;
-  const date = new Date(zonedDate);
-  date.setUTCDate(date.getUTCDate() - 28);
+
+  if (
+    Number.isNaN(new Date(zonedDate).getTime())
+    || calendarDate.getUTCFullYear() !== year
+    || calendarDate.getUTCMonth() !== month - 1
+    || calendarDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return calendarDate;
+}
+
+function formatMotDate(date: Date, month: 'short' | 'long'): string {
   return date.toLocaleDateString('en-GB', {
     day: 'numeric',
-    month: 'long',
+    month,
+    ...(month === 'short' ? { year: 'numeric' as const } : {}),
     timeZone: 'UTC',
   });
+}
+
+function preparationDate(expiryDate: Date | null): string | null {
+  if (!expiryDate) return null;
+  const date = new Date(expiryDate.getTime());
+  date.setUTCDate(date.getUTCDate() - 28);
+  return formatMotDate(date, 'long');
+}
+
+function failureFrequency(failureRisk: number): { text: string; predictionSummary: string } {
+  if (!Number.isFinite(failureRisk) || failureRisk <= 0) {
+    return {
+      text: 'fewer than 1 in 100',
+      predictionSummary: 'That’s a chance of fewer than 1 in 100.',
+    };
+  }
+
+  const frequency = Math.max(1, Math.round(1 / failureRisk));
+  return {
+    text: `about 1 in ${frequency}`,
+    predictionSummary: `That’s about a 1 in ${frequency} chance.`,
+  };
 }
 
 function componentIcon(key: string): React.ReactNode {
@@ -114,11 +157,20 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
   const isVehiclePrediction = report.result_kind === 'vehicle_prediction';
   const registration = formatRegistration(report.registration);
   const risk = reportRateDisplay(report);
-  const frequency = Math.max(1, Math.round(1 / report.risk.failure_risk));
+  const frequency = failureFrequency(report.risk.failure_risk);
+  const vehicleComparison = hasVehicleComparison(report);
+  const comparisonLabel = vehicleComparison
+    ? `${report.vehicle.make} ${report.vehicle.model} comparison`
+    : 'Dataset-wide reference comparison';
+  const comparisonDescription = vehicleComparison ? comparisonLabel : 'dataset-wide reference comparison';
+  const comparisonSummary = vehicleComparison
+    ? `${comparisonLabel}: ${frequency.text} failed their MOT`
+    : `${comparisonLabel}: ${frequency.text} recorded MOT tests resulted in failure`;
   const priorities = report.components.available && report.components.items
     ? [...report.components.items].sort((a, b) => b.risk - a.risk).slice(0, 3)
     : [];
-  const prepareBy = preparationDate(report.mot.expiry_date);
+  const motExpiryDate = parseMotExpiryDate(report.mot.expiry_date);
+  const prepareBy = preparationDate(motExpiryDate);
 
   const riskTextColour = risk.value >= 50
     ? 'text-red-600'
@@ -158,8 +210,7 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
                     This result isn’t a prediction for {registration}
                   </h2>
                   <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-                    The result available today is a {report.vehicle.make} {report.vehicle.model} comparison,
-                    not a prediction for {registration}.
+                    The result available today is a {comparisonDescription}, not a prediction for {registration}.
                   </p>
                 </>
               )}
@@ -170,7 +221,7 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
                 <span className={`text-6xl font-semibold leading-none tracking-tight md:text-7xl ${riskTextColour}`}>
                   {risk.text}
                 </span>
-                <span className="pb-1 text-base text-slate-600">about 1 in {frequency}</span>
+                <span className="pb-1 text-base text-slate-600">{frequency.text}</span>
               </div>
               <div
                 role="progressbar"
@@ -188,8 +239,8 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
               </div>
               <p className="text-base font-medium text-slate-900">
                 {isVehiclePrediction
-                  ? `That’s about a 1 in ${frequency} chance.`
-                  : `${report.vehicle.make} ${report.vehicle.model} comparison: about 1 in ${frequency} failed their MOT`}
+                  ? frequency.predictionSummary
+                  : comparisonSummary}
               </p>
               {isVehiclePrediction && (
                 <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
@@ -199,10 +250,10 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
             </div>
 
             <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
-              {report.mot.expiry_date && (
+              {motExpiryDate && (
                 <span className="mr-auto inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                   <CalendarDays className="h-5 w-5 text-blue-600" aria-hidden="true" />
-                  MOT due {formatDateGB(report.mot.expiry_date)}
+                  MOT due {formatMotDate(motExpiryDate, 'short')}
                 </span>
               )}
               <Button variant="secondary" size="sm" onClick={onReminder}>
