@@ -49,10 +49,10 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>
-        <title>AutoSafe | MOT Records &amp; Predicted Failure Chance</title>
-        <meta name="description" content="Check recorded MOT details. When enough recorded history is available, AutoSafe shows the vehicle's predicted chance of failing its next MOT; otherwise a clearly labelled comparison with similar vehicles." />
-        <meta property="og:title" content="See your car's predicted chance of failing its next MOT." />
-        <meta property="og:description" content="Recorded MOT details with a predicted failing chance when available — and a clearly labelled comparable-vehicle failure rate when it isn't." />
+        <title>AutoSafe | MOT Records &amp; Next-MOT Failure Insight</title>
+        <meta name="description" content="Check recorded MOT details. When AutoSafe can assess the vehicle's recorded MOT history, it shows a predicted chance of failing the next MOT; otherwise a clearly labelled comparison with similar vehicles." />
+        <meta property="og:title" content="Check your car's MOT record — and, where available, its predicted chance of failing the next test." />
+        <meta property="og:description" content="Recorded MOT details with a predicted failing chance where available — and a clearly labelled comparable-vehicle failure rate when it isn't." />
         <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}

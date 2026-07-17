@@ -38,6 +38,7 @@ unparseable) is 404/410/503, never a reconstructed report. Demo mode is
 the one deliberate exception: it is a clearly-labelled synthetic path
 (``vehicle_data_source='demo'``), never presented as real DVSA evidence.
 """
+import asyncio
 import functools
 import hashlib
 import logging
@@ -198,9 +199,11 @@ def _normalize_vrn(raw: str) -> str:
 
 def _normalize_postcode(raw: Optional[str]) -> Optional[str]:
     """Best-effort postcode normalization. Never rejects -- postcode is
-    optional on the v2 contract and only ever used for the DB row's
-    analytics field (LIA-covered) and, if regional_defaults has an
-    opinion, its normalized form; it is never a gate on report creation
+    optional on the v2 contract and is used for (a) the DB row's analytics
+    field (LIA-covered) and (b) the V55 prediction path's regional
+    corrosion-index input (prediction_service.build_v55_assessment; an
+    unresolvable or missing postcode falls back to the default index, it
+    never blocks the prediction). It is never a gate on report creation
     and never appears in the response payload at all (ReportResponse has
     no postcode field)."""
     if not raw or not raw.strip():
@@ -651,16 +654,21 @@ async def _create_report_core(request: Request, body: ReportCreateRequest, sqlit
 
     identity, history, vehicle_data_source = await _resolve_vehicle_and_history(vrm)
 
-    # V55 prediction first, on real DVSA data only: a synthetic demo history
-    # must never be presented as a per-vehicle prediction. Only the typed
+    # V55 prediction first, on real DVSA data with at least one recorded MOT
+    # test: a synthetic demo history must never be presented as a per-vehicle
+    # prediction, and a zero-history vehicle must not receive a result whose
+    # copy claims it was produced from recorded MOT history. Only the typed
     # PredictionUnavailable failures fall back to the comparison assessment;
     # a contract/programming error propagates to the 500 guard instead of
-    # being silently relabelled as a comparison.
+    # being silently relabelled as a comparison. Inference is CPU-bound
+    # (feature engineering + CatBoost), so it runs in a worker thread rather
+    # than blocking the event loop.
     assessment = None
-    if vehicle_data_source == VehicleDataSource.DVSA:
+    if vehicle_data_source == VehicleDataSource.DVSA and getattr(history, 'mot_tests', None):
         try:
-            assessment = prediction_service.build_v55_assessment(
-                identity, history, postcode=postcode
+            assessment = await asyncio.to_thread(
+                prediction_service.build_v55_assessment,
+                identity, history, postcode,
             )
             logger.info(
                 "v55_prediction outcome=success model_version=v55 correlation_id=%s hash_vrm=%s",

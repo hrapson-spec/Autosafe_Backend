@@ -9,8 +9,12 @@
  * WhatsApp share message, and the demo-data banner. No other module should
  * hand-roll any of these strings.
  *
- * AutoSafe's served product is a make/model/age/mileage-band population
- * lookup, not a per-vehicle model (see root CLAUDE.md). scripts/claim_sweep.py
+ * AutoSafe serves two result kinds: a per-vehicle V55 prediction
+ * (result_kind 'vehicle_prediction', when the model can assess the recorded
+ * history) and a make/model/age/mileage-band population lookup
+ * (result_kind 'comparison', the fallback). Every function here branches
+ * honestly between the two — a prediction never borrows cohort claims and
+ * a comparison never borrows prediction claims. scripts/claim_sweep.py
  * statically scans this file (components/*.tsx) for banned capability
  * claims — every function here is written to read honestly: honest about
  * scope, honest about sample size, and never fabricating a number or a

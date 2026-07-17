@@ -885,6 +885,24 @@ class TestCreateReportPredictionGates(unittest.TestCase):
         self.assertEqual(body['vehicle_data_source'], 'demo')
         prediction_spy.assert_not_called()
 
+    def test_zero_history_vehicle_never_attempts_prediction(self):
+        # Real DVSA data but an empty mot_tests list: the prediction copy
+        # claims recorded-history provenance, so a zero-history vehicle must
+        # take the comparison path instead.
+        from report_test_helpers import make_history
+        empty_history = make_history([])
+        fake_client = _fake_dvsa_client(empty_history)
+        prediction_spy = MagicMock(side_effect=AssertionError('zero history must not predict'))
+        with patch('report_routes.get_dvsa_client', return_value=fake_client), \
+             patch('report_routes.prediction_service.build_v55_assessment', prediction_spy), \
+             patch('report_routes.db.save_report', new=AsyncMock(return_value='row-id-123')):
+            resp = client.post('/api/v2/reports', json={'registration': VALID_VRM})
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['result_kind'], 'comparison')
+        self.assertEqual(body['vehicle_data_source'], 'dvsa')
+        prediction_spy.assert_not_called()
+
     def test_idempotent_replay_of_prediction_never_reruns_the_model(self):
         token = 'replay-token-1234'
         stored = _fixture_response(

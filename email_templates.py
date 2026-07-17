@@ -246,16 +246,18 @@ def generate_lead_email(
                 {% if risk_breakdown_html or failure_rate is not none %}
                 <!-- Report evidence -->
                 <div style="margin-bottom: 24px;">
+                    {% if risk_breakdown_html %}
                     <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
                         {% if is_prediction %}Inspection Priorities (Not Diagnosed Faults){% else %}Comparable-Vehicle Component Patterns{% endif %}
                     </h3>
-                    {% if risk_breakdown_html %}<table width="100%" cellpadding="0" cellspacing="0">
+                    <table width="100%" cellpadding="0" cellspacing="0">
                         {{ risk_breakdown_html|safe }}
-                    </table>{% endif %}
+                    </table>
+                    {% endif %}
                     {% if failure_rate is not none %}
                     <p style="margin: 12px 0 0 0; font-size: 13px; color: #64748B;">
                         {{ rate_label }}: <strong style="color: #1E293B;">{{ failure_rate }}%</strong>.
-                        {% if is_prediction %}These are inspection priorities from the customer's AutoSafe report — not a guarantee, and not a diagnosis of the customer's car.{% else %}This is comparison evidence, not a diagnosis of the customer's car.{% endif %}
+                        {% if is_prediction %}This is the customer's AutoSafe predicted chance for this vehicle — not a guarantee, and not a diagnosis of the customer's car.{% if risk_breakdown_html %} The list above shows inspection priorities, not diagnosed faults.{% endif %}{% else %}This is comparison evidence, not a diagnosis of the customer's car.{% endif %}
                     </p>
                     {% endif %}
                 </div>
@@ -394,7 +396,7 @@ NEW LEAD: {{ vehicle_label }}
 
 DISTANCE: {{ distance_miles }} miles from your garage
 {% if failure_rate is not none %}{{ rate_label|upper }}: {{ failure_rate }}%
-{% if is_prediction %}Inspection priorities only; not a guarantee, not a diagnosis of this car.{% else %}Comparison evidence only; not a diagnosis of this car.{% endif %}{% endif %}
+{% if is_prediction %}The customer's AutoSafe predicted chance for this vehicle; not a guarantee, not a diagnosis of this car.{% else %}Comparison evidence only; not a diagnosis of this car.{% endif %}{% endif %}
 
 {% if is_prediction %}INSPECTION PRIORITIES (NOT DIAGNOSED FAULTS):{% else %}COMPARABLE-VEHICLE COMPONENT PATTERNS:{% endif %}
 {{ risk_list }}
