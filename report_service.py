@@ -59,6 +59,7 @@ from report_contract import (
     ReportRepairEstimate,
     ReportRisk,
     ReportVehicle,
+    ResultKind,
     RiskLookupResponse,
 )
 from utils import get_age_band, get_mileage_band
@@ -135,6 +136,10 @@ class Assessment:
     repair_estimate: Optional[ReportRepairEstimate]
     prediction_source: PredictionSource
     note: Optional[str]
+    # COMPARISON matches ReportResponse's own default, so every existing
+    # comparison producer is unchanged; only prediction_service sets
+    # VEHICLE_PREDICTION.
+    result_kind: ResultKind = ResultKind.COMPARISON
 
 
 # ---------------------------------------------------------------------------
@@ -547,6 +552,27 @@ def _build_mot(history: Any) -> ReportMot:
 
 
 # ---------------------------------------------------------------------------
+# Shared vehicle context (comparison + prediction paths)
+# ---------------------------------------------------------------------------
+
+def build_vehicle_context(
+    identity: Dict[str, Any],
+    history: Any,
+) -> Tuple[ReportVehicle, ReportMot, ReportMileage]:
+    """The vehicle/MOT/mileage mapping shared by the comparison assessment
+    and the V55 prediction assessment, so both report kinds carry identical
+    date and odometer semantics for the same inputs."""
+    vehicle = ReportVehicle(
+        make=identity.get('make') or '',
+        model=identity.get('model') or '',
+        year=identity.get('year'),
+        fuel_type=identity.get('fuel_type'),
+        colour=identity.get('colour'),
+    )
+    return vehicle, _build_mot(history), resolve_mileage(history)
+
+
+# ---------------------------------------------------------------------------
 # Top-level orchestration
 # ---------------------------------------------------------------------------
 
@@ -568,16 +594,7 @@ async def build_assessment(
     model_raw = identity.get('model') or ''
     year = identity.get('year')
 
-    vehicle = ReportVehicle(
-        make=make_raw,
-        model=model_raw,
-        year=year,
-        fuel_type=identity.get('fuel_type'),
-        colour=identity.get('colour'),
-    )
-
-    mot = _build_mot(history)
-    mileage = resolve_mileage(history)
+    vehicle, mot, mileage = build_vehicle_context(identity, history)
 
     # Mirror main.py's model_id normalization exactly (get_risk / _fallback_prediction):
     # model_id = f"{make.strip().upper()} {model.strip().upper()}"
