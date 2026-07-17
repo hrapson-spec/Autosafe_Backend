@@ -15,6 +15,29 @@ describe('ReportResult', () => {
     cleanup();
   });
 
+  it('states the pass/fail likelihood truthfully on both sides of 50%', () => {
+    const { unmount } = render(
+      <ReportResult report={fixtureVehiclePrediction} onReminder={vi.fn()} onGarage={vi.fn()} />
+    );
+    // 12% predicted failure: a pass genuinely is more likely.
+    expect(screen.getByText(/A pass is still more likely/)).toBeInTheDocument();
+    unmount();
+
+    render(
+      <ReportResult
+        report={{
+          ...fixtureVehiclePrediction,
+          risk: { ...fixtureVehiclePrediction.risk, failure_risk: 0.62 },
+        }}
+        onReminder={vi.fn()}
+        onGarage={vi.fn()}
+      />
+    );
+    // 62% predicted failure: never claim a pass is more likely.
+    expect(screen.queryByText(/A pass is still more likely/)).not.toBeInTheDocument();
+    expect(screen.getByText(/A fail is more likely than not/)).toBeInTheDocument();
+  });
+
   it('renders a vehicle prediction only for the explicit vehicle_prediction state', () => {
     render(
       <ReportResult
