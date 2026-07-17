@@ -8,11 +8,10 @@
  * ReportCopy unit-test level (already covered by ReportCopy.test.tsx):
  *
  *   1. A high, exact-band mileage reading renders its full dated
- *      last-recorded-mileage line and the population-average badge (the
- *      report never implies a vehicle-specific prediction).
- *   2. A rejected/anomalous reading with no usable mileage renders the
- *      honest "not used" disclosure and shows NO numeric mileage anywhere
- *      on the page -- the strongest form of the no-fabrication guarantee.
+ *      last-recorded-mileage line inside the final comparison report.
+ *   2. A rejected/anomalous reading with no usable mileage shows NO numeric
+ *      mileage anywhere and keeps its mileage-free scope in the collapsed
+ *      methodology disclosure.
  *   3. A kilometre-recorded reading discloses its pre-conversion km figure
  *      rather than silently showing only the converted miles number.
  *   4. A DVSA outage at report-creation time renders the established error
@@ -39,7 +38,6 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/setup';
 import { mockCreateReport, mockGetReport } from './helpers/mockApi';
-import { forceVariant } from './helpers/experiments';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import {
   fixtureObservedHighMileage,
@@ -47,7 +45,7 @@ import {
   fixtureKmConverted,
   fixtureErrorEnvelopes,
 } from '../fixtures/reportResponses';
-import { lastRecordedMileageLine, populationBadge } from '../components/ReportCopy';
+import { buildScopeDisclosure, lastRecordedMileageLine } from '../components/ReportCopy';
 import { mapErrorToMessage } from '../services/errorMessages';
 
 // Pin the browser timezone so the date-rendering assertions are meaningful:
@@ -68,8 +66,7 @@ async function driveToReport(page: Page, registration: string, postcode: string)
   await page.getByRole('button', { name: /check this car/i }).click();
 }
 
-test('high-mileage exact-band reading: dated last-recorded-mileage line and population badge render', async ({ page }) => {
-  await forceVariant(page, 'control');
+test('high-mileage exact-band reading: dated last-recorded-mileage line renders in the final comparison report', async ({ page }) => {
   // Canonical wire shape: fixtureObservedHighMileage's observed_at is already
   // the date-only 'YYYY-MM-DD' form the backend now emits, so the fixture is
   // used directly -- no hand-built local override. Renders under the pinned
@@ -86,15 +83,13 @@ test('high-mileage exact-band reading: dated last-recorded-mileage line and popu
   const expectedLine = 'Last recorded MOT mileage: 112,406 miles on 2 Nov 2025';
   expect(lastRecordedMileageLine(fixtureObservedHighMileage)).toBe(expectedLine);
   // ...then confirm the rendered page actually shows it. Rendered exactly
-  // once (ReportDashboard.tsx's shared renderHeader(), called once per
-  // variant branch), so no .first() is needed here.
+  // once in ReportDashboard's vehicle-identity header.
   await expect(page.getByText(expectedLine, { exact: true })).toBeVisible();
-
-  await expect(page.getByTestId('population-badge')).toHaveText(populationBadge().label);
+  await expect(page.getByTestId('comparison-result')).toBeVisible();
+  await expect(page.getByTestId('vehicle-prediction-result')).toHaveCount(0);
 });
 
-test('anomalous/missing mileage: "not used" disclosure renders and no numeric mileage appears anywhere', async ({ page }) => {
-  await forceVariant(page, 'control');
+test('anomalous/missing mileage: methodology stays mileage-free and no numeric mileage appears anywhere', async ({ page }) => {
   await mockCreateReport(page, fixtureAnomalyMissing, 200);
   await mockGetReport(page, fixtureAnomalyMissing.report_token as string, fixtureAnomalyMissing, 200);
 
@@ -102,38 +97,24 @@ test('anomalous/missing mileage: "not used" disclosure renders and no numeric mi
 
   await expect(page).toHaveURL(new RegExp(`/app/report/${fixtureAnomalyMissing.report_token}$`));
 
-  const disclosure = "Recorded mileage was not used: the vehicle's MOT mileage history is inconsistent, so no reading could be trusted.";
-  // buildNarrative(report) repeats identically in two places in the control
-  // layout (pie-card paragraph + Evidence Summary card) -- .first() avoids a
-  // strict-mode violation, exactly as report-and-reset.spec.ts's narrative
-  // check does for the same reason.
-  await expect(page.getByText(disclosure).first()).toBeVisible();
+  const scopeDisclosure = buildScopeDisclosure(fixtureAnomalyMissing);
+  await expect(page.getByText(scopeDisclosure, { exact: true })).toBeHidden();
+  await page.getByText('How this result was calculated').click();
+  await expect(page.getByText(scopeDisclosure, { exact: true })).toBeVisible();
 
   // No numeric mileage anywhere on the page -- source: 'missing' means
   // ReportCopy.tsx's mileage-phrase functions (buildMileagePhrase,
   // mileageHeaderValue, lastRecordedMileageLine) all return null for this
   // fixture, so nothing should ever interpolate a number in front of
-  // "miles". Checked against the whole rendered body, with the disclosure
-  // sentence itself excluded first -- it contains no such pattern, but this
-  // keeps the check honestly scoped to "outside the disclosure copy" per
-  // the brief.
+  // "miles". Checked against the whole rendered body after expanding the
+  // methodology disclosure.
   const bodyText = (await page.textContent('body')) ?? '';
-  expect(bodyText).toContain(disclosure);
-
-  // Option C (acceptance-ii page copy): with the anomalous reading rejected,
-  // W4 (the disclosure above) already states mileage was not used and why, so
-  // the scope line (W5) must carry NO second mileage statement -- it names
-  // only the comparison scope. Assert the mileage-free scope sentence is on
-  // the page and the pre-Option-C duplicate clause is gone.
-  expect(bodyText).toContain('This comparison uses TESTMAKE ANOMALYMODEL records in the matched age band.');
+  expect(bodyText).toContain(scopeDisclosure);
   expect(bodyText).not.toContain('mileage was not used because no reliable recorded mileage was available');
-
-  const textOutsideDisclosure = bodyText.split(disclosure).join(' ');
-  expect(textOutsideDisclosure).not.toMatch(/\d[\d,]* miles/);
+  expect(bodyText).not.toMatch(/\d[\d,]* miles/);
 });
 
 test('km-recorded reading: full dated last-recorded-mileage line, incl. the pre-conversion km figure, renders', async ({ page }) => {
-  await forceVariant(page, 'control');
   await mockCreateReport(page, fixtureKmConverted, 200);
   await mockGetReport(page, fixtureKmConverted.report_token as string, fixtureKmConverted, 200);
 
@@ -167,8 +148,8 @@ test('DVSA outage at report creation: established error UX renders, no fabricate
 
   // No fabricated report: the app never navigates off the form on error
   // (App.tsx's catch block only calls setError, never navigate()), and no
-  // report-only DOM (population badge, evidence meta) is ever mounted.
+  // final report-result DOM is ever mounted.
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByTestId('population-badge')).toHaveCount(0);
-  await expect(page.getByTestId('evidence-meta')).toHaveCount(0);
+  await expect(page.getByTestId('comparison-result')).toHaveCount(0);
+  await expect(page.getByTestId('vehicle-prediction-result')).toHaveCount(0);
 });
