@@ -104,8 +104,6 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 tracking-wide mt-4">
               <span>{stats ? `${stats.mot_records} recorded MOT tests analysed` : 'Recorded DVSA MOT tests'}</span>
               <span className="hidden md:inline" aria-hidden="true">&middot;</span>
-              <span>{stats ? `${stats.checks_this_month.toLocaleString()} vehicles checked this month` : 'Free vehicle checks'}</span>
-              <span className="hidden md:inline" aria-hidden="true">&middot;</span>
               <span>Free &amp; instant</span>
             </div>
           </div>

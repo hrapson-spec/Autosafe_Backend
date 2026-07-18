@@ -125,7 +125,8 @@ test.describe('form-lifecycle', () => {
     resolveStats();
     // Concrete proof the resolved stats actually flowed into a HomePage
     // re-render (rather than an arbitrary sleep) before we keep typing.
-    await expect(page.getByText(`${DEFAULT_STATS.checks_this_month} vehicles checked this month`)).toBeVisible();
+    await expect(page.getByText(`${DEFAULT_STATS.mot_records} recorded MOT tests analysed`)).toBeVisible();
+    await expect(page.getByText(/vehicles checked this month/i)).toHaveCount(0);
 
     await regInput.pressSequentially('CDE', { delay: 20 });
     await expect(regInput).toHaveValue('AB12CDE');

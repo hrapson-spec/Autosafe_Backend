@@ -88,7 +88,7 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistr
 
         <Input
           id="postcode"
-          label="Post Code"
+          label="Postcode"
           placeholder="e.g. SW1A 1AA"
           value={postcode}
           onChange={setPostcode}
