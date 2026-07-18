@@ -856,6 +856,71 @@ async def get_risk(
     return response
 
 
+# --- v57 (gated): parity-first Stage-1 bundle, OFF by default ---------------
+# Enable with V57_PREDICTIONS_ENABLED=true once all promotion gates pass
+# (models/v57/README.md). v55 remains the default serving path.
+V57_PREDICTIONS_ENABLED = os.environ.get("V57_PREDICTIONS_ENABLED", "false").lower() == "true"
+import model_v57  # noqa: E402
+
+
+@app.get("/api/risk/v57")
+@limiter.limit("20/minute")
+async def get_risk_v57(
+    request: Request,
+    registration: str = Query(..., min_length=2, max_length=8, description="Vehicle registration mark"),
+    postcode: str = Query("", max_length=10, description="UK postcode for regional factors (optional)"),
+):
+    """V57 model prediction (gated). No lookup-table fallback: this route is
+    for gate evaluation and shadow comparison, not customer traffic."""
+    dvsa = get_dvsa_client()
+    try:
+        vrm = dvsa.normalize_vrm(registration)
+    except VRMValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not V57_PREDICTIONS_ENABLED:
+        raise HTTPException(status_code=503, detail="v57 predictions are not enabled")
+    if not model_v57.is_model_loaded() and not model_v57.load_model():
+        raise HTTPException(status_code=503, detail="v57 model bundle not available")
+
+    validated_postcode = ""
+    if postcode:
+        postcode_result = validate_postcode(postcode)
+        validated_postcode = (
+            postcode_result.get("normalized", postcode)
+            if postcode_result.get("valid") else postcode.strip().upper()
+        )
+
+    if not dvsa.is_configured:
+        raise HTTPException(status_code=503, detail="DVSA integration not configured")
+
+    vrm_hash = hash_vrm(vrm)
+    try:
+        history = await dvsa.fetch_vehicle_history(vrm)
+    except VehicleNotFoundError:
+        raise HTTPException(status_code=404, detail="Vehicle not found in DVSA database")
+    except DVSAAPIError as e:
+        logger.warning(f"DVSA API error for {vrm_hash} (v57): {e}")
+        raise HTTPException(status_code=502, detail="DVSA API unavailable")
+
+    try:
+        features = model_v57.engineer_features_with_stats(history, validated_postcode)
+        prediction = model_v57.predict_risk(features)
+    except Exception as e:
+        logger.error(f"v57 prediction failed for {vrm_hash}: {e}")
+        raise HTTPException(status_code=500, detail="v57 prediction failed")
+
+    latest = history.latest_test
+    return {
+        "registration": vrm,
+        "make": history.make,
+        "model": history.model,
+        "last_test_date": latest.test_date.isoformat() if latest else None,
+        "mileage": latest.odometer_value if latest else None,
+        **prediction,
+    }
+
+
 @app.get("/api/risk/v55")
 @limiter.limit("20/minute")
 async def get_risk_v55(

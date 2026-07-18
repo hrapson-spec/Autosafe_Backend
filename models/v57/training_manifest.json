@@ -1,0 +1,355 @@
+{
+  "version": "v57",
+  "command": "python3.13 train_catboost_production_v57.py",
+  "interpreter": "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13",
+  "git_commit": "f001f577df3679490c575f5cbc8a3adb04b772d2",
+  "history_window_start": "2019-01-01",
+  "feature_count": 105,
+  "feature_names": [
+    "prev_cycle_outcome_band",
+    "gap_band",
+    "make",
+    "advisory_trend",
+    "test_mileage",
+    "prior_advisory_count_observed",
+    "days_since_last_test",
+    "prior_fail_rate_observed",
+    "n_prior_tests_observed",
+    "make_fail_rate_smoothed",
+    "segment_fail_rate_smoothed",
+    "model_fail_rate_smoothed",
+    "days_late",
+    "prev_adv_brakes",
+    "prev_adv_suspension",
+    "prev_adv_steering",
+    "prev_adv_tyres",
+    "mileage_cohort_ratio",
+    "advisory_cohort_delta",
+    "days_since_pass_ratio",
+    "multi_system_advisory_count",
+    "n_prior_fails_observed",
+    "fails_last_365d_observed",
+    "fails_last_730d_observed",
+    "fail_rate_trend",
+    "recent_fail_intensity",
+    "mdps_score",
+    "front_end_advisory_intensity",
+    "brake_system_stress",
+    "commercial_wear_proxy",
+    "usage_band_hybrid",
+    "has_prior_advisory_brakes_observed",
+    "tests_since_last_advisory_brakes_observed",
+    "advisory_in_last_1_brakes_observed",
+    "advisory_in_last_2_brakes_observed",
+    "advisory_streak_len_brakes_observed",
+    "has_prior_advisory_tyres_observed",
+    "miles_since_last_advisory_tyres_observed",
+    "tests_since_last_advisory_tyres_observed",
+    "advisory_in_last_1_tyres_observed",
+    "advisory_in_last_2_tyres_observed",
+    "advisory_streak_len_tyres_observed",
+    "has_prior_advisory_suspension_observed",
+    "miles_since_last_advisory_suspension_observed",
+    "tests_since_last_advisory_suspension_observed",
+    "advisory_in_last_1_suspension_observed",
+    "advisory_in_last_2_suspension_observed",
+    "advisory_streak_len_suspension_observed",
+    "has_prior_failure_brakes_observed",
+    "has_observed_failure_brakes",
+    "failure_streak_len_brakes_observed",
+    "tests_since_last_failure_brakes_observed",
+    "has_prior_failure_tyres_observed",
+    "has_observed_failure_tyres",
+    "failure_streak_len_tyres_observed",
+    "tests_since_last_failure_tyres_observed",
+    "has_prior_failure_suspension_observed",
+    "has_observed_failure_suspension",
+    "failure_streak_len_suspension_observed",
+    "tests_since_last_failure_suspension_observed",
+    "annualized_mileage_v2",
+    "mileage_anomaly_flag",
+    "has_prev_mileage",
+    "mileage_plausible_flag",
+    "local_corrosion_index",
+    "local_corrosion_delta",
+    "high_risk_model_flag",
+    "model_age_fail_rate_eb",
+    "make_age_fail_rate_eb",
+    "historic_negligence_ratio_smoothed",
+    "negligence_band",
+    "raw_behavioral_count",
+    "eb_unified_prior",
+    "mech_decay_brake",
+    "mech_decay_suspension",
+    "mech_decay_structure",
+    "mech_decay_steering",
+    "mech_decay_index",
+    "mech_decay_index_normalized",
+    "mech_risk_driver",
+    "text_corrosion_index",
+    "text_wear_index",
+    "text_leak_index",
+    "text_damage_index",
+    "text_corrosion_index_log",
+    "text_wear_index_log",
+    "text_leak_index_log",
+    "text_damage_index_log",
+    "has_corrosion_history",
+    "has_wear_history",
+    "has_leak_history",
+    "has_damage_history",
+    "mechanism_count",
+    "max_severity_score",
+    "severity_escalation_flag",
+    "has_advisory_history",
+    "dominant_mechanism",
+    "test_month",
+    "is_winter_test",
+    "day_of_week",
+    "window_days_available",
+    "history_years_observed",
+    "has_prior_test_observed",
+    "has_left_truncated_history",
+    "first_observed_test_is_not_true_first"
+  ],
+  "categorical_features": [
+    "prev_cycle_outcome_band",
+    "gap_band",
+    "make",
+    "advisory_trend",
+    "usage_band_hybrid",
+    "negligence_band",
+    "mech_risk_driver",
+    "dominant_mechanism",
+    "test_month",
+    "day_of_week"
+  ],
+  "train_years": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "early_stop_tail_start": "2023-07-01",
+  "best_iterations": 1233,
+  "n_seeds": 10,
+  "hyperparameters": {
+    "iterations": 2000,
+    "learning_rate": 0.02,
+    "depth": 6,
+    "l2_leaf_reg": 4,
+    "border_count": 128,
+    "random_strength": 1.0,
+    "bagging_temperature": 0.5,
+    "eval_metric": "AUC"
+  },
+  "dev_rows": 542256,
+  "oot_rows": 228328,
+  "dev_date_range": [
+    "2019-01-01",
+    "2023-12-31"
+  ],
+  "oot_date_range": [
+    "2024-01-01",
+    "2024-12-30"
+  ],
+  "recompute_coverage": {
+    "dev": {
+      "targets": 542256,
+      "targets_with_priors": 393569,
+      "prior_pairs": 733493,
+      "priors_with_known_outcome": 733493,
+      "priors_with_odometer": 453070
+    },
+    "oot": {
+      "targets": 228328,
+      "targets_with_priors": 190412,
+      "prior_pairs": 689019,
+      "priors_with_known_outcome": 688741,
+      "priors_with_odometer": 200814
+    }
+  },
+  "staged_inputs": {
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/stratified_samples/dev_set_with_advisory.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/dev_set_with_advisory.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/stratified_samples/oot_set_with_advisory.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/oot_set_with_advisory.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/cycle_first_with_history.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/cycle_first_with_history.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/component_failures_all_years.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/component_failures_all_years.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2019.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2019.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2020.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2020.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2021.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2021.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2022.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2022.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2023.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2023.parquet",
+    "/Users/henrirapson/Library/Mobile Documents/com~apple~CloudDocs/AutoSafe/validation_samples/sampled_2024.parquet": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2024.parquet"
+  },
+  "vocab_report": {
+    "dev": {
+      "prev_cycle_outcome_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "gap_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "advisory_trend": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "usage_band_hybrid": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "negligence_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "mech_risk_driver": {
+        "matrix_only": [],
+        "serving_only_absent": [
+          "STEER",
+          "STRUCT"
+        ]
+      },
+      "dominant_mechanism": {
+        "matrix_only": [
+          "MIXED"
+        ],
+        "serving_only_absent": []
+      },
+      "test_month": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "day_of_week": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      }
+    },
+    "oot": {
+      "prev_cycle_outcome_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "gap_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "advisory_trend": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "usage_band_hybrid": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "negligence_band": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "mech_risk_driver": {
+        "matrix_only": [],
+        "serving_only_absent": [
+          "STEER",
+          "STRUCT"
+        ]
+      },
+      "dominant_mechanism": {
+        "matrix_only": [
+          "MIXED"
+        ],
+        "serving_only_absent": []
+      },
+      "test_month": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      },
+      "day_of_week": {
+        "matrix_only": [],
+        "serving_only_absent": []
+      }
+    }
+  },
+  "prepared_data": "/Users/henrirapson/autosafe_work/v57_prepared_data.pkl",
+  "input_files": [
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/dev_set_with_advisory.parquet",
+      "size_bytes": 70991713,
+      "sha256": "82761846bc97b09ba0225bf3fd733edd100e32caa5a8d11972012193e5142dc8"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/oot_set_with_advisory.parquet",
+      "size_bytes": 20918123,
+      "sha256": "6f784c3b3cbd85f919d6f1d32575583550f6102c601639c02f80065a7227955a"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/cycle_first_with_history.parquet",
+      "size_bytes": 2086758381,
+      "sha256": "7f65b08139b3b20618c7a49c76e556430d45912ee392eff38985f093b361b270"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/component_failures_all_years.parquet",
+      "size_bytes": 364764265,
+      "sha256": "960b012686945b1ac4025a90c1e2a891bda039683a80777fc3ad595e50380398"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/text_mining_features_v52.parquet",
+      "size_bytes": 43394481,
+      "sha256": "8e8ddc300a97cabd6351a4254e24851a472942e612ea86618c695a1a38fdb0f3"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v45_features/model_age_features_dev.parquet",
+      "size_bytes": 18340755,
+      "sha256": "2f7ed86411ecc65fd06f224a04660c83565af2c2c716add6dde381449ddf2f88"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v45_features/model_age_features_oot.parquet",
+      "size_bytes": 5695526,
+      "sha256": "10e9e6a5eedc6e5dd92908049ffdbd883c216b312e0e515f84039e9cfdf154d5"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2019.parquet",
+      "size_bytes": 54925631,
+      "sha256": "94407954375131bd8025a5626af6ef8f44cbdcd15198c4b674ec9531c8419a6d"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2020.parquet",
+      "size_bytes": 53427409,
+      "sha256": "6310f5cf69d3a8ddc395a1602490c9a295be65f7549a7a0132424903562d1330"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2021.parquet",
+      "size_bytes": 64408011,
+      "sha256": "c18099a484b503895c42b98ebed3cdb9acbfffca24e4aaf8aa7e6a44873d0103"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2022.parquet",
+      "size_bytes": 67241349,
+      "sha256": "fd7e5c3a9f7b30b56239683219586e9288ef3c5fcd83edc43599a517251f1117"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2023.parquet",
+      "size_bytes": 69258341,
+      "sha256": "a99d99e43d771312611ce0807f7e03f1b0c75e45eff16760f1b748dd9eb17c57"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/v57_staged_inputs/sampled_2024.parquet",
+      "size_bytes": 18671851,
+      "sha256": "54ac945fe255d6c2abcd1fe305fbfc4177e444bd88cbf41c1be217e6966e4a63"
+    },
+    {
+      "path": "/Users/henrirapson/autosafe_work/cycle_history_extension_2024.parquet",
+      "size_bytes": 14020178,
+      "sha256": "9988792023dc5dca4a4482d07a4366e5d23b870269ae5a96cb0368699babe1ce"
+    }
+  ],
+  "package_versions": {
+    "numpy": "2.3.5",
+    "pandas": "2.3.3",
+    "duckdb": "1.4.3",
+    "catboost": "1.2.8",
+    "scikit-learn": "1.8.0"
+  },
+  "elapsed_seconds": 7881.089828,
+  "created": "2026-06-12T19:34:29.680244"
+}

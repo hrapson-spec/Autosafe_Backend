@@ -1,0 +1,912 @@
+{
+  "contract_type": "autosafe_feature_contract",
+  "version": "v57",
+  "history_window": {
+    "start": "2019-01-01",
+    "rule": "Training matrices and the serving path both discard MOT tests before this date; full-depth serving is deferred to v58 after the results-lake re-ingest."
+  },
+  "parity": {
+    "tolerance": 1e-09
+  },
+  "point_in_time_rule": "Every feature uses only data available strictly before the target test date, and only tests dated >= history_window.start",
+  "artifact_dependencies": [
+    "feature_artifacts/cohort_stats.json",
+    "feature_artifacts/hierarchical_rates.json",
+    "feature_artifacts/model_age_rates.json"
+  ],
+  "decision_provenance": {
+    "rc3_dropped": [
+      "station_fail_rate_smoothed",
+      "station_x_prev_outcome_fail_rate",
+      "station_strictness_bias",
+      "suspension_risk_profile"
+    ],
+    "observed_renames": {
+      "n_prior_tests": "n_prior_tests_observed",
+      "n_prior_fails": "n_prior_fails_observed",
+      "prev_count_advisory": "prior_advisory_count_observed",
+      "has_ever_failed_brakes": "has_observed_failure_brakes",
+      "has_ever_failed_tyres": "has_observed_failure_tyres",
+      "has_ever_failed_suspension": "has_observed_failure_suspension",
+      "fails_last_365d": "fails_last_365d_observed",
+      "fails_last_730d": "fails_last_730d_observed",
+      "prior_fail_rate_smoothed": "prior_fail_rate_observed",
+      "has_prior_advisory_brakes": "has_prior_advisory_brakes_observed",
+      "has_prior_advisory_tyres": "has_prior_advisory_tyres_observed",
+      "has_prior_advisory_suspension": "has_prior_advisory_suspension_observed",
+      "tests_since_last_advisory_brakes": "tests_since_last_advisory_brakes_observed",
+      "tests_since_last_advisory_tyres": "tests_since_last_advisory_tyres_observed",
+      "tests_since_last_advisory_suspension": "tests_since_last_advisory_suspension_observed",
+      "advisory_in_last_1_brakes": "advisory_in_last_1_brakes_observed",
+      "advisory_in_last_1_tyres": "advisory_in_last_1_tyres_observed",
+      "advisory_in_last_1_suspension": "advisory_in_last_1_suspension_observed",
+      "advisory_in_last_2_brakes": "advisory_in_last_2_brakes_observed",
+      "advisory_in_last_2_tyres": "advisory_in_last_2_tyres_observed",
+      "advisory_in_last_2_suspension": "advisory_in_last_2_suspension_observed",
+      "advisory_streak_len_brakes": "advisory_streak_len_brakes_observed",
+      "advisory_streak_len_tyres": "advisory_streak_len_tyres_observed",
+      "advisory_streak_len_suspension": "advisory_streak_len_suspension_observed",
+      "miles_since_last_advisory_tyres": "miles_since_last_advisory_tyres_observed",
+      "miles_since_last_advisory_suspension": "miles_since_last_advisory_suspension_observed",
+      "has_prior_failure_brakes": "has_prior_failure_brakes_observed",
+      "has_prior_failure_tyres": "has_prior_failure_tyres_observed",
+      "has_prior_failure_suspension": "has_prior_failure_suspension_observed",
+      "failure_streak_len_brakes": "failure_streak_len_brakes_observed",
+      "failure_streak_len_tyres": "failure_streak_len_tyres_observed",
+      "failure_streak_len_suspension": "failure_streak_len_suspension_observed",
+      "tests_since_last_failure_brakes": "tests_since_last_failure_brakes_observed",
+      "tests_since_last_failure_tyres": "tests_since_last_failure_tyres_observed",
+      "tests_since_last_failure_suspension": "tests_since_last_failure_suspension_observed"
+    },
+    "coverage_features": [
+      "first_observed_test_is_not_true_first",
+      "has_left_truncated_history",
+      "has_prior_test_observed",
+      "history_years_observed",
+      "window_days_available"
+    ],
+    "directive": "v57 Stage-1, 2026-06-12"
+  },
+  "features": [
+    {
+      "name": "prev_cycle_outcome_band",
+      "dtype": "categorical",
+      "default": "first_test",
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "gap_band",
+      "dtype": "categorical",
+      "default": "first_test",
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "make",
+      "dtype": "categorical",
+      "default": "UNKNOWN",
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "advisory_trend",
+      "dtype": "categorical",
+      "default": "unknown",
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "test_mileage",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "prior_advisory_count_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "days_since_last_test",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "prior_fail_rate_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "n_prior_tests_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "make_fail_rate_smoothed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "segment_fail_rate_smoothed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "model_fail_rate_smoothed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "days_late",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "prev_adv_brakes",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "prev_adv_suspension",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "prev_adv_steering",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "prev_adv_tyres",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "mileage_cohort_ratio",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "advisory_cohort_delta",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "days_since_pass_ratio",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "latest in-window prior cycle (train SQL / capped API history)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "multi_system_advisory_count",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "n_prior_fails_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "fails_last_365d_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "fails_last_730d_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "fail_rate_trend",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "recent_fail_intensity",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mdps_score",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "front_end_advisory_intensity",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "brake_system_stress",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "commercial_wear_proxy",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "usage_band_hybrid",
+      "dtype": "categorical",
+      "default": "average",
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_prior_advisory_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_advisory_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_1_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_2_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_streak_len_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_advisory_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "miles_since_last_advisory_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_advisory_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_1_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_2_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_streak_len_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_advisory_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "miles_since_last_advisory_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_advisory_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_1_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_in_last_2_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "advisory_streak_len_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_failure_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_observed_failure_brakes",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "failure_streak_len_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_failure_brakes_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_failure_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_observed_failure_tyres",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "failure_streak_len_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_failure_tyres_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_failure_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_observed_failure_suspension",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "failure_streak_len_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "tests_since_last_failure_suspension_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "window-bounded observed history: in-window recompute over cycle_first_with_history (train) / capped DVSA API history (serve)",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "annualized_mileage_v2",
+      "dtype": "float",
+      "default": 10000.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mileage_anomaly_flag",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_prev_mileage",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mileage_plausible_flag",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "local_corrosion_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "local_corrosion_delta",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "high_risk_model_flag",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "model_age_fail_rate_eb",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "make_age_fail_rate_eb",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "historic_negligence_ratio_smoothed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "negligence_band",
+      "dtype": "categorical",
+      "default": "clean",
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "raw_behavioral_count",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "eb_unified_prior",
+      "dtype": "float",
+      "default": 0.23995692703798704,
+      "source": "fitted lookup artifact (models/v57/feature_artifacts)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_brake",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_suspension",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_structure",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_steering",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_decay_index_normalized",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mech_risk_driver",
+      "dtype": "categorical",
+      "default": "CLEAN",
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_corrosion_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_wear_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_leak_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_damage_index",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_corrosion_index_log",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_wear_index_log",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_leak_index_log",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "text_damage_index_log",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_corrosion_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_wear_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_leak_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_damage_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "mechanism_count",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "max_severity_score",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "severity_escalation_flag",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "has_advisory_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "dominant_mechanism",
+      "dtype": "categorical",
+      "default": "NO_HISTORY",
+      "source": "precomputed v52 text-mining / v49 mech-decay artifact join (train) / keyword FE (serve)",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "test_month",
+      "dtype": "categorical",
+      "default": 1,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "is_winter_test",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "day_of_week",
+      "dtype": "categorical",
+      "default": 0,
+      "source": "trainer SQL / feature_engineering_v57",
+      "prediction_time_available": true,
+      "window_bounded": false
+    },
+    {
+      "name": "window_days_available",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "coverage: max(0, (target_date - WINDOW_START).days) \u2014 how much observation window could exist for this prediction, regardless of the vehicle",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "history_years_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "coverage: (target_date - first_observed_test_date).days / 365.25, or 0.0 when no prior test is observed",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_prior_test_observed",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "coverage: 1 if at least one prior test is observed inside the window, else 0",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "has_left_truncated_history",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "coverage: 1 if the vehicle was MOT-liable before WINDOW_START (first_use_date + FIRST_MOT_AGE_YEARS < WINDOW_START), i.e. true history plausibly exists that the window cannot observe",
+      "prediction_time_available": true,
+      "window_bounded": true
+    },
+    {
+      "name": "first_observed_test_is_not_true_first",
+      "dtype": "float",
+      "default": 0.0,
+      "source": "coverage: 1 if a prior test is observed AND has_left_truncated_history \u2014 the earliest observed test cannot be the vehicle's true first MOT",
+      "prediction_time_available": true,
+      "window_bounded": true
+    }
+  ]
+}
