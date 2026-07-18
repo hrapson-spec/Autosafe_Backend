@@ -88,8 +88,11 @@ describe('App: home page rendering', () => {
     expect(screen.getByText('1 in 4 cars fails its MOT. Will yours?')).toBeInTheDocument();
     expect(screen.queryByText('See what the MOT evidence says.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Registration Number', { exact: false })).toBeInTheDocument();
-    expect(screen.getByLabelText('Post Code', { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Postcode' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /check this car/i })).toBeInTheDocument();
+    expect(await screen.findByText(/148M\+ recorded MOT tests analysed/)).toBeInTheDocument();
+    expect(screen.queryByText(/vehicles checked this month/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Free & instant')).toBeInTheDocument();
   });
 
   it('prefills from one-use session storage without putting the registration in the URL', async () => {
@@ -115,7 +118,7 @@ describe('App: submit success', () => {
     renderApp(['/app']);
 
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
     await user.click(screen.getByRole('button', { name: /check this car/i }));
 
     expect(await screen.findByTestId('report-screen-probe')).toBeInTheDocument();
@@ -139,7 +142,7 @@ describe('App: submit success', () => {
     renderApp(['/app']);
 
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'ZZ99ZZZ');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
     await user.click(screen.getByRole('button', { name: /check this car/i }));
 
     expect(await screen.findByTestId('probe-token')).toHaveTextContent('unsaved');
@@ -158,7 +161,7 @@ describe('App: submit failure (remount regression)', () => {
     renderApp(['/app']);
 
     const regInput = screen.getByLabelText('Registration Number', { exact: false });
-    const postcodeInput = screen.getByLabelText('Post Code', { exact: false });
+    const postcodeInput = screen.getByRole('textbox', { name: 'Postcode' });
     await user.type(regInput, 'AB12CDE');
     await user.type(postcodeInput, 'SW1A 1AA');
     await user.click(screen.getByRole('button', { name: /check this car/i }));
@@ -181,7 +184,7 @@ describe('App: submit failure (remount regression)', () => {
 
     renderApp(['/app']);
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
 
     await user.click(screen.getByRole('button', { name: /check this car/i }));
     await screen.findByRole('alert');
@@ -211,7 +214,7 @@ describe('App: submit failure (remount regression)', () => {
 
     renderApp(['/app']);
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
 
     await user.click(screen.getByRole('button', { name: /check this car/i }));
     await screen.findByRole('alert');
@@ -243,15 +246,12 @@ describe('App: remount regression via stats resolving mid-typing', () => {
     await user.type(regInput, 'AB12CDE');
     expect(regInput).toHaveValue('AB12CDE');
 
-    // checks_this_month is kept under 1000 deliberately: toLocaleString()
-    // would insert a thousands separator whose exact character depends on
-    // locale, which this assertion doesn't want to depend on.
     resolveStats({ total_checks: 999, checks_this_month: 421, mot_records: '149M+' });
 
     // Proves the resolved stats actually flowed through and re-rendered
     // HomePage before we assert the input survived that re-render.
-    await screen.findByText(/421 vehicles checked this month/);
-    expect(screen.getByText(/149M\+ recorded MOT tests analysed/)).toBeInTheDocument();
+    expect(await screen.findByText(/149M\+ recorded MOT tests analysed/)).toBeInTheDocument();
+    expect(screen.queryByText(/vehicles checked this month/i)).not.toBeInTheDocument();
 
     expect(regInput).toHaveValue('AB12CDE');
   });

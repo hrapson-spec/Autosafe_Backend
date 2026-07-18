@@ -8,6 +8,12 @@ afterEach(() => {
 });
 
 describe('HeroForm: prefill', () => {
+  it('uses the standard Postcode label and keeps the field required', () => {
+    render(<HeroForm onSubmit={vi.fn()} isLoading={false} />);
+
+    expect(screen.getByRole('textbox', { name: 'Postcode' })).toBeRequired();
+  });
+
   it('prefills the registration field from initialRegistration', () => {
     render(<HeroForm onSubmit={vi.fn()} isLoading={false} initialRegistration="AB12CDE" />);
 
@@ -65,7 +71,7 @@ describe('HeroForm: validation', () => {
     const { container } = render(<HeroForm onSubmit={onSubmit} isLoading={false} />);
 
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'A');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
 
     const form = container.querySelector('form');
     fireEvent.submit(form as HTMLFormElement);
@@ -80,7 +86,7 @@ describe('HeroForm: validation', () => {
     render(<HeroForm onSubmit={onSubmit} isLoading={false} />);
 
     await user.type(screen.getByLabelText('Registration Number', { exact: false }), 'AB12CDE');
-    await user.type(screen.getByLabelText('Post Code', { exact: false }), 'SW1A 1AA');
+    await user.type(screen.getByRole('textbox', { name: 'Postcode' }), 'SW1A 1AA');
     await user.click(screen.getByRole('button', { name: /check this car/i }));
 
     expect(onSubmit).toHaveBeenCalledWith({ registration: 'AB12CDE', postcode: 'SW1A 1AA' });
@@ -102,7 +108,7 @@ describe('HeroForm: non-clearing across parent re-renders', () => {
     const { rerender } = render(<HeroForm onSubmit={onSubmit} isLoading={false} initialRegistration="AB12CDE" />);
 
     const regInput = screen.getByLabelText('Registration Number', { exact: false });
-    const postcodeInput = screen.getByLabelText('Post Code', { exact: false });
+    const postcodeInput = screen.getByRole('textbox', { name: 'Postcode' });
     await user.clear(regInput);
     await user.type(regInput, 'XY99ZZZ');
     await user.type(postcodeInput, 'SW1A 1AA');
@@ -114,6 +120,6 @@ describe('HeroForm: non-clearing across parent re-renders', () => {
     rerender(<HeroForm onSubmit={onSubmit} isLoading={false} initialRegistration="AB12CDE" />);
 
     expect(screen.getByLabelText('Registration Number', { exact: false })).toHaveValue('XY99ZZZ');
-    expect(screen.getByLabelText('Post Code', { exact: false })).toHaveValue('SW1A 1AA');
+    expect(screen.getByRole('textbox', { name: 'Postcode' })).toHaveValue('SW1A 1AA');
   });
 });
