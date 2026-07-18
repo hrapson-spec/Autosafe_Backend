@@ -85,7 +85,7 @@ describe('App: home page rendering', () => {
         name: 'Fix it before they find it.',
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('Taking the stress out of MOTs and repairs.')).toBeInTheDocument();
+    expect(screen.getByText('1 in 4 cars fails its MOT. Will yours?')).toBeInTheDocument();
     expect(screen.queryByText('See what the MOT evidence says.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Registration Number', { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText('Post Code', { exact: false })).toBeInTheDocument();

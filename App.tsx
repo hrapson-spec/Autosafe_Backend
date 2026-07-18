@@ -87,7 +87,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </h1>
 
               <p className="text-lg md:text-xl text-slate-500 font-light tracking-wide max-w-lg mx-auto font-sans">
-                Taking the stress out of MOTs and repairs.
+                1 in 4 cars fails its MOT. Will yours?
               </p>
             </div>
 
