@@ -371,6 +371,22 @@ async def health_check(request: Request):
         "timestamp": datetime.now().isoformat(),
     }
 
+    # Prediction-slot state: operational metadata only (no constants, no
+    # secrets). Public because staging acceptance must assert it without
+    # ADMIN_API_KEY (deliberately unset there), and the Railway-candidate
+    # D6 check uses it to prove the deployed image carries working model
+    # artifacts -- a dead model otherwise degrades every request to the
+    # comparison fallback with HTTP 200 and no alertable signal.
+    # "version" is the literal loaded lineage; the MODEL_VERSION env var
+    # becomes the real selector when the model registry lands (v58 P5b).
+    response["prediction"] = {
+        "primary": {
+            "version": "v55",
+            "loaded": model_v55.is_model_loaded(),
+            "calibrator": model_v55.calibrator_state()["status"],
+        },
+    }
+
     # Detailed diagnostics only with admin API key
     api_key = request.headers.get("X-API-Key")
     if _verify_admin_api_key(api_key):

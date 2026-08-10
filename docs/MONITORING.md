@@ -34,6 +34,9 @@ route:
 - `report_api_error error_code=report_not_found`
 - `idempotency_lookup_unavailable`
 - `idempotency_replay_payload_invalid`
+- `v55_prediction outcome=fallback` (break out by `reason=ModelUnavailable`,
+  `reason=FeatureEngineeringFailed`, `reason=InferenceFailed`,
+  `reason=PredictionDisabled`)
 
 Initial release thresholds, to be tuned from a clean 48-hour baseline:
 
@@ -44,7 +47,19 @@ Initial release thresholds, to be tuned from a clean 48-hour baseline:
 - any invalid stored replay payload: investigate contract/data drift;
 - three times baseline not-found/conflict rate for 15 minutes: inspect routing,
   client retry identity, token handling, and abuse;
-- HTTP 5xx above 1% for five minutes or two failed probes: rollback decision.
+- HTTP 5xx above 1% for five minutes or two failed probes: rollback decision;
+- any `reason=ModelUnavailable` fallback, or a sustained fallback rate above
+  20% of prediction-eligible reports for 15 minutes: page the release owner.
+  A dead or degraded model otherwise serves every request the comparison
+  fallback with HTTP 200 and no error signal — availability probes will not
+  catch it.
+
+The unauthenticated `/health` response carries a `prediction` block
+(`prediction.primary.loaded`, `prediction.primary.calibrator`). Alert when
+`loaded` is false or `calibrator != "loaded"` while `PREDICTIONS_ENABLED` is
+true: the second condition means raw uncalibrated probabilities would serve
+silently (the audit-gf2b failure mode). Staging acceptance check
+`4a-model-loaded` asserts the same block per release.
 
 Do not add raw VRNs, postcodes, tokens, referrer paths/queries/fragments,
 request bodies, or free-form exception text to make these events easier to

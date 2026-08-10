@@ -34,6 +34,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # Training/pipeline deps (duckdb etc.) so pipeline unit tests run.
+          # The serving image never installs these (see requirements-train.txt).
+          pip install -r requirements-train.txt
           pip install pytest pytest-cov pytest-asyncio
 
       - name: Run tests

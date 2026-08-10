@@ -12,9 +12,12 @@
 !tsconfig.json
 !catboost_production_v55/calibrator.json
 !models/v57/*.json
+!models/v58/*.json
+!models/v58/feature_artifacts/*.json
 *.zip
 
 # Large directories
+pipeline/
 work/
 backend/
 frontend/
@@ -57,6 +60,7 @@ claude-code-academy/
 # Model files (except production model)
 *.cbm
 !catboost_production_v55/model.cbm
+!models/v58/model.cbm
 
 # Development/training scripts
 train_*.py

@@ -1,0 +1,10 @@
+# Training/pipeline-only dependencies (v58 program).
+#
+# Deliberately separate from requirements.txt: the serving image must stay
+# lean, and none of these are imported by any code path that runs in
+# production (pipeline/ is excluded from the Railway build context entirely
+# -- see .railwayignore). CI's test job installs BOTH files so the pipeline
+# unit tests run; the Dockerfile installs only requirements.txt.
+duckdb>=1.1.0
+pyarrow>=15.0.0
+jsonschema>=4.21.0

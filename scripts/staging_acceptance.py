@@ -122,6 +122,28 @@ async def check_health(client: httpx.AsyncClient) -> Dict:
     return body
 
 
+async def check_model_loaded(client: httpx.AsyncClient) -> Dict:
+    """The unauthenticated /health prediction block must show the primary
+    model loaded WITH its calibrator. Staging never exercises the predict
+    path (demo mode, no DVSA creds -- by design), so this load-state assert
+    is the only staging-side proof that the shipped image carries working
+    model artifacts; without it a stripped/corrupt bundle degrades every
+    production request to the comparison fallback silently (HTTP 200)."""
+    r = await client.get("/health")
+    assert r.status_code == 200, f"status={r.status_code} body={r.text}"
+    body = r.json()
+    prediction = body.get("prediction")
+    assert isinstance(prediction, dict), f"missing prediction block: {body}"
+    primary = prediction.get("primary")
+    assert isinstance(primary, dict), f"missing prediction.primary: {body}"
+    assert primary.get("loaded") is True, f"primary model not loaded: {primary}"
+    assert primary.get("calibrator") == "loaded", (
+        f"primary calibrator not loaded (raw probabilities would serve silently): {primary}"
+    )
+    show("GET /health prediction block", prediction)
+    return prediction
+
+
 async def check_ready(client: httpx.AsyncClient) -> Dict:
     r = await client.get("/ready")
     assert r.status_code == 200, f"status={r.status_code} body={r.text}"
@@ -653,6 +675,10 @@ async def main_async(args: argparse.Namespace) -> int:
     try:
         async with httpx.AsyncClient(base_url=args.base_url, timeout=30.0) as client:
             await runner.run("4a-health", "GET /health -> ok", check_health(client))
+            await runner.run(
+                "4a-model-loaded", "/health prediction block: primary model + calibrator loaded",
+                check_model_loaded(client),
+            )
             await runner.run("4a-ready", "GET /ready -> ok, database connected", check_ready(client))
             await runner.run(
                 "4a-version", "GET /api/version shape + frontend_bundle_hash",
