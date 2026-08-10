@@ -23,6 +23,7 @@ from report_contract import (
     DATASET_TOTAL_FAILURES,
     DATASET_TOTAL_TESTS,
     ERROR_CODE_STATUS,
+    MODEL_PREDICTION_SOURCES,
     POPULATION_DEFAULT_FAILURE_RISK,
     REPORT_CONTRACT_VERSION,
     REPORT_TTL_DAYS,
@@ -118,11 +119,12 @@ class TestResultSemanticContract:
 
     def test_vehicle_prediction_requires_model_source(self, valid_report_dict):
         valid_report_dict["result_kind"] = "vehicle_prediction"
-        with pytest.raises(ValidationError, match="vehicle prediction requires model_v55"):
+        with pytest.raises(ValidationError, match="vehicle prediction requires a model prediction source"):
             ReportResponse.model_validate(valid_report_dict)
 
-    def test_vehicle_prediction_accepts_model_v55(self, valid_report_dict):
-        valid_report_dict.update(result_kind="vehicle_prediction", prediction_source="model_v55")
+    @pytest.mark.parametrize("model_source", ["model_v55", "model_v58"])
+    def test_vehicle_prediction_accepts_model_sources(self, valid_report_dict, model_source):
+        valid_report_dict.update(result_kind="vehicle_prediction", prediction_source=model_source)
         # A prediction must also claim the model_prediction evidence scope
         # (see TestModelPredictionScope for the full biconditional).
         valid_report_dict["evidence"] = dict(
@@ -135,11 +137,21 @@ class TestResultSemanticContract:
         report = ReportResponse.model_validate(valid_report_dict)
         assert report.result_kind == ResultKind.VEHICLE_PREDICTION
 
-    def test_model_v55_prediction_source_requires_vehicle_prediction(self, valid_report_dict):
-        valid_report_dict["prediction_source"] = "model_v55"
+    def test_model_prediction_sources_membership(self):
+        # The set the biconditional keys on. model_v55 must remain a member
+        # permanently: persisted payloads replay through model_validate for
+        # their full TTL (idempotency replay and GET-by-token).
+        assert MODEL_PREDICTION_SOURCES == {
+            PredictionSource.MODEL_V55,
+            PredictionSource.MODEL_V58,
+        }
+
+    @pytest.mark.parametrize("model_source", ["model_v55", "model_v58"])
+    def test_model_prediction_source_requires_vehicle_prediction(self, valid_report_dict, model_source):
+        valid_report_dict["prediction_source"] = model_source
         with pytest.raises(
             ValidationError,
-            match="model_v55 prediction source requires vehicle_prediction",
+            match="a model prediction source requires vehicle_prediction",
         ):
             ReportResponse.model_validate(valid_report_dict)
 
@@ -354,7 +366,14 @@ class TestEnumValuesExact(unittest.TestCase):
     def test_prediction_source_values(self):
         self.assertEqual(
             {m.value for m in PredictionSource},
-            {"postgres", "sqlite", "dataset_reference", "model_v55", "unavailable"},
+            {
+                "postgres",
+                "sqlite",
+                "dataset_reference",
+                "model_v55",
+                "model_v58",
+                "unavailable",
+            },
         )
 
     def test_vehicle_data_source_values(self):

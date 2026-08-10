@@ -177,8 +177,16 @@ export type ConfidenceLevel = 'High' | 'Medium' | 'Low' | 'Very Low';
 export type ResultKind = 'comparison' | 'vehicle_prediction';
 
 /** Exact source of the report's displayed risk figure. Mirrors
- * report_contract.PredictionSource. */
-export type PredictionSource = 'postgres' | 'sqlite' | 'dataset_reference' | 'model_v55' | 'unavailable';
+ * report_contract.PredictionSource. 'model_v58' ships ahead of any backend
+ * emission (expand/contract: cached SPAs must already accept it when the
+ * v58 model is promoted). */
+export type PredictionSource =
+  | 'postgres'
+  | 'sqlite'
+  | 'dataset_reference'
+  | 'model_v55'
+  | 'model_v58'
+  | 'unavailable';
 
 /** Which backing store served the report's vehicle details. Mirrors
  * report_contract.VehicleDataSource. */

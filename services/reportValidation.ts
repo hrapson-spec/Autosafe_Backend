@@ -79,7 +79,16 @@ export const VALID_PREDICTION_SOURCES: readonly PredictionSource[] = [
   'sqlite',
   'dataset_reference',
   'model_v55',
+  'model_v58',
   'unavailable',
+];
+
+/** Sources that denote a per-vehicle model output. Mirrors
+ * report_contract.MODEL_PREDICTION_SOURCES: vehicle_prediction pairs 1:1
+ * with membership of this list. */
+export const MODEL_PREDICTION_SOURCES: readonly PredictionSource[] = [
+  'model_v55',
+  'model_v58',
 ];
 
 export const VALID_VEHICLE_DATA_SOURCES: readonly VehicleDataSource[] = ['dvsa', 'demo'];
@@ -385,12 +394,12 @@ export function isReportV2(x: unknown): x is ReportV2 {
   if (!structurallyValid) return false;
 
   if (x.result_kind === 'vehicle_prediction') {
-    if (x.prediction_source !== 'model_v55') return false;
+    if (!isOneOf(x.prediction_source, MODEL_PREDICTION_SOURCES)) return false;
     if (!isReportEvidenceV2(x.evidence) || x.evidence.match_scope !== 'model_prediction') {
       return false;
     }
   } else {
-    if (x.prediction_source === 'model_v55') return false;
+    if (isOneOf(x.prediction_source, MODEL_PREDICTION_SOURCES)) return false;
     if (isReportEvidenceV2(x.evidence) && x.evidence.match_scope === 'model_prediction') {
       return false;
     }

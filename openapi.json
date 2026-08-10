@@ -541,6 +541,7 @@
           "sqlite",
           "dataset_reference",
           "model_v55",
+          "model_v58",
           "unavailable"
         ],
         "title": "PredictionSource",

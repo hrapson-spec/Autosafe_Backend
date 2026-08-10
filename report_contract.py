@@ -112,10 +112,28 @@ class PredictionSource(str, Enum):
     SQLITE = "sqlite"
     DATASET_REFERENCE = "dataset_reference"
     MODEL_V55 = "model_v55"
+    # v58 full-depth-history model (successor lineage to v55). Deliberately
+    # shipped end-to-end (enum, validators, OpenAPI snapshot, types.ts, SPA
+    # runtime validator) BEFORE anything emits it on the wire: cached SPAs
+    # validate prediction_source against a closed list and hard-reject
+    # unknown values, so promotion may only happen after this value has been
+    # deployed for at least one release. MODEL_V55 stays a readable value
+    # permanently -- persisted payloads replay through model_validate for
+    # their full TTL and beyond.
+    MODEL_V58 = "model_v58"
     # Retained for backwards compatibility with already-saved payloads.
     # New degraded reports display the checked-in dataset reference and
     # therefore use DATASET_REFERENCE; MatchScope records why they degraded.
     UNAVAILABLE = "unavailable"
+
+
+# Prediction sources that denote a per-vehicle model output rather than a
+# cohort comparison store. ResultKind.VEHICLE_PREDICTION pairs 1:1 with
+# membership of this set (see ReportResponse.validate_report_consistency and
+# the mirrored MODEL_PREDICTION_SOURCES list in services/reportValidation.ts).
+MODEL_PREDICTION_SOURCES = frozenset(
+    {PredictionSource.MODEL_V55, PredictionSource.MODEL_V58}
+)
 
 
 class VehicleDataSource(str, Enum):
@@ -464,13 +482,13 @@ class ReportResponse(BaseModel):
             raise ValueError("unsupported report contract version")
 
         if self.result_kind == ResultKind.VEHICLE_PREDICTION:
-            if self.prediction_source != PredictionSource.MODEL_V55:
-                raise ValueError("vehicle prediction requires model_v55 prediction source")
+            if self.prediction_source not in MODEL_PREDICTION_SOURCES:
+                raise ValueError("vehicle prediction requires a model prediction source")
             if self.evidence.match_scope != MatchScope.MODEL_PREDICTION:
                 raise ValueError("vehicle prediction requires the model_prediction evidence scope")
         else:
-            if self.prediction_source == PredictionSource.MODEL_V55:
-                raise ValueError("model_v55 prediction source requires vehicle_prediction result kind")
+            if self.prediction_source in MODEL_PREDICTION_SOURCES:
+                raise ValueError("a model prediction source requires vehicle_prediction result kind")
             if self.evidence.match_scope == MatchScope.MODEL_PREDICTION:
                 raise ValueError("only a vehicle prediction may claim the model_prediction evidence scope")
 

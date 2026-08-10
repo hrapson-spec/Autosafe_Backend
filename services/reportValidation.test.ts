@@ -9,6 +9,7 @@ import {
   VALID_MATCH_SCOPES,
   VALID_MILEAGE_SOURCES,
   VALID_CONFIDENCE_LEVELS,
+  MODEL_PREDICTION_SOURCES,
   VALID_PREDICTION_SOURCES,
   VALID_VEHICLE_DATA_SOURCES,
   VALID_API_ERROR_CODES,
@@ -110,6 +111,18 @@ describe('isReportV2', () => {
       prediction_source: 'model_v55',
       evidence: predictionEvidence,
     })).toBe(true);
+    // The v58 successor source is valid ahead of promotion (expand/contract).
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'vehicle_prediction',
+      prediction_source: 'model_v58',
+      evidence: predictionEvidence,
+    })).toBe(true);
+    expect(isReportV2({
+      ...fixtureExactHigh,
+      result_kind: 'comparison',
+      prediction_source: 'model_v58',
+    })).toBe(false);
     // A prediction may not claim a cohort evidence scope.
     expect(isReportV2({
       ...fixtureExactHigh,
@@ -365,8 +378,10 @@ describe('enum membership consts', () => {
       'sqlite',
       'dataset_reference',
       'model_v55',
+      'model_v58',
       'unavailable',
     ]);
+    expect(MODEL_PREDICTION_SOURCES).toEqual(['model_v55', 'model_v58']);
     expect(VALID_VEHICLE_DATA_SOURCES).toEqual(['dvsa', 'demo']);
     expect(VALID_API_ERROR_CODES).toHaveLength(10);
     expect(VALID_API_ERROR_CODES).toContain('undeclared_parameter');
