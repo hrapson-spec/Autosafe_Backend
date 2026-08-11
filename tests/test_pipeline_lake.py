@@ -280,6 +280,29 @@ class TestContinuityGate:
         result = lake_checks.check_vehicle_continuity(con, "res", sample_size=1000)
         assert not result.passed, result.detail
 
+    def test_backslash_escaped_quote_in_model(self, tmp_path, con):
+        # Regression (2026-08-11, 2018 Q1 chunk line 100435): the 2018+ MTS
+        # exports escape quotes with BACKSLASH (LAND ROVER,"88\"") while the
+        # reader assumed doubled-quote escaping — the parser then swallowed
+        # 45MB as one runaway quoted field. escape now comes from the schema
+        # registry (comma epochs = backslash).
+        from pipeline.lake import ingest_results, schemas
+        f = tmp_path / "test_result_esc.csv"
+        f.write_text(
+            "test_id,vehicle_id,test_date,test_class_id,test_type,test_result,"
+            "test_mileage,postcode_area,make,model,colour,fuel_type,"
+            "cylinder_capacity,first_use_date\n"
+            '1,10,2018-01-03,4,NT,P,1000,AB,LAND ROVER,"88\\"",GREEN,PE,2286,1983-01-01\n'
+            "2,11,2018-01-03,4,NT,F,2000,CD,FORD,FIESTA,BLUE,PE,1242,2005-11-01\n"
+        )
+        schema = schemas.detect_schema_for_file(str(f), "results")
+        assert schema.name == "results_csv" and schema.escape == "\\"
+        rows = con.execute(
+            f"SELECT model FROM {ingest_results._read_csv_clause(f, schema)} ORDER BY test_id"
+        ).fetchall()
+        assert rows[0][0] == '88"'
+        assert rows[1][0] == "FIESTA"
+
     def test_sample_smaller_than_population_regression(self, con):
         # Regression (2026-08-11, found live on 450M rows): USING SAMPLE inside
         # the grouped SELECT sampled RAW rows pre-aggregation, so any sample

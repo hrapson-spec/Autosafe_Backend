@@ -34,6 +34,7 @@ class SourceSchema:
     delimiter: str
     columns: Dict[str, str]
     notes: str = ""
+    escape: str = '"'              # 2018+ MTS chunk exports use backslash escapes
 
     @property
     def source_columns(self) -> frozenset:
@@ -71,6 +72,8 @@ REGISTRY: List[SourceSchema] = [
         columns=dict(_IDENTITY_RESULTS),
         notes="Comma-delimited variant (the frozen research tree's "
               "'MOT Test Results 24/test_result_*.csv' shape).",
+    
+        escape="\\",
     ),
     SourceSchema(
         name="items_mts",
@@ -93,6 +96,8 @@ REGISTRY: List[SourceSchema] = [
         delimiter=",",
         columns={c: c for c in ITEMS_CANONICAL},
         notes="Comma-delimited item variant.",
+    
+        escape="\\",
     ),
 ]
 
