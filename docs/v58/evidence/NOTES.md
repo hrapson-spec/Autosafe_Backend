@@ -64,3 +64,15 @@ the ruling.
   handles `.txt.gz` natively — the remote session may want to add that
   pattern to eliminate ~5 GB/yr transient expansion. Not changed locally
   (outside the §5 sanctioned tables).
+
+## Amendment (2026-08-11 21:10, owner-approved): dynamic-ledger start for final six years
+
+The calibration instrument's static formula (free >= remaining_lake + transient
++ floor, evaluated once) does not model mid-run space releases. With the last
+offload delete (+2.2 GiB) in flight and chunk-at-a-time processing measured at
+~2 GiB transient, the owner approved starting years 2018-2023 on the dynamic
+ledger: first three years covered by present free space, back half by the
+in-flight delete. Every floor guard and every proof gate (continuity, checks,
+reconciliation) unchanged; worst case is a floor-guarded auto-resuming pause,
+not a floor breach. Recorded openly as an amendment rather than silently
+overriding the instrument's ABORT.
