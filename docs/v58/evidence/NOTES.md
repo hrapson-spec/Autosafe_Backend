@@ -1,0 +1,55 @@
+# Local-agent execution notes (workstation phases)
+
+Machine-truth record for the remote session. Started 2026-08-11.
+
+## Environment record
+
+- Worktree of `claude/autosave-defects-history-xqutcw` at head `0a279bc`
+  (expected P0/P5a/P1/P2 stack verified). Python 3.11 venv; CV heavies
+  (ultralytics/paddle*/opencv) skipped per handover §1. Sanity gate:
+  **66/66 pipeline tests green** before any data work.
+- Workstation: Apple M3, **8 GB RAM** (runbook prerequisite is 16 GB) —
+  all lake tooling runs with `--memory-limit 4GB`; recorded as a deviation,
+  not a gate change. Internal disk 251 GB with ~12 GB free at start; owner
+  ruled out external drives — data phases run a staged architecture:
+  per-year download → ingest → delete archive (DVSA is the archive;
+  manifest sha chain makes any rebuild identity-provable), plus owner-approved
+  offload of cold research artifacts to owner's Google Drive.
+
+## Measured corpus sizing (see sizing_2026_08_11.md)
+
+Entire current release is **26.22 GB compressed** (results 19.43, items 6.78,
+lookup 0.25 MB). The runbook's 80–150 GB estimate matches the UNCOMPRESSED
+total, which the staged design never materializes at once. Full-depth lake
+projected ~31 GB at gz→parquet ratio 1.0 (ratio re-measured at first ingest).
+
+## ⚠ ESCALATION — the release ends at full-year 2023
+
+No 2024 or 2025 archives exist (CKAN catalogue, live data.gov.uk page, and
+direct URL probes all agree, 2026-08-11). Consequences needing remote+owner
+ruling — not decided locally:
+
+1. **D3 window**: "latest 5 full calendar years" of this release =
+   **2019-01-01 → 2023-12-31**, not the handover §4c's assumed 2021→2025.
+2. **Phase-3 recency gap**: training data would end 2023-12-31 while serving
+   scores histories through the present — a temporal variant of the very
+   skew v58 exists to remove. The remote session should reason about this
+   before the trainer design lands.
+
+Local behavior meanwhile: §4b window discovery proceeds (it targets the OLD
+artifact's window and is unaffected); the §4c fresh-window build waits for
+the ruling.
+
+## Deviations-with-rationale (execution level, model/data semantics untouched)
+
+- E1 fail-fast continuity probes after ingesting {2005,2006} and {2016,2017}
+  (the gz→zip format boundary): advisory reads of `multiyear_share` (the
+  designed tripwire) to stop early on a per-file ID reset. The FORMAL
+  full-depth `check --gate continuity` exit code remains the binding gate;
+  early probes are advisory because the 200–800-day median-gap band is
+  calibrated for full depth.
+- gz-era sources (2005–2016) are decompressed per-year before ingest because
+  `run_lake._source_files` globs only `*.csv|*.txt`. duckdb's `read_csv`
+  handles `.txt.gz` natively — the remote session may want to add that
+  pattern to eliminate ~5 GB/yr transient expansion. Not changed locally
+  (outside the §5 sanctioned tables).
