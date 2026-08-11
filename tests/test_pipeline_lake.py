@@ -279,3 +279,14 @@ class TestContinuityGate:
         self._seed(con, reset_ids=True)
         result = lake_checks.check_vehicle_continuity(con, "res", sample_size=1000)
         assert not result.passed, result.detail
+
+    def test_sample_smaller_than_population_regression(self, con):
+        # Regression (2026-08-11, found live on 450M rows): USING SAMPLE inside
+        # the grouped SELECT sampled RAW rows pre-aggregation, so any sample
+        # much smaller than the row count yielded ZERO multi-test vehicles and
+        # the gate could only fail. sample_size=50 << 1200 rows discriminates:
+        # the broken form fails with "no multi-test vehicles found in sample".
+        self._seed(con, reset_ids=False)
+        result = lake_checks.check_vehicle_continuity(con, "res", sample_size=50)
+        assert result.passed, result.detail
+        assert "no multi-test vehicles" not in result.detail

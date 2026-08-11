@@ -43,13 +43,21 @@ def check_vehicle_continuity(con, results_relation: str,
     - median inter-test gap: annual test discipline puts the median around
       365 days; a mixed/reset ID space distorts it wildly.
     """
+    # NOTE (2026-08-11 workstation): USING SAMPLE binds to the input scan in
+    # DuckDB, so placing it inside the grouped SELECT sampled RAW ROWS before
+    # aggregation — on a full-depth lake no vehicle has >=3 tests within a
+    # 10k-row sample of 450M, and the gate could only ever fail (verified
+    # live; unit fixtures were too small to expose it). Sampling now applies
+    # to the grouped multi-test-vehicle set, the documented intent. The three
+    # PASS thresholds are unchanged.
     sampled = f"""
     WITH multi AS (
-        SELECT vehicle_id
-        FROM {results_relation}
-        GROUP BY vehicle_id
-        HAVING count(*) >= 3
-        USING SAMPLE reservoir({sample_size} ROWS) REPEATABLE (42)
+        SELECT vehicle_id FROM (
+            SELECT vehicle_id
+            FROM {results_relation}
+            GROUP BY vehicle_id
+            HAVING count(*) >= 3
+        ) USING SAMPLE reservoir({sample_size} ROWS) REPEATABLE (42)
     )
     """
     row = con.execute(sampled + f"""
