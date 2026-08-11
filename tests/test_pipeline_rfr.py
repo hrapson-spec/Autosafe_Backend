@@ -119,6 +119,18 @@ class TestCategoryProjection:
         ("Lamps, Reflectors and Electrical Equipment",
          "Lamps_Reflectors_And_Electrical_Equipment"),
         ("Body, Chassis, Structure", "Body_Chassis_Structure"),
+        # 2026-08-11 release names (real item_group.csv top-level sections)
+        ("Body, Structure and General Items", "Body_Chassis_Structure"),
+        ("Brake Performance", "Brakes"),
+        ("Motor Tricycles and Quadricycles", None),
+        ("Seat Belts and Supplementary Restraint Systems", None),
+        ("Exhaust, Fuel and Emissions", None),
+        ("Towbars", None),
+        ("Buses and Coaches Supplementary Tests", None),
+        ("Seat Belt Installation Check", None),
+        ("Non-Component Advisories", None),
+        ("Driving Controls and Speed Limiters", None),
+        ("Items Not Tested", None),
         ("Seat Belts", None),              # explicit out-of-scope
         ("Never Heard Of It", None),       # unmapped -> None, counted by checks
         (None, None),

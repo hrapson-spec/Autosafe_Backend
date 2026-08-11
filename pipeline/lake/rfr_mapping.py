@@ -56,6 +56,10 @@ _SECTION_TO_CATEGORY: Dict[str, Optional[str]] = {
     "lamps reflectors electrical equipment": "Lamps_Reflectors_And_Electrical_Equipment",
     "body chassis structure": "Body_Chassis_Structure",
     "body structure and attachments": "Body_Chassis_Structure",
+    # 2026-08-11 release (item_group.csv ⋈ item_detail.csv, class 4): the
+    # current publication's actual top-level names for existing categories.
+    "body structure and general items": "Body_Chassis_Structure",
+    "brake performance": "Brakes",
     # Known out-of-scope top-level sections (explicit None = deliberate).
     "exhaust emissions": None,
     "fuel and exhaust": None,
@@ -66,6 +70,17 @@ _SECTION_TO_CATEGORY: Dict[str, Optional[str]] = {
     "identification of the vehicle": None,
     "supplementary restraint systems": None,
     "speedometer and speed limiter": None,
+    # 2026-08-11 release: out-of-scope sections observed in the real lookup
+    # tables (no corresponding artifact Risk_* column; explicit None).
+    "motor tricycles and quadricycles": None,
+    "seat belts and supplementary restraint systems": None,
+    "exhaust fuel and emissions": None,
+    "towbars": None,
+    "buses and coaches supplementary tests": None,
+    "seat belt installation check": None,   # singular variant; plural above
+    "non component advisories": None,
+    "driving controls and speed limiters": None,
+    "items not tested": None,
 }
 
 
