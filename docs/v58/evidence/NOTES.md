@@ -76,3 +76,31 @@ in-flight delete. Every floor guard and every proof gate (continuity, checks,
 reconciliation) unchanged; worst case is a floor-guarded auto-resuming pause,
 not a floor breach. Recorded openly as an amendment rather than silently
 overriding the instrument's ABORT.
+
+## Schedule variance ledger (exact, signed) — evidence-commit forecast
+
+Original central forecast (17:40 audit): **20:30**.
+
+Gross delays (+215 min):
+- +91  orchestration rework, avoidable (unresumable-partial loop 19; one-shot
+       waiter gap 11; parking saga — unmeasured premise, API-bound crawl,
+       dead-end sequencers 35; rename-shim archive corruption + stale-marker
+       loops 26)
+- +38  necessary repairs tonight, preventable at pipeline design level
+       (continuity gate sampling defect; 2018+ backslash-escape dialect stack
+       — both would have blocked any full-depth run; a first-contact
+       one-file probe per archive era would have surfaced them cheaply)
+- +60  physics/external (evening uplink congestion ~35; Drive shared-client
+       API pacer on small files ~25)
+- +26  necessary science + durable scope (checkpoint probe/calibration/cohort,
+       two sharding falsifiers, chunk-mode redesign, restore proof)
+
+Recovered/overlapped (−33 min, previously netted invisibly):
+- −8   marker-based skips + waiter recalibration made relaunches free
+- −9   prefetch-warm zip years beat the cadence model (43-56s vs 3.5min)
+- −13  cycles scans are 4-column columnar (~4-5GB) not whole-file — segment
+       re-modelled 25-40 → 12-25 min
+- −3   sharding falsifier pre-proven at N=16 (no re-proof at cycles time)
+
+**20:30 + 215 − 33 ≈ 23:32 → current central 23:35 (range 23:20-23:55; residual
+spread = shard timing + any §5 friction at the full gate).**
