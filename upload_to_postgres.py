@@ -1,10 +1,20 @@
 """
-Upload FINAL_MOT_REPORT.csv to Railway PostgreSQL.
+Upload the canonical comparison artifact to Railway PostgreSQL.
+
+Reads prod_data_clean.csv.gz -- the SAME artifact build_db.py loads into
+SQLite. Historically this script read FINAL_MOT_REPORT.csv (an
+uncompressed predecessor that no code in this repo produces and that is
+not checked in), so Postgres and SQLite were loaded from two different
+files with no proven relationship, while docs/DATABASE.md required them to
+stay arithmetically equivalent. One artifact, one row set; prove it with
+pipeline/aggregates/parity_pg_sqlite.py after loading.
+
 Run locally with: DATABASE_URL="postgresql://..." python upload_to_postgres.py
 """
 import os
 import sys
 import csv
+import gzip
 import re
 
 # Increase CSV field size limit for large fields
@@ -27,9 +37,21 @@ DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 import psycopg2
 from psycopg2.extras import execute_values
 
-CSV_FILE = "FINAL_MOT_REPORT.csv"
+CSV_FILE = "prod_data_clean.csv.gz"
 TABLE_NAME = "mot_risk"
 CHUNK_SIZE = 10000
+# mot_risk.model_id is VARCHAR(255). The aggregate builder already drops
+# overlong ids and logs the count; this stays as a defensive backstop, but
+# a non-zero skip count here now means the artifact and the table would
+# disagree -- parity_pg_sqlite.py will fail, which is the intent.
+MAX_MODEL_ID_LEN = 255
+
+
+def open_artifact(path):
+    """Open the artifact whether or not it is gzipped."""
+    if str(path).endswith(".gz"):
+        return gzip.open(path, "rt", encoding="utf-8", newline="")
+    return open(path, "r", encoding="utf-8", newline="")
 
 def sanitize_column_name(name):
     """Convert CSV header to valid PostgreSQL column name."""
@@ -47,7 +69,7 @@ def main():
     cur = conn.cursor()
     
     # Read CSV header
-    with open(CSV_FILE, 'r', encoding='utf-8') as f:
+    with open_artifact(CSV_FILE) as f:
         reader = csv.reader(f)
         raw_headers = next(reader)
     
@@ -88,7 +110,7 @@ def main():
     print(f"Reading {CSV_FILE}...")
     total_rows = 0
     
-    with open(CSV_FILE, 'r', encoding='utf-8') as f:
+    with open_artifact(CSV_FILE) as f:
         reader = csv.reader(f)
         next(reader)  # Skip header
         
@@ -96,7 +118,7 @@ def main():
         skipped = 0
         for row in reader:
             # Skip rows with extremely long model_id (corrupted data)
-            if len(row[0]) > 255:
+            if len(row[0]) > MAX_MODEL_ID_LEN:
                 skipped += 1
                 continue
                 
@@ -105,7 +127,7 @@ def main():
             for i, val in enumerate(row):
                 if i < 3:
                     # Truncate text fields to 255 chars
-                    processed_row.append(val[:255] if val else "")
+                    processed_row.append(val[:MAX_MODEL_ID_LEN] if val else "")
                 elif i < 5:
                     processed_row.append(int(float(val)) if val else 0)
                 else:

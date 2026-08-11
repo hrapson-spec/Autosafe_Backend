@@ -13,19 +13,39 @@ import os
 
 DB_FILE = 'autosafe.db'
 
-# Age band to approximate age mapping (use midpoint of range)
+# Age band to approximate age mapping (midpoint of range).
+#
+# Keys MUST be the bands utils.get_age_band actually emits -- which is what
+# the artifact contains. This table previously carried '0-3', '10-15' and
+# '10+', none of which any band function ever produces, so only 3 of the 6
+# real bands ever mapped and every '0-2'/'11-15' row was silently dropped
+# from the production-year estimate.
 AGE_BAND_TO_YEARS = {
-    '0-3': 1,      # ~1 year old on average
+    '0-2': 1,      # ~1 year old on average
     '3-5': 4,      # ~4 years old on average
     '6-10': 8,     # ~8 years old on average
-    '10-15': 12,   # ~12 years old on average
-    '10+': 12,     # Same as 10-15
+    '11-15': 13,   # ~13 years old on average
     '15+': 18,     # ~18 years old on average
     'Unknown': None
 }
 
-# Assume MOT data is from tests conducted in 2024 (adjust if needed)
-TEST_YEAR = 2024
+# Reference year for "how old is a vehicle in this band". Derived from the
+# artifact's pinned coverage window when report_contract exposes one (v58
+# regeneration sets DATASET_COVERAGE_END); the literal fallback keeps this
+# script working against the pre-v58 artifact, which encodes no coverage
+# period at all.
+_FALLBACK_TEST_YEAR = 2024
+
+
+def _resolve_test_year() -> int:
+    try:
+        from report_contract import DATASET_COVERAGE_END  # type: ignore
+        return int(str(DATASET_COVERAGE_END)[:4])
+    except Exception:
+        return _FALLBACK_TEST_YEAR
+
+
+TEST_YEAR = _resolve_test_year()
 
 
 def populate_model_years():
