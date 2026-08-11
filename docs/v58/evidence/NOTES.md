@@ -48,6 +48,17 @@ the ruling.
   full-depth `check --gate continuity` exit code remains the binding gate;
   early probes are advisory because the 200–800-day median-gap band is
   calibrated for full depth.
+- **Cycles build executed vehicle-sharded (8-way), not monolithic** — measured
+  necessity, not preference: a 7-year monolithic `build-cycles` probe ENOSPC'd
+  its duckdb spill temp (>13 GiB demand; full depth ≈35 GiB vs ≤20 GiB free on
+  this machine). The sharded path runs `pipeline.lake.cycles.build_cycles_sql`
+  VERBATIM over `vehicle_id % 8` slices (cycles are per-vehicle independent,
+  mirroring `assign_cycles`' by_vehicle structure). Equivalence falsifier:
+  monolithic vs sharded on a `vehicle_id % 61 == 0` subsample (spreads across
+  all shards) — 3,543,912 rows, `EXCEPT` both directions = 0
+  (`sharded_cycles_VERDICT.txt`; tool `sharded_cycles.py` refuses to run
+  without a PASS on record). Same SQL, same gap_days, same output schema and
+  partitioning; only the execution plan differs.
 - gz-era sources (2005–2016) are decompressed per-year before ingest because
   `run_lake._source_files` globs only `*.csv|*.txt`. duckdb's `read_csv`
   handles `.txt.gz` natively — the remote session may want to add that
