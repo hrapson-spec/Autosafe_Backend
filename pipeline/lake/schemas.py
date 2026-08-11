@@ -145,3 +145,22 @@ def detect_schema_for_file(path: str, kind: str) -> SourceSchema:
         first_line = f.readline()
     delimiter, fields = sniff_header(first_line)
     return detect_schema(fields, kind, delimiter)
+
+
+def sniff_escape(path: str, default: str = '"', sample_bytes: int = 4_000_000) -> str:
+    """Per-file escape-convention detection (2026-08-11): the nominal
+    comma epoch spans at least two real conventions — 2018-2021 chunk
+    exports use backslash-escaped quotes, 2022+ timestamped exports use
+    standard doubled quotes. Headers are identical, so the registry cannot
+    discriminate statically; the file's own bytes decide, falling back to
+    the registry default when neither marker appears."""
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read(sample_bytes)
+    except OSError:
+        return default
+    if data.count(rb'\"') > 0:
+        return "\\"
+    if data.count(b'""') > 0:
+        return '"'
+    return default

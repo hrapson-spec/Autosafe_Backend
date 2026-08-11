@@ -47,7 +47,7 @@ def _read_csv_clause(path: Path, schema: schemas.SourceSchema) -> str:
     cols = ", ".join(f"'{c}': 'VARCHAR'" for c in schema.columns)
     return (
         f"read_csv('{path.as_posix()}', delim='{schema.delimiter}', header=true, "
-        f"columns={{{cols}}}, quote='\"', escape='{schema.escape}', "
+        f"columns={{{cols}}}, quote='\"', escape='{schemas.sniff_escape(path.as_posix(), schema.escape)}', "
         f"null_padding=true, strict_mode=false, auto_type_candidates=['VARCHAR'], "
         f"parallel=false)"
     )
