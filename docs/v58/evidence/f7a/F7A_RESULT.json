@@ -1,0 +1,383 @@
+{
+ "date": "2026-08-12",
+ "design": "F7a self-differential DESC-vs-ASC tie order",
+ "module_repo_head": "38203e4fba108ea22d9e331b984d8f7c552814a3",
+ "population": {
+  "targets_with_priors": 983407,
+  "exposed_within_day_tie": 366268,
+  "exposed_share": 0.37245
+ },
+ "sample": {
+  "exposed": {
+   "n": 4000,
+   "any_diff": 2604
+  },
+  "control": {
+   "n": 1000,
+   "any_diff": 0
+  }
+ },
+ "exposed_any_diff_rate": 0.651,
+ "control_any_diff_rate": 0.0,
+ "harness_valid": true,
+ "per_feature_diff_counts": {
+  "neglect_score_tyres": 998,
+  "fail_rate_trend": 992,
+  "tests_since_last_failure_tyres": 970,
+  "neglect_score_brakes": 900,
+  "prev_cycle_outcome_band": 884,
+  "tests_since_last_failure_brakes": 853,
+  "neglect_score_suspension": 688,
+  "tests_since_last_failure_suspension": 667,
+  "severity_escalation_flag": 638,
+  "days_late": 431,
+  "mdps_score": 431,
+  "advisory_trend": 281,
+  "failure_streak_len_tyres": 254,
+  "tests_since_last_advisory_tyres": 246,
+  "tests_since_last_advisory_brakes": 221,
+  "failure_streak_len_brakes": 211,
+  "failure_streak_len_suspension": 210,
+  "has_prior_failure_tyres": 122,
+  "has_prior_failure_brakes": 109,
+  "advisory_streak_len_brakes": 102,
+  "advisory_streak_len_tyres": 88,
+  "has_prior_failure_suspension": 83,
+  "advisory_in_last_1_tyres": 70,
+  "advisory_in_last_1_brakes": 70,
+  "tests_since_last_advisory_suspension": 51,
+  "advisory_in_last_2_tyres": 44,
+  "test_mileage": 41,
+  "advisory_in_last_2_brakes": 38,
+  "advisory_streak_len_suspension": 31,
+  "annualized_mileage_v2": 28,
+  "commercial_wear_proxy": 28,
+  "advisory_in_last_1_suspension": 23,
+  "advisory_in_last_2_suspension": 11,
+  "miles_since_last_advisory_tyres": 7,
+  "has_prev_mileage": 4,
+  "mileage_plausible_flag": 4,
+  "miles_since_last_advisory_suspension": 3,
+  "usage_band_hybrid": 3
+ },
+ "numeric_mean_abs_delta": {
+  "has_prior_failure_brakes": 1.0,
+  "failure_streak_len_brakes": 1.0,
+  "tests_since_last_failure_brakes": 1.003517,
+  "has_prior_failure_suspension": 1.0,
+  "failure_streak_len_suspension": 1.0,
+  "tests_since_last_failure_suspension": 1.004498,
+  "neglect_score_brakes": 0.169367,
+  "neglect_score_suspension": 0.198924,
+  "days_late": 55.740139,
+  "mdps_score": 0.152713,
+  "has_prior_failure_tyres": 1.0,
+  "failure_streak_len_tyres": 1.003937,
+  "tests_since_last_failure_tyres": 1.003093,
+  "neglect_score_tyres": 0.136072,
+  "fail_rate_trend": 1.552419,
+  "severity_escalation_flag": 1.0,
+  "annualized_mileage_v2": 821.425695,
+  "commercial_wear_proxy": 0.05447,
+  "advisory_streak_len_tyres": 1.0,
+  "tests_since_last_advisory_brakes": 1.0,
+  "tests_since_last_advisory_tyres": 1.004065,
+  "advisory_in_last_1_tyres": 1.0,
+  "advisory_in_last_2_tyres": 1.0,
+  "test_mileage": 3196.804878,
+  "advisory_in_last_1_brakes": 1.0,
+  "advisory_streak_len_brakes": 1.019608,
+  "advisory_in_last_2_brakes": 1.0,
+  "tests_since_last_advisory_suspension": 1.0,
+  "advisory_in_last_1_suspension": 1.0,
+  "advisory_streak_len_suspension": 1.0,
+  "advisory_in_last_2_suspension": 1.0,
+  "has_prev_mileage": 1.0,
+  "mileage_plausible_flag": 1.0,
+  "miles_since_last_advisory_tyres": 2743.428571,
+  "miles_since_last_advisory_suspension": 3546.0
+ },
+ "examples": [
+  {
+   "tgt_id": 380085,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "fail",
+     "pass"
+    ],
+    "advisory_trend": [
+     "increasing",
+     "decreasing"
+    ],
+    "has_prior_failure_brakes": [
+     1,
+     0
+    ],
+    "failure_streak_len_brakes": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_brakes": [
+     0,
+     1
+    ],
+    "has_prior_failure_suspension": [
+     1,
+     0
+    ],
+    "failure_streak_len_suspension": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_suspension": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "tgt_id": 920407,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "fail",
+     "pass"
+    ],
+    "has_prior_failure_tyres": [
+     1,
+     0
+    ],
+    "failure_streak_len_tyres": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_tyres": [
+     0,
+     1
+    ],
+    "neglect_score_tyres": [
+     0.9500000000000001,
+     0.5700000000000001
+    ]
+   }
+  },
+  {
+   "tgt_id": 1207485,
+   "grp": "exposed",
+   "diffs": {
+    "fail_rate_trend": [
+     1,
+     -1
+    ],
+    "severity_escalation_flag": [
+     1,
+     0
+    ],
+    "annualized_mileage_v2": [
+     689.8901098901099,
+     687.8846153846154
+    ],
+    "commercial_wear_proxy": [
+     0.8950155688751371,
+     0.8948279446217104
+    ]
+   }
+  },
+  {
+   "tgt_id": 1274303,
+   "grp": "exposed",
+   "diffs": {
+    "advisory_streak_len_tyres": [
+     1,
+     2
+    ],
+    "tests_since_last_failure_brakes": [
+     2,
+     1
+    ],
+    "neglect_score_brakes": [
+     0.15,
+     0.17
+    ],
+    "neglect_score_tyres": [
+     0.2,
+     0.4
+    ]
+   }
+  },
+  {
+   "tgt_id": 1614217,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "fail",
+     "pass"
+    ],
+    "failure_streak_len_suspension": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_suspension": [
+     0,
+     1
+    ],
+    "neglect_score_suspension": [
+     0.53,
+     0.06
+    ]
+   }
+  },
+  {
+   "tgt_id": 2573415,
+   "grp": "exposed",
+   "diffs": {
+    "fail_rate_trend": [
+     1,
+     0
+    ],
+    "severity_escalation_flag": [
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "tgt_id": 3759999,
+   "grp": "exposed",
+   "diffs": {
+    "fail_rate_trend": [
+     -1,
+     1
+    ],
+    "severity_escalation_flag": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "tgt_id": 5196645,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "fail",
+     "pass"
+    ],
+    "advisory_trend": [
+     "increasing",
+     "decreasing"
+    ],
+    "tests_since_last_advisory_brakes": [
+     3,
+     2
+    ],
+    "tests_since_last_advisory_tyres": [
+     0,
+     1
+    ],
+    "advisory_in_last_1_tyres": [
+     1,
+     0
+    ],
+    "advisory_streak_len_tyres": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_brakes": [
+     3,
+     2
+    ],
+    "failure_streak_len_tyres": [
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "tgt_id": 5382063,
+   "grp": "exposed",
+   "diffs": {
+    "fail_rate_trend": [
+     1,
+     -1
+    ],
+    "tests_since_last_failure_tyres": [
+     1,
+     2
+    ],
+    "neglect_score_tyres": [
+     -0.03,
+     -0.06
+    ],
+    "severity_escalation_flag": [
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "tgt_id": 7297703,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "fail",
+     "pass"
+    ],
+    "advisory_trend": [
+     "increasing",
+     "decreasing"
+    ],
+    "tests_since_last_advisory_tyres": [
+     2,
+     3
+    ],
+    "has_prior_failure_brakes": [
+     1,
+     0
+    ],
+    "failure_streak_len_brakes": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_brakes": [
+     0,
+     1
+    ],
+    "failure_streak_len_tyres": [
+     1,
+     0
+    ],
+    "tests_since_last_failure_tyres": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "tgt_id": 7451639,
+   "grp": "exposed",
+   "diffs": {
+    "prev_cycle_outcome_band": [
+     "pass",
+     "fail"
+    ]
+   }
+  },
+  {
+   "tgt_id": 7580927,
+   "grp": "exposed",
+   "diffs": {
+    "tests_since_last_failure_tyres": [
+     5,
+     4
+    ],
+    "neglect_score_tyres": [
+     -0.15,
+     -0.12
+    ]
+   }
+  }
+ ],
+ "next": "if exposed_any_diff_rate > 0: F7b full re-stream + seed0/seed1 rescore vs 0.002052"
+}
