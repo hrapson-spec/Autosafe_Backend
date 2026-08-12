@@ -165,7 +165,7 @@ freeze's quarantine add no marginal damage.
 | F2 (aggregate invariance to #16) | RETIRED by REPLACE-D7 (target no longer cycle-derived) | — |
 | F3 (gate power) | Computation done (n=50k threshold); empirical rerun deferred, folded into the owner-lane gate re-verification | — |
 | F5 (order-invariance sweep) | DEFERRED (needs DuckDB; box constrained) | — |
-| **F7 (fulldepth tie-rule materiality)** | **DEFERRED — the decisive one.** Re-stream a bounded packet sample with `p_test_id ASC`, recompute 104 features, diff | Open path to SVAR |
+| **F7a (fulldepth tie-rule materiality)** | **EXECUTED 2026-08-12 08:4x** (box idle; per-PID spill; module 38203e4) | See addendum 2 — order-dependence PROVEN at feature level; ΔAUC still needs F7b |
 | F8 (repair vacuous time_travel_test, run) | Repair diff specified; run deferred (fixtures scan DEV_SET via DuckDB) | Downgraded in urgency by C-iv (no reliance) |
 
 Discriminator outcome: (i) unmeasured — not triggered; (ii) refuted by C-iv; (iii)
@@ -302,6 +302,38 @@ Between report drafting and commit, the fix sessions advanced the repair queue:
   Design note: F7 measures ASC-vs-DESC tie-order feature diffs under ONE module
   version (self-differential), deliberately not a diff against the banked frame —
   module drift would confound that; the tie-rule effect is isolated by construction.
+
+## Addendum 2 — F7a executed (2026-08-12, after commit e7e8072)
+
+The watcher fired (items runner had ESCALATED on year 2013 — box idle, 12.5 GiB
+free); preflight passed; F7a ran once. Result (`F7A_RESULT.json`, scratchpad;
+harness VALID — 0/1,000 tie-free controls differ):
+
+- **Exposed population is 37.24%** of h1 targets-with-priors (366,268 / 983,407
+  have >=2 priors sharing a calendar day) — much larger than the 11.97%
+  max-date-only figure, because positional features see ties on ANY prior day.
+- **65.1% of exposed targets (2,604/4,000) change at least one of the 104
+  features when the same-day tie order is reversed** (`p_test_id DESC` -> `ASC`,
+  same module, same data). Scaled: **~24% of ALL targets-with-priors in the
+  canonical fulldepth frame carry tie-order-dependent feature vectors** (~238k
+  of 983k in h1 alone).
+- 38 features move; the changes are categorical flips and unit-scale jumps, not
+  epsilon noise: `prev_cycle_outcome_band` flips fail<->pass on 884/4,000
+  exposed; `fail_rate_trend` mean |delta| 1.55; `has_prior_failure_{brakes,tyres,
+  suspension}` flip 0<->1; `advisory_trend` flips increasing<->decreasing;
+  `days_late` mean |delta| 55.7 days; `tests_since_last_failure_*` and the
+  neglect scores shift accordingly.
+
+**Verdict impact:** the pre-registered discriminator requires metric-level
+propagation (> 0.002052 on a reported metric) for SCIENTIFIC VALIDITY AT RISK.
+F7a proves feature-level order-dependence at scale but not the AUC delta — the
+frame is internally consistent (every arm saw the same DESC realization), so
+reported *comparisons* still stand. The verdict therefore REMAINS **MATERIAL
+SIBLINGS FOUND**, with the fulldepth-absolutes caveat now QUANTIFIED rather than
+open: a quarter of the frame's feature vectors are artifacts of an undecided
+tie rule. **F7b** (full re-stream under the decided rule + seed0/seed1 rescore,
+ΔAUC vs 0.002052) is the single remaining discriminator input and is
+owner-scheduled (~2-3 h compute; needs the box).
 
 ## 16. What the main engineer should do next (dependency order)
 
