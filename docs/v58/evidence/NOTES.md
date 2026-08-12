@@ -265,3 +265,16 @@ of the unverified-attribution failure class this record repeatedly documents.
   builds HELD behind gates G2/G4 (charter).
 - Generic-member collision (2023 items reuses test_item.csv): resolved by
   year-disambiguated extraction; earlier record's lineage intact.
+
+## Post-close addendum (2026-08-12): lake relocated (owner ruling)
+
+Owner directed consolidation: the lake moved from `~/autosafe_lake` to
+`~/autosafe/autosafe_lake` (plain rename, same volume). Verified post-move:
+manifest + `results_PARKED` sentinel present; results read 354,057,034 rows
+across the 9 local years. Guard: `autosafe_lake/` added to the repo's local
+`.git/info/exclude` (applies to all worktrees; never a tracked-file change),
+so the lake is invisible to git and `add -A` cannot stage it. No pipeline
+default referenced the old path (`--lake-dir` is required-explicit); any
+older command transcripts in this evidence record cite the pre-move path.
+Restore target for parked years 2005-2014 is now
+`~/autosafe/autosafe_lake/results/`.

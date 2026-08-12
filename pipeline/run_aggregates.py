@@ -6,7 +6,7 @@ gates against the OLD artifact's vocabulary/match-rate, and exports the
 canonical prod_data_clean.csv.gz + provenance sidecar.
 
     python -m pipeline.run_aggregates \
-        --lake-dir ~/autosafe_lake \
+        --lake-dir ~/autosafe/autosafe_lake \
         --coverage-start 2021-01-01 --coverage-end 2025-12-31 \
         --old-artifact prod_data_clean.csv.gz \
         --expect-rate 0.269139638817903 --reconciliation-tolerance 0.02 \
