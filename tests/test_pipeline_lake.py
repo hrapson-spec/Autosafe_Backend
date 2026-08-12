@@ -18,6 +18,7 @@ duckdb = pytest.importorskip("duckdb")
 
 from pipeline.lake import checks as lake_checks  # noqa: E402
 from pipeline.lake import normalize, schemas  # noqa: E402
+from pipeline.lake import cycles as lake_cycles  # noqa: E402
 from pipeline.lake.cycles import assign_cycles, build_cycles_sql  # noqa: E402
 from pipeline.lake.ingest_items import (  # noqa: E402
     ingest_items_file,
@@ -113,26 +114,26 @@ class TestNormalize:
 class TestCycles:
     CASES = [
         # fail then retest inside gap -> one cycle, outcome of the retest
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 3, 8), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 3, 8), "PASS", "RT")],
              expect_cycles=1, expect_outcomes=["PASS"]),
         # pass then pass -> two cycles regardless of gap
-        dict(tests=[(1, date(2019, 3, 1), "PASS"), (2, date(2019, 3, 8), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "PASS", "NT"), (2, date(2019, 3, 8), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["PASS", "PASS"]),
         # fail then retest OUTSIDE gap -> two cycles
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 6, 1), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 6, 1), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["FAIL", "PASS"]),
         # PRS closes its cycle (it is a pass with rectified defects)
-        dict(tests=[(1, date(2019, 3, 1), "PRS"), (2, date(2019, 3, 5), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "PRS", "NT"), (2, date(2019, 3, 5), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["PRS", "PASS"]),
         # fail -> abandoned within gap stays in the cycle; outcome = last definitive
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 3, 10), "ABANDONED")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 3, 10), "ABANDONED", "RT")],
              expect_cycles=1, expect_outcomes=["FAIL"]),
     ]
 
     @pytest.mark.parametrize("case", CASES)
     def test_python_rule(self, case):
-        rows = [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o)
-                for t, d, o in case["tests"]]
+        rows = [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o, test_type=tt)
+                for t, d, o, tt in case["tests"]]
         assigned = assign_cycles(rows)
         cycle_ids = sorted({r.cycle_id for r in assigned})
         assert len(cycle_ids) == case["expect_cycles"]
@@ -142,9 +143,9 @@ class TestCycles:
 
     def test_prev_cycle_linkage(self):
         rows = [
-            dict(test_id=1, vehicle_id=1, test_date=date(2019, 3, 1), outcome="FAIL"),
-            dict(test_id=2, vehicle_id=1, test_date=date(2019, 3, 8), outcome="PASS"),
-            dict(test_id=3, vehicle_id=1, test_date=date(2020, 3, 20), outcome="PASS"),
+            dict(test_id=1, vehicle_id=1, test_date=date(2019, 3, 1), outcome="FAIL", test_type="NT"),
+            dict(test_id=2, vehicle_id=1, test_date=date(2019, 3, 8), outcome="PASS", test_type="RT"),
+            dict(test_id=3, vehicle_id=1, test_date=date(2020, 3, 20), outcome="PASS", test_type="NT"),
         ]
         assigned = {r.test_id: r for r in assign_cycles(rows)}
         assert assigned[3].prev_cycle_test_id == 2
@@ -157,17 +158,18 @@ class TestCycles:
         # cycle must take the FINAL-BY-DATE outcome (PASS) and the first-by-
         # date cycle_id (100); the old min/max(test_id) twin flipped both.
         rows = [
-            (100, 1, date(2019, 3, 1), "FAIL"), (50, 1, date(2019, 3, 8), "PASS"),
-            (900, 2, date(2020, 1, 5), "FAIL"), (20, 2, date(2020, 1, 15), "FAIL"),
-            (7, 2, date(2020, 1, 20), "PRS"),
-            (300, 3, date(2021, 6, 1), "ABANDONED"), (8, 3, date(2021, 6, 9), "ABORTED"),
+            (100, 1, date(2019, 3, 1), "FAIL", "NT"), (50, 1, date(2019, 3, 8), "PASS", "RT"),
+            (900, 2, date(2020, 1, 5), "FAIL", "NT"), (20, 2, date(2020, 1, 15), "FAIL", "RT"),
+            (7, 2, date(2020, 1, 20), "PRS", "RT"),
+            (300, 3, date(2021, 6, 1), "ABANDONED", "NT"), (8, 3, date(2021, 6, 9), "ABORTED", "NT"),
         ]
         con.execute("CREATE TABLE res2 (test_id BIGINT, vehicle_id BIGINT, "
-                    "test_date DATE, outcome VARCHAR)")
-        con.executemany("INSERT INTO res2 VALUES (?, ?, ?, ?)", rows)
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res2 VALUES (?, ?, ?, ?, ?)", rows)
         sql_rows = {r[0]: r for r in con.execute(build_cycles_sql("res2")).fetchall()}
         py_rows = {r.test_id: r for r in assign_cycles(
-            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o) for t, v, d, o in rows])}
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows])}
         assert set(sql_rows) == set(py_rows)
         for tid, py in py_rows.items():
             sq = sql_rows[tid]
@@ -188,20 +190,20 @@ class TestCycles:
 
     def test_sql_twin_equivalence(self, con):
         rows = [
-            (1, 1, date(2019, 3, 1), "FAIL"), (2, 1, date(2019, 3, 8), "PASS"),
-            (3, 1, date(2020, 3, 20), "PASS"),
-            (10, 2, date(2019, 5, 1), "PASS"), (11, 2, date(2020, 5, 3), "FAIL"),
-            (12, 2, date(2020, 5, 20), "FAIL"), (13, 2, date(2020, 6, 1), "PASS"),
+            (1, 1, date(2019, 3, 1), "FAIL", "NT"), (2, 1, date(2019, 3, 8), "PASS", "RT"),
+            (3, 1, date(2020, 3, 20), "PASS", "NT"),
+            (10, 2, date(2019, 5, 1), "PASS", "NT"), (11, 2, date(2020, 5, 3), "FAIL", "NT"),
+            (12, 2, date(2020, 5, 20), "FAIL", "RT"), (13, 2, date(2020, 6, 1), "PASS", "RT"),
         ]
         con.execute("CREATE TABLE res (test_id BIGINT, vehicle_id BIGINT, "
-                    "test_date DATE, outcome VARCHAR)")
-        con.executemany("INSERT INTO res VALUES (?, ?, ?, ?)", rows)
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res VALUES (?, ?, ?, ?, ?)", rows)
         sql_rows = {
             r[0]: r for r in con.execute(build_cycles_sql("res")).fetchall()
         }
         py_rows = {r.test_id: r for r in assign_cycles(
-            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o)
-             for t, v, d, o in rows]
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows]
         )}
         assert set(sql_rows) == set(py_rows)
         for test_id, py in py_rows.items():
@@ -212,6 +214,116 @@ class TestCycles:
             assert sql[5] == py.prev_cycle_test_id, test_id
             assert sql[6] == py.prev_cycle_outcome, test_id
             assert sql[7] == py.days_since_prev_cycle, test_id
+
+
+class TestChronologyD13:
+    """Falsifiers for decision D13: the within-day semantic order.
+
+    These are the tests that would have caught defect #18 originally:
+    non-monotone ids, shuffled physical order, and same-day ties must never
+    change cycle assignment.
+    """
+
+    def _rows(self, spec):
+        return [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o, test_type=tt)
+                for t, d, o, tt in spec]
+
+    def test_same_day_retest_id_inversion(self):
+        # Defect #18 shape: the RT carries a LOWER id than the NT that caused
+        # it (measured: 43,403/43,791 orphaned RTs). Under (date, id) order
+        # the retest sorted first and split the day into two cycles; under
+        # D13 the NT-FAIL leads and the day is ONE cycle resolving to PASS.
+        for ids in [(999, 100), (100, 999)]:  # both id orders, same answer
+            nt, rt = ids
+            rows = self._rows([(nt, date(2019, 3, 1), "FAIL", "NT"),
+                               (rt, date(2019, 3, 1), "PASS", "RT")])
+            assigned = {r.test_id: r for r in assign_cycles(rows)}
+            assert len({r.cycle_id for r in assigned.values()}) == 1
+            assert assigned[nt].is_cycle_first
+            assert not assigned[rt].is_cycle_first
+            assert assigned[nt].cycle_id == nt
+            assert assigned[nt].cycle_outcome == "PASS"
+
+    def test_same_day_two_full_tests_outcome_rank_decides(self):
+        # Two NTs on one day, FAIL carrying the higher id: outcome_rank puts
+        # the FAIL first (a failure precedes its same-day resolution), so the
+        # day collapses to one cycle ending PASS -- for either id order.
+        for fail_id, pass_id in [(11, 10), (10, 11)]:
+            rows = self._rows([(fail_id, date(2019, 3, 1), "FAIL", "NT"),
+                               (pass_id, date(2019, 3, 1), "PASS", "NT")])
+            assigned = {r.test_id: r for r in assign_cycles(rows)}
+            assert assigned[fail_id].is_cycle_first
+            assert assigned[fail_id].cycle_outcome == "PASS"
+            assert len({r.cycle_id for r in assigned.values()}) == 1
+
+    def test_interrupted_attempt_precedes_completion(self):
+        # ABORTED (equipment failure) then the completed FAIL, same day: the
+        # non-result ranks first; ABORTED never opens a prev-FAIL link, so
+        # both rows share the cycle only if a FAIL precedes -- here the
+        # ABORTED leads, the FAIL starts its own cycle.
+        rows = self._rows([(5, date(2019, 3, 1), "ABORTED", "NT"),
+                           (9, date(2019, 3, 1), "FAIL", "NT")])
+        assigned = {r.test_id: r for r in assign_cycles(rows)}
+        assert assigned[5].is_cycle_first and assigned[9].is_cycle_first
+
+    def test_shuffled_input_order_cannot_alter_assignment(self):
+        import random
+        rows = self._rows([
+            (100, date(2019, 3, 1), "FAIL", "NT"), (50, date(2019, 3, 1), "PASS", "RT"),
+            (70, date(2019, 6, 2), "FAIL", "NT"), (71, date(2019, 6, 20), "PASS", "RT"),
+            (90, date(2020, 6, 10), "PASS", "NT"),
+        ])
+        baseline = assign_cycles([dict(r) for r in rows])
+        rng = random.Random(18)
+        for _ in range(8):
+            shuffled = [dict(r) for r in rows]
+            rng.shuffle(shuffled)
+            assert assign_cycles(shuffled) == baseline
+
+    def test_duplicate_test_id_fails_loud(self):
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "NT"),
+                           (1, date(2019, 3, 8), "PASS", "RT")])
+        with pytest.raises(ValueError, match="duplicate test_id"):
+            assign_cycles(rows)
+
+    def test_unknown_test_type_fails_loud(self):
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "XX")])
+        with pytest.raises(KeyError):
+            assign_cycles(rows)
+
+    def test_sql_twin_same_day_adversarial(self, con):
+        # The same-day inversions, through the SQL twin, asserted equal to
+        # the rule of record on every CycleRow column.
+        rows = [
+            (999, 1, date(2019, 3, 1), "FAIL", "NT"), (100, 1, date(2019, 3, 1), "PASS", "RT"),
+            (11, 2, date(2020, 5, 3), "FAIL", "NT"), (10, 2, date(2020, 5, 3), "PASS", "NT"),
+            (5, 3, date(2021, 1, 4), "ABORTED", "NT"), (9, 3, date(2021, 1, 4), "FAIL", "NT"),
+            (8, 3, date(2021, 1, 12), "PASS", "RT"),
+        ]
+        con.execute("CREATE TABLE res3 (test_id BIGINT, vehicle_id BIGINT, "
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res3 VALUES (?, ?, ?, ?, ?)", rows)
+        sql_rows = {r[0]: r for r in con.execute(build_cycles_sql("res3")).fetchall()}
+        py_rows = {r.test_id: r for r in assign_cycles(
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows])}
+        assert set(sql_rows) == set(py_rows)
+        for tid, py in py_rows.items():
+            sq = sql_rows[tid]
+            assert sq[2] == py.cycle_id and bool(sq[3]) == py.is_cycle_first
+            assert sq[4] == py.cycle_outcome and sq[5] == py.prev_cycle_test_id
+        assert py_rows[999].cycle_outcome == "PASS" and py_rows[999].is_cycle_first
+
+    def test_generated_sql_never_orders_by_bare_test_id(self):
+        # AST-regex gate (pattern from the blast-radius w3 acceptance): no
+        # window in the twin may use test_id as chronology. It may appear
+        # only inside the full D13 key.
+        import re
+        sql = build_cycles_sql("t")
+        assert "row(test_date, test_id)" not in sql
+        assert re.search(r"ORDER BY test_date, test_id\b", sql) is None
+        assert sql.count(lake_cycles.CHRONOLOGY_ROW_SQL) >= 3
+        assert sql.count("ORDER BY " + lake_cycles.CHRONOLOGY_ORDER_SQL) >= 2
 
 
 class TestIngestEndToEnd:

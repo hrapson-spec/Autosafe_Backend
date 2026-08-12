@@ -5,8 +5,12 @@ depresses the failure rate, which is why the lost pipeline kept
 cycle_history/ and cycle_history_dedup_dataset/ trees. This module rebuilds
 that logic in-repo, deterministically.
 
-Cycle rule (decision D7, docs/v58/DECISIONS.md):
-- ordering is per vehicle by (test_date, test_id);
+Cycle rule (decisions D7 + D13, docs/v58/DECISIONS.md):
+- ordering is per vehicle by the SEMANTIC chronology key
+  (test_date, type_rank, outcome_rank, test_id) — see chronology_key().
+  test_id is a determinism tiebreak ONLY: within a day it agrees with
+  outcome order 49.91% of the time (= chance, measured 2026-08-12), so it
+  must never carry chronological meaning (decision D13);
 - a test CONTINUES the previous cycle iff the previous test's canonical
   outcome was FAIL and the gap is <= gap_days (default 45: the free-retest
   window is 10 working days, but paid partial retests within a repair
@@ -25,9 +29,35 @@ Both implementations below are asserted equivalent in tests:
 - build_cycles_sql(): the DuckDB window-function twin used in production.
 """
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple
 
 DEFAULT_CYCLE_GAP_DAYS = 45
+
+# --- Within-day chronology (decision D13) -----------------------------------
+# The initial test precedes its retests precedes appeals; an interrupted
+# attempt precedes the completed test that follows it; a failure precedes its
+# same-day rectified resolution. Strict indexing on test_type: an unknown code
+# must fail loud, not sort somewhere silently.
+TEST_TYPE_RANK = {"NT": 0, "PL": 1, "PV": 1, "RT": 1, "ES": 2, "EI": 2}
+OUTCOME_RANK = {"ABANDONED": 0, "ABORTED": 0, "ABORTED_VE": 0, "REFUSED": 0,
+                "UNKNOWN": 0, "FAIL": 1, "PRS": 2, "PASS": 3}
+
+TYPE_RANK_SQL = ("CASE test_type WHEN 'NT' THEN 0 WHEN 'PL' THEN 1 "
+                 "WHEN 'PV' THEN 1 WHEN 'RT' THEN 1 WHEN 'ES' THEN 2 "
+                 "WHEN 'EI' THEN 2 ELSE 3 END")
+OUTCOME_RANK_SQL = ("CASE outcome WHEN 'FAIL' THEN 1 WHEN 'PRS' THEN 2 "
+                    "WHEN 'PASS' THEN 3 ELSE 0 END")
+
+# The four-part key, as it must appear in every window ORDER BY / row() of the
+# SQL twin. Tests assert the generated SQL never orders by a bare test_id.
+CHRONOLOGY_ORDER_SQL = "test_date, type_rank, outcome_rank, test_id"
+CHRONOLOGY_ROW_SQL = "row(test_date, type_rank, outcome_rank, test_id)"
+
+
+def chronology_key(row: dict) -> Tuple:
+    """Deterministic semantic order of one vehicle's tests (decision D13)."""
+    return (row["test_date"], TEST_TYPE_RANK[row["test_type"]],
+            OUTCOME_RANK[row["outcome"]], row["test_id"])
 
 
 @dataclass
@@ -47,14 +77,21 @@ class CycleRow:
 def assign_cycles(rows: Iterable[dict], gap_days: int = DEFAULT_CYCLE_GAP_DAYS) -> List[CycleRow]:
     """Pure-Python cycle assignment (rule of record; production uses the SQL
     twin). `rows` are dicts with test_id, vehicle_id, test_date (date),
-    outcome (canonical) -- any vehicle mix, any order."""
+    test_type (DVSA code) and outcome (canonical) -- any vehicle mix, any
+    order. Physical input order can never affect the result: ordering comes
+    from chronology_key() alone (decision D13)."""
     out: List[CycleRow] = []
     by_vehicle: dict = {}
     for row in rows:
         by_vehicle.setdefault(row["vehicle_id"], []).append(row)
 
     for vehicle_id, tests in by_vehicle.items():
-        tests.sort(key=lambda r: (r["test_date"], r["test_id"]))
+        if len({r["test_id"] for r in tests}) != len(tests):
+            raise ValueError(
+                f"duplicate test_id within vehicle {vehicle_id}: test_id is a "
+                f"primary key and a duplicate would fan out the SQL twin's "
+                f"self-join -- refusing to assign cycles")
+        tests.sort(key=chronology_key)
         cycles: List[List[dict]] = []
         for row in tests:
             if cycles:
@@ -105,16 +142,23 @@ def build_cycles_sql(results_relation: str, gap_days: int = DEFAULT_CYCLE_GAP_DA
     """DuckDB SQL twin of assign_cycles over a results relation/glob.
 
     `results_relation` is any FROM-able expression exposing test_id,
-    vehicle_id, test_date, outcome. Emits one row per test with the
-    CycleRow columns (plus test_year for partitioning).
+    vehicle_id, test_date, test_type, outcome. Emits one row per test with
+    the CycleRow columns (plus test_year for partitioning). Every window
+    orders by the D13 chronology key -- never by bare test_id.
     """
     return f"""
-WITH ordered AS (
+WITH ranked AS (
     SELECT test_id, vehicle_id, test_date, outcome,
+           {TYPE_RANK_SQL} AS type_rank,
+           {OUTCOME_RANK_SQL} AS outcome_rank
+    FROM {results_relation}
+),
+ordered AS (
+    SELECT *,
            lag(test_date) OVER w AS prev_date,
            lag(outcome)   OVER w AS prev_outcome_row
-    FROM {results_relation}
-    WINDOW w AS (PARTITION BY vehicle_id ORDER BY test_date, test_id)
+    FROM ranked
+    WINDOW w AS (PARTITION BY vehicle_id ORDER BY {CHRONOLOGY_ORDER_SQL})
 ),
 flagged AS (
     SELECT *,
@@ -127,27 +171,24 @@ flagged AS (
 numbered AS (
     SELECT *,
            sum(is_cycle_first_int) OVER (PARTITION BY vehicle_id
-                                         ORDER BY test_date, test_id
+                                         ORDER BY {CHRONOLOGY_ORDER_SQL}
                                          ROWS UNBOUNDED PRECEDING) AS cycle_seq
     FROM flagged
 ),
 cycles AS (
-    -- 2026-08-12 twin repair: cycle_id / outcome_test_id / last_test_id are
-    -- defined by assign_cycles (the rule of record) as CHRONOLOGICAL
-    -- positions (first row, last definitive row, last row — in
-    -- (test_date, test_id) order). The previous min/max(test_id) forms
-    -- assumed test_id is monotone with test_date; real DVSA ids are not,
-    -- which flipped cycle outcomes on ~9%% of multi-test cycles
-    -- (falsified live 2026-08-12; discriminating fixture added).
+    -- 2026-08-12 twin repair (#16): chronological positions, not min/max ids.
+    -- 2026-08-12 D13 repair (#18): the chronological order itself is the
+    -- semantic key -- within a day, test_id order is a coin flip (49.91%%),
+    -- so type_rank/outcome_rank decide and test_id only breaks exact ties.
     SELECT *,
-           arg_min(test_id, row(test_date, test_id)) OVER c AS cycle_id,
+           arg_min(test_id, {CHRONOLOGY_ROW_SQL}) OVER c AS cycle_id,
            coalesce(
                arg_max(CASE WHEN outcome IN ('PASS','FAIL','PRS') THEN test_id END,
                        CASE WHEN outcome IN ('PASS','FAIL','PRS')
-                            THEN row(test_date, test_id) END) OVER c,
-               arg_max(test_id, row(test_date, test_id)) OVER c
+                            THEN {CHRONOLOGY_ROW_SQL} END) OVER c,
+               arg_max(test_id, {CHRONOLOGY_ROW_SQL}) OVER c
            ) AS outcome_test_id,
-           arg_max(test_id, row(test_date, test_id)) OVER c AS last_test_id,
+           arg_max(test_id, {CHRONOLOGY_ROW_SQL}) OVER c AS last_test_id,
            min(test_date) OVER c AS cycle_start_date,
            max(test_date) OVER c AS cycle_end_date
     FROM numbered

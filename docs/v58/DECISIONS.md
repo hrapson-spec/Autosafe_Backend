@@ -146,6 +146,42 @@ the target definition:
 Therefore reproducing it, or failing to, cannot determine the correct target
 population. Do not delete it and do not conceal the discrepancy.
 
+## D13. Within-day chronology: semantic order, never test_id (2026-08-12)
+
+`test_id` carries no chronological meaning within a day: id order agrees with
+FAIL-first outcome order on 49.91% of same-day FAIL+definitive pairs — chance
+(research repo independently: 49.92%). F7a quantified the consequence on the
+canonical fulldepth frame: 37.24% of targets-with-priors carry a within-day
+tie, and reversing the tie order flips ≥1 of the 104 features on 65.1% of
+exposed targets (0/1,000 tie-free controls) — ~24% of feature vectors were
+artifacts of an undecided rule. Evidence:
+`docs/v58/evidence/INVARIANTS_AUDIT_2026_08_12.md` addendum 2 (6ff01d9);
+`docs/v58/evidence/f7a/{f7_tie_rule_materiality.py,F7A_RESULT.json}` (15acb39).
+
+**The rule.** A vehicle's tests order by `(test_date, type_rank, outcome_rank,
+test_id)`:
+
+- `type_rank`: `NT` 0 — the initial test precedes everything; `PL`/`PV`/`RT` 1 —
+  a retest follows the test it retests; `ES`/`EI` 2 — appeals contest an
+  earlier result, so they sort last.
+- `outcome_rank`: non-results (`ABANDONED`/`ABORTED`/`ABORTED_VE`/`REFUSED`) 0 —
+  an interrupted attempt precedes the completed test that follows it; `FAIL` 1
+  before `PRS` 2 before `PASS` 3 — a failure precedes its same-day resolution.
+- `test_id` LAST, as a pure determinism tiebreak. It is never chronology.
+
+Scope: the lake cycle builder and its SQL twin (this commit); the untracked
+streaming/sharded builders and the research-repo history builders must adopt
+the same key before any cycle-derived feature is trusted (the research lake
+carries `test_type` too — decide once, apply everywhere). The serving analogue
+is stronger: the DVSA API's `completedDate` carries true time-of-day, which
+serving must stop truncating; this rule is serving's fallback for exact-
+timestamp ties only.
+
+Not decided here: regeneration scale (arbiter: F7b re-stream + rescore vs the
+0.002052 floor, with calibration deltas — pooled AUC alone can hide per-cohort
+harm) and the D12 label question. Population membership (D7) is unaffected —
+it is per-row and order-free by construction.
+
 ## D12. OPEN: when, if ever, to migrate the target from FAIL to FAIL+PRS
 
 The terminology is settled — this is not a question about what PRS means.
