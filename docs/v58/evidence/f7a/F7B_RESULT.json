@@ -1,0 +1,67 @@
+{
+ "design": "F7b dump-based; D13 (7f3d8f1) vs banked p_test_id-DESC; module 38203e4; float32 dump representation of record",
+ "floor": 0.002052,
+ "n_targets": 1048500,
+ "s2_prior_rows_missing_test_type": 0,
+ "gates": {
+  "G1": "PASS exact",
+  "G2": "PASS (banked block reproduces keyed full-frame)",
+  "G3": "PASS"
+ },
+ "per_seed": {
+  "seed0": {
+   "auc_banked": 0.716015,
+   "auc_cf": 0.716015,
+   "delta_auc_pooled": -0.0,
+   "exceeds_floor": false,
+   "delta_auc_exposed": -2e-06,
+   "n_exposed": 366268,
+   "delta_auc_unexposed": 0.0,
+   "n_unexposed": 682232,
+   "abs_dp": {
+    "mean": 1.1e-05,
+    "p50": 0.0,
+    "p99": 0.0,
+    "max": 0.03827,
+    "share_gt_1e-6": 0.00379
+   },
+   "ece_raw_banked": 0.054684,
+   "ece_raw_cf": 0.054681,
+   "decile_migration_share": 0.00016
+  },
+  "seed1": {
+   "auc_banked": 0.715783,
+   "auc_cf": 0.715783,
+   "delta_auc_pooled": 0.0,
+   "exceeds_floor": false,
+   "delta_auc_exposed": -1e-06,
+   "n_exposed": 366268,
+   "delta_auc_unexposed": 0.0,
+   "n_unexposed": 682232,
+   "abs_dp": {
+    "mean": 1e-05,
+    "p50": 0.0,
+    "p99": 0.0,
+    "max": 0.03109,
+    "share_gt_1e-6": 0.00347
+   },
+   "ece_raw_banked": 0.055747,
+   "ece_raw_cf": 0.055743,
+   "decile_migration_share": 0.00017
+  }
+ },
+ "exceeds_floor_any_seed": false,
+ "null_validation": {
+  "cf_vs_banked_block_rows_differing": 4508,
+  "share": 0.0043,
+  "top_differing_cols": [
+   "tests_since_last_failure_tyres (1830)",
+   "tests_since_last_failure_brakes (1544)",
+   "tests_since_last_failure_suspension (1334)",
+   "failure_streak_len_* (~1600)",
+   "tests_since_last_advisory_* (~950)"
+  ],
+  "interpretation": "CF genuinely differs from banked; the 40 substrate-sourced contract columns are predominantly order-robust counts/windows, so D13-vs-DESC reaches the model weakly. The order-fragile features F7a found flipping (prev_cycle_outcome_band, advisory_trend, gap_band) are BASE-lineage columns, outside the fulldepth swap \u2014 their ordering exposure is recorded separately (DQ-19 / freeze) and is NOT measured by F7b."
+ },
+ "verdict": "FLOOR NOT EXCEEDED: dAUC seed0 -0.0000005 / seed1 +0.0000002; exposed-cohort deltas -2e-6/-1e-6; ECE deltas ~3e-6; decile migration 0.016-0.017%. SVAR condition (i) NOT triggered. Audit verdict stands: MATERIAL SIBLINGS FOUND; fulldepth-substrate published absolutes SURVIVE the tie-rule caveat."
+}

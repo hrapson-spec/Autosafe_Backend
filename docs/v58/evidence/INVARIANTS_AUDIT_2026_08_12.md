@@ -335,6 +335,41 @@ tie rule. **F7b** (full re-stream under the decided rule + seed0/seed1 rescore,
 ΔAUC vs 0.002052) is the single remaining discriminator input and is
 owner-scheduled (~2-3 h compute; needs the box).
 
+## Addendum 3 — F7b executed: FLOOR NOT EXCEEDED, verdict final (2026-08-12 ~13:0x)
+
+F7b ran gate-clean (G1 env exact; G2 banked block reproduces all 1,048,500 banked
+predictions bit-for-bit; G3 target sets align; S2 re-stream: 0 prior rows missing
+test_type — D13 ranks exact, no approximation). Result (`evidence/f7a/F7B_RESULT.json`):
+
+- **ΔAUC pooled: seed0 −0.0000005, seed1 +0.0000002** — vs floor ±0.002052.
+- Exposed-cohort (n=366,268) deltas −2e-6/−1e-6; ECE deltas ~3e-6; decile
+  migration 0.016–0.017%; |Δp| max 0.038 on ~0.4% of rows.
+- **Null validated, not assumed**: the counterfactual block genuinely differs from
+  banked (4,508 rows, concentrated in tests_since_last_failure_*/streaks) and
+  predictions genuinely move — the metric simply does not.
+- Mechanism: the 40 substrate-sourced contract columns are predominantly
+  order-robust counts/windows. The order-FRAGILE features F7a found flipping
+  (prev_cycle_outcome_band, advisory_trend, gap_band) enter the model from the
+  BASE lineage, outside the fulldepth swap — their ordering exposure is the
+  separately-recorded DQ-19/freeze class, not measured by F7b. F7a (feature-level,
+  65.1% flip under full reversal) and F7b (metric-level null under D13) are
+  consistent: the substrate's tie-rule defect is real and repairable, and it does
+  not propagate to the arm's reported metrics.
+
+**Final determination under the pre-registered discriminator: SVAR condition (i)
+NOT triggered. The audit verdict is FINAL at MATERIAL SIBLINGS FOUND, and the
+fulldepth-substrate published absolutes (FD twin 0.716389, RealMLP 0.716733, TabM,
+TabPFN ladder) SURVIVE the tie-rule caveat.** The D13 repair remains scientifically
+correct and should proceed for semantic integrity — with the measured assurance
+that no banked fulldepth result shifts when it lands.
+
+Provenance notes from the run: the base H1 frame was restored from the Drive park
+(clean 07-29 files only; quarantined versions untouched); `bakeoff_2026` was found
+safely parked on Drive (upgrades §9's "unrecoverable" to "recoverable"); the
+float64/float32 representation boundary between the FD frame and the model input
+is documented in the runner header — it produced a 1.6e-2-scale false signal that
+the G-gates caught, which is the R67 discipline earning its keep.
+
 ## 16. What the main engineer should do next (dependency order)
 
 1. Free the box; run **F7** (bounded, per-PID spill, one attempt) — it resolves the
