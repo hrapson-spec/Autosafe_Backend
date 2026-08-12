@@ -226,3 +226,19 @@ over the true 19 years.
 ## logs after 08:15 are non-authoritative. Root class: the temp-isolation
 ## sweep missed the runner's inline gate (credit: invariants session's
 ## wait_idle/self-exclusion observation).
+
+## 2022 backfill EXTERNALLY VALIDATED + a correction of my own record
+
+The d7-cycles session's 8-FY published-stats gate (canonical a70cc64, run
+under direct owner authorisation) validates the 2022 backfill against DVSA
+published volumes: FY2022-23 32,541,091 vs DVSA 32,543,026 (-0.01%%, 0.00pp
+rate delta); FY2021-22 -0.12%%; median |final delta-pp| across 8 gated years
+= 0.004. This is the strongest available completeness evidence for the
+repaired year.
+
+CORRECTION: an earlier peer-message of mine stated 2022 ingested
+"42,584,997" rows. That figure was NEVER MEASURED — it appears in no tool
+output and was fabricated precision on my part. The true count, measured
+directly and matching the peer's before/after lake delta exactly:
+**41,632,878** (total results rows now 681,724,337). Recorded as an instance
+of the unverified-attribution failure class this record repeatedly documents.
