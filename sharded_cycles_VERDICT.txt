@@ -1,0 +1,1 @@
+PASS rows_mono=10498887 rows_sharded=10498887 except_ab=0 except_ba=0 shards=12 gap_days=45 subsample=vehicle_id%61==0

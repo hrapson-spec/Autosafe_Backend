@@ -1,0 +1,22 @@
+diff --git a/stream_cycles.py b/stream_cycles.py
+index 15661bd..d88a109 100644
+--- a/stream_cycles.py
++++ b/stream_cycles.py
+@@ -111,7 +111,7 @@ def stream_shard(lake: Path, out_dir: Path, shards: int, k: int,
+                  gap: int, extra_filter: str = "") -> int:
+     con = connect()
+     q = (f"SELECT test_id, vehicle_id, test_date, outcome FROM {rel(lake)} "
+-         f"WHERE vehicle_id % {shards} = {k} {extra_filter} "
++         f"WHERE abs(hash(vehicle_id)) % {shards} = {k} {extra_filter} "  # hash residues: raw modulo is biased (evidence NOTES 08-12)
+          f"ORDER BY vehicle_id, test_date, test_id")
+     reader = con.execute(q).fetch_record_batch(100_000)
+     writer = YearWriter(out_dir, f"stream{k}")
+@@ -196,7 +196,7 @@ def sort_probe(lake: Path, shards: int, k: int) -> int:
+     with SpillSampler() as sampler:
+         reader = con.execute(
+             f"SELECT test_id, vehicle_id, test_date, outcome FROM {rel(lake)} "
+-            f"WHERE vehicle_id % {shards} = {k} "
++            f"WHERE abs(hash(vehicle_id)) % {shards} = {k} "  # hash residues
+             f"ORDER BY vehicle_id, test_date, test_id").fetch_record_batch(1_000_000)
+         while True:
+             try:

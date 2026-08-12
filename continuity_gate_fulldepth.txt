@@ -1,0 +1,2 @@
+PASS [vehicle_continuity] sample=10000 multiyear_share=0.998 (min 0.2) first_use_conflict_share=0.0078 (max 0.01) median_gap_days=361.0 (range 200-800)
+[re-verified 2026-08-12, default insertion order; supersedes the invalidated 2026-08-11 preserve-disabled result]
