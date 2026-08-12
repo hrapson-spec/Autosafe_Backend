@@ -72,6 +72,30 @@ class MOTTest:
     odometer_unit: Optional[str]  # 'mi', 'km', or None if DVSA omitted it
     test_number: str
     defects: List[Dict[str, Any]]  # Advisory/failure items
+    # Full completedDate timestamp (naive UTC as DVSA sends it). test_date
+    # stays midnight-truncated for all day arithmetic; completed_at exists
+    # for ORDERING -- the true intra-day chronology the anonymised training
+    # data never had (decision D13's serving analogue). Defaults to None so
+    # existing constructions (tests, replays) keep working and fall back to
+    # the semantic outcome order.
+    completed_at: Optional[datetime] = None
+
+
+# Ascending semantic chronology for one vehicle's tests (D13 serving
+# analogue). True time-of-day wins when present; otherwise a FAILED test
+# precedes the PASSED/other result that resolved it on the same day.
+# test_number is a determinism tiebreak only -- like the lake's test_id, it
+# must never be treated as chronology in its own right.
+_RESULT_RANK = {"FAILED": 1, "PASSED": 3}
+
+
+def mot_chronology_key(test: "MOTTest"):
+    return (
+        test.test_date,
+        test.completed_at or test.test_date,
+        _RESULT_RANK.get(test.test_result, 0),
+        test.test_number or "",
+    )
 
 
 @dataclass
@@ -485,6 +509,7 @@ class DVSAClient:
             test = MOTTest(
                 test_date=self._parse_date(test_data.get('completedDate')),
                 test_result=test_data.get('testResult', 'UNKNOWN'),
+                completed_at=self._parse_datetime(test_data.get('completedDate')),
                 expiry_date=self._parse_date(test_data.get('expiryDate')),
                 odometer_value=self._parse_odometer(test_data.get('odometerValue')),
                 # No default: an absent unit must surface as None, never a
@@ -497,6 +522,15 @@ class DVSAClient:
             )
             mot_tests.append(test)
 
+        # INVARIANT (D13 serving analogue): mot_tests leaves this client
+        # sorted newest-first by true chronology. Downstream index sites
+        # (main.py latest-test, report_service odometer scan, feature
+        # engineering's stable re-sort) all inherit this order; same-day
+        # ties resolve by completedDate time-of-day when DVSA provides it,
+        # else FAILED-before-PASSED (a failure precedes its resolution),
+        # with test_number as a pure determinism tiebreak.
+        mot_tests.sort(key=mot_chronology_key, reverse=True)
+
         return VehicleHistory(
             registration=vrm,
             make=make,
@@ -508,6 +542,25 @@ class DVSAClient:
             engine_size=vehicle_data.get('engineSize'),
             mot_tests=mot_tests
         )
+
+    def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
+        """Parse the FULL completedDate timestamp, preserving time-of-day.
+
+        DVSA sends ISO instants ('2025-07-02T10:30:00.000Z', UTC). Returns a
+        naive-UTC datetime used for ordering only; date-only strings carry no
+        intra-day information and return None (the sort then falls back to
+        the semantic outcome order). Never touches _parse_date's truncation
+        contract, which existing date arithmetic and tests depend on.
+        """
+        if not date_str:
+            return None
+        s = date_str.strip().rstrip('Z')
+        for fmt in ('%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        return None
 
     def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
         """Parse date string from DVSA API."""
