@@ -23,3 +23,9 @@ uniqueness check CAN run per-year against parked+local years sequentially
 with a restore/re-park rotation; the 50k continuity check cannot, it needs
 all years co-resident). Seat 5 holds the LAKE TOKEN until this queue clears
 or #0 resequences it.
+
+## 2026-08-12 lake relocation (owner-directed, token holder action)
+Lake path is now `~/autosafe/autosafe_lake` (was `~/autosafe_lake`; mv verified,
+sentinel+manifest intact, 354,057,034 rows readable). All queued/blocked tasks
+(50k re-verify, Phase-1.1) and any restore of parked 2005-2014 must use the new
+path. `.git/info/exclude` now shields `autosafe_lake/` repo-wide.
