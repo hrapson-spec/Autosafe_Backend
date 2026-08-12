@@ -1,0 +1,415 @@
+{
+ "age_band": [
+  {
+   "cohort": "6-9",
+   "n": 454890,
+   "final_fail_rate": 0.21204686847369694,
+   "mean_priors": 5.817839477675921,
+   "mean_prior_items": 6.36326144782255,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "10-14",
+   "n": 428428,
+   "final_fail_rate": 0.31924384027187763,
+   "mean_priors": 11.355137852801404,
+   "mean_prior_items": 16.60510284108415,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "3-5",
+   "n": 397310,
+   "final_fail_rate": 0.12260703229216481,
+   "mean_priors": 1.9973874304699102,
+   "mean_prior_items": 1.6336538219526315,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "15+",
+   "n": 266546,
+   "final_fail_rate": 0.34435707157488765,
+   "mean_priors": 16.40137537235599,
+   "mean_prior_items": 29.142271878024808,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "0-2",
+   "n": 110022,
+   "final_fail_rate": 0.08092017960044355,
+   "mean_priors": 0.08089291232662559,
+   "mean_prior_items": 0.04198251258839141,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "unknown",
+   "n": 70,
+   "final_fail_rate": 0.17142857142857143,
+   "mean_priors": 0.4714285714285714,
+   "mean_prior_items": 1.0142857142857142,
+   "min_cell_flag": true
+  }
+ ],
+ "fuel": [
+  {
+   "cohort": "PE",
+   "n": 879992,
+   "final_fail_rate": 0.2246634060309639,
+   "mean_priors": 8.126132964845135,
+   "mean_prior_items": 11.066859698724533,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "DI",
+   "n": 739248,
+   "final_fail_rate": 0.24469460857520076,
+   "mean_priors": 7.280927374845789,
+   "mean_prior_items": 11.571979903902344,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "HY",
+   "n": 29318,
+   "final_fail_rate": 0.09366259635718671,
+   "mean_priors": 3.7572481069650046,
+   "mean_prior_items": 3.072788048297974,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "EL",
+   "n": 6250,
+   "final_fail_rate": 0.1344,
+   "mean_priors": 3.51392,
+   "mean_prior_items": 3.24656,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "OT",
+   "n": 1054,
+   "final_fail_rate": 0.16698292220113853,
+   "mean_priors": 9.814990512333965,
+   "mean_prior_items": 9.55123339658444,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "ED",
+   "n": 803,
+   "final_fail_rate": 0.1320049813200498,
+   "mean_priors": 2.551681195516812,
+   "mean_prior_items": 1.9887920298879203,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "LP",
+   "n": 490,
+   "final_fail_rate": 0.32653061224489793,
+   "mean_priors": 14.012244897959183,
+   "mean_prior_items": 28.195918367346938,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "GB",
+   "n": 53,
+   "final_fail_rate": 0.20754716981132076,
+   "mean_priors": 8.716981132075471,
+   "mean_prior_items": 13.339622641509434,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "GD",
+   "n": 20,
+   "final_fail_rate": 0.25,
+   "mean_priors": 3.4,
+   "mean_prior_items": 2.45,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "FC",
+   "n": 13,
+   "final_fail_rate": 0.15384615384615385,
+   "mean_priors": 10.23076923076923,
+   "mean_prior_items": 8.846153846153847,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "CN",
+   "n": 11,
+   "final_fail_rate": 0.09090909090909091,
+   "mean_priors": 6.0,
+   "mean_prior_items": 3.4545454545454546,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "GA",
+   "n": 9,
+   "final_fail_rate": 0.6666666666666666,
+   "mean_priors": 5.333333333333333,
+   "mean_prior_items": 9.333333333333334,
+   "min_cell_flag": true
+  },
+  {
+   "cohort": "LN",
+   "n": 5,
+   "final_fail_rate": 0.2,
+   "mean_priors": 15.0,
+   "mean_prior_items": 5.0,
+   "min_cell_flag": true
+  }
+ ],
+ "mileage_band": [
+  {
+   "cohort": "60-100k",
+   "n": 472095,
+   "final_fail_rate": 0.28269945667715185,
+   "mean_priors": 9.17335917558966,
+   "mean_prior_items": 12.877016278503268,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "30-60k",
+   "n": 466100,
+   "final_fail_rate": 0.17321390259600944,
+   "mean_priors": 5.365327183007938,
+   "mean_prior_items": 5.258802832010298,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "<30k",
+   "n": 313863,
+   "final_fail_rate": 0.08620321605286382,
+   "mean_priors": 2.8602128954352697,
+   "mean_prior_items": 1.7683862067207667,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "100-150k",
+   "n": 286769,
+   "final_fail_rate": 0.3514013020933225,
+   "mean_priors": 12.060927087655918,
+   "mean_prior_items": 21.493787682769057,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "150k+",
+   "n": 107068,
+   "final_fail_rate": 0.363451264616879,
+   "mean_priors": 13.497123323495348,
+   "mean_prior_items": 28.712098853065342,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "missing/0",
+   "n": 11371,
+   "final_fail_rate": 0.15029460909330752,
+   "mean_priors": 4.623252132618063,
+   "mean_prior_items": 9.405944947673907,
+   "min_cell_flag": false
+  }
+ ],
+ "depth_bucket": [
+  {
+   "cohort": "11-20",
+   "n": 478073,
+   "final_fail_rate": 0.34943199051190926,
+   "mean_priors": 14.438033522077172,
+   "mean_prior_items": 23.45605169085056,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "6-10",
+   "n": 410676,
+   "final_fail_rate": 0.24832714840896472,
+   "mean_priors": 7.877355871782135,
+   "mean_prior_items": 8.88230624628661,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "3-5",
+   "n": 339916,
+   "final_fail_rate": 0.1622165476176467,
+   "mean_priors": 3.947972440249944,
+   "mean_prior_items": 3.468874663152073,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "0",
+   "n": 135773,
+   "final_fail_rate": 0.09115950888615557,
+   "mean_priors": 0.0,
+   "mean_prior_items": 0.0,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "1",
+   "n": 129043,
+   "final_fail_rate": 0.10228373487907132,
+   "mean_priors": 1.0,
+   "mean_prior_items": 0.5664933394294925,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "2",
+   "n": 127488,
+   "final_fail_rate": 0.12107806224899599,
+   "mean_priors": 2.0,
+   "mean_prior_items": 1.4422063253012047,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "21+",
+   "n": 36297,
+   "final_fail_rate": 0.48097638923326996,
+   "mean_priors": 22.649227208860236,
+   "mean_prior_items": 58.755296580984655,
+   "min_cell_flag": false
+  }
+ ],
+ "make_top20": [
+  {
+   "cohort": "FORD",
+   "n": 234425,
+   "final_fail_rate": 0.2530617468273435,
+   "mean_priors": 7.660961928122001,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "<other>",
+   "n": 193335,
+   "final_fail_rate": 0.20580339824656685,
+   "mean_priors": 7.9485090645770295,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "VAUXHALL",
+   "n": 161301,
+   "final_fail_rate": 0.2764892964085778,
+   "mean_priors": 8.00838804471144,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "VOLKSWAGEN",
+   "n": 146727,
+   "final_fail_rate": 0.2380543458259216,
+   "mean_priors": 7.976759560271797,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "BMW",
+   "n": 87999,
+   "final_fail_rate": 0.1778315662677985,
+   "mean_priors": 7.091262400709099,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "MERCEDES-BENZ",
+   "n": 77895,
+   "final_fail_rate": 0.1958662301816548,
+   "mean_priors": 6.452339688041595,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "NISSAN",
+   "n": 77247,
+   "final_fail_rate": 0.24501922404753582,
+   "mean_priors": 7.1780781130658795,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "TOYOTA",
+   "n": 77089,
+   "final_fail_rate": 0.19781032313300212,
+   "mean_priors": 8.665918613550572,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "AUDI",
+   "n": 76724,
+   "final_fail_rate": 0.18120796621656848,
+   "mean_priors": 6.617225379281581,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "PEUGEOT",
+   "n": 74703,
+   "final_fail_rate": 0.2654110276695715,
+   "mean_priors": 7.944660856993695,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "HONDA",
+   "n": 57563,
+   "final_fail_rate": 0.19588972082761497,
+   "mean_priors": 9.020777235376892,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "CITROEN",
+   "n": 55376,
+   "final_fail_rate": 0.28414836752383704,
+   "mean_priors": 7.957436434556486,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "RENAULT",
+   "n": 55266,
+   "final_fail_rate": 0.3277421923063004,
+   "mean_priors": 8.724278941844895,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "LAND ROVER",
+   "n": 42952,
+   "final_fail_rate": 0.20841869994412368,
+   "mean_priors": 8.185695660271932,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "FIAT",
+   "n": 40417,
+   "final_fail_rate": 0.2610287750204122,
+   "mean_priors": 7.7574535467748715,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "HYUNDAI",
+   "n": 38512,
+   "final_fail_rate": 0.20598774407976733,
+   "mean_priors": 5.887385749896136,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "KIA",
+   "n": 37665,
+   "final_fail_rate": 0.21311562458515865,
+   "mean_priors": 5.659976105137395,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "MINI",
+   "n": 35858,
+   "final_fail_rate": 0.19097551452953315,
+   "mean_priors": 7.569831000055776,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "SKODA",
+   "n": 34305,
+   "final_fail_rate": 0.19259583151144147,
+   "mean_priors": 6.177350240489725,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "SUZUKI",
+   "n": 26046,
+   "final_fail_rate": 0.19050909928587884,
+   "mean_priors": 7.881555709130001,
+   "min_cell_flag": false
+  },
+  {
+   "cohort": "VOLVO",
+   "n": 25861,
+   "final_fail_rate": 0.23939522833610455,
+   "mean_priors": 7.913808437415413,
+   "min_cell_flag": false
+  }
+ ]
+}

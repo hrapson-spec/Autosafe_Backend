@@ -1,0 +1,601 @@
+{
+ "census": [
+  {
+   "test_year": 2005,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 2851412,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2005,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 6334111,
+   "n_certified_fail": 6334111
+  },
+  {
+   "test_year": 2005,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 658966,
+   "n_certified_fail": 658966
+  },
+  {
+   "test_year": 2006,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 15326047,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2006,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 27169733,
+   "n_certified_fail": 27169733
+  },
+  {
+   "test_year": 2006,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 3534655,
+   "n_certified_fail": 3534655
+  },
+  {
+   "test_year": 2007,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 20178852,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2007,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 29012587,
+   "n_certified_fail": 29012587
+  },
+  {
+   "test_year": 2007,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4335264,
+   "n_certified_fail": 4335264
+  },
+  {
+   "test_year": 2008,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 25695523,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2008,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 29499289,
+   "n_certified_fail": 29499289
+  },
+  {
+   "test_year": 2008,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4904573,
+   "n_certified_fail": 4904573
+  },
+  {
+   "test_year": 2009,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 30159595,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2009,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 30721546,
+   "n_certified_fail": 30721546
+  },
+  {
+   "test_year": 2009,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4957531,
+   "n_certified_fail": 4957531
+  },
+  {
+   "test_year": 2010,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 31548023,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2010,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 30169127,
+   "n_certified_fail": 30169127
+  },
+  {
+   "test_year": 2010,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4858533,
+   "n_certified_fail": 4858533
+  },
+  {
+   "test_year": 2011,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 33684452,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2011,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 30065434,
+   "n_certified_fail": 30065434
+  },
+  {
+   "test_year": 2011,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4973981,
+   "n_certified_fail": 4973981
+  },
+  {
+   "test_year": 2012,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 36297946,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2012,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 29761433,
+   "n_certified_fail": 29761433
+  },
+  {
+   "test_year": 2012,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4938173,
+   "n_certified_fail": 4938173
+  },
+  {
+   "test_year": 2013,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 38669763,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2013,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 30476863,
+   "n_certified_fail": 30476863
+  },
+  {
+   "test_year": 2013,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4889565,
+   "n_certified_fail": 4889565
+  },
+  {
+   "test_year": 2014,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 39734972,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2014,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 29453719,
+   "n_certified_fail": 29453719
+  },
+  {
+   "test_year": 2014,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4764873,
+   "n_certified_fail": 4764873
+  },
+  {
+   "test_year": 2015,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 37762796,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2015,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 27682280,
+   "n_certified_fail": 27682280
+  },
+  {
+   "test_year": 2015,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4632292,
+   "n_certified_fail": 4632292
+  },
+  {
+   "test_year": 2016,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 38724316,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2016,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 26618626,
+   "n_certified_fail": 26618626
+  },
+  {
+   "test_year": 2016,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4441164,
+   "n_certified_fail": 4441164
+  },
+  {
+   "test_year": 2017,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 41438656,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2017,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 25539728,
+   "n_certified_fail": 25539728
+  },
+  {
+   "test_year": 2017,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 4216749,
+   "n_certified_fail": 4216749
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 25746954,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 14804669,
+   "n_certified_fail": 14804669
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 2879652,
+   "n_certified_fail": 2879652
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 2208718,
+   "n_certified_fail": 2208718
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "A",
+   "n": 17204808,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "F",
+   "n": 10165680,
+   "n_certified_fail": 10165680
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "pre_2018",
+   "rfr_type_code": "P",
+   "n": 1680787,
+   "n_certified_fail": 1680787
+  },
+  {
+   "test_year": 2019,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 47824973,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2019,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 23273495,
+   "n_certified_fail": 23273495
+  },
+  {
+   "test_year": 2019,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 5187206,
+   "n_certified_fail": 5187206
+  },
+  {
+   "test_year": 2019,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 3680368,
+   "n_certified_fail": 3680368
+  },
+  {
+   "test_year": 2020,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 46627677,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2020,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 20850038,
+   "n_certified_fail": 20850038
+  },
+  {
+   "test_year": 2020,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 5103760,
+   "n_certified_fail": 5103760
+  },
+  {
+   "test_year": 2020,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 3325599,
+   "n_certified_fail": 3325599
+  },
+  {
+   "test_year": 2021,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 51879439,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2021,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 21560374,
+   "n_certified_fail": 21560374
+  },
+  {
+   "test_year": 2021,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 5756635,
+   "n_certified_fail": 5756635
+  },
+  {
+   "test_year": 2021,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 3230520,
+   "n_certified_fail": 3230520
+  },
+  {
+   "test_year": 2022,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 55683570,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2022,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 21246448,
+   "n_certified_fail": 21246448
+  },
+  {
+   "test_year": 2022,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 6222610,
+   "n_certified_fail": 6222610
+  },
+  {
+   "test_year": 2022,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 3199713,
+   "n_certified_fail": 3199713
+  },
+  {
+   "test_year": 2023,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "A",
+   "n": 58089060,
+   "n_certified_fail": 0
+  },
+  {
+   "test_year": 2023,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "F",
+   "n": 21543744,
+   "n_certified_fail": 21543744
+  },
+  {
+   "test_year": 2023,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "M",
+   "n": 6599101,
+   "n_certified_fail": 6599101
+  },
+  {
+   "test_year": 2023,
+   "taxonomy_era": "post_2018",
+   "rfr_type_code": "P",
+   "n": 3070724,
+   "n_certified_fail": 3070724
+  }
+ ],
+ "per_year_severity": {
+  "2005": {
+   "items": 9844489,
+   "certified_fail": 6993077,
+   "corrected_fail": 6993077,
+   "minor_post2018": 0,
+   "advisory": 2851412
+  },
+  "2006": {
+   "items": 46030435,
+   "certified_fail": 30704388,
+   "corrected_fail": 30704388,
+   "minor_post2018": 0,
+   "advisory": 15326047
+  },
+  "2007": {
+   "items": 53526703,
+   "certified_fail": 33347851,
+   "corrected_fail": 33347851,
+   "minor_post2018": 0,
+   "advisory": 20178852
+  },
+  "2008": {
+   "items": 60099385,
+   "certified_fail": 34403862,
+   "corrected_fail": 34403862,
+   "minor_post2018": 0,
+   "advisory": 25695523
+  },
+  "2009": {
+   "items": 65838672,
+   "certified_fail": 35679077,
+   "corrected_fail": 35679077,
+   "minor_post2018": 0,
+   "advisory": 30159595
+  },
+  "2010": {
+   "items": 66575683,
+   "certified_fail": 35027660,
+   "corrected_fail": 35027660,
+   "minor_post2018": 0,
+   "advisory": 31548023
+  },
+  "2011": {
+   "items": 68723867,
+   "certified_fail": 35039415,
+   "corrected_fail": 35039415,
+   "minor_post2018": 0,
+   "advisory": 33684452
+  },
+  "2012": {
+   "items": 70997552,
+   "certified_fail": 34699606,
+   "corrected_fail": 34699606,
+   "minor_post2018": 0,
+   "advisory": 36297946
+  },
+  "2013": {
+   "items": 74036191,
+   "certified_fail": 35366428,
+   "corrected_fail": 35366428,
+   "minor_post2018": 0,
+   "advisory": 38669763
+  },
+  "2014": {
+   "items": 73953564,
+   "certified_fail": 34218592,
+   "corrected_fail": 34218592,
+   "minor_post2018": 0,
+   "advisory": 39734972
+  },
+  "2015": {
+   "items": 70077368,
+   "certified_fail": 32314572,
+   "corrected_fail": 32314572,
+   "minor_post2018": 0,
+   "advisory": 37762796
+  },
+  "2016": {
+   "items": 69784106,
+   "certified_fail": 31059790,
+   "corrected_fail": 31059790,
+   "minor_post2018": 0,
+   "advisory": 38724316
+  },
+  "2017": {
+   "items": 71195133,
+   "certified_fail": 29756477,
+   "corrected_fail": 29756477,
+   "minor_post2018": 0,
+   "advisory": 41438656
+  },
+  "2018": {
+   "items": 74691268,
+   "certified_fail": 31739506,
+   "corrected_fail": 28859854,
+   "minor_post2018": 2879652,
+   "advisory": 42951762
+  },
+  "2019": {
+   "items": 79966042,
+   "certified_fail": 32141069,
+   "corrected_fail": 26953863,
+   "minor_post2018": 5187206,
+   "advisory": 47824973
+  },
+  "2020": {
+   "items": 75907074,
+   "certified_fail": 29279397,
+   "corrected_fail": 24175637,
+   "minor_post2018": 5103760,
+   "advisory": 46627677
+  },
+  "2021": {
+   "items": 82426968,
+   "certified_fail": 30547529,
+   "corrected_fail": 24790894,
+   "minor_post2018": 5756635,
+   "advisory": 51879439
+  },
+  "2022": {
+   "items": 86352341,
+   "certified_fail": 30668771,
+   "corrected_fail": 24446161,
+   "minor_post2018": 6222610,
+   "advisory": 55683570
+  },
+  "2023": {
+   "items": 89302629,
+   "certified_fail": 31213569,
+   "corrected_fail": 24614468,
+   "minor_post2018": 6599101,
+   "advisory": 58089060
+  }
+ }
+}

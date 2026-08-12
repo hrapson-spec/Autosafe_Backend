@@ -1,0 +1,74 @@
+[
+ {
+  "test_year": 2015,
+  "distinct_vehicles": 28375162,
+  "vehicle_days": 34265078,
+  "multi_test_vehicle_days": 3200339,
+  "tests_on_multi_days": 6425997,
+  "tests_total": 37490736
+ },
+ {
+  "test_year": 2016,
+  "distinct_vehicles": 28809581,
+  "vehicle_days": 34522483,
+  "multi_test_vehicle_days": 3150604,
+  "tests_on_multi_days": 6321501,
+  "tests_total": 37693380
+ },
+ {
+  "test_year": 2017,
+  "distinct_vehicles": 29277910,
+  "vehicle_days": 34875736,
+  "multi_test_vehicle_days": 3147010,
+  "tests_on_multi_days": 6327435,
+  "tests_total": 38056161
+ },
+ {
+  "test_year": 2018,
+  "distinct_vehicles": 29781326,
+  "vehicle_days": 35500486,
+  "multi_test_vehicle_days": 3157928,
+  "tests_on_multi_days": 6339243,
+  "tests_total": 38681801
+ },
+ {
+  "test_year": 2019,
+  "distinct_vehicles": 30558860,
+  "vehicle_days": 36064079,
+  "multi_test_vehicle_days": 3225530,
+  "tests_on_multi_days": 6472149,
+  "tests_total": 39310698
+ },
+ {
+  "test_year": 2020,
+  "distinct_vehicles": 29988237,
+  "vehicle_days": 35624323,
+  "multi_test_vehicle_days": 2950420,
+  "tests_on_multi_days": 5920110,
+  "tests_total": 38594013
+ },
+ {
+  "test_year": 2021,
+  "distinct_vehicles": 31805191,
+  "vehicle_days": 37372719,
+  "multi_test_vehicle_days": 2989143,
+  "tests_on_multi_days": 5997070,
+  "tests_total": 40380646
+ },
+ {
+  "test_year": 2022,
+  "distinct_vehicles": 32940357,
+  "vehicle_days": 38561674,
+  "multi_test_vehicle_days": 3052426,
+  "tests_on_multi_days": 6123630,
+  "tests_total": 41632878
+ },
+ {
+  "test_year": 2023,
+  "distinct_vehicles": 33313871,
+  "vehicle_days": 39159555,
+  "multi_test_vehicle_days": 3037645,
+  "tests_on_multi_days": 6094811,
+  "tests_total": 42216721
+ }
+]

@@ -1,0 +1,116 @@
+[
+ {
+  "test_year": 2005,
+  "n": 9844489,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2006,
+  "n": 46030435,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2007,
+  "n": 53526703,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2008,
+  "n": 60099385,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2009,
+  "n": 65838672,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2010,
+  "n": 66575683,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2011,
+  "n": 68723867,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2012,
+  "n": 70997552,
+  "loc_missing": 0,
+  "loc_distinct": 90
+ },
+ {
+  "test_year": 2013,
+  "n": 74036191,
+  "loc_missing": 0,
+  "loc_distinct": 92
+ },
+ {
+  "test_year": 2014,
+  "n": 73953564,
+  "loc_missing": 0,
+  "loc_distinct": 91
+ },
+ {
+  "test_year": 2015,
+  "n": 70077368,
+  "loc_missing": 0,
+  "loc_distinct": 114
+ },
+ {
+  "test_year": 2016,
+  "n": 69784106,
+  "loc_missing": 0,
+  "loc_distinct": 75
+ },
+ {
+  "test_year": 2017,
+  "n": 71195133,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2018,
+  "n": 74691268,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2019,
+  "n": 79966042,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2020,
+  "n": 75907074,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2021,
+  "n": 82426968,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2022,
+  "n": 86352341,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ },
+ {
+  "test_year": 2023,
+  "n": 89302629,
+  "loc_missing": 0,
+  "loc_distinct": 60
+ }
+]

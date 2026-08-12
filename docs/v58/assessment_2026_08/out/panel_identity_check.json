@@ -1,0 +1,8 @@
+{
+ "tgh2_rows_le2023": 19411331,
+ "matched_in_panel": 1237152,
+ "observed_match_rate": 0.06373349668809418,
+ "expected_if_same_id_space": 0.01,
+ "ratio_obs_over_expected": 6.373349668809418,
+ "note": "vehicle_id spaces are NOT comparable across vintages; this is a test_id-space compatibility probe. Ratio ~1.0 => same test_id space => 875.4M new-items claim upgraded to identity-verified basis."
+}

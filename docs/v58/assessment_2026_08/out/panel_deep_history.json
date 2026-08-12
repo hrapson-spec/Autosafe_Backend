@@ -1,0 +1,31 @@
+{
+ "definitions": {
+  "deep6": "2023 NT+definitive events with >=6 prior initial tests",
+  "deep10": ">=10 prior initial tests",
+  "defect3": ">=3 prior defect-bearing test days",
+  "ev2023": "all 2023 NT+definitive events"
+ },
+ "x100_with_vehicle_bootstrap_ci": {
+  "deep6": {
+   "point": 18833000,
+   "ci_lo": 18743147.5,
+   "ci_hi": 18916085.0
+  },
+  "deep10": {
+   "point": 10256400,
+   "ci_lo": 10190692.5,
+   "ci_hi": 10322602.5
+  },
+  "defect3": {
+   "point": 18400600,
+   "ci_lo": 18313797.5,
+   "ci_hi": 18483857.5
+  },
+  "ev2023": {
+   "point": 34784900,
+   "ci_lo": 34656495.0,
+   "ci_hi": 34909530.0
+  }
+ },
+ "panel_vehicles_contributing": 719875
+}

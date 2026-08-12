@@ -1,0 +1,30 @@
+{
+ "distinct_codes": [
+  {
+   "taxonomy_era": "post_2018",
+   "distinct_rfr_ids": 3295,
+   "in_class4_catalogue": 2538,
+   "in_any_class_catalogue": 3295
+  },
+  {
+   "taxonomy_era": "pre_2018",
+   "distinct_rfr_ids": 4454,
+   "in_class4_catalogue": 2492,
+   "in_any_class_catalogue": 4454
+  }
+ ],
+ "row_coverage": [
+  {
+   "taxonomy_era": "post_2018",
+   "item_rows": 459595047,
+   "rows_rfr_in_class4_catalogue": 455388680,
+   "rows_rfr_in_any_catalogue": 459595047
+  },
+  {
+   "taxonomy_era": "pre_2018",
+   "item_rows": 829734423,
+   "rows_rfr_in_class4_catalogue": 818387920,
+   "rows_rfr_in_any_catalogue": 829734423
+  }
+ ]
+}

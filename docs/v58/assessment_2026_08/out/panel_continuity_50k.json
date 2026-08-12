@@ -1,0 +1,15 @@
+{
+ "n_vehicles": 628177,
+ "multiyear_share": 0.9978111264818673,
+ "first_use_conflict_share": 0.008879662897559128,
+ "median_gap_days": 361.0,
+ "definition": "checks.py:29-106 replicated exactly; population = ALL panel multi-test (>=3) vehicles, no reservoir; panel = abs(hash(vehicle_id))%100==0 across all 19 years",
+ "bars": {
+  "multiyear_min": 0.2,
+  "conflict_max": 0.01,
+  "gap_range": [
+   200,
+   800
+  ]
+ }
+}

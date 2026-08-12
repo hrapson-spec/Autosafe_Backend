@@ -1,0 +1,330 @@
+{
+ "gaps": [
+  {
+   "event_year": 2005,
+   "n_with_prior": 627,
+   "g_p05": 1,
+   "g_p50": 35,
+   "g_p95": 186,
+   "share_le60d": 0.6443381180223285,
+   "share_annual_band": 0.014354066985645933
+  },
+  {
+   "event_year": 2006,
+   "n_with_prior": 57079,
+   "g_p05": 36,
+   "g_p50": 362,
+   "g_p95": 396,
+   "share_le60d": 0.07058638027996286,
+   "share_annual_band": 0.775118695141821
+  },
+  {
+   "event_year": 2007,
+   "n_with_prior": 223466,
+   "g_p05": 213,
+   "g_p50": 364,
+   "g_p95": 444,
+   "share_le60d": 0.021618501248512077,
+   "share_annual_band": 0.8648384989215362
+  },
+  {
+   "event_year": 2008,
+   "n_with_prior": 238466,
+   "g_p05": 241,
+   "g_p50": 365,
+   "g_p95": 481,
+   "share_le60d": 0.01910125552489663,
+   "share_annual_band": 0.8529056553135458
+  },
+  {
+   "event_year": 2009,
+   "n_with_prior": 245376,
+   "g_p05": 248,
+   "g_p50": 365,
+   "g_p95": 487,
+   "share_le60d": 0.019056468440271257,
+   "share_annual_band": 0.8562451095461658
+  },
+  {
+   "event_year": 2010,
+   "n_with_prior": 251828,
+   "g_p05": 247,
+   "g_p50": 365,
+   "g_p95": 478,
+   "share_le60d": 0.019207554362501388,
+   "share_annual_band": 0.8606588623981448
+  },
+  {
+   "event_year": 2011,
+   "n_with_prior": 260335,
+   "g_p05": 254,
+   "g_p50": 364,
+   "g_p95": 472,
+   "share_le60d": 0.01775788887395087,
+   "share_annual_band": 0.8649432462020089
+  },
+  {
+   "event_year": 2012,
+   "n_with_prior": 263633,
+   "g_p05": 256,
+   "g_p50": 365,
+   "g_p95": 466,
+   "share_le60d": 0.01761539716196379,
+   "share_annual_band": 0.8682183186475138
+  },
+  {
+   "event_year": 2013,
+   "n_with_prior": 266965,
+   "g_p05": 236,
+   "g_p50": 364,
+   "g_p95": 467,
+   "share_le60d": 0.0188189463038226,
+   "share_annual_band": 0.862124248496994
+  },
+  {
+   "event_year": 2014,
+   "n_with_prior": 269976,
+   "g_p05": 226,
+   "g_p50": 364,
+   "g_p95": 467,
+   "share_le60d": 0.018660918007526596,
+   "share_annual_band": 0.8598282810323881
+  },
+  {
+   "event_year": 2015,
+   "n_with_prior": 273040,
+   "g_p05": 220,
+   "g_p50": 364,
+   "g_p95": 464,
+   "share_le60d": 0.020213155581599765,
+   "share_annual_band": 0.8596213009082918
+  },
+  {
+   "event_year": 2016,
+   "n_with_prior": 275602,
+   "g_p05": 220,
+   "g_p50": 365,
+   "g_p95": 468,
+   "share_le60d": 0.02074005268466847,
+   "share_annual_band": 0.8566084426092699
+  },
+  {
+   "event_year": 2017,
+   "n_with_prior": 277113,
+   "g_p05": 219,
+   "g_p50": 364,
+   "g_p95": 465,
+   "share_le60d": 0.020731614900780546,
+   "share_annual_band": 0.8587074586901372
+  },
+  {
+   "event_year": 2018,
+   "n_with_prior": 280238,
+   "g_p05": 219,
+   "g_p50": 364,
+   "g_p95": 458,
+   "share_le60d": 0.021363983471192345,
+   "share_annual_band": 0.8622777781742662
+  },
+  {
+   "event_year": 2019,
+   "n_with_prior": 287151,
+   "g_p05": 225,
+   "g_p50": 364,
+   "g_p95": 452,
+   "share_le60d": 0.019752673680398118,
+   "share_annual_band": 0.8679301134246442
+  },
+  {
+   "event_year": 2020,
+   "n_with_prior": 286896,
+   "g_p05": 186,
+   "g_p50": 368,
+   "g_p95": 554,
+   "share_le60d": 0.02558766939936423,
+   "share_annual_band": 0.7348725670626289
+  },
+  {
+   "event_year": 2021,
+   "n_with_prior": 303562,
+   "g_p05": 216,
+   "g_p50": 364,
+   "g_p95": 559,
+   "share_le60d": 0.019620374091618844,
+   "share_annual_band": 0.8293528175463332
+  },
+  {
+   "event_year": 2022,
+   "n_with_prior": 316533,
+   "g_p05": 218,
+   "g_p50": 364,
+   "g_p95": 456,
+   "share_le60d": 0.020099010213784976,
+   "share_annual_band": 0.8620680940059963
+  },
+  {
+   "event_year": 2023,
+   "n_with_prior": 327351,
+   "g_p05": 218,
+   "g_p50": 364,
+   "g_p95": 445,
+   "share_le60d": 0.020742261364712494,
+   "share_annual_band": 0.8681079330748951
+  }
+ ],
+ "mileage_ladder": [
+  {
+   "event_year": 2005,
+   "n": 58732,
+   "mean_prior_mileages": 0.010181842947626507,
+   "pm_p50": 0,
+   "pm_p90": 0,
+   "day_grain_regression_share": 0.00035755635769256966
+  },
+  {
+   "event_year": 2006,
+   "n": 253198,
+   "mean_prior_mileages": 0.2852313209425035,
+   "pm_p50": 0,
+   "pm_p90": 1,
+   "day_grain_regression_share": 0.0047591213200736185
+  },
+  {
+   "event_year": 2007,
+   "n": 263476,
+   "mean_prior_mileages": 1.3165297788033825,
+   "pm_p50": 1,
+   "pm_p90": 2,
+   "day_grain_regression_share": 0.017295692966342285
+  },
+  {
+   "event_year": 2008,
+   "n": 268733,
+   "mean_prior_mileages": 2.2491915767695074,
+   "pm_p50": 2,
+   "pm_p90": 4,
+   "day_grain_regression_share": 0.022896332047050418
+  },
+  {
+   "event_year": 2009,
+   "n": 274109,
+   "mean_prior_mileages": 3.0808036219168287,
+   "pm_p50": 3,
+   "pm_p90": 5,
+   "day_grain_regression_share": 0.02653324042625379
+  },
+  {
+   "event_year": 2010,
+   "n": 280695,
+   "mean_prior_mileages": 3.8140294625839433,
+   "pm_p50": 4,
+   "pm_p90": 6,
+   "day_grain_regression_share": 0.02885338178449919
+  },
+  {
+   "event_year": 2011,
+   "n": 285969,
+   "mean_prior_mileages": 4.509247505848536,
+   "pm_p50": 5,
+   "pm_p90": 8,
+   "day_grain_regression_share": 0.02945773842619305
+  },
+  {
+   "event_year": 2012,
+   "n": 286623,
+   "mean_prior_mileages": 5.166912634366398,
+   "pm_p50": 6,
+   "pm_p90": 9,
+   "day_grain_regression_share": 0.029955725814048418
+  },
+  {
+   "event_year": 2013,
+   "n": 290254,
+   "mean_prior_mileages": 5.7404032330303805,
+   "pm_p50": 6,
+   "pm_p90": 10,
+   "day_grain_regression_share": 0.02896773171084636
+  },
+  {
+   "event_year": 2014,
+   "n": 292555,
+   "mean_prior_mileages": 6.265669703132744,
+   "pm_p50": 6,
+   "pm_p90": 11,
+   "day_grain_regression_share": 0.028128044299362512
+  },
+  {
+   "event_year": 2015,
+   "n": 296546,
+   "mean_prior_mileages": 6.711579316530994,
+   "pm_p50": 7,
+   "pm_p90": 12,
+   "day_grain_regression_share": 0.02716947792248083
+  },
+  {
+   "event_year": 2016,
+   "n": 300935,
+   "mean_prior_mileages": 7.028780301393989,
+   "pm_p50": 7,
+   "pm_p90": 13,
+   "day_grain_regression_share": 0.02535098941631914
+  },
+  {
+   "event_year": 2017,
+   "n": 305206,
+   "mean_prior_mileages": 7.190435312543004,
+   "pm_p50": 7,
+   "pm_p90": 14,
+   "day_grain_regression_share": 0.023567688708609924
+  },
+  {
+   "event_year": 2018,
+   "n": 310605,
+   "mean_prior_mileages": 7.259297178087925,
+   "pm_p50": 7,
+   "pm_p90": 15,
+   "day_grain_regression_share": 0.02116192591877143
+  },
+  {
+   "event_year": 2019,
+   "n": 318178,
+   "mean_prior_mileages": 7.306306532821251,
+   "pm_p50": 7,
+   "pm_p90": 15,
+   "day_grain_regression_share": 0.019096229154749858
+  },
+  {
+   "event_year": 2020,
+   "n": 316541,
+   "mean_prior_mileages": 7.168518454165495,
+   "pm_p50": 6,
+   "pm_p90": 15,
+   "day_grain_regression_share": 0.016613961540527137
+  },
+  {
+   "event_year": 2021,
+   "n": 331105,
+   "mean_prior_mileages": 7.524386523912354,
+   "pm_p50": 6,
+   "pm_p90": 16,
+   "day_grain_regression_share": 0.016846619652376136
+  },
+  {
+   "event_year": 2022,
+   "n": 343593,
+   "mean_prior_mileages": 7.7347064695730126,
+   "pm_p50": 6,
+   "pm_p90": 16,
+   "day_grain_regression_share": 0.019456158885658322
+  },
+  {
+   "event_year": 2023,
+   "n": 347849,
+   "mean_prior_mileages": 8.12767033971637,
+   "pm_p50": 7,
+   "pm_p90": 17,
+   "day_grain_regression_share": 0.01791007017412728
+  }
+ ],
+ "caveat": "test_mileage has no unit column; DVSA documents pre-2022 km contamination (corrected upstream only from the 2022 dataset). Regression share conflates unit flips, corrections and genuine clocking."
+}

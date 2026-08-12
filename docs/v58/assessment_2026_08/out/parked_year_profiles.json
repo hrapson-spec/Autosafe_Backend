@@ -1,0 +1,4650 @@
+{
+ "2005": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 3
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 68
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 34771
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 4
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 165
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 293
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 10361
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 35501
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2451
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 15
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 53
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 248
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 8395
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 77
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 331
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 823
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 13988
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 91741
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 4505
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 21
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 84
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 260
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 11748
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 67
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 27
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 44
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 981
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 2813
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 215
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 10
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 30
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 863
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 11
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 22072
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 35315
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 1600901
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 3624716
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 327528
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3743
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 12001
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 35488
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 1445005
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 6320
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 88
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 157
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2201
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 6662
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 234
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 14
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 46
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 140
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 1913
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 7
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 915
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1025
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 44428
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 61534
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 3980
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 211
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 458
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2049
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 39416
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 205
+   }
+  ],
+  "sanity": {
+   "n": 7499744,
+   "mileage_null": 134954,
+   "mileage_zero": 0,
+   "mileage_gt200k": 76557,
+   "m_p50": 63471,
+   "m_p95": 148523,
+   "fud_null": 24811,
+   "age_p50": 7.419849154396135,
+   "age_p95": 16.126569752988352,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2005-01-01",
+   "dmax": "2005-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 5805422,
+   "vehicle_days": 6902706,
+   "multi_test_vehicle_days": 579253,
+   "tests_on_multi_days": 1176291
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 27608,
+    "tests_with_items": 2693,
+    "item_rows": 10242
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 50309,
+    "tests_with_items": 1676,
+    "item_rows": 3478
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 1711147,
+    "tests_with_items": 1711147,
+    "item_rows": 7406821
+   },
+   {
+    "outcome": "PASS",
+    "tests": 5365080,
+    "tests_with_items": 818972,
+    "item_rows": 1595320
+   },
+   {
+    "outcome": "PRS",
+    "tests": 345600,
+    "tests_with_items": 345600,
+    "item_rows": 828628
+   }
+  ]
+ },
+ "2006": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 10
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 1174
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 1189
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 7
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 20
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 549
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 485
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 44440
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 166543
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 13514
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 33
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 179
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 788
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 36110
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 351
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 1042
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1411
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 70054
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 550141
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 31858
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 56
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 321
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 928
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 59612
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 418
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 46
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 56
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 3329
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 11497
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 809
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 4
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 21
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 77
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2919
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 25
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 1
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 35
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 29
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 4
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 65631
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 63946
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 6693059
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 15448848
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 1749413
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 10046
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 33663
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 117795
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 6096567
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 23531
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 233
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 266
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 9097
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 26321
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 1512
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 31
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 124
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 495
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 8087
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 59
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2881
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 2118
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 192054
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 260690
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 23831
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 570
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1420
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 6903
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 173830
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 968
+   }
+  ],
+  "sanity": {
+   "n": 32014080,
+   "mileage_null": 323256,
+   "mileage_zero": 0,
+   "mileage_gt200k": 324511,
+   "m_p50": 62824,
+   "m_p95": 148238,
+   "fud_null": 1829,
+   "age_p50": 7.435104712669716,
+   "age_p95": 16.312638539698458,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2006-01-01",
+   "dmax": "2006-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 24309669,
+   "vehicle_days": 29837883,
+   "multi_test_vehicle_days": 2152562,
+   "tests_on_multi_days": 4328759
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 81133,
+    "tests_with_items": 10335,
+    "item_rows": 48957
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 104019,
+    "tests_with_items": 2892,
+    "item_rows": 6302
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 7140251,
+    "tests_with_items": 7140251,
+    "item_rows": 32674443
+   },
+   {
+    "outcome": "PASS",
+    "tests": 22842384,
+    "tests_with_items": 4281812,
+    "item_rows": 8705040
+   },
+   {
+    "outcome": "PRS",
+    "tests": 1846293,
+    "tests_with_items": 1846293,
+    "item_rows": 4595693
+   }
+  ]
+ },
+ "2007": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 4
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 211
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 3
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 411
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 951
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 46277
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 166415
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 15689
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 23
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 105
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 454
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 38227
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 192
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 2
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 1
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 695
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 2757
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 71338
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 559111
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 39552
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 20
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 175
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 493
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 61284
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 243
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 39
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 130
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 3184
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 10632
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 900
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 21
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 39
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2862
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 7
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 2
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 69
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 32
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 7
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 61155
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 120961
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 7278348
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 15425899
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2161830
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3818
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 21849
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 55351
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 6662031
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 12622
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 195
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 639
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 9702
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 26324
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 1980
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 15
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 62
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 292
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 8861
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 30
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 4
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2763
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 5741
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 209809
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 268612
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 31842
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 221
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 947
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 4007
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 192183
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 576
+   }
+  ],
+  "sanity": {
+   "n": 33591238,
+   "mileage_null": 378909,
+   "mileage_zero": 0,
+   "mileage_gt200k": 345051,
+   "m_p50": 63003,
+   "m_p95": 148738,
+   "fud_null": 627,
+   "age_p50": 7.4955871206187865,
+   "age_p95": 16.284172404805968,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2007-01-01",
+   "dmax": "2007-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 25288070,
+   "vehicle_days": 31148491,
+   "multi_test_vehicle_days": 2427133,
+   "tests_on_multi_days": 4869880
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 69362,
+    "tests_with_items": 10188,
+    "item_rows": 54886
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 154341,
+    "tests_with_items": 4404,
+    "item_rows": 12336
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 7679584,
+    "tests_with_items": 7679584,
+    "item_rows": 36285783
+   },
+   {
+    "outcome": "PASS",
+    "tests": 23422479,
+    "tests_with_items": 5358284,
+    "item_rows": 11357923
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2265472,
+    "tests_with_items": 2265472,
+    "item_rows": 5815775
+   }
+  ]
+ },
+ "2008": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1
+   },
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 22
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 420
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 974
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 48463
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 168632
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 19114
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 12
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 97
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 489
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 40718
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 207
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 589
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 2792
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 73956
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 565980
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 48458
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 18
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 176
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 430
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 64483
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 281
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 43
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 113
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2941
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 10057
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 997
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 7
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 34
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2674
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 15
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 1
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 60
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 45
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 8
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 53849
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 131013
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 7555544
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 15339155
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2463168
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 2579
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 23172
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 45729
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 6966411
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 11019
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 150
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 658
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11019
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 26270
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2375
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 13
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 62
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 265
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10168
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 29
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2429
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 6189
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 217961
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 269121
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 41429
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 143
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 994
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 3343
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 201044
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 521
+   }
+  ],
+  "sanity": {
+   "n": 34439132,
+   "mileage_null": 384012,
+   "mileage_zero": 0,
+   "mileage_gt200k": 359302,
+   "m_p50": 63500,
+   "m_p95": 149376,
+   "fud_null": 438,
+   "age_p50": 7.669525220901031,
+   "age_p95": 16.168040906231724,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2008-01-01",
+   "dmax": "2008-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 25863312,
+   "vehicle_days": 31768582,
+   "multi_test_vehicle_days": 2655209,
+   "tests_on_multi_days": 5325759
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 60246,
+    "tests_with_items": 10155,
+    "item_rows": 58092
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 166249,
+    "tests_with_items": 5125,
+    "item_rows": 15681
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 7960258,
+    "tests_with_items": 7960258,
+    "item_rows": 38236729
+   },
+   {
+    "outcome": "PASS",
+    "tests": 23664758,
+    "tests_with_items": 6845225,
+    "item_rows": 15059311
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2587621,
+    "tests_with_items": 2587621,
+    "item_rows": 6729572
+   }
+  ]
+ },
+ "2009": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 5
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 430
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1034
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 49377
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 170527
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 21703
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 20
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 142
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 394
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 41786
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 197
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 3
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 669
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 2866
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 77786
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 577764
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 54897
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 23
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 163
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 427
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 68948
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 232
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 45
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 155
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2850
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 9674
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 1005
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 7
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 20
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2595
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 13
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 2
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 52
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 28
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 8
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 56432
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 138872
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 7992441
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 15354521
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2508162
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 2607
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 25515
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 43683
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7395835
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 10925
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 125
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 625
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11131
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 27608
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2702
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 4
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 53
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 220
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10341
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 31
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2395
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 6712
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 226501
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 272656
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 46406
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 143
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1028
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 3112
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 209760
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 541
+   }
+  ],
+  "sanity": {
+   "n": 35436943,
+   "mileage_null": 405979,
+   "mileage_zero": 0,
+   "mileage_gt200k": 376585,
+   "m_p50": 64060,
+   "m_p95": 149790,
+   "fud_null": 351,
+   "age_p50": 7.869269138777398,
+   "age_p95": 16.235559091457365,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2009-01-01",
+   "dmax": "2009-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 26415325,
+   "vehicle_days": 32521855,
+   "multi_test_vehicle_days": 2897689,
+   "tests_on_multi_days": 5812777
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 62896,
+    "tests_with_items": 11332,
+    "item_rows": 65992
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 177174,
+    "tests_with_items": 5062,
+    "item_rows": 15635
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8408003,
+    "tests_with_items": 8408003,
+    "item_rows": 41241644
+   },
+   {
+    "outcome": "PASS",
+    "tests": 24142047,
+    "tests_with_items": 7756647,
+    "item_rows": 17539638
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2646823,
+    "tests_with_items": 2646823,
+    "item_rows": 6975763
+   }
+  ]
+ },
+ "2010": {
+  "census": [
+   {
+    "test_class_id": "1",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 2
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 484
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1130
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 50030
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 176275
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 22289
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 16
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 137
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 375
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 42841
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 196
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 642
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 2947
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 73434
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 585621
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 54684
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 26
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 167
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 360
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 65390
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 224
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 50
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 140
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2531
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 9411
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 942
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 7
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 19
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2311
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 8
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 37
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 30
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 1
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 55845
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 148657
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 8041780
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 15891667
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2494653
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 2409
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 25801
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 39428
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7468747
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 10271
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 131
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 577
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11047
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 27877
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 3037
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 7
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 57
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 180
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10281
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 22
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2467
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 7063
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 234899
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 291574
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 50443
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 110
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1214
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2868
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 218500
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 543
+   }
+  ],
+  "sanity": {
+   "n": 36134920,
+   "mileage_null": 428765,
+   "mileage_zero": 0,
+   "mileage_gt200k": 396906,
+   "m_p50": 64917,
+   "m_p95": 150541,
+   "fud_null": 315,
+   "age_p50": 7.981907653362797,
+   "age_p95": 16.302580714187656,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2010-01-01",
+   "dmax": "2010-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 27015723,
+   "vehicle_days": 33134966,
+   "multi_test_vehicle_days": 2982573,
+   "tests_on_multi_days": 5982527
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 62188,
+    "tests_with_items": 11003,
+    "item_rows": 64065
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 187897,
+    "tests_with_items": 5497,
+    "item_rows": 17301
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8456994,
+    "tests_with_items": 8456994,
+    "item_rows": 41063629
+   },
+   {
+    "outcome": "PASS",
+    "tests": 24790528,
+    "tests_with_items": 8211216,
+    "item_rows": 18510311
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2637313,
+    "tests_with_items": 2637313,
+    "item_rows": 6920377
+   }
+  ]
+ },
+ "2011": {
+  "census": [
+   {
+    "test_class_id": "0",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 525
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1276
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 55912
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 191303
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 25924
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 16
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 153
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 414
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 47942
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 261
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 3
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 3
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 680
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 3331
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 73902
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 616601
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 58219
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 17
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 160
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 344
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 66051
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 246
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 42
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 126
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2421
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 9409
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 948
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 10
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 7
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2220
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 7
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 49
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 21
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 7
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 56183
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 159313
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 8176137
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 16132688
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2567801
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 2213
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 25348
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 35573
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7625553
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9810
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 110
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 629
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11246
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 28590
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2934
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 6
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 56
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 155
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10469
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 34
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2442
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 7590
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 245148
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 301742
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 54668
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 116
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1161
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2639
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 229742
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 505
+   }
+  ],
+  "sanity": {
+   "n": 36849154,
+   "mileage_null": 447187,
+   "mileage_zero": 0,
+   "mileage_gt200k": 421950,
+   "m_p50": 66081,
+   "m_p95": 151623,
+   "fud_null": 279,
+   "age_p50": 8.138713914716826,
+   "age_p95": 16.55150397361778,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2011-01-01",
+   "dmax": "2011-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 27526896,
+   "vehicle_days": 33632832,
+   "multi_test_vehicle_days": 3197526,
+   "tests_on_multi_days": 6413848
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 62350,
+    "tests_with_items": 11788,
+    "item_rows": 69253
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 199153,
+    "tests_with_items": 5591,
+    "item_rows": 17285
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8603953,
+    "tests_with_items": 8603953,
+    "item_rows": 41614175
+   },
+   {
+    "outcome": "PASS",
+    "tests": 25262334,
+    "tests_with_items": 8793963,
+    "item_rows": 19829527
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2721364,
+    "tests_with_items": 2721364,
+    "item_rows": 7193627
+   }
+  ]
+ },
+ "2012": {
+  "census": [
+   {
+    "test_class_id": "1",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 499
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1300
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 54612
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 191497
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 26228
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 17
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 142
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 404
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 46935
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 210
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 1
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 639
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 3337
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 69682
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 612784
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 57954
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 17
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 169
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 292
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 62246
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 212
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 35
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 110
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2258
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 8949
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 857
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 3
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 11
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 2004
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 29
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 34
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 4
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 53535
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 173347
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 8137116
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 16217522
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2583133
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1787
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 23838
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 31666
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7600690
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9145
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 103
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 698
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 10962
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 27866
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2930
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 7
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 50
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 152
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10239
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 22
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2137
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 8067
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 235253
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 292299
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 55310
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 112
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1116
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2439
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 220894
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 426
+   }
+  ],
+  "sanity": {
+   "n": 36846342,
+   "mileage_null": 321435,
+   "mileage_zero": 137855,
+   "mileage_gt200k": 441715,
+   "m_p50": 67178,
+   "m_p95": 152894,
+   "fud_null": 206,
+   "age_p50": 8.520299177575092,
+   "age_p95": 16.73139685674003,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2012-01-01",
+   "dmax": "2012-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 27572094,
+   "vehicle_days": 33561524,
+   "multi_test_vehicle_days": 3265847,
+   "tests_on_multi_days": 6550665
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 58888,
+    "tests_with_items": 11161,
+    "item_rows": 66865
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 212177,
+    "tests_with_items": 5448,
+    "item_rows": 17251
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8544876,
+    "tests_with_items": 8544876,
+    "item_rows": 42299432
+   },
+   {
+    "outcome": "PASS",
+    "tests": 25293961,
+    "tests_with_items": 9381475,
+    "item_rows": 21343762
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2736440,
+    "tests_with_items": 2736440,
+    "item_rows": 7270242
+   }
+  ]
+ },
+ "2013": {
+  "census": [
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 505
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1414
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 51936
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 189352
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 25429
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 16
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 155
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 379
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 44383
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 199
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 667
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 3544
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 68463
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 614419
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 56090
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 22
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 186
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 315
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 61339
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 238
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 34
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 131
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 2072
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 8445
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 843
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 2
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 6
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 19
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 1839
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 38
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 26
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 3
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 55001
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 186056
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 8314600
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 16406727
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2574314
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1879
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 25779
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 31820
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7740470
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9795
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 124
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 666
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11882
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 28000
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 3070
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 8
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 67
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 159
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 11012
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 17
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 1
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2393
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 8608
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 239587
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 293755
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 55801
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 104
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1248
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2361
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 223592
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 511
+   }
+  ],
+  "sanity": {
+   "n": 37361925,
+   "mileage_null": 342583,
+   "mileage_zero": 119936,
+   "mileage_gt200k": 489782,
+   "m_p50": 68380,
+   "m_p95": 155051,
+   "fud_null": 138,
+   "age_p50": 8.883559484889664,
+   "age_p95": 16.83165355611873,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2013-01-01",
+   "dmax": "2013-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 27819980,
+   "vehicle_days": 34037079,
+   "multi_test_vehicle_days": 3305441,
+   "tests_on_multi_days": 6630287
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 60755,
+    "tests_with_items": 11821,
+    "item_rows": 72549
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 227860,
+    "tests_with_items": 5811,
+    "item_rows": 18558
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8723632,
+    "tests_with_items": 8723632,
+    "item_rows": 43900077
+   },
+   {
+    "outcome": "PASS",
+    "tests": 25623359,
+    "tests_with_items": 9857345,
+    "item_rows": 22704705
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2726319,
+    "tests_with_items": 2726319,
+    "item_rows": 7340302
+   }
+  ]
+ },
+ "2014": {
+  "census": [
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 456
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 1323
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 50222
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 191713
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 24699
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 13
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 143
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 355
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 43035
+   },
+   {
+    "test_class_id": "1",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 188
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 562
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 3658
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 66693
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 621556
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 54432
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 14
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 195
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 266
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 59484
+   },
+   {
+    "test_class_id": "2",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 210
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 30
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 137
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 1880
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 8590
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 799
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 8
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 14
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 1677
+   },
+   {
+    "test_class_id": "3",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 3
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "ABORTED",
+    "n": 4
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 40
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PASS",
+    "n": 34
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "ES",
+    "outcome": "PRS",
+    "n": 2
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 56492
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 190141
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 8148984
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 16863178
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 2542209
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 1781
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 25605
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 28485
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 7592335
+   },
+   {
+    "test_class_id": "4",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 9056
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 105
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 738
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 11492
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 29291
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 3230
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 3
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 65
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 109
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 10701
+   },
+   {
+    "test_class_id": "5",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 18
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "ES",
+    "outcome": "FAIL",
+    "n": 4
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABANDONED",
+    "n": 2263
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "ABORTED",
+    "n": 8647
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "FAIL",
+    "n": 240728
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PASS",
+    "n": 307468
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "NT",
+    "outcome": "PRS",
+    "n": 58986
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABANDONED",
+    "n": 95
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "ABORTED",
+    "n": 1260
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "FAIL",
+    "n": 2257
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PASS",
+    "n": 225237
+   },
+   {
+    "test_class_id": "7",
+    "test_type": "RT",
+    "outcome": "PRS",
+    "n": 427
+   }
+  ],
+  "sanity": {
+   "n": 37493825,
+   "mileage_null": 444599,
+   "mileage_zero": 21462,
+   "mileage_gt200k": 540750,
+   "m_p50": 69851,
+   "m_p95": 157736,
+   "fud_null": 67,
+   "age_p50": 9.028086278545047,
+   "age_p95": 17.151469899177357,
+   "schema_epochs": [
+    "results_mts"
+   ],
+   "dmin": "2014-01-01",
+   "dmax": "2014-12-31"
+  },
+  "vehicle_day": {
+   "distinct_vehicles": 28064493,
+   "vehicle_days": 34164109,
+   "multi_test_vehicle_days": 3310261,
+   "tests_on_multi_days": 6639977
+  },
+  "items_join": [
+   {
+    "outcome": "ABANDONED",
+    "tests": 61814,
+    "tests_with_items": 11952,
+    "item_rows": 73361
+   },
+   {
+    "outcome": "ABORTED",
+    "tests": 231924,
+    "tests_with_items": 5604,
+    "item_rows": 18519
+   },
+   {
+    "outcome": "FAIL",
+    "tests": 8551529,
+    "tests_with_items": 8551529,
+    "item_rows": 43034472
+   },
+   {
+    "outcome": "PASS",
+    "tests": 25954299,
+    "tests_with_items": 10158623,
+    "item_rows": 23529911
+   },
+   {
+    "outcome": "PRS",
+    "tests": 2694259,
+    "tests_with_items": 2694259,
+    "item_rows": 7297301
+   }
+  ]
+ }
+}

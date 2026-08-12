@@ -1,0 +1,160 @@
+{
+ "unique_vehicles_exact": 72037010,
+ "vehicles_in_2plus_years": 66042023,
+ "first_year_seen": [
+  {
+   "first_year_seen": 2005,
+   "n": 5805422
+  },
+  {
+   "first_year_seen": 2006,
+   "n": 19620599
+  },
+  {
+   "first_year_seen": 2007,
+   "n": 3996925
+  },
+  {
+   "first_year_seen": 2008,
+   "n": 3023139
+  },
+  {
+   "first_year_seen": 2009,
+   "n": 2861343
+  },
+  {
+   "first_year_seen": 2010,
+   "n": 2877470
+  },
+  {
+   "first_year_seen": 2011,
+   "n": 2547898
+  },
+  {
+   "first_year_seen": 2012,
+   "n": 2282790
+  },
+  {
+   "first_year_seen": 2013,
+   "n": 2350741
+  },
+  {
+   "first_year_seen": 2014,
+   "n": 2272751
+  },
+  {
+   "first_year_seen": 2015,
+   "n": 2357370
+  },
+  {
+   "first_year_seen": 2016,
+   "n": 2589954
+  },
+  {
+   "first_year_seen": 2017,
+   "n": 2835115
+  },
+  {
+   "first_year_seen": 2018,
+   "n": 3034641
+  },
+  {
+   "first_year_seen": 2019,
+   "n": 3099615
+  },
+  {
+   "first_year_seen": 2020,
+   "n": 2975130
+  },
+  {
+   "first_year_seen": 2021,
+   "n": 2761277
+  },
+  {
+   "first_year_seen": 2022,
+   "n": 2706167
+  },
+  {
+   "first_year_seen": 2023,
+   "n": 2038663
+  }
+ ],
+ "n_years_dist": [
+  {
+   "n_years": 1,
+   "n": 5994987
+  },
+  {
+   "n_years": 2,
+   "n": 5966490
+  },
+  {
+   "n_years": 3,
+   "n": 5771397
+  },
+  {
+   "n_years": 4,
+   "n": 5818627
+  },
+  {
+   "n_years": 5,
+   "n": 5649971
+  },
+  {
+   "n_years": 6,
+   "n": 5482210
+  },
+  {
+   "n_years": 7,
+   "n": 5249334
+  },
+  {
+   "n_years": 8,
+   "n": 4987091
+  },
+  {
+   "n_years": 9,
+   "n": 4753520
+  },
+  {
+   "n_years": 10,
+   "n": 4566777
+  },
+  {
+   "n_years": 11,
+   "n": 4281378
+  },
+  {
+   "n_years": 12,
+   "n": 3687209
+  },
+  {
+   "n_years": 13,
+   "n": 2992614
+  },
+  {
+   "n_years": 14,
+   "n": 2338748
+  },
+  {
+   "n_years": 15,
+   "n": 1665706
+  },
+  {
+   "n_years": 16,
+   "n": 1183700
+  },
+  {
+   "n_years": 17,
+   "n": 876637
+  },
+  {
+   "n_years": 18,
+   "n": 677223
+  },
+  {
+   "n_years": 19,
+   "n": 93391
+  }
+ ]
+}

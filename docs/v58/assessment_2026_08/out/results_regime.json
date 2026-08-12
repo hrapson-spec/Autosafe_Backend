@@ -1,0 +1,240 @@
+{
+ "schema_epoch": [
+  {
+   "test_year": 2015,
+   "schema_epoch": "results_mts",
+   "n": 37490736
+  },
+  {
+   "test_year": 2016,
+   "schema_epoch": "results_mts",
+   "n": 37693380
+  },
+  {
+   "test_year": 2017,
+   "schema_epoch": "results_mts",
+   "n": 38056161
+  },
+  {
+   "test_year": 2018,
+   "schema_epoch": "results_csv",
+   "n": 38681801
+  },
+  {
+   "test_year": 2019,
+   "schema_epoch": "results_csv",
+   "n": 39310698
+  },
+  {
+   "test_year": 2020,
+   "schema_epoch": "results_csv",
+   "n": 38594013
+  },
+  {
+   "test_year": 2021,
+   "schema_epoch": "results_csv",
+   "n": 40380646
+  },
+  {
+   "test_year": 2022,
+   "schema_epoch": "results_mts",
+   "n": 41632878
+  },
+  {
+   "test_year": 2023,
+   "schema_epoch": "results_mts",
+   "n": 42216721
+  }
+ ],
+ "age_source": [
+  {
+   "test_year": 2015,
+   "age_source": "first_use_date",
+   "n": 37490488
+  },
+  {
+   "test_year": 2015,
+   "age_source": "missing",
+   "n": 248
+  },
+  {
+   "test_year": 2016,
+   "age_source": "first_use_date",
+   "n": 37693111
+  },
+  {
+   "test_year": 2016,
+   "age_source": "missing",
+   "n": 269
+  },
+  {
+   "test_year": 2017,
+   "age_source": "first_use_date",
+   "n": 38055878
+  },
+  {
+   "test_year": 2017,
+   "age_source": "missing",
+   "n": 283
+  },
+  {
+   "test_year": 2018,
+   "age_source": "first_use_date",
+   "n": 38681674
+  },
+  {
+   "test_year": 2018,
+   "age_source": "missing",
+   "n": 127
+  },
+  {
+   "test_year": 2019,
+   "age_source": "first_use_date",
+   "n": 39310640
+  },
+  {
+   "test_year": 2019,
+   "age_source": "missing",
+   "n": 58
+  },
+  {
+   "test_year": 2020,
+   "age_source": "first_use_date",
+   "n": 38593327
+  },
+  {
+   "test_year": 2020,
+   "age_source": "missing",
+   "n": 686
+  },
+  {
+   "test_year": 2021,
+   "age_source": "first_use_date",
+   "n": 40373395
+  },
+  {
+   "test_year": 2021,
+   "age_source": "missing",
+   "n": 7251
+  },
+  {
+   "test_year": 2022,
+   "age_source": "first_use_date",
+   "n": 41632856
+  },
+  {
+   "test_year": 2022,
+   "age_source": "missing",
+   "n": 22
+  },
+  {
+   "test_year": 2023,
+   "age_source": "first_use_date",
+   "n": 42216687
+  },
+  {
+   "test_year": 2023,
+   "age_source": "missing",
+   "n": 34
+  }
+ ],
+ "taxonomy_era": [
+  {
+   "test_year": 2015,
+   "taxonomy_era": "pre_2018",
+   "n": 37490736
+  },
+  {
+   "test_year": 2016,
+   "taxonomy_era": "pre_2018",
+   "n": 37693380
+  },
+  {
+   "test_year": 2017,
+   "taxonomy_era": "pre_2018",
+   "n": 38056161
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "post_2018",
+   "n": 23016430
+  },
+  {
+   "test_year": 2018,
+   "taxonomy_era": "pre_2018",
+   "n": 15665371
+  },
+  {
+   "test_year": 2019,
+   "taxonomy_era": "post_2018",
+   "n": 39310698
+  },
+  {
+   "test_year": 2020,
+   "taxonomy_era": "post_2018",
+   "n": 38594013
+  },
+  {
+   "test_year": 2021,
+   "taxonomy_era": "post_2018",
+   "n": 40380646
+  },
+  {
+   "test_year": 2022,
+   "taxonomy_era": "post_2018",
+   "n": 41632878
+  },
+  {
+   "test_year": 2023,
+   "taxonomy_era": "post_2018",
+   "n": 42216721
+  }
+ ],
+ "date_range": [
+  {
+   "test_year": 2015,
+   "dmin": "2015-01-01",
+   "dmax": "2015-12-31"
+  },
+  {
+   "test_year": 2016,
+   "dmin": "2016-01-01",
+   "dmax": "2016-12-31"
+  },
+  {
+   "test_year": 2017,
+   "dmin": "2017-01-01",
+   "dmax": "2017-12-31"
+  },
+  {
+   "test_year": 2018,
+   "dmin": "2018-01-01",
+   "dmax": "2018-12-31"
+  },
+  {
+   "test_year": 2019,
+   "dmin": "2019-01-01",
+   "dmax": "2019-12-31"
+  },
+  {
+   "test_year": 2020,
+   "dmin": "2020-01-01",
+   "dmax": "2020-12-31"
+  },
+  {
+   "test_year": 2021,
+   "dmin": "2021-01-01",
+   "dmax": "2021-12-30"
+  },
+  {
+   "test_year": 2022,
+   "dmin": "2022-01-01",
+   "dmax": "2022-12-31"
+  },
+  {
+   "test_year": 2023,
+   "dmin": "2023-01-01",
+   "dmax": "2023-12-31"
+  }
+ ]
+}

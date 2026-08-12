@@ -1,0 +1,92 @@
+[
+ {
+  "test_year": 2015,
+  "n_makes": 8759,
+  "make_unclassified": 39,
+  "n_model_ids": 111106,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 42539
+ },
+ {
+  "test_year": 2016,
+  "n_makes": 9262,
+  "make_unclassified": 35,
+  "n_model_ids": 108822,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 41171
+ },
+ {
+  "test_year": 2017,
+  "n_makes": 10815,
+  "make_unclassified": 24,
+  "n_model_ids": 96879,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 50571
+ },
+ {
+  "test_year": 2018,
+  "n_makes": 10679,
+  "make_unclassified": 22,
+  "n_model_ids": 86174,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 15,
+  "cc_null": 56448
+ },
+ {
+  "test_year": 2019,
+  "n_makes": 10543,
+  "make_unclassified": 25,
+  "n_model_ids": 80568,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 15,
+  "cc_null": 65120
+ },
+ {
+  "test_year": 2020,
+  "n_makes": 9405,
+  "make_unclassified": 2544,
+  "n_model_ids": 64014,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 15,
+  "cc_null": 77015
+ },
+ {
+  "test_year": 2021,
+  "n_makes": 10270,
+  "make_unclassified": 231,
+  "n_model_ids": 64778,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 96260
+ },
+ {
+  "test_year": 2022,
+  "n_makes": 10288,
+  "make_unclassified": 174,
+  "n_model_ids": 66020,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 146338
+ },
+ {
+  "test_year": 2023,
+  "n_makes": 10226,
+  "make_unclassified": 152,
+  "n_model_ids": 66545,
+  "n_postcode_areas": 119,
+  "pc_missing": 0,
+  "n_fuel_types": 14,
+  "cc_null": 279982
+ }
+]

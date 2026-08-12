@@ -1,0 +1,26 @@
+{
+ "detail_rows": 21069,
+ "distinct_rfr_id": 7505,
+ "distinct_rfr_id_class": 21069,
+ "rfr_id_multi_class": 5768,
+ "rfr_id_multi_deficiency_within_class4": 0,
+ "class4_rfr_ids": 4432,
+ "class4_by_deficiency": [
+  {
+   "deficiency_category": "Dangerous",
+   "n": 525
+  },
+  {
+   "deficiency_category": "Major",
+   "n": 1196
+  },
+  {
+   "deficiency_category": "Minor",
+   "n": 200
+  },
+  {
+   "deficiency_category": "Pre-EU Directive",
+   "n": 2511
+  }
+ ]
+}

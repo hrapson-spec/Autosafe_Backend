@@ -1,0 +1,955 @@
+{
+ "by_year": [
+  {
+   "event_year": 2005,
+   "n": 58732,
+   "mean_prior_items": 0.02564189879452428,
+   "items_p50": 0,
+   "items_p90": 0,
+   "items_p99": 0,
+   "mean_prior_fail_items": 0.022406865082067698,
+   "mean_prior_adv_items": 0.0032350337124565825,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.005516583804399646,
+   "share_3plus_defect_tests": 0.0
+  },
+  {
+   "event_year": 2006,
+   "n": 253198,
+   "mean_prior_items": 0.4174598535533456,
+   "items_p50": 0,
+   "items_p90": 1,
+   "items_p99": 8,
+   "mean_prior_fail_items": 0.3026564190870386,
+   "mean_prior_adv_items": 0.114803434466307,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.10799058444379497,
+   "share_3plus_defect_tests": 0.0004660384363225618
+  },
+  {
+   "event_year": 2007,
+   "n": 263476,
+   "mean_prior_items": 1.7768487452367578,
+   "items_p50": 0,
+   "items_p90": 5,
+   "items_p99": 15,
+   "mean_prior_fail_items": 1.1697839651429351,
+   "mean_prior_adv_items": 0.6070647800938226,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.4425981873111782,
+   "share_3plus_defect_tests": 0.00816393143967572
+  },
+  {
+   "event_year": 2008,
+   "n": 268733,
+   "mean_prior_items": 3.085839848474136,
+   "items_p50": 1,
+   "items_p90": 9,
+   "items_p99": 20,
+   "mean_prior_fail_items": 1.919477697193869,
+   "mean_prior_adv_items": 1.166362151280267,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.5947613430430948,
+   "share_3plus_defect_tests": 0.060699653559480975
+  },
+  {
+   "event_year": 2009,
+   "n": 274109,
+   "mean_prior_items": 4.375722796405809,
+   "items_p50": 2,
+   "items_p90": 12,
+   "items_p99": 27,
+   "mean_prior_fail_items": 2.568569437705438,
+   "mean_prior_adv_items": 1.807153358700371,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.6716196841402508,
+   "share_3plus_defect_tests": 0.18502858351969473
+  },
+  {
+   "event_year": 2010,
+   "n": 280695,
+   "mean_prior_items": 5.573419547907871,
+   "items_p50": 3,
+   "items_p90": 15,
+   "items_p99": 33,
+   "mean_prior_fail_items": 3.1083346693029803,
+   "mean_prior_adv_items": 2.4650848786048916,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7136251091041879,
+   "share_3plus_defect_tests": 0.2896204064910312
+  },
+  {
+   "event_year": 2011,
+   "n": 285969,
+   "mean_prior_items": 6.638418849595586,
+   "items_p50": 4,
+   "items_p90": 18,
+   "items_p99": 38,
+   "mean_prior_fail_items": 3.5639492392532057,
+   "mean_prior_adv_items": 3.07446961034238,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7411013081837542,
+   "share_3plus_defect_tests": 0.36522839888239633
+  },
+  {
+   "event_year": 2012,
+   "n": 286623,
+   "mean_prior_items": 7.603643113078853,
+   "items_p50": 4,
+   "items_p90": 20,
+   "items_p99": 43,
+   "mean_prior_fail_items": 3.94090844070434,
+   "mean_prior_adv_items": 3.662734672374513,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7636756296598668,
+   "share_3plus_defect_tests": 0.4197604518827868
+  },
+  {
+   "event_year": 2013,
+   "n": 290254,
+   "mean_prior_items": 8.495262769849855,
+   "items_p50": 5,
+   "items_p90": 22,
+   "items_p99": 48,
+   "mean_prior_fail_items": 4.280760988651319,
+   "mean_prior_adv_items": 4.214501781198536,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7766852480930495,
+   "share_3plus_defect_tests": 0.45715821315123994
+  },
+  {
+   "event_year": 2014,
+   "n": 292555,
+   "mean_prior_items": 9.340089897626088,
+   "items_p50": 5,
+   "items_p90": 25,
+   "items_p99": 52,
+   "mean_prior_fail_items": 4.584512313923877,
+   "mean_prior_adv_items": 4.75557758370221,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7840132624634684,
+   "share_3plus_defect_tests": 0.48608979508126676
+  },
+  {
+   "event_year": 2015,
+   "n": 296546,
+   "mean_prior_items": 10.048184767287369,
+   "items_p50": 6,
+   "items_p90": 27,
+   "items_p99": 56,
+   "mean_prior_fail_items": 4.803652721668813,
+   "mean_prior_adv_items": 5.244532045618555,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7867008828309942,
+   "share_3plus_defect_tests": 0.5061204669764556
+  },
+  {
+   "event_year": 2016,
+   "n": 300935,
+   "mean_prior_items": 10.408835795105256,
+   "items_p50": 6,
+   "items_p90": 28,
+   "items_p99": 59,
+   "mean_prior_fail_items": 4.875275391695881,
+   "mean_prior_adv_items": 5.533560403409374,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7790353398574443,
+   "share_3plus_defect_tests": 0.5110040374167178
+  },
+  {
+   "event_year": 2017,
+   "n": 305206,
+   "mean_prior_items": 10.428635085810894,
+   "items_p50": 5,
+   "items_p90": 28,
+   "items_p99": 61,
+   "mean_prior_fail_items": 4.767851877092848,
+   "mean_prior_adv_items": 5.660783208718046,
+   "mean_prior_minor_items": 0.0,
+   "share_any_defect_history": 0.7667345989266267,
+   "share_3plus_defect_tests": 0.5040267884641848
+  },
+  {
+   "event_year": 2018,
+   "n": 310605,
+   "mean_prior_items": 10.39588222984176,
+   "items_p50": 5,
+   "items_p90": 28,
+   "items_p99": 63,
+   "mean_prior_fail_items": 4.593625344086541,
+   "mean_prior_adv_items": 5.798960094010077,
+   "mean_prior_minor_items": 0.0032967917451425443,
+   "share_any_defect_history": 0.7560052156275655,
+   "share_3plus_defect_tests": 0.49259348690458943
+  },
+  {
+   "event_year": 2019,
+   "n": 318178,
+   "mean_prior_items": 10.419441319010113,
+   "items_p50": 5,
+   "items_p90": 29,
+   "items_p99": 65,
+   "mean_prior_fail_items": 4.410072349439622,
+   "mean_prior_adv_items": 5.926849122189466,
+   "mean_prior_minor_items": 0.08251984738102572,
+   "share_any_defect_history": 0.7536347579028091,
+   "share_3plus_defect_tests": 0.48318236961700683
+  },
+  {
+   "event_year": 2020,
+   "n": 316541,
+   "mean_prior_items": 10.271759424529524,
+   "items_p50": 5,
+   "items_p90": 29,
+   "items_p99": 66,
+   "mean_prior_fail_items": 4.089242783715222,
+   "mean_prior_adv_items": 5.984532809335915,
+   "mean_prior_minor_items": 0.1979838314783867,
+   "share_any_defect_history": 0.7434013287378254,
+   "share_3plus_defect_tests": 0.4667610198994759
+  },
+  {
+   "event_year": 2021,
+   "n": 331105,
+   "mean_prior_items": 10.978858670210355,
+   "items_p50": 5,
+   "items_p90": 30,
+   "items_p99": 70,
+   "mean_prior_fail_items": 4.159828453209707,
+   "mean_prior_adv_items": 6.51160205976956,
+   "mean_prior_minor_items": 0.30742815723108985,
+   "share_any_defect_history": 0.7720602225880008,
+   "share_3plus_defect_tests": 0.4888207668262334
+  },
+  {
+   "event_year": 2022,
+   "n": 343593,
+   "mean_prior_items": 11.503971268332009,
+   "items_p50": 6,
+   "items_p90": 31,
+   "items_p99": 73,
+   "mean_prior_fail_items": 4.129729068985689,
+   "mean_prior_adv_items": 6.962784457192085,
+   "mean_prior_minor_items": 0.4114577421542348,
+   "share_any_defect_history": 0.7813925196380601,
+   "share_3plus_defect_tests": 0.5026150125293589
+  },
+  {
+   "event_year": 2023,
+   "n": 347849,
+   "mean_prior_items": 12.291767404822208,
+   "items_p50": 6,
+   "items_p90": 33,
+   "items_p99": 77,
+   "mean_prior_fail_items": 4.186353848940201,
+   "mean_prior_adv_items": 7.584451874232785,
+   "mean_prior_minor_items": 0.5209616816492214,
+   "share_any_defect_history": 0.8058237913577443,
+   "share_3plus_defect_tests": 0.5289824032841837
+  }
+ ],
+ "defect_bearing_buckets": [
+  {
+   "event_year": 2005,
+   "bucket": "0",
+   "n": 58408,
+   "final_fail_rate": 0.2850294480208191
+  },
+  {
+   "event_year": 2005,
+   "bucket": "1",
+   "n": 317,
+   "final_fail_rate": 0.1861198738170347
+  },
+  {
+   "event_year": 2005,
+   "bucket": "2",
+   "n": 7,
+   "final_fail_rate": 0.42857142857142855
+  },
+  {
+   "event_year": 2006,
+   "bucket": "0",
+   "n": 225855,
+   "final_fail_rate": 0.26862810210090543
+  },
+  {
+   "event_year": 2006,
+   "bucket": "1",
+   "n": 25678,
+   "final_fail_rate": 0.36268400965807307
+  },
+  {
+   "event_year": 2006,
+   "bucket": "2",
+   "n": 1547,
+   "final_fail_rate": 0.44085326438267614
+  },
+  {
+   "event_year": 2006,
+   "bucket": "3-5",
+   "n": 118,
+   "final_fail_rate": 0.4491525423728814
+  },
+  {
+   "event_year": 2007,
+   "bucket": "0",
+   "n": 146862,
+   "final_fail_rate": 0.2147934795930874
+  },
+  {
+   "event_year": 2007,
+   "bucket": "1",
+   "n": 96395,
+   "final_fail_rate": 0.3691477773743451
+  },
+  {
+   "event_year": 2007,
+   "bucket": "2",
+   "n": 18068,
+   "final_fail_rate": 0.44216294000442774
+  },
+  {
+   "event_year": 2007,
+   "bucket": "3-5",
+   "n": 2147,
+   "final_fail_rate": 0.480204937121565
+  },
+  {
+   "event_year": 2007,
+   "bucket": "6-10",
+   "n": 4,
+   "final_fail_rate": 0.5
+  },
+  {
+   "event_year": 2008,
+   "bucket": "0",
+   "n": 108901,
+   "final_fail_rate": 0.18210117446120788
+  },
+  {
+   "event_year": 2008,
+   "bucket": "1",
+   "n": 88576,
+   "final_fail_rate": 0.31284998193641617
+  },
+  {
+   "event_year": 2008,
+   "bucket": "2",
+   "n": 54944,
+   "final_fail_rate": 0.43005605707629585
+  },
+  {
+   "event_year": 2008,
+   "bucket": "3-5",
+   "n": 16248,
+   "final_fail_rate": 0.5033234859675036
+  },
+  {
+   "event_year": 2008,
+   "bucket": "6-10",
+   "n": 64,
+   "final_fail_rate": 0.4375
+  },
+  {
+   "event_year": 2009,
+   "bucket": "0",
+   "n": 90012,
+   "final_fail_rate": 0.16536683997689197
+  },
+  {
+   "event_year": 2009,
+   "bucket": "1",
+   "n": 74167,
+   "final_fail_rate": 0.2791942508123559
+  },
+  {
+   "event_year": 2009,
+   "bucket": "11-20",
+   "n": 1,
+   "final_fail_rate": 0.0
+  },
+  {
+   "event_year": 2009,
+   "bucket": "2",
+   "n": 59212,
+   "final_fail_rate": 0.38563129095453624
+  },
+  {
+   "event_year": 2009,
+   "bucket": "3-5",
+   "n": 50064,
+   "final_fail_rate": 0.4934084372003835
+  },
+  {
+   "event_year": 2009,
+   "bucket": "6-10",
+   "n": 653,
+   "final_fail_rate": 0.5712098009188361
+  },
+  {
+   "event_year": 2010,
+   "bucket": "0",
+   "n": 80384,
+   "final_fail_rate": 0.1468451433121019
+  },
+  {
+   "event_year": 2010,
+   "bucket": "1",
+   "n": 64195,
+   "final_fail_rate": 0.2451904353921645
+  },
+  {
+   "event_year": 2010,
+   "bucket": "11-20",
+   "n": 4,
+   "final_fail_rate": 0.75
+  },
+  {
+   "event_year": 2010,
+   "bucket": "2",
+   "n": 54821,
+   "final_fail_rate": 0.3401068933437916
+  },
+  {
+   "event_year": 2010,
+   "bucket": "3-5",
+   "n": 77235,
+   "final_fail_rate": 0.4579400530847414
+  },
+  {
+   "event_year": 2010,
+   "bucket": "6-10",
+   "n": 4056,
+   "final_fail_rate": 0.605276134122288
+  },
+  {
+   "event_year": 2011,
+   "bucket": "0",
+   "n": 74037,
+   "final_fail_rate": 0.1405783594689142
+  },
+  {
+   "event_year": 2011,
+   "bucket": "1",
+   "n": 57666,
+   "final_fail_rate": 0.21726840772725697
+  },
+  {
+   "event_year": 2011,
+   "bucket": "11-20",
+   "n": 18,
+   "final_fail_rate": 0.6111111111111112
+  },
+  {
+   "event_year": 2011,
+   "bucket": "2",
+   "n": 49822,
+   "final_fail_rate": 0.30635060816506765
+  },
+  {
+   "event_year": 2011,
+   "bucket": "3-5",
+   "n": 91746,
+   "final_fail_rate": 0.43447125760251126
+  },
+  {
+   "event_year": 2011,
+   "bucket": "6-10",
+   "n": 12680,
+   "final_fail_rate": 0.581230283911672
+  },
+  {
+   "event_year": 2012,
+   "bucket": "0",
+   "n": 67736,
+   "final_fail_rate": 0.1334593126254872
+  },
+  {
+   "event_year": 2012,
+   "bucket": "1",
+   "n": 53241,
+   "final_fail_rate": 0.20499239308052064
+  },
+  {
+   "event_year": 2012,
+   "bucket": "11-20",
+   "n": 135,
+   "final_fail_rate": 0.6444444444444445
+  },
+  {
+   "event_year": 2012,
+   "bucket": "2",
+   "n": 45333,
+   "final_fail_rate": 0.2819358965874749
+  },
+  {
+   "event_year": 2012,
+   "bucket": "3-5",
+   "n": 94877,
+   "final_fail_rate": 0.4054091086353911
+  },
+  {
+   "event_year": 2012,
+   "bucket": "6-10",
+   "n": 25301,
+   "final_fail_rate": 0.551243033872179
+  },
+  {
+   "event_year": 2013,
+   "bucket": "0",
+   "n": 64818,
+   "final_fail_rate": 0.12612237341479218
+  },
+  {
+   "event_year": 2013,
+   "bucket": "1",
+   "n": 49855,
+   "final_fail_rate": 0.2016046534951359
+  },
+  {
+   "event_year": 2013,
+   "bucket": "11-20",
+   "n": 488,
+   "final_fail_rate": 0.694672131147541
+  },
+  {
+   "event_year": 2013,
+   "bucket": "2",
+   "n": 42889,
+   "final_fail_rate": 0.26897339644197815
+  },
+  {
+   "event_year": 2013,
+   "bucket": "3-5",
+   "n": 93402,
+   "final_fail_rate": 0.38580544313826254
+  },
+  {
+   "event_year": 2013,
+   "bucket": "6-10",
+   "n": 38802,
+   "final_fail_rate": 0.5350239678367095
+  },
+  {
+   "event_year": 2014,
+   "bucket": "0",
+   "n": 63188,
+   "final_fail_rate": 0.12040260809014369
+  },
+  {
+   "event_year": 2014,
+   "bucket": "1",
+   "n": 46767,
+   "final_fail_rate": 0.19071139906344217
+  },
+  {
+   "event_year": 2014,
+   "bucket": "11-20",
+   "n": 1589,
+   "final_fail_rate": 0.643801132787917
+  },
+  {
+   "event_year": 2014,
+   "bucket": "2",
+   "n": 40392,
+   "final_fail_rate": 0.2568577936224995
+  },
+  {
+   "event_year": 2014,
+   "bucket": "21+",
+   "n": 2,
+   "final_fail_rate": 1.0
+  },
+  {
+   "event_year": 2014,
+   "bucket": "3-5",
+   "n": 90500,
+   "final_fail_rate": 0.3578674033149171
+  },
+  {
+   "event_year": 2014,
+   "bucket": "6-10",
+   "n": 50117,
+   "final_fail_rate": 0.5058562962667358
+  },
+  {
+   "event_year": 2015,
+   "bucket": "0",
+   "n": 63253,
+   "final_fail_rate": 0.11197887847216732
+  },
+  {
+   "event_year": 2015,
+   "bucket": "1",
+   "n": 44950,
+   "final_fail_rate": 0.1714349276974416
+  },
+  {
+   "event_year": 2015,
+   "bucket": "11-20",
+   "n": 3742,
+   "final_fail_rate": 0.5791020844468199
+  },
+  {
+   "event_year": 2015,
+   "bucket": "2",
+   "n": 38255,
+   "final_fail_rate": 0.22642791791922626
+  },
+  {
+   "event_year": 2015,
+   "bucket": "21+",
+   "n": 2,
+   "final_fail_rate": 1.0
+  },
+  {
+   "event_year": 2015,
+   "bucket": "3-5",
+   "n": 87835,
+   "final_fail_rate": 0.3297774235783002
+  },
+  {
+   "event_year": 2015,
+   "bucket": "6-10",
+   "n": 58509,
+   "final_fail_rate": 0.46772291442342206
+  },
+  {
+   "event_year": 2016,
+   "bucket": "0",
+   "n": 66496,
+   "final_fail_rate": 0.10766061116458132
+  },
+  {
+   "event_year": 2016,
+   "bucket": "1",
+   "n": 43911,
+   "final_fail_rate": 0.16736125344446723
+  },
+  {
+   "event_year": 2016,
+   "bucket": "11-20",
+   "n": 6471,
+   "final_fail_rate": 0.5657549065059496
+  },
+  {
+   "event_year": 2016,
+   "bucket": "2",
+   "n": 36749,
+   "final_fail_rate": 0.22016925630629405
+  },
+  {
+   "event_year": 2016,
+   "bucket": "21+",
+   "n": 2,
+   "final_fail_rate": 0.5
+  },
+  {
+   "event_year": 2016,
+   "bucket": "3-5",
+   "n": 84270,
+   "final_fail_rate": 0.3112851548593806
+  },
+  {
+   "event_year": 2016,
+   "bucket": "6-10",
+   "n": 63036,
+   "final_fail_rate": 0.4385747826638746
+  },
+  {
+   "event_year": 2017,
+   "bucket": "0",
+   "n": 71194,
+   "final_fail_rate": 0.10645560019102733
+  },
+  {
+   "event_year": 2017,
+   "bucket": "1",
+   "n": 44762,
+   "final_fail_rate": 0.16509539341405657
+  },
+  {
+   "event_year": 2017,
+   "bucket": "11-20",
+   "n": 9189,
+   "final_fail_rate": 0.5514201762977473
+  },
+  {
+   "event_year": 2017,
+   "bucket": "2",
+   "n": 35418,
+   "final_fail_rate": 0.2201140662939748
+  },
+  {
+   "event_year": 2017,
+   "bucket": "21+",
+   "n": 5,
+   "final_fail_rate": 0.8
+  },
+  {
+   "event_year": 2017,
+   "bucket": "3-5",
+   "n": 80893,
+   "final_fail_rate": 0.3046493516126241
+  },
+  {
+   "event_year": 2017,
+   "bucket": "6-10",
+   "n": 63745,
+   "final_fail_rate": 0.42580594556435797
+  },
+  {
+   "event_year": 2018,
+   "bucket": "0",
+   "n": 75786,
+   "final_fail_rate": 0.10697226400654475
+  },
+  {
+   "event_year": 2018,
+   "bucket": "1",
+   "n": 46483,
+   "final_fail_rate": 0.1708151367166491
+  },
+  {
+   "event_year": 2018,
+   "bucket": "11-20",
+   "n": 11707,
+   "final_fail_rate": 0.5348082343896814
+  },
+  {
+   "event_year": 2018,
+   "bucket": "2",
+   "n": 35334,
+   "final_fail_rate": 0.22032603158430972
+  },
+  {
+   "event_year": 2018,
+   "bucket": "21+",
+   "n": 14,
+   "final_fail_rate": 0.5
+  },
+  {
+   "event_year": 2018,
+   "bucket": "3-5",
+   "n": 77678,
+   "final_fail_rate": 0.306560416076624
+  },
+  {
+   "event_year": 2018,
+   "bucket": "6-10",
+   "n": 63603,
+   "final_fail_rate": 0.4180777636275019
+  },
+  {
+   "event_year": 2019,
+   "bucket": "0",
+   "n": 78388,
+   "final_fail_rate": 0.10338317089350411
+  },
+  {
+   "event_year": 2019,
+   "bucket": "1",
+   "n": 49437,
+   "final_fail_rate": 0.15814066387523515
+  },
+  {
+   "event_year": 2019,
+   "bucket": "11-20",
+   "n": 14111,
+   "final_fail_rate": 0.5064134363262703
+  },
+  {
+   "event_year": 2019,
+   "bucket": "2",
+   "n": 36615,
+   "final_fail_rate": 0.21351904956984843
+  },
+  {
+   "event_year": 2019,
+   "bucket": "21+",
+   "n": 34,
+   "final_fail_rate": 0.7647058823529411
+  },
+  {
+   "event_year": 2019,
+   "bucket": "3-5",
+   "n": 76205,
+   "final_fail_rate": 0.29167377468670036
+  },
+  {
+   "event_year": 2019,
+   "bucket": "6-10",
+   "n": 63388,
+   "final_fail_rate": 0.4025840853158327
+  },
+  {
+   "event_year": 2020,
+   "bucket": "0",
+   "n": 81224,
+   "final_fail_rate": 0.0898502905545159
+  },
+  {
+   "event_year": 2020,
+   "bucket": "1",
+   "n": 50169,
+   "final_fail_rate": 0.15368055970818634
+  },
+  {
+   "event_year": 2020,
+   "bucket": "11-20",
+   "n": 15196,
+   "final_fail_rate": 0.4794682811266123
+  },
+  {
+   "event_year": 2020,
+   "bucket": "2",
+   "n": 37399,
+   "final_fail_rate": 0.20150271397630953
+  },
+  {
+   "event_year": 2020,
+   "bucket": "21+",
+   "n": 63,
+   "final_fail_rate": 0.6825396825396826
+  },
+  {
+   "event_year": 2020,
+   "bucket": "3-5",
+   "n": 72870,
+   "final_fail_rate": 0.2768080142719912
+  },
+  {
+   "event_year": 2020,
+   "bucket": "6-10",
+   "n": 59620,
+   "final_fail_rate": 0.3814659510231466
+  },
+  {
+   "event_year": 2021,
+   "bucket": "0",
+   "n": 75472,
+   "final_fail_rate": 0.09125238499046004
+  },
+  {
+   "event_year": 2021,
+   "bucket": "1",
+   "n": 52720,
+   "final_fail_rate": 0.1403072837632777
+  },
+  {
+   "event_year": 2021,
+   "bucket": "11-20",
+   "n": 18535,
+   "final_fail_rate": 0.4671162665227947
+  },
+  {
+   "event_year": 2021,
+   "bucket": "2",
+   "n": 41062,
+   "final_fail_rate": 0.19149091617553943
+  },
+  {
+   "event_year": 2021,
+   "bucket": "21+",
+   "n": 127,
+   "final_fail_rate": 0.6141732283464567
+  },
+  {
+   "event_year": 2021,
+   "bucket": "3-5",
+   "n": 79600,
+   "final_fail_rate": 0.26910804020100504
+  },
+  {
+   "event_year": 2021,
+   "bucket": "6-10",
+   "n": 63589,
+   "final_fail_rate": 0.3757096353142839
+  },
+  {
+   "event_year": 2022,
+   "bucket": "0",
+   "n": 75112,
+   "final_fail_rate": 0.0890270529342848
+  },
+  {
+   "event_year": 2022,
+   "bucket": "1",
+   "n": 53056,
+   "final_fail_rate": 0.13581875753920386
+  },
+  {
+   "event_year": 2022,
+   "bucket": "11-20",
+   "n": 21567,
+   "final_fail_rate": 0.44215699911902445
+  },
+  {
+   "event_year": 2022,
+   "bucket": "2",
+   "n": 42730,
+   "final_fail_rate": 0.18017786098759653
+  },
+  {
+   "event_year": 2022,
+   "bucket": "21+",
+   "n": 230,
+   "final_fail_rate": 0.5478260869565217
+  },
+  {
+   "event_year": 2022,
+   "bucket": "3-5",
+   "n": 84357,
+   "final_fail_rate": 0.25540263404341074
+  },
+  {
+   "event_year": 2022,
+   "bucket": "6-10",
+   "n": 66541,
+   "final_fail_rate": 0.35783952750935516
+  },
+  {
+   "event_year": 2023,
+   "bucket": "0",
+   "n": 67544,
+   "final_fail_rate": 0.08937877531683051
+  },
+  {
+   "event_year": 2023,
+   "bucket": "1",
+   "n": 52837,
+   "final_fail_rate": 0.13354278251982513
+  },
+  {
+   "event_year": 2023,
+   "bucket": "11-20",
+   "n": 24641,
+   "final_fail_rate": 0.4356560204537154
+  },
+  {
+   "event_year": 2023,
+   "bucket": "2",
+   "n": 43462,
+   "final_fail_rate": 0.17544061478993142
+  },
+  {
+   "event_year": 2023,
+   "bucket": "21+",
+   "n": 351,
+   "final_fail_rate": 0.5584045584045584
+  },
+  {
+   "event_year": 2023,
+   "bucket": "3-5",
+   "n": 89036,
+   "final_fail_rate": 0.24838267667011096
+  },
+  {
+   "event_year": 2023,
+   "bucket": "6-10",
+   "n": 69978,
+   "final_fail_rate": 0.35199634170739375
+  }
+ ]
+}

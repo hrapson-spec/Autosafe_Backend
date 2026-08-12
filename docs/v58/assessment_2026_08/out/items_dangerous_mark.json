@@ -1,0 +1,242 @@
+[
+ {
+  "test_year": 2005,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 9634352
+ },
+ {
+  "test_year": 2005,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 210137
+ },
+ {
+  "test_year": 2006,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 44901926
+ },
+ {
+  "test_year": 2006,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1128509
+ },
+ {
+  "test_year": 2007,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 52258185
+ },
+ {
+  "test_year": 2007,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1268518
+ },
+ {
+  "test_year": 2008,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 58820566
+ },
+ {
+  "test_year": 2008,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1278819
+ },
+ {
+  "test_year": 2009,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 64496491
+ },
+ {
+  "test_year": 2009,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1342181
+ },
+ {
+  "test_year": 2010,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 65251873
+ },
+ {
+  "test_year": 2010,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1323810
+ },
+ {
+  "test_year": 2011,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 67365971
+ },
+ {
+  "test_year": 2011,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1357896
+ },
+ {
+  "test_year": 2012,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 69733020
+ },
+ {
+  "test_year": 2012,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1264532
+ },
+ {
+  "test_year": 2013,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 72776254
+ },
+ {
+  "test_year": 2013,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1259937
+ },
+ {
+  "test_year": 2014,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 72775106
+ },
+ {
+  "test_year": 2014,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 1178458
+ },
+ {
+  "test_year": 2015,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 69116563
+ },
+ {
+  "test_year": 2015,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 960805
+ },
+ {
+  "test_year": 2016,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 69072909
+ },
+ {
+  "test_year": 2016,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 711197
+ },
+ {
+  "test_year": 2017,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 70420219
+ },
+ {
+  "test_year": 2017,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 774914
+ },
+ {
+  "test_year": 2018,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 43130671
+ },
+ {
+  "test_year": 2018,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 2509322
+ },
+ {
+  "test_year": 2018,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 28726890
+ },
+ {
+  "test_year": 2018,
+  "taxonomy_era": "pre_2018",
+  "dangerous_mark": "D",
+  "n": 324385
+ },
+ {
+  "test_year": 2019,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 75647773
+ },
+ {
+  "test_year": 2019,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 4318269
+ },
+ {
+  "test_year": 2020,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 71960197
+ },
+ {
+  "test_year": 2020,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 3946877
+ },
+ {
+  "test_year": 2021,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 78631427
+ },
+ {
+  "test_year": 2021,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 3795541
+ },
+ {
+  "test_year": 2022,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 82523415
+ },
+ {
+  "test_year": 2022,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 3828926
+ },
+ {
+  "test_year": 2023,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "<null-or-blank>",
+  "n": 85409530
+ },
+ {
+  "test_year": 2023,
+  "taxonomy_era": "post_2018",
+  "dangerous_mark": "D",
+  "n": 3893099
+ }
+]

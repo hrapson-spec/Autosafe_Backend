@@ -1,0 +1,290 @@
+[
+ {
+  "test_year": 2015,
+  "class_group": "C1&2",
+  "nt_definitive": 1007104,
+  "final_fail": 108476,
+  "initial_fail": 184272,
+  "rows_total": 1106612
+ },
+ {
+  "test_year": 2015,
+  "class_group": "C3&4",
+  "nt_definitive": 27943257,
+  "final_fail": 7861080,
+  "initial_fail": 10373695,
+  "rows_total": 35458593
+ },
+ {
+  "test_year": 2015,
+  "class_group": "C5",
+  "nt_definitive": 45280,
+  "final_fail": 11384,
+  "initial_fail": 14528,
+  "rows_total": 56580
+ },
+ {
+  "test_year": 2015,
+  "class_group": "C7",
+  "nt_definitive": 636011,
+  "final_fail": 239978,
+  "initial_fail": 301239,
+  "rows_total": 868951
+ },
+ {
+  "test_year": 2016,
+  "class_group": "C1&2",
+  "nt_definitive": 1000250,
+  "final_fail": 103581,
+  "initial_fail": 178428,
+  "rows_total": 1090458
+ },
+ {
+  "test_year": 2016,
+  "class_group": "C3&4",
+  "nt_definitive": 28397176,
+  "final_fail": 7711301,
+  "initial_fail": 10172935,
+  "rows_total": 35649555
+ },
+ {
+  "test_year": 2016,
+  "class_group": "C5",
+  "nt_definitive": 47103,
+  "final_fail": 11736,
+  "initial_fail": 14974,
+  "rows_total": 58247
+ },
+ {
+  "test_year": 2016,
+  "class_group": "C7",
+  "nt_definitive": 667099,
+  "final_fail": 242062,
+  "initial_fail": 305923,
+  "rows_total": 895120
+ },
+ {
+  "test_year": 2017,
+  "class_group": "C1&2",
+  "nt_definitive": 988376,
+  "final_fail": 98674,
+  "initial_fail": 169725,
+  "rows_total": 1074332
+ },
+ {
+  "test_year": 2017,
+  "class_group": "C3&4",
+  "nt_definitive": 28832081,
+  "final_fail": 7599917,
+  "initial_fail": 9990065,
+  "rows_total": 35996333
+ },
+ {
+  "test_year": 2017,
+  "class_group": "C5",
+  "nt_definitive": 47448,
+  "final_fail": 11487,
+  "initial_fail": 14412,
+  "rows_total": 58392
+ },
+ {
+  "test_year": 2017,
+  "class_group": "C7",
+  "nt_definitive": 697857,
+  "final_fail": 242410,
+  "initial_fail": 307629,
+  "rows_total": 927104
+ },
+ {
+  "test_year": 2018,
+  "class_group": "C1&2",
+  "nt_definitive": 966324,
+  "final_fail": 95956,
+  "initial_fail": 163262,
+  "rows_total": 1049462
+ },
+ {
+  "test_year": 2018,
+  "class_group": "C3&4",
+  "nt_definitive": 29359810,
+  "final_fail": 7705699,
+  "initial_fail": 9956086,
+  "rows_total": 36609603
+ },
+ {
+  "test_year": 2018,
+  "class_group": "C5",
+  "nt_definitive": 46456,
+  "final_fail": 11047,
+  "initial_fail": 13790,
+  "rows_total": 56860
+ },
+ {
+  "test_year": 2018,
+  "class_group": "C7",
+  "nt_definitive": 730941,
+  "final_fail": 250778,
+  "initial_fail": 312302,
+  "rows_total": 965876
+ },
+ {
+  "test_year": 2019,
+  "class_group": "C1&2",
+  "nt_definitive": 946036,
+  "final_fail": 92327,
+  "initial_fail": 159641,
+  "rows_total": 1025998
+ },
+ {
+  "test_year": 2019,
+  "class_group": "C3&4",
+  "nt_definitive": 30114194,
+  "final_fail": 7508011,
+  "initial_fail": 9681833,
+  "rows_total": 37215360
+ },
+ {
+  "test_year": 2019,
+  "class_group": "C5",
+  "nt_definitive": 47055,
+  "final_fail": 10937,
+  "initial_fail": 13498,
+  "rows_total": 57371
+ },
+ {
+  "test_year": 2019,
+  "class_group": "C7",
+  "nt_definitive": 773564,
+  "final_fail": 253211,
+  "initial_fail": 315666,
+  "rows_total": 1011969
+ },
+ {
+  "test_year": 2020,
+  "class_group": "C1&2",
+  "nt_definitive": 855313,
+  "final_fail": 74836,
+  "initial_fail": 130438,
+  "rows_total": 919642
+ },
+ {
+  "test_year": 2020,
+  "class_group": "C3&4",
+  "nt_definitive": 30039081,
+  "final_fail": 6952015,
+  "initial_fail": 8948551,
+  "rows_total": 36616731
+ },
+ {
+  "test_year": 2020,
+  "class_group": "C5",
+  "nt_definitive": 41467,
+  "final_fail": 8830,
+  "initial_fail": 10851,
+  "rows_total": 49588
+ },
+ {
+  "test_year": 2020,
+  "class_group": "C7",
+  "nt_definitive": 786396,
+  "final_fail": 236455,
+  "initial_fail": 294856,
+  "rows_total": 1008052
+ },
+ {
+  "test_year": 2021,
+  "class_group": "C1&2",
+  "nt_definitive": 963230,
+  "final_fail": 88544,
+  "initial_fail": 150909,
+  "rows_total": 1038243
+ },
+ {
+  "test_year": 2021,
+  "class_group": "C3&4",
+  "nt_definitive": 31311275,
+  "final_fail": 7268845,
+  "initial_fail": 9222894,
+  "rows_total": 38166712
+ },
+ {
+  "test_year": 2021,
+  "class_group": "C5",
+  "nt_definitive": 42614,
+  "final_fail": 9638,
+  "initial_fail": 11527,
+  "rows_total": 51510
+ },
+ {
+  "test_year": 2021,
+  "class_group": "C7",
+  "nt_definitive": 872256,
+  "final_fail": 269104,
+  "initial_fail": 332934,
+  "rows_total": 1124181
+ },
+ {
+  "test_year": 2022,
+  "class_group": "C1&2",
+  "nt_definitive": 980408,
+  "final_fail": 87829,
+  "initial_fail": 149381,
+  "rows_total": 1054664
+ },
+ {
+  "test_year": 2022,
+  "class_group": "C3&4",
+  "nt_definitive": 32435945,
+  "final_fail": 7305946,
+  "initial_fail": 9256121,
+  "rows_total": 39325665
+ },
+ {
+  "test_year": 2022,
+  "class_group": "C5",
+  "nt_definitive": 41726,
+  "final_fail": 9047,
+  "initial_fail": 10882,
+  "rows_total": 50023
+ },
+ {
+  "test_year": 2022,
+  "class_group": "C7",
+  "nt_definitive": 941461,
+  "final_fail": 280800,
+  "initial_fail": 348958,
+  "rows_total": 1202526
+ },
+ {
+  "test_year": 2023,
+  "class_group": "C1&2",
+  "nt_definitive": 983521,
+  "final_fail": 86065,
+  "initial_fail": 144698,
+  "rows_total": 1056397
+ },
+ {
+  "test_year": 2023,
+  "class_group": "C3&4",
+  "nt_definitive": 32811888,
+  "final_fail": 7487236,
+  "initial_fail": 9367037,
+  "rows_total": 39844963
+ },
+ {
+  "test_year": 2023,
+  "class_group": "C5",
+  "nt_definitive": 42092,
+  "final_fail": 9339,
+  "initial_fail": 11201,
+  "rows_total": 50622
+ },
+ {
+  "test_year": 2023,
+  "class_group": "C7",
+  "nt_definitive": 995107,
+  "final_fail": 292636,
+  "initial_fail": 363353,
+  "rows_total": 1264739
+ }
+]
