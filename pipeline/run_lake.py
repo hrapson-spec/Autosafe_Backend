@@ -36,13 +36,18 @@ logger = logging.getLogger("pipeline.run_lake")
 CYCLES_DATASET = "cycles"
 
 
-def _connect(memory_limit: str, threads: Optional[int]):
+def _connect(memory_limit: str, threads: Optional[int],
+             max_temp: Optional[str] = None):
     import duckdb  # lazy: requirements-train only
 
     con = duckdb.connect()
     con.execute(f"SET memory_limit='{memory_limit}'")
     if threads:
         con.execute(f"SET threads={threads}")
+    if max_temp:
+        # hard spill ceiling: fail loud at the cap instead of consuming the
+        # volume (2026-08-12 invariant after two spill-exhaustion incidents)
+        con.execute(f"PRAGMA max_temp_directory_size='{max_temp}'")
     return con
 
 
@@ -68,7 +73,7 @@ def _load_or_new_manifest(lake_dir: Path, args: argparse.Namespace) -> LakeManif
 
 
 def cmd_ingest_results(args: argparse.Namespace) -> int:
-    con = _connect(args.memory_limit, args.threads)
+    con = _connect(args.memory_limit, args.threads, getattr(args, "max_temp", None))
     lake_dir = Path(args.lake_dir)
     manifest = _load_or_new_manifest(lake_dir, args)
     files = _source_files(Path(args.source_dir), ["test_result*.csv", "test_result*.txt"])
@@ -85,7 +90,7 @@ def cmd_ingest_results(args: argparse.Namespace) -> int:
 
 
 def cmd_ingest_items(args: argparse.Namespace) -> int:
-    con = _connect(args.memory_limit, args.threads)
+    con = _connect(args.memory_limit, args.threads, getattr(args, "max_temp", None))
     lake_dir = Path(args.lake_dir)
     manifest = _load_or_new_manifest(lake_dir, args)
     rfr_map = load_rfr_mapping(args.rfr_detail, args.rfr_group, args.test_class)
@@ -111,7 +116,7 @@ def cmd_ingest_items(args: argparse.Namespace) -> int:
 
 
 def cmd_build_cycles(args: argparse.Namespace) -> int:
-    con = _connect(args.memory_limit, args.threads)
+    con = _connect(args.memory_limit, args.threads, getattr(args, "max_temp", None))
     lake_dir = Path(args.lake_dir)
     manifest = _load_or_new_manifest(lake_dir, args)
     out_dir = lake_dir / CYCLES_DATASET
@@ -132,7 +137,7 @@ def cmd_build_cycles(args: argparse.Namespace) -> int:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    con = _connect(args.memory_limit, args.threads)
+    con = _connect(args.memory_limit, args.threads, getattr(args, "max_temp", None))
     lake_dir = Path(args.lake_dir)
     manifest = _load_or_new_manifest(lake_dir, args)
     results_rel = _relation(lake_dir, RESULTS_DATASET)
@@ -189,6 +194,8 @@ def build_parser() -> argparse.ArgumentParser:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--memory-limit", default="8GB")
     parser.add_argument("--threads", type=int, default=None)
+    parser.add_argument("--max-temp", default=None,
+                        help="hard duckdb spill ceiling, e.g. 7GiB (fail-loud)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     def common(p, source=False, rfr=False):
