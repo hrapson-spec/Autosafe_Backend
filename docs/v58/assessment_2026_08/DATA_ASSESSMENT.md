@@ -18,13 +18,16 @@ honoured throughout. The d7-side record should note this override when next reco
 
 ## Material findings (read first)
 
-1. **The dataset is 2005–2023, not 2005–present.** The DVSA anonymised release ends at
+1. **The dataset is 2005–2023, not 2005–present** — ⚠ **CORRECTED 2026-08-12 ~16:00,
+   see Addendum A below.** As originally written: the DVSA anonymised release ends at
    full-year 2023 (CKAN + live page + URL probes, evidence `NUMBERS.md` /
-   `docs/v58/evidence/NOTES.md:26-41`). There is **no 2024 or 2025** in the new lake,
-   while the previous modelling substrate evaluated on 2024-Q4 and 2025-H1 surfaces.
-   Recency bridges that exist today: `work/fresh_2025/frame/fresh_frame_2025h1/`
-   (H1 aux+features, local), the 2024-Q4 cal frame (Drive-only), collected DVSA deltas
-   through 2026-08-08 (later deltas expired upstream, permanently), and the live API.
+   `docs/v58/evidence/NOTES.md:26-41`); no 2024 or 2025 in the new lake; recency
+   bridges = `fresh_frame_2025h1` (local), 2024-Q4 cal frame (Drive-only), deltas
+   through 2026-08-08, and the live API. **The statement was true of the DfT-published
+   dataset probed, but false of the world: DVSA moved publication to its own portal in
+   January 2025 and 2024+2025 anonymised extracts exist there.** The in-lake facts and
+   every other number in this assessment are unaffected; the recency implications
+   (Q3.1, Q5.1) are superseded by Addendum A.
 2. **F-22 (decided today, measured verdict): the post-2018 item severity mapping is
    INVERTED in the lake's derived columns.** Post-2018 vocabulary is {A,F,M,P}; `M` =
    Minor per DVSA guide v5.1; `rfr_mapping.py` reads it as Major-fail. 31,748,964
@@ -644,3 +647,43 @@ prereg shas and deviations in ANALYSIS_LOG.md; all outputs in out/. Panel scratc
 artifacts (shards, items join, running-distinct) live in the session scratchpad;
 the lake's end-state equals its pre-assessment state (2005–2014 parked, sentinel
 untouched, no lake writes).*
+
+---
+
+# Addendum A — 2024 and 2025 anonymised extracts EXIST (correction, 2026-08-12 ~16:00)
+
+Triggered by an external technical review and verified directly this session:
+
+- DVSA split publication in **January 2025**: the DfT dataset this lake was built
+  from (data.gov.uk id e3939ef8…, data.dft.gov.uk URLs) is the HISTORICAL series and
+  genuinely ends at full-year 2023 — the v58 probe of 2026-08-11 measured that
+  dataset correctly. New years are published under DVSA's own portal
+  (`open.data.dvsa.gov.uk/mot-anonymised/`) and a separate data.gov.uk dataset entry.
+- Verified inventory on the DVSA portal (fetched 2026-08-12): **"MOT testing data
+  results extracts (2025)"** and **"failure item extracts (2025)"**, both added
+  **22 June 2026**; **TWO 2024 versions** — "results (2024)"/"failure item (2024)"
+  added 07 March 2025, and newer "results extracts (2024)"/"failure item extracts
+  (2024)" added 22 June 2026 (supersession UNRESOLVED — must be reconciled by hash +
+  row counts + schema before any ingest); refreshed user guides + lookup tables
+  (12 May 2025) and six supporting lookup CSVs (22 June 2026).
+
+Consequences:
+1. The recency cliff shrinks from ~2.5 years to ~7 months. Q3.1's framing and
+   Q5.1's option set are superseded: the primary lane is now RECONCILE + EXTEND
+   the lake to 2005–2025 through the existing pipeline (schema detection is
+   fail-loud set-equality — a changed 2024/2025 layout will surface immediately;
+   the MOT-01 comparator needs a refresh for FY2023-24/FY2024-25 before those
+   gates can bind; the two-2024-versions question is a hard prerequisite).
+2. New full-population 2024/2025 evaluation surfaces become buildable. Their
+   exposure status (this programme has repeatedly read fresh-sample 2024-Q4 and
+   2025-H1/H2 surfaces covering the same periods) is a LEDGER adjudication, not a
+   default: period-level adaptation is real even where vehicles differ.
+3. The 22-June-2026 lookup CSVs partially mitigate the lookup single-point-of-
+   failure (finding 5): upstream copies exist again; the local-vintage (2023-03)
+   vs new-vintage reconciliation is still required before mixing.
+4. Nothing in-lake changes: every count, rate, and structural finding in this
+   assessment describes the certified 2005–2023 lake and stands.
+
+Lesson recorded: "the release ends at 2023" was verified against one publisher
+surface and generalised to the world. Existence claims about external data need a
+publisher-migration check (who publishes NOW, not just where it was last found).
