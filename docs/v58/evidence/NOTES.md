@@ -242,3 +242,26 @@ output and was fabricated precision on my part. The true count, measured
 directly and matching the peer's before/after lake delta exactly:
 **41,632,878** (total results rows now 681,724,337). Recorded as an instance
 of the unverified-attribution failure class this record repeatedly documents.
+
+## MISSION CLOSE (2026-08-12 11:50) — the lake is complete and certified
+
+- Results: 19/19 years, 681,724,337 rows, zero duplicate test_ids.
+  Continuity RE-VERIFIED PASS (authoritative): 0.998 / 0.0078 / 361d,
+  default ordering, one attempt. Fidelity gates all PASS (class_mix,
+  no_unknown_outcomes, year_volumes). Externally validated vs DVSA MOT-01
+  to -0.01%% at FY grain (peer 8-FY gate).
+- Items: 19/19 years, 1,289,329,470 rows. Gates all PASS: taxonomy_step
+  exact at 2018-05-20; rfr_type unclassified 0.00000; category coverage
+  0.896 categorized failing items.
+- PHYSICAL LAYOUT: results test_year=2005..2014 PARKED on Drive
+  (gdrive:autosafe_offload_2026_08_11/results_park, per-year rclone
+  hash-verified; results_PARKED sentinel lists them). RESTORE REQUIRED
+  before any full-results read (incl. the charter's n>=50k continuity
+  re-verification and Phase-1.1 all-years uniqueness audit) — restore is
+  ~7.5GB downlink; the disk ledger for restore+scan needs sequencing by
+  the Chief Engineer (seat-5 ledger note in n18/).
+- D7 reconciliation: OPEN / DEFERRED — MUST PASS BEFORE PHASE-3 TARGET
+  DEFINITION IS FROZEN (four-armed fingerprint per this file). Cycles
+  builds HELD behind gates G2/G4 (charter).
+- Generic-member collision (2023 items reuses test_item.csv): resolved by
+  year-disambiguated extraction; earlier record's lineage intact.
