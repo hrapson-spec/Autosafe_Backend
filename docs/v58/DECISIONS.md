@@ -114,7 +114,15 @@ It was superseded the same day by measurement:
 4. **The cycle implementation has an unrepaired chronology defect** (#18):
    `test_id` is not chronological within a day, so 43,403/43,791 orphaned
    retests sorted *before* the failure that caused them, inflating the
-   denominator 4.55% and depressing the rate 1.26pp.
+   denominator 4.55% and depressing the rate 1.26pp. Two figures describe
+   this defect and are different conditionals, not a contradiction: 99.1% is
+   P(a same-day higher-id NT exists | an RT row appears priorless) — a
+   composition diagnostic of the already-mis-ordered subset — while 49.91%
+   is P(id order agrees with FAIL-first outcome order | same-day FAIL +
+   definitive pair) — the population rate, indistinguishable from chance
+   (research repo measured 49.92% independently). The population defined
+   here is immune to both by construction; cycle-derived history features
+   are not, and stay quarantined until repaired.
 5. **The 26.9139638817903% artifact cannot adjudicate.** Its window, counting
    basis and vehicle classes were never recorded (`HANDOVER_LOCAL_AGENT.md:135-144`),
    its generator was never committed, and the retired gate returned PASS when no
