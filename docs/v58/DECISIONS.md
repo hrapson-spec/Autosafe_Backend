@@ -138,17 +138,30 @@ the target definition:
 Therefore reproducing it, or failing to, cannot determine the correct target
 population. Do not delete it and do not conceal the discrepancy.
 
-## D12. OPEN: should AutoSafe predict FAIL, or FAIL+PRS?
+## D12. OPEN: when, if ever, to migrate the target from FAIL to FAIL+PRS
 
-Unresolved, and now the load-bearing scientific gate. `outcome == 'FAIL'`
-(DVSA final basis) is preserved for this change so historical AUCs stay
-comparable. Adopting DVSA's *initial* basis (FAIL+PRS) would flip ~7.22% of 2019
-labels and require re-running prior experiments. Evidence required before
-deciding: DVSA initial-vs-final semantics; PRS prevalence by year and class;
-exact label-flip rate per modelling era; which user question each target
-answers; class-balance effect; comparability with historical results; whether
-PRS is consistently observable across the pre/post-2018 regimes. Do not resolve
-it from naming conventions or legacy behaviour.
+The terminology is settled — this is not a question about what PRS means.
+DVSA distinguishes the *initial* fail rate (the vehicle as presented; a PRS
+began the test in a fail condition) from the *final* fail rate (after
+rectification at the station), and publishes Pass after Rectification as its
+own column in MOT-01. AutoSafe's legacy target, `outcome == 'FAIL'`, is the
+final basis and is preserved unchanged by the D7 revision.
+
+The decision actually open is: **when, if ever, should AutoSafe migrate from
+its legacy FAIL-only target to a true initial-presentation target of
+FAIL+PRS — and what parts of the scientific record must be regenerated if we
+do?** Adopting FAIL+PRS would flip ~7.22% of 2019 labels, so every historical
+AUC/comparison spanning the change would need re-running or explicit
+non-comparability marking.
+
+Evidence required before deciding: PRS prevalence by year and class; exact
+label-flip rate per modelling era; which practical user question each target
+answers ("will my car fail as presented?" vs "will it leave without a pass?");
+class-balance effect; the regeneration bill for prior experiments; and whether
+PRS is consistently observable across the pre/post-2018 regimes (both user
+guides define it identically; prevalence drift still needs measuring). Do not
+resolve it from naming conventions or legacy behaviour, and never adopt it by
+code drift — only by closing this decision.
 
 ## D8. JSON-only v58 bundle
 

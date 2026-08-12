@@ -293,7 +293,8 @@ def gate(comparisons: List[YearComparison]) -> Tuple[bool, List[str]]:
         lines.append(f"FAIL: {len(failures)} year(s) outside tolerance "
                      f"(volume {VOLUME_TOL_PCT}%, rate {RATE_TOL_PP}pp)")
         return False, lines
-    lines.append("PASS: DVSA published-statistics reproduction within derived tolerance")
+    lines.append("PASS on comparable periods; COVID exemption period excluded "
+                 "from acceptance thresholds and reported separately")
     return True, lines
 
 

@@ -194,3 +194,43 @@ def test_a_real_regression_fails_the_gate():
                            33.60, 33.59, 24.90, 26.15, covid_affected=False)
     assert g.gate([good])[0] is True
     assert g.gate([good, bad])[0] is False
+
+
+# --- architectural drift protection ------------------------------------------
+
+def test_default_population_never_depends_on_cycles():
+    """The denominator selector must not drift back to is_cycle_first.
+
+    D7 (revised): cycles are an optional longitudinal construct, never again
+    the authority for target-population membership. The default aggregate SQL
+    must therefore contain no cycle join and select on DVSA test type.
+    """
+    from datetime import date as d
+    from pipeline.aggregates.build_aggregates import AggregateConfig, segment_counts_sql
+    cfg = AggregateConfig(coverage_start=d(2021, 1, 1), coverage_end=d(2023, 12, 31))
+    sql = segment_counts_sql("results", "items", cfg)
+    assert "is_cycle_first" not in sql
+    assert "cycle" not in sql.lower()
+    assert "test_type = 'NT'" in sql
+    # and the label stays the legacy final basis: FAIL only, PRS is a pass
+    assert "(r.outcome = 'FAIL') AS is_fail" in sql
+    assert "'PRS'" not in sql.split("AS is_fail")[0].rsplit("SELECT", 1)[-1]
+
+
+def test_legacy_cycle_path_is_explicit_opt_in_only():
+    from datetime import date as d
+    from pipeline.aggregates.build_aggregates import AggregateConfig, segment_counts_sql
+    cfg = AggregateConfig(coverage_start=d(2021, 1, 1), coverage_end=d(2023, 12, 31))
+    sql = segment_counts_sql("results", "items", cfg, cycles_relation="cycles")
+    assert "c.is_cycle_first" in sql   # reproducible on request...
+    assert "test_type" not in sql      # ...as the historical population, verbatim
+
+
+def test_gate_pass_wording_names_its_scope():
+    """The PASS line must state the COVID carve-out, not imply blanket agreement."""
+    from pipeline.aggregates import published_stats_gate as g
+    ok = g.YearComparison(2017, "C3&4", 28_874_533, 28_877_225,
+                          34.48, 34.48, 26.22, 26.22, covid_affected=False)
+    passed, lines = g.gate([ok])
+    assert passed
+    assert any("COVID exemption period excluded" in ln for ln in lines)

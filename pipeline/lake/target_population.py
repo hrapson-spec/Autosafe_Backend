@@ -23,10 +23,17 @@ published statistics", and lookup.zip/mdr_test_type.csv):
 The guide's own worked example is `WHERE TESTTYPE='NT' AND TESTRESULT IN
 ('P','F','PRS')`, which is exactly what this module encodes.
 
-ERA STABILITY. The test-type and outcome vocabularies do NOT change at the
-20 May 2018 EU-directive boundary. mdr_test_type.csv and mdr_test_outcome.csv
-are single-version and era-blind, and normalize.OUTCOME_MAP has no era branch.
-Verified empirically over all 640,091,459 lake rows (2026-08-12):
+ERA STABILITY -- documented on both sides of the boundary, then measured. The
+pre-May-2018 user guide (MOT_user_guide_v4.docx; the registered DfT URL now
+404s, archived copy web.archive.org/web/20220122114543id_/https://data.dft.gov.uk/
+anonymised-mot-test/MOT_user_guide_v4.docx, sha256 36da41f2b151c41b501ed44b67
+cf470ead9ad2e18e846079bd7a0b56d678d89c) documents the IDENTICAL vocabulary to
+the post-2018 guide v5.1: NT "Full initial test", RT "Full retest of vehicle.
+Derived by system, not selected by NT", PL/PV partial retests, ES appeal, and
+outcomes P/F/PRS/ABA/ABR/ABRVE (v4 adds: "Refusal to Test is no longer used as
+a test outcome"). mdr_test_type.csv / mdr_test_outcome.csv are single-version
+and era-blind, and normalize.OUTCOME_MAP has no era branch. Verified
+empirically over all 640,091,459 lake rows (2026-08-12):
 
     pre_2018   NT 360,806,328   RT 95,765,612   ES 1,011   (no PL/PV/EI)
     post_2018  NT 150,996,706   RT 32,521,107   ES   360   EI 335
@@ -41,6 +48,19 @@ FAIL-CLOSED. `assert_known_test_types` rejects any value outside the DVSA
 lookup vocabulary rather than silently dropping it. A new DVSA code must be
 classified deliberately, because defaulting it either way is a silent change
 to the training population.
+
+ARCHITECTURE (rule of record; tests pin each layer separately):
+
+    Prediction population   -> authoritative DVSA initial-test semantics
+                               (is_initial_test / initial_test_sql).
+    Current legacy target   -> outcome == 'FAIL'
+                               (is_final_failure / final_failure_sql).
+    Potential future target -> FAIL+PRS, the true initial-presentation basis
+                               (is_initial_failure), adoptable ONLY via open
+                               decision D12 -- never by code drift.
+    Cycles                  -> optional longitudinal/history construct; never
+                               again the authority for target-population
+                               membership (docs/v58/DECISIONS.md, D7 revised).
 """
 from typing import Iterable, Set
 
