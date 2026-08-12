@@ -185,6 +185,22 @@ sampling/sharding uses hash residues (stream_cycles patched); (b) shard-size
 imbalance from raw modulo plausibly contributed to per-shard ENOSPC; (c) the
 twin-equivalence falsifier verdicts on vehicle_id%%61==0 remain valid AS
 EQUIVALENCE evidence (bit-identical EXCEPT on 10.5M rows tests semantic
-agreement, and the residue-0-adjacent slice is retest-RICH, i.e. harder);
-they are NOT rate-representative, and a hash-sample falsifier re-run is
-queued as belt-and-braces.
+agreement — a row-level EXCEPT disagreement on any slice is a real
+disagreement); they are NOT rate-representative. CORRECTION 08-12: an
+earlier draft called the slice "retest-rich/adversarial" — measured FALSE
+(RT share 18.385% vs 18.380% hash baseline; 3+-test-vehicle rows 3.89% vs
+3.86%). The slice is unremarkable; the verdicts stand on the EXCEPT logic
+alone. Hash-sample re-run queued as belt-and-braces.
+
+## D7 fingerprint is FOUR-armed: legacy gap was 120 days, not 45
+
+Verified verbatim (autosafe-icloud-dev/build_cycle_index_duckdb.py:18):
+legacy CYCLE_GAP_DAYS = 120; the v58 pipeline pins gap_days = 45. The
+eventual D7 reconciliation must fingerprint production's 26.9139638817903%
+against: (1) legacy-SQL semantics, (2) repaired-canonical, (3)
+same-day-repaired (NT-before-RT tiebreak), (4) gap=120 variants as needed.
+Peer-measured reference points (2019 C3&4, unbiased 1/20 hash sample,
+failure = cycle-first row outcome FAIL): as-implemented 23.670% (denom
+1,573,060); same-day-repaired 24.831% (1,498,298); DVSA final basis NT/F
+24.934% (1,504,549) — same-day-repaired sits 0.10pp from final basis, the
+unrepaired arm 1.26pp below.
