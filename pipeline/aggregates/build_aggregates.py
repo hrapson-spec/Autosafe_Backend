@@ -14,12 +14,22 @@ Component Risk_* columns get the same two-level shrinkage per category:
 the legacy audit's sparse-cell gate requires non-zero component risks on
 zero-failure cells, which is only satisfiable if components are smoothed.
 
-Grain and semantics (decision D7):
-- denominator: cycle-FIRST class-4 tests inside the coverage window;
-- failure: the cycle-first test's own outcome is FAIL (initial-failure
-  basis; a PRS initial is its recorded result: a pass);
-- Risk_<cat> numerator: failing cycle-first tests with >=1 failing item in
-  that category (items on PRS tests feed model features, not these rates).
+Grain and semantics (decision D7, REVISED 2026-08-12):
+- denominator: DVSA INITIAL tests (test_type='NT' with a recorded result)
+  of the configured class inside the coverage window. The cycle-first
+  reconstruction is retired as the population authority -- see
+  pipeline/lake/target_population.py for the DVSA definition and evidence;
+- failure: the test's own outcome is FAIL. This is DVSA's FINAL failure
+  basis (a PRS is the pass it was recorded as) and is UNCHANGED from the
+  historical AutoSafe label. Note this is NOT DVSA's *initial* failure
+  rate, which counts FAIL+PRS; the earlier docstring called it an
+  "initial-failure basis", which was wrong. Whether AutoSafe should adopt
+  FAIL+PRS is open decision D12;
+- Risk_<cat> numerator: failing tests with >=1 failing item in that
+  category (items on PRS tests feed model features, not these rates).
+
+Passing `cycles_relation` restores the retired cycle-first population so the
+historical methodology stays reproducible; it is not the default.
 
 Band edges are asserted equivalent to utils.get_age_band /
 utils.get_mileage_band by tests -- the SQL below is a twin, not a second
@@ -31,6 +41,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
+from pipeline.lake import target_population
 from pipeline.lake.rfr_mapping import COMPONENT_CATEGORIES
 
 DEFAULT_K_GLOBAL = 10   # shrinkage of make toward global (hierarchical_make_adjustment.py:65)
@@ -86,24 +97,35 @@ CASE WHEN test_mileage IS NULL OR test_mileage < 0 OR test_mileage > 500000 THEN
 """
 
 
-def segment_counts_sql(results_relation: str, cycles_relation: str,
-                       items_relation: str, config: AggregateConfig) -> str:
+def segment_counts_sql(results_relation: str, items_relation: str,
+                       config: AggregateConfig,
+                       cycles_relation: Optional[str] = None) -> str:
     """Segment-level raw counts: tests, failures, and per-category failing
-    tests, at (model_id, age_band, mileage_band) grain."""
+    tests, at (model_id, age_band, mileage_band) grain.
+
+    Population is DVSA initial tests. Passing `cycles_relation` selects the
+    RETIRED cycle-first population instead (kept for historical reproduction).
+    """
     cat_sums = ",\n           ".join(
         f"count(DISTINCT CASE WHEN cat.component_category = '{category}' "
         f"THEN base.test_id END) AS fails_{column}"
         for category, column in _CATEGORY_TO_COLUMN.items()
     )
+    if cycles_relation is None:
+        population_join = ""
+        population_pred = target_population.initial_test_sql("r")
+    else:  # legacy path: cycle-first reconstruction (D7, retired 2026-08-12)
+        population_join = f"JOIN {cycles_relation} c ON c.test_id = r.test_id"
+        population_pred = "c.is_cycle_first"
     return f"""
 WITH base AS (
     SELECT r.test_id, r.model_id,
            ({AGE_BAND_SQL}) AS age_band,
            ({MILEAGE_BAND_SQL}) AS mileage_band,
-           (r.outcome = 'FAIL') AS is_fail
+           {target_population.final_failure_sql('r')} AS is_fail
     FROM {results_relation} r
-    JOIN {cycles_relation} c ON c.test_id = r.test_id
-    WHERE c.is_cycle_first
+    {population_join}
+    WHERE {population_pred}
       AND r.test_class_id = '{config.test_class}'
       AND r.test_date BETWEEN DATE '{config.coverage_start.isoformat()}'
                           AND DATE '{config.coverage_end.isoformat()}'
@@ -125,9 +147,11 @@ GROUP BY 1, 2, 3
 """
 
 
-def build_segment_counts(con, results_relation: str, cycles_relation: str,
-                         items_relation: str, config: AggregateConfig) -> pd.DataFrame:
-    sql = segment_counts_sql(results_relation, cycles_relation, items_relation, config)
+def build_segment_counts(con, results_relation: str, items_relation: str,
+                         config: AggregateConfig,
+                         cycles_relation: Optional[str] = None) -> pd.DataFrame:
+    sql = segment_counts_sql(results_relation, items_relation, config,
+                             cycles_relation=cycles_relation)
     frame = con.execute(sql).fetchdf()
     dropped = con.execute(f"""
         SELECT count(*) FROM {results_relation}

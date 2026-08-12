@@ -138,19 +138,19 @@ class TestSegmentCountsFromLake:
         con.execute("""
             CREATE TABLE results (test_id BIGINT, model_id VARCHAR, test_class_id VARCHAR,
                                   test_date DATE, outcome VARCHAR, age_at_test DOUBLE,
-                                  test_mileage BIGINT)
+                                  test_mileage BIGINT, test_type VARCHAR)
         """)
-        con.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?)", [
-            # cycle-first FAIL with a brakes defect
-            (1, "FORD FOCUS", "4", date(2022, 3, 1), "FAIL", 4.0, 45000),
-            # the retest: same cycle, NOT cycle-first -> excluded from denominator
-            (2, "FORD FOCUS", "4", date(2022, 3, 8), "PASS", 4.0, 45010),
-            # cycle-first PASS in a different age band
-            (3, "FORD FOCUS", "4", date(2023, 3, 1), "PASS", 7.0, 55000),
+        con.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+            # DVSA initial test, FAIL, with a brakes defect
+            (1, "FORD FOCUS", "4", date(2022, 3, 1), "FAIL", 4.0, 45000, "NT"),
+            # the retest: DVSA test_type RT -> excluded from the denominator
+            (2, "FORD FOCUS", "4", date(2022, 3, 8), "PASS", 4.0, 45010, "RT"),
+            # initial PASS in a different age band
+            (3, "FORD FOCUS", "4", date(2023, 3, 1), "PASS", 7.0, 55000, "NT"),
             # out of coverage window
-            (4, "FORD FOCUS", "4", date(2019, 3, 1), "FAIL", 1.0, 5000),
+            (4, "FORD FOCUS", "4", date(2019, 3, 1), "FAIL", 1.0, 5000, "NT"),
             # wrong class
-            (5, "HONDA CBR", "1", date(2022, 6, 1), "FAIL", 4.0, 20000),
+            (5, "HONDA CBR", "1", date(2022, 6, 1), "FAIL", 4.0, 20000, "NT"),
         ])
         con.execute("CREATE TABLE cycles (test_id BIGINT, is_cycle_first BOOLEAN)")
         con.executemany("INSERT INTO cycles VALUES (?, ?)", [
@@ -168,11 +168,11 @@ class TestSegmentCountsFromLake:
 
     def test_counts(self, con, config):
         self._seed(con)
-        seg = build_segment_counts(con, "results", "cycles", "items", config)
+        seg = build_segment_counts(con, "results", "items", config)
         assert len(seg) == 2  # two (model, age, mileage) segments in window
         row = seg[(seg["age_band"] == "3-5") & (seg["mileage_band"] == "30k-60k")].iloc[0]
         assert row["model_id"] == "FORD FOCUS"
-        assert row["tests"] == 1        # retest excluded
+        assert row["tests"] == 1        # RT retest excluded
         assert row["failures"] == 1
         assert row["fails_Risk_Brakes"] == 1   # de-duplicated
         assert row["fails_Risk_Tyres"] == 0    # advisory/non-fail item ignored
@@ -346,3 +346,45 @@ class TestStoreParity:
                                                     coverage_end=date(2025, 12, 31)))
         rows = parity_pg_sqlite.rows_from_artifact(out)
         assert rows[0][0] == "FORD FOCUS" and rows[0][3] == 100
+
+
+class TestPopulationDivergence:
+    """The retired cycle population vs the DVSA population, pinned.
+
+    Legacy reproduction must stay available (decision D7 revised: preserve the
+    historical methodology, do not erase it), and the one case where the two
+    definitions genuinely disagree must be explicit rather than incidental.
+    """
+
+    def _seed(self, con):
+        con.execute("""
+            CREATE TABLE results (test_id BIGINT, model_id VARCHAR, test_class_id VARCHAR,
+                                  test_date DATE, outcome VARCHAR, age_at_test DOUBLE,
+                                  test_mileage BIGINT, test_type VARCHAR)
+        """)
+        con.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+            (1, "FORD FOCUS", "4", date(2022, 3, 1), "FAIL", 4.0, 45000, "NT"),
+            # a full NT 30 days later: OUTSIDE the 10-working-day retest
+            # entitlement, so a new full-fee test. DVSA records NT; the 45-day
+            # cycle rule collapsed it into the previous event and deleted it.
+            (2, "FORD FOCUS", "4", date(2022, 3, 31), "PASS", 4.0, 45900, "NT"),
+        ])
+        con.execute("CREATE TABLE cycles (test_id BIGINT, is_cycle_first BOOLEAN)")
+        con.executemany("INSERT INTO cycles VALUES (?, ?)", [(1, True), (2, False)])
+        con.execute("""
+            CREATE TABLE items (test_id BIGINT, is_fail_item BOOLEAN,
+                                component_category VARCHAR)
+        """)
+
+    def test_dvsa_population_keeps_the_second_full_test(self, con, config):
+        self._seed(con)
+        seg = build_segment_counts(con, "results", "items", config)
+        assert seg["tests"].sum() == 2      # both are genuine initial tests
+        assert seg["failures"].sum() == 1
+
+    def test_legacy_cycle_population_still_reproducible(self, con, config):
+        self._seed(con)
+        seg = build_segment_counts(con, "results", "items", config,
+                                   cycles_relation="cycles")
+        assert seg["tests"].sum() == 1      # the 30-day NT is deleted
+        assert seg["failures"].sum() == 1

@@ -80,7 +80,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     seg = build_segment_counts(
         con,
         _relation(lake_dir, "results"),
-        _relation(lake_dir, "cycles"),
         _relation(lake_dir, "items"),
         config,
     )
