@@ -104,3 +104,56 @@ Recovered/overlapped (−33 min, previously netted invisibly):
 
 **20:30 + 215 − 33 ≈ 23:32 → current central 23:35 (range 23:20-23:55; residual
 spread = shard timing + any §5 friction at the full gate).**
+
+## D7 STATUS: OPEN / DEFERRED — MUST PASS BEFORE PHASE-3 TARGET DEFINITION IS FROZEN
+
+Owner ruling 2026-08-12: reconciliation is a hard PRE-TRAINING gate, not a
+local-completion gate. Preference: run it LOCALLY at trainer-design time
+(streaming implementation below makes that plausible); remote hardware only
+if genuinely necessary. When run, compute the old-artifact comparison under
+BOTH cycle semantics (canonical assign_cycles AND the legacy pre-repair SQL
+semantics) — the ~6.10%% one-directional FAIL->PASS/PRS divergence measured
+below fingerprints which semantics production's 26.9139638817903%% reflects.
+
+## Defect #16 (2026-08-12): SQL twin mislabelled rectified cycles — REPAIRED
+
+DVSA test_ids are not chronological. build_cycles_sql picked cycle_id /
+outcome_test_id / last_test_id by min/max(test_id); assign_cycles (rule of
+record) defines them by (test_date, test_id) position. Measured on the 1/61
+subsample (10,498,887 cycle rows): 640,786 rows (6.10%%) differed, 100%%
+one-directional FAIL->PASS (636,916) and FAIL->PRS (3,870) — the legacy twin
+systematically labelled rectified retest chains as failures. Repaired with
+arg_min/arg_max over row(test_date, test_id) (commit 5996f53); repaired twin
+vs a streaming per-vehicle execution of the actual assign_cycles library is
+bit-identical (EXCEPT 0/0). Discriminating fixture added (fixtures with
+monotone ids could never catch this). assign_cycles itself untouched.
+
+## Row-loss hazard (provisional classification — NOT yet a proven DuckDB defect)
+
+A 2.8%% silent output-row loss was observed in a window-pipeline COPY
+(build_cycles_sql shape) under: DuckDB 1.5.5, memory_limit 2GB, threads 2,
+preserve_insertion_order=false, temp cap 6GiB, concurrent duckdb load.
+The identical query with default insertion order produced the correct count.
+Loss is nondeterministic (other preserve-disabled runs lost nothing).
+Classified as: ROW-LOSS ASSOCIATED WITH THE PRESERVE-DISABLED PIPELINE.
+Setting purged from all load-bearing tooling; a minimal reproducer
+(version/build, query shape, threads, settings, repeated counts, default-
+ordering and explicit-ordering contrasts) is queued after mission-critical
+work.
+
+## Continuity gate PASS: INVALIDATED PENDING RE-VERIFICATION
+
+The 2026-08-11 formal PASS (0.997 / 0.0088 / 362d) was produced by a session
+using preserve_insertion_order=false. Given the row-loss association above
+and the 0.0088-vs-0.01 margin on conflict share, that PASS is not sufficient
+evidence. One-attempt re-verification with default ordering, isolated spill,
+hard temp cap, input/output row counts and duplicate checks is queued behind
+items completion; if it cannot complete safely on this machine, that outcome
+is recorded rather than retried.
+
+## Defect #17 (2026-08-12): concurrent DuckDB processes shared a spill dir
+
+DuckDB temp filenames are not process-unique; two processes sharing
+temp_directory corrupted one's spill mid-read. INVARIANT: every concurrent
+DuckDB process gets its own spill directory (per-PID), with hard
+max_temp_directory_size caps and one-attempt execution.
