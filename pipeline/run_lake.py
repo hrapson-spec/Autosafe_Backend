@@ -102,6 +102,14 @@ def cmd_ingest_items(args: argparse.Namespace) -> int:
         )
     register_rfr_category_table(con, rfr_map)
     results_rel = _relation(lake_dir, RESULTS_DATASET)
+    if getattr(args, "results_years", None):
+        # Year-scoped join hint (2026-08-12): the per-file items JOIN against
+        # the FULL results relation spills >7GiB at full depth. Items rows
+        # join their archive year +/-1 (adjacent-year spillover is real;
+        # wider crossing has never been observed); rows outside the scope
+        # fall into the documented orphan path and surface in reconciliation.
+        years = ",".join(str(int(y)) for y in args.results_years.split(","))
+        results_rel = f"(SELECT * FROM {results_rel} WHERE test_year IN ({years}))"
     files = _source_files(Path(args.source_dir), ["test_item*.csv", "test_item*.txt"])
     if not files:
         logger.error("no test_item* files under %s", args.source_dir)
@@ -206,6 +214,8 @@ def build_parser() -> argparse.ArgumentParser:
         if rfr:
             p.add_argument("--rfr-detail", required=True,
                            help="pipe-delimited RfR detail lookup table")
+            p.add_argument("--results-years", default=None,
+                           help="comma list scoping the results join (spill control)")
             p.add_argument("--rfr-group", required=True,
                            help="pipe-delimited test-item group lookup table")
             p.add_argument("--test-class", default="4")
