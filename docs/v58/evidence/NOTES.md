@@ -157,3 +157,34 @@ DuckDB temp filenames are not process-unique; two processes sharing
 temp_directory corrupted one's spill mid-read. INVARIANT: every concurrent
 DuckDB process gets its own spill directory (per-PID), with hard
 max_temp_directory_size caps and one-attempt execution.
+
+## Defect #18 (2026-08-12, found by the parallel test-type session): same-day
+## fail->retest mis-ordering — IN BOTH IMPLEMENTATIONS — decision pending
+
+The shared ordering key (test_date, test_id) mis-orders same-day NT-fail ->
+RT-retest pairs whenever the retest drew a smaller test_id: the retest sorts
+BEFORE its failure, LAG sees no prior FAIL, and the retest opens its own
+cycle. Peer-measured (2019 C3&4): 99.1%% of no-prior RT rows have a same-day
+higher-id NT; effect on D7 cycle-first basis: denominator +4.55%% of
+near-certain passes (RT pass rate 99.6%%), rate depressed 1.26pp. Same error
+class and direction as Defect #16. Candidate repair: within-day tiebreak
+ORDER BY test_date, (NT before RT via test_type), test_id — test_type is
+populated on every lake row (peer census: 0 nulls, NT/RT/ES + EI-2023-only).
+NOT REPAIRED: this changes assign_cycles' own semantics (the rule of record),
+i.e. the D7 target definition — owner has routed all such decisions to the
+D7/trainer-design review. The eventual dual-semantics D7 run is now
+THREE-way: legacy-SQL, repaired-canonical, and same-day-repaired.
+
+## Sampling/sharding bias (2026-08-12, peer-found, independently verified)
+
+vehicle_id is not uniform over residues: %%20==0 is oversized (1.87M vs
+1.50M expected) and fail-heavy (+7-8pp vs truth); abs(hash(vehicle_id))%%N
+matches population truth exactly (verified on 2019 C3&4: hash slice
+24.93%% F-only vs 24.93%% population). Consequences recorded: (a) all future
+sampling/sharding uses hash residues (stream_cycles patched); (b) shard-size
+imbalance from raw modulo plausibly contributed to per-shard ENOSPC; (c) the
+twin-equivalence falsifier verdicts on vehicle_id%%61==0 remain valid AS
+EQUIVALENCE evidence (bit-identical EXCEPT on 10.5M rows tests semantic
+agreement, and the residue-0-adjacent slice is retest-RICH, i.e. harder);
+they are NOT rate-representative, and a hash-sample falsifier re-run is
+queued as belt-and-braces.
