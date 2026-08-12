@@ -132,13 +132,22 @@ numbered AS (
     FROM flagged
 ),
 cycles AS (
+    -- 2026-08-12 twin repair: cycle_id / outcome_test_id / last_test_id are
+    -- defined by assign_cycles (the rule of record) as CHRONOLOGICAL
+    -- positions (first row, last definitive row, last row — in
+    -- (test_date, test_id) order). The previous min/max(test_id) forms
+    -- assumed test_id is monotone with test_date; real DVSA ids are not,
+    -- which flipped cycle outcomes on ~9%% of multi-test cycles
+    -- (falsified live 2026-08-12; discriminating fixture added).
     SELECT *,
-           min(test_id) OVER c AS cycle_id,
+           arg_min(test_id, row(test_date, test_id)) OVER c AS cycle_id,
            coalesce(
-               max(CASE WHEN outcome IN ('PASS','FAIL','PRS') THEN test_id END) OVER c,
-               max(test_id) OVER c
+               arg_max(CASE WHEN outcome IN ('PASS','FAIL','PRS') THEN test_id END,
+                       CASE WHEN outcome IN ('PASS','FAIL','PRS')
+                            THEN row(test_date, test_id) END) OVER c,
+               arg_max(test_id, row(test_date, test_id)) OVER c
            ) AS outcome_test_id,
-           max(test_id) OVER c AS last_test_id,
+           arg_max(test_id, row(test_date, test_id)) OVER c AS last_test_id,
            min(test_date) OVER c AS cycle_start_date,
            max(test_date) OVER c AS cycle_end_date
     FROM numbered

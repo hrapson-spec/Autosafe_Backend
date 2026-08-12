@@ -151,6 +151,41 @@ class TestCycles:
         assert assigned[3].prev_cycle_outcome == "PASS"
         assert assigned[3].days_since_prev_cycle == (date(2020, 3, 20) - date(2019, 3, 8)).days
 
+    def test_sql_twin_equivalence_nonmonotone_ids(self, con):
+        # Regression (2026-08-12, falsified live on 450M rows): DVSA test_ids
+        # are NOT chronological. A FAIL(day1, id=100) -> PASS(day2, id=50)
+        # cycle must take the FINAL-BY-DATE outcome (PASS) and the first-by-
+        # date cycle_id (100); the old min/max(test_id) twin flipped both.
+        rows = [
+            (100, 1, date(2019, 3, 1), "FAIL"), (50, 1, date(2019, 3, 8), "PASS"),
+            (900, 2, date(2020, 1, 5), "FAIL"), (20, 2, date(2020, 1, 15), "FAIL"),
+            (7, 2, date(2020, 1, 20), "PRS"),
+            (300, 3, date(2021, 6, 1), "ABANDONED"), (8, 3, date(2021, 6, 9), "ABORTED"),
+        ]
+        con.execute("CREATE TABLE res2 (test_id BIGINT, vehicle_id BIGINT, "
+                    "test_date DATE, outcome VARCHAR)")
+        con.executemany("INSERT INTO res2 VALUES (?, ?, ?, ?)", rows)
+        sql_rows = {r[0]: r for r in con.execute(build_cycles_sql("res2")).fetchall()}
+        py_rows = {r.test_id: r for r in assign_cycles(
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o) for t, v, d, o in rows])}
+        assert set(sql_rows) == set(py_rows)
+        for tid, py in py_rows.items():
+            sq = sql_rows[tid]
+            assert sq[2] == py.cycle_id, (tid, sq[2], py.cycle_id)
+            assert bool(sq[3]) == py.is_cycle_first
+            assert sq[4] == py.cycle_outcome, (tid, sq[4], py.cycle_outcome)
+            assert sq[5] == py.prev_cycle_test_id
+            assert sq[6] == py.prev_cycle_outcome
+        # the discriminating assertions the old twin fails:
+        assert py_rows[100].cycle_outcome == "PASS"
+        assert py_rows[100].cycle_id == 100
+        # ABANDONED does not extend a cycle (only FAIL does): two single-row
+        # cycles — the no-definitive fallback is only ever single-row, since
+        # any extended cycle contains the FAIL that extended it.
+        assert py_rows[300].cycle_outcome == "ABANDONED"
+        assert py_rows[8].cycle_outcome == "ABORTED"
+        assert py_rows[8].prev_cycle_test_id == 300
+
     def test_sql_twin_equivalence(self, con):
         rows = [
             (1, 1, date(2019, 3, 1), "FAIL"), (2, 1, date(2019, 3, 8), "PASS"),
