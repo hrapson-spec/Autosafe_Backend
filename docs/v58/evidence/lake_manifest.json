@@ -1,0 +1,884 @@
+{
+  "checks": [
+    {
+      "detail": "no multi-test vehicles found in sample",
+      "name": "vehicle_continuity",
+      "passed": false,
+      "ran_at": "2026-08-11T15:12:40.107276+00:00"
+    },
+    {
+      "detail": "no multi-test vehicles found in sample",
+      "name": "vehicle_continuity",
+      "passed": false,
+      "ran_at": "2026-08-11T18:43:12.553810+00:00"
+    },
+    {
+      "detail": "no multi-test vehicles found in sample",
+      "name": "vehicle_continuity",
+      "passed": false,
+      "ran_at": "2026-08-11T18:45:19.860334+00:00"
+    },
+    {
+      "detail": "sample=10000 multiyear_share=0.997 (min 0.2) first_use_conflict_share=0.0000 (max 0.01) median_gap_days=360.0 (range 200-800)",
+      "name": "vehicle_continuity",
+      "passed": true,
+      "ran_at": "2026-08-11T18:51:43.437705+00:00"
+    },
+    {
+      "detail": "sample=10000 multiyear_share=0.997 (min 0.2) first_use_conflict_share=0.0088 (max 0.01) median_gap_days=362.0 (range 200-800) [rerun: tuned session after spill-disk crash; check code identical]",
+      "name": "vehicle_continuity",
+      "passed": true,
+      "ran_at": "2026-08-11T21:55:32.067760+00:00"
+    },
+    {
+      "detail": "sample=10000 multiyear_share=0.998 (min 0.2) first_use_conflict_share=0.0078 (max 0.01) median_gap_days=361.0 (range 200-800) [re-verification, default insertion order, after row-loss hazard finding]",
+      "name": "vehicle_continuity",
+      "passed": true,
+      "ran_at": "2026-08-12T08:13:41.116450+00:00"
+    },
+    {
+      "detail": "class4_share=0.946 (expected 0.5-0.98) over 681,724,337 rows [final results-scope run, 19-year lake; continuity via gate_reverify]",
+      "name": "class_mix",
+      "passed": true,
+      "ran_at": "2026-08-12T08:15:59.721619+00:00"
+    },
+    {
+      "detail": "unknown_outcome_share=0.00000 (max 0.001) over 681,724,337 rows [final results-scope run, 19-year lake; continuity via gate_reverify]",
+      "name": "no_unknown_outcomes",
+      "passed": true,
+      "ran_at": "2026-08-12T08:16:01.480282+00:00"
+    },
+    {
+      "detail": "volumes: 2005=7,113,089, 2006=30,302,568, 2007=31,803,974, 2008=32,591,753, 2009=33,529,083, 2010=34,179,326, 2011=34,790,696, 2012=34,831,846, 2013=35,346,508, 2014=35,458,346, 2015=35,445,915, 2016=35,637,088, 2017=35,983,938, 2018=36,597,485, 2019=37,203,595, 2020=36,607,155, 2021=38,155,866, 2022=39,314,756, 2023=39,834,324 [final results-scope run, 19-year lake; continuity via gate_reverify]",
+      "name": "year_volumes",
+      "passed": true,
+      "ran_at": "2026-08-12T08:16:05.669442+00:00"
+    },
+    {
+      "detail": "pre-switch dangerous/major/minor rows=0 (must be 0); post-switch has D/M/m codes=yes (must be yes) [final items-scope run, 19-year items; results 2005-2014 parked]",
+      "name": "taxonomy_step",
+      "passed": true,
+      "ran_at": "2026-08-12T10:47:40.207766+00:00"
+    },
+    {
+      "detail": "unclassified_share=0.00000 (max 0.001) over 1,289,329,470 items [final items-scope run, 19-year items; results 2005-2014 parked]",
+      "name": "rfr_type_coverage",
+      "passed": true,
+      "ran_at": "2026-08-12T10:47:40.215729+00:00"
+    },
+    {
+      "detail": "categorized_failure_share=0.896 (min 0.5) over 594,200,636 failing items [final items-scope run, 19-year items; results 2005-2014 parked]",
+      "name": "category_coverage",
+      "passed": true,
+      "ran_at": "2026-08-12T10:47:40.215739+00:00"
+    }
+  ],
+  "config": {
+    "gap_days": 45
+  },
+  "created_at": "2026-08-11T15:09:37.019024+00:00",
+  "partitions": {},
+  "sources": [
+    {
+      "bytes": 650813708,
+      "ingested_at": "2026-08-11T15:09:42.302328+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2005.txt",
+      "rows_ingested": 7499744,
+      "schema": "results_mts",
+      "sha256": "f7894f78b565478fa81f8ca2cd7db629db1b10d8a8c9c9b22902c0faa8d70a05"
+    },
+    {
+      "bytes": 2778612563,
+      "ingested_at": "2026-08-11T15:12:38.504829+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2006.txt",
+      "rows_ingested": 32014080,
+      "schema": "results_mts",
+      "sha256": "bf0d20bff3caf04acd89e5599ec763ff92d374a96e63be55c5905cf0734f6f38"
+    },
+    {
+      "bytes": 2917959468,
+      "ingested_at": "2026-08-11T15:19:54.120645+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2007.txt",
+      "rows_ingested": 33591238,
+      "schema": "results_mts",
+      "sha256": "d8112f4c29370dff416bd3885fd49aefde8a74d84d331c2719415df3146f360e"
+    },
+    {
+      "bytes": 2988397416,
+      "ingested_at": "2026-08-11T16:38:44.947984+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2008.txt",
+      "rows_ingested": 34439132,
+      "schema": "results_mts",
+      "sha256": "98fa38baf9ef2e600257abd615f21130279a533b6f6c8cae64afb14b60a99b4c"
+    },
+    {
+      "bytes": 3067433296,
+      "ingested_at": "2026-08-11T16:39:42.652170+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2009.txt",
+      "rows_ingested": 35436943,
+      "schema": "results_mts",
+      "sha256": "66af73e12e748886bf177b1d355694c60c1949c92d35f60cba518104758a60d7"
+    },
+    {
+      "bytes": 3124248235,
+      "ingested_at": "2026-08-11T16:42:17.439124+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2010.txt",
+      "rows_ingested": 36134920,
+      "schema": "results_mts",
+      "sha256": "13955ab5b0a60f59dafc301e4c672c35dbeb19efe28542458fa99d1c0ad5dde2"
+    },
+    {
+      "bytes": 3187851988,
+      "ingested_at": "2026-08-11T16:45:15.747768+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2011.txt",
+      "rows_ingested": 36849154,
+      "schema": "results_mts",
+      "sha256": "a327431ab6d73c219cd552cf9143d6decf79a627572f7720891ab56db2a387d9"
+    },
+    {
+      "bytes": 204966074,
+      "ingested_at": "2026-08-11T16:58:36.132187+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2005.txt",
+      "rows_ingested": 9844489,
+      "schema": "items_mts",
+      "sha256": "27cbbc6c9a32703f4fed306eeeba7e520322b5f6fb5032cfe9b61827defdff96"
+    },
+    {
+      "bytes": 957468818,
+      "ingested_at": "2026-08-11T17:03:39.186435+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2006.txt",
+      "rows_ingested": 46030435,
+      "schema": "items_mts",
+      "sha256": "7d7d0a779f05b53a2faadb928db1d7e937e2f544eb6f1e3443d34853c74917c6"
+    },
+    {
+      "bytes": 1112998371,
+      "ingested_at": "2026-08-11T17:07:27.702990+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2007.txt",
+      "rows_ingested": 53526703,
+      "schema": "items_mts",
+      "sha256": "823a43b02b1dddafaed628d972891035ff23bd654dd51f7868912f047194ab5a"
+    },
+    {
+      "bytes": 1249356362,
+      "ingested_at": "2026-08-11T17:12:14.472828+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2008.txt",
+      "rows_ingested": 60099385,
+      "schema": "items_mts",
+      "sha256": "4b0111af8ce533e840470a4cffb787f8e8d873f104687aff11e5460b60d13b95"
+    },
+    {
+      "bytes": 1367850455,
+      "ingested_at": "2026-08-11T17:17:14.840281+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2009.txt",
+      "rows_ingested": 65838672,
+      "schema": "items_mts",
+      "sha256": "13b551d5513e16aac490988be630cdc5bd64d5968473e7b4df93d99b5b85088d"
+    },
+    {
+      "bytes": 3189151382,
+      "ingested_at": "2026-08-11T18:07:39.861758+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2012.txt",
+      "rows_ingested": 36846342,
+      "schema": "results_mts",
+      "sha256": "b61b1da729d52e3249825635342604ac8f7b680559b3917439e9edfb5c974183"
+    },
+    {
+      "bytes": 3236140781,
+      "ingested_at": "2026-08-11T18:10:37.562896+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2013.txt",
+      "rows_ingested": 37361925,
+      "schema": "results_mts",
+      "sha256": "09935ee80d738b972faff236e6610c69570721e8611607d5c71a7066ae75da9a"
+    },
+    {
+      "bytes": 3251609141,
+      "ingested_at": "2026-08-11T18:13:24.431380+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2014.txt",
+      "rows_ingested": 37493825,
+      "schema": "results_mts",
+      "sha256": "67fd96c74424cade47601f6f35f7f2e078ec92d61128aebc412b9e2da2032cac"
+    },
+    {
+      "bytes": 3260654068,
+      "ingested_at": "2026-08-11T18:16:12.248513+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2015.txt",
+      "rows_ingested": 37490736,
+      "schema": "results_mts",
+      "sha256": "b331d77a22815ad64bb45fb00717714bd51b66c0d50988cdff1b73e7f7096ab8"
+    },
+    {
+      "bytes": 3285252913,
+      "ingested_at": "2026-08-11T18:39:41.198748+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2016.txt",
+      "rows_ingested": 37693380,
+      "schema": "results_mts",
+      "sha256": "64a0cbbeb6632e1f007847b1de9650ab679a9acf9659f14e6bcae7fb56436887"
+    },
+    {
+      "bytes": 278106162,
+      "ingested_at": "2026-08-11T18:42:42.822426+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31859.csv",
+      "rows_ingested": 3174846,
+      "schema": "results_mts",
+      "sha256": "f028a96812c8472510333cb463d7ddba14317f20bf2a3bbb6797335bef11ee1e"
+    },
+    {
+      "bytes": 277851557,
+      "ingested_at": "2026-08-11T18:42:44.792957+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31860.csv",
+      "rows_ingested": 3171746,
+      "schema": "results_mts",
+      "sha256": "f36ca38b51df6b2fee63d3982056c77261ba3e143694bdd666a78ecef8fd7af8"
+    },
+    {
+      "bytes": 278164756,
+      "ingested_at": "2026-08-11T18:42:46.524000+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31861.csv",
+      "rows_ingested": 3175418,
+      "schema": "results_mts",
+      "sha256": "5ab6c3df4c6c95bda31cfed01333cd5002095d4640592993657b517c982917be"
+    },
+    {
+      "bytes": 278057838,
+      "ingested_at": "2026-08-11T18:42:48.521622+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31862.csv",
+      "rows_ingested": 3174044,
+      "schema": "results_mts",
+      "sha256": "9000a1660e282eb6d5aec6f68bb55580b625ec28f18d977a69e7aef2e9b3f23e"
+    },
+    {
+      "bytes": 277900985,
+      "ingested_at": "2026-08-11T18:42:50.408656+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31863.csv",
+      "rows_ingested": 3172552,
+      "schema": "results_mts",
+      "sha256": "c132f322f5665b59a2c07f40b3c76dbe8a08eb38c3178ebd649f2259404aa628"
+    },
+    {
+      "bytes": 277664669,
+      "ingested_at": "2026-08-11T18:42:52.188062+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31864.csv",
+      "rows_ingested": 3169571,
+      "schema": "results_mts",
+      "sha256": "072d6cd8b9926dd9f705305b71cc61f80065644a0e75d30a0c276780ae7ac130"
+    },
+    {
+      "bytes": 277604628,
+      "ingested_at": "2026-08-11T18:42:54.091503+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31868.csv",
+      "rows_ingested": 3169092,
+      "schema": "results_mts",
+      "sha256": "46eb72a7d04ed266f0069ade80f7d94e53b7d493068e19a7d23bf52daf208e37"
+    },
+    {
+      "bytes": 277654436,
+      "ingested_at": "2026-08-11T18:42:55.910622+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31869.csv",
+      "rows_ingested": 3169587,
+      "schema": "results_mts",
+      "sha256": "ac6a4dbd280a3059b9fe27d4c2cc96e57027e88e9c3dad2d7392be6d001c0a35"
+    },
+    {
+      "bytes": 277437970,
+      "ingested_at": "2026-08-11T18:42:58.053138+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31870.csv",
+      "rows_ingested": 3167011,
+      "schema": "results_mts",
+      "sha256": "568cf809b967729eececb7aee8a1e685c4051f499dea74f523809f046b9b5067"
+    },
+    {
+      "bytes": 278104322,
+      "ingested_at": "2026-08-11T18:43:00.007118+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31871.csv",
+      "rows_ingested": 3174845,
+      "schema": "results_mts",
+      "sha256": "4226cb13ab0385cc1dd6583eb03c1ed5a6baa459d98a80b029c09d0de146a85b"
+    },
+    {
+      "bytes": 277577552,
+      "ingested_at": "2026-08-11T18:43:01.846496+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31876.csv",
+      "rows_ingested": 3168766,
+      "schema": "results_mts",
+      "sha256": "7d966bb56e0591deeebb5a4798aa777ad049aeb5df2c73db957112fd10ad0905"
+    },
+    {
+      "bytes": 277585494,
+      "ingested_at": "2026-08-11T18:43:03.828361+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_31879.csv",
+      "rows_ingested": 3168683,
+      "schema": "results_mts",
+      "sha256": "d07adc5fdf0e5c8a7c54cfcfb39419312dab6edb84715b466a25b13887d8d8b1"
+    },
+    {
+      "bytes": 860243815,
+      "ingested_at": "2026-08-11T20:23:25.378277+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2018-01-01_00-00-01-to-2018-04-01_00-00-01.csv",
+      "rows_ingested": 9950815,
+      "schema": "results_csv",
+      "sha256": "02d917c04b8e1bc2e791be045d8f2bdeb68f54e1fd77101e1f24b177228b23ef"
+    },
+    {
+      "bytes": 723051860,
+      "ingested_at": "2026-08-11T20:58:02.244854+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2018-10-01_00-00-01-to-2019-01-01_00-00-01.csv",
+      "rows_ingested": 8356979,
+      "schema": "results_csv",
+      "sha256": "66a8ef932309a8d77031360d99d0ad358b6ac6b717e9eaea25b1b2e301b6ce62"
+    },
+    {
+      "bytes": 856876260,
+      "ingested_at": "2026-08-11T20:58:14.820025+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2018-07-01_00-00-01-to-2018-10-01_00-00-01.csv",
+      "rows_ingested": 9916656,
+      "schema": "results_csv",
+      "sha256": "ba6f5da97fe9c073cf1d4d67e40ae3a831f6b20e996665c6da4dc7ad3591d031"
+    },
+    {
+      "bytes": 904477597,
+      "ingested_at": "2026-08-11T20:58:27.290602+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2018-04-01_00-00-01-to-2018-07-01_00-00-01.csv",
+      "rows_ingested": 10457351,
+      "schema": "results_csv",
+      "sha256": "55c183dce0f0fc028341c92700f7d339b9ce295b242a05a4a49941591be60f02"
+    },
+    {
+      "bytes": 904613679,
+      "ingested_at": "2026-08-11T21:03:50.338491+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2019-04-01_00-00-01-to-2019-07-01_00-00-01.csv",
+      "rows_ingested": 10466891,
+      "schema": "results_csv",
+      "sha256": "b08f3497e969c8572bbace1a3e044878f36bb57812d6bc1c87b32b78c60c38c5"
+    },
+    {
+      "bytes": 729614504,
+      "ingested_at": "2026-08-11T21:04:01.595073+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2019-10-01_00-00-01-to-2020-01-01_00-00-01.csv",
+      "rows_ingested": 8439417,
+      "schema": "results_csv",
+      "sha256": "86d2b9af4b976f5adddb2adcdee7bd8edc45c77abc5c70bd6956b0409c91f9be"
+    },
+    {
+      "bytes": 880414075,
+      "ingested_at": "2026-08-11T21:04:16.827299+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2019-07-01_00-00-01-to-2019-10-01_00-00-01.csv",
+      "rows_ingested": 10194304,
+      "schema": "results_csv",
+      "sha256": "771dad37b62c7cdb24e10a99b5999b4e2827e24d27828d4c97f38b606be4b8bb"
+    },
+    {
+      "bytes": 881939355,
+      "ingested_at": "2026-08-11T21:04:33.855435+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2019-01-01_00-00-01-to-2019-04-01_00-00-01.csv",
+      "rows_ingested": 10210086,
+      "schema": "results_csv",
+      "sha256": "81e18cb874c5fe592d3eabee21f44fd14fbfda56d1d3c3a04b54b2093f433cfb"
+    },
+    {
+      "bytes": 869868581,
+      "ingested_at": "2026-08-11T21:04:51.755294+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2020-01-01_00-00-00-to-2020-04-01_00-00-00.csv",
+      "rows_ingested": 10104425,
+      "schema": "results_csv",
+      "sha256": "f0b4472579d4c76917b2b9f58cc8041db535b00adf12c88f640a770ef127f178"
+    },
+    {
+      "bytes": 459316024,
+      "ingested_at": "2026-08-11T21:04:59.211302+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2020-04-01_00-00-00-to-2020-07-01_00-00-00.csv",
+      "rows_ingested": 5362645,
+      "schema": "results_csv",
+      "sha256": "7f1644c54ebfd649e4686a15964a7096d4722f26cbbbe1f760c35f284c49bc6d"
+    },
+    {
+      "bytes": 957999776,
+      "ingested_at": "2026-08-11T21:05:12.676125+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2020-07-01_00-00-00-to-2020-10-01_00-00-00.csv",
+      "rows_ingested": 11137836,
+      "schema": "results_csv",
+      "sha256": "0bc3b14804edc650923f0a03b715182db72cf04c6d1b5ed1bdbd4c211cc4a103"
+    },
+    {
+      "bytes": 1033587999,
+      "ingested_at": "2026-08-11T21:05:31.562830+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result-from-2020-10-01_00-00-00-to-2021-01-01_00-00-00.csv",
+      "rows_ingested": 11989107,
+      "schema": "results_csv",
+      "sha256": "f98ae7ca599a8557abfae84a3cf2fe684acd19c0d59e8eea56714f5e8ea816a1"
+    },
+    {
+      "bytes": 370591916,
+      "ingested_at": "2026-08-11T21:07:59.164622+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32355.csv",
+      "rows_ingested": 3362528,
+      "schema": "results_csv",
+      "sha256": "3c2945c7c3498ab72e2e14c7b573012e21adaea3da790d477930cdfb7e001729"
+    },
+    {
+      "bytes": 370584177,
+      "ingested_at": "2026-08-11T21:08:03.900769+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32357.csv",
+      "rows_ingested": 3362449,
+      "schema": "results_csv",
+      "sha256": "25ae503936b7a5e51dff06ba4effbb90de5610d8e6a011690daf42ffba6410ae"
+    },
+    {
+      "bytes": 371195101,
+      "ingested_at": "2026-08-11T21:08:09.007772+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32360.csv",
+      "rows_ingested": 3368007,
+      "schema": "results_csv",
+      "sha256": "e2fb6e85a3633a2a625581138808a6d5ccca89b530be3a3cadd8643f7710cce8"
+    },
+    {
+      "bytes": 370681200,
+      "ingested_at": "2026-08-11T21:08:14.218340+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32361.csv",
+      "rows_ingested": 3363318,
+      "schema": "results_csv",
+      "sha256": "b7d94d377359ecb69b98daf1396016c5d1fb34d724c5e58f2adda00ea298d6b9"
+    },
+    {
+      "bytes": 371006342,
+      "ingested_at": "2026-08-11T21:08:19.621789+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32365.csv",
+      "rows_ingested": 3366232,
+      "schema": "results_csv",
+      "sha256": "c26a97be2285ee0af80bfd2968d99e3316e3365c6affd708a032ddc81e3f5c7a"
+    },
+    {
+      "bytes": 371116837,
+      "ingested_at": "2026-08-11T21:40:14.423620+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32367.csv",
+      "rows_ingested": 3367301,
+      "schema": "results_csv",
+      "sha256": "324fe2e36b5fcac3201c09371f8cbb9a7f139c24b76ef34dc20ac58ad99e64e8"
+    },
+    {
+      "bytes": 370669369,
+      "ingested_at": "2026-08-11T21:40:39.975260+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32370.csv",
+      "rows_ingested": 3363389,
+      "schema": "results_csv",
+      "sha256": "d32818f8073793255596946a3968d181f8ff87d970ee3d266cb8732b47ae89e6"
+    },
+    {
+      "bytes": 370581748,
+      "ingested_at": "2026-08-11T21:40:52.551089+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32372.csv",
+      "rows_ingested": 3362480,
+      "schema": "results_csv",
+      "sha256": "1a18379ac59da13d803f8c953d67e88a56870c7e3fe41803fffec4a92f23ae37"
+    },
+    {
+      "bytes": 370670092,
+      "ingested_at": "2026-08-11T21:41:02.075268+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32375.csv",
+      "rows_ingested": 3363313,
+      "schema": "results_csv",
+      "sha256": "575a9ab9a2c0f91baa39fbc0a4d1b70ee81b6857ce8472ea312811135b2b9f8d"
+    },
+    {
+      "bytes": 371339397,
+      "ingested_at": "2026-08-11T21:41:12.696546+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32378.csv",
+      "rows_ingested": 3369257,
+      "schema": "results_csv",
+      "sha256": "e4cb28d0114cc83ace35f3d6b9142c1bed46c22c37f5c90d43df50b8b7d092b2"
+    },
+    {
+      "bytes": 371123609,
+      "ingested_at": "2026-08-11T21:41:22.184441+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32384.csv",
+      "rows_ingested": 3367462,
+      "schema": "results_csv",
+      "sha256": "b745e5cccfe3abd0bfce0e552fcb9dbebda7938b4b7f3116c45ee002e44c8861"
+    },
+    {
+      "bytes": 370865904,
+      "ingested_at": "2026-08-11T21:41:31.570967+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022/test_result_20220531131730_32386.csv",
+      "rows_ingested": 3364910,
+      "schema": "results_csv",
+      "sha256": "bbc23147ca5641369b2192a13d1dd5fd28735ee310d2eb4f19b8a33da2da6856"
+    },
+    {
+      "bytes": 3661104239,
+      "ingested_at": "2026-08-11T21:46:44.354136+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result.csv",
+      "rows_ingested": 42216721,
+      "schema": "results_mts",
+      "sha256": "08ab1e2e83030b4d16655a1e1f37333fc32d0b091c9a03c34c78fd82caa19b18"
+    },
+    {
+      "bytes": 1382672836,
+      "ingested_at": "2026-08-12T06:32:11.432912+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2010.txt",
+      "rows_ingested": 66575683,
+      "schema": "items_mts",
+      "sha256": "f9cd2f9fe0032fef6e0779c94ed213ad490fcbe8f7e188c208dfd4bbaae02cf4"
+    },
+    {
+      "bytes": 1427240202,
+      "ingested_at": "2026-08-12T06:39:04.101498+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2011.txt",
+      "rows_ingested": 68723867,
+      "schema": "items_mts",
+      "sha256": "a6bf3570b1c845ceed83e13aacea439fef5299f4f5150ed46ee43d4c1e95ee89"
+    },
+    {
+      "bytes": 1475308412,
+      "ingested_at": "2026-08-12T06:48:48.427066+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2012.txt",
+      "rows_ingested": 70997552,
+      "schema": "items_mts",
+      "sha256": "2ac09ae5d3da2c00e993c5c61c6fbf46989ed03b9af9fa4706770a9bdc38a83f"
+    },
+    {
+      "bytes": 3593668893,
+      "ingested_at": "2026-08-12T07:18:10.914991+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/results/test_result_2022.csv",
+      "rows_ingested": 41632878,
+      "schema": "results_mts",
+      "sha256": "81e6b03407be2f3bbb71a34432da163a62c28afd89e07a2c7e86495bf7366baf"
+    },
+    {
+      "bytes": 1537429462,
+      "ingested_at": "2026-08-12T07:43:07.884135+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2013.txt",
+      "rows_ingested": 74036191,
+      "schema": "items_mts",
+      "sha256": "3360ed7fb3e4a2f7b35f00e675422b12cd7ffd0de7c803593a3f85b76b8342b4"
+    },
+    {
+      "bytes": 1535334072,
+      "ingested_at": "2026-08-12T09:07:34.572218+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2014.txt",
+      "rows_ingested": 73953564,
+      "schema": "items_mts",
+      "sha256": "0f52ec24b0df8bbdcb17fd930b33e48636e7c6d58d53b040b44d96aaa63dac1b"
+    },
+    {
+      "bytes": 1454979148,
+      "ingested_at": "2026-08-12T09:23:40.756976+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2015.txt",
+      "rows_ingested": 70077368,
+      "schema": "items_mts",
+      "sha256": "b71fc5c78231606093c638a5d8c5319e02fa8fc628d40fc13e8f8ab73a65c03f"
+    },
+    {
+      "bytes": 1451278527,
+      "ingested_at": "2026-08-12T09:26:45.038071+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2016.txt",
+      "rows_ingested": 69784106,
+      "schema": "items_mts",
+      "sha256": "7b8c817ee1ea1f55df904d57810c31ed80a85cf6300f1b7c61ed24932b534da1"
+    },
+    {
+      "bytes": 129581116,
+      "ingested_at": "2026-08-12T09:37:55.565206+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26597.csv",
+      "rows_ingested": 5933449,
+      "schema": "items_mts",
+      "sha256": "7759bdbc680c5c5750d86b5b0e2f5138c58ade8cdadcd7c8f83004fdd72b7d80"
+    },
+    {
+      "bytes": 129587750,
+      "ingested_at": "2026-08-12T09:38:03.712588+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26598.csv",
+      "rows_ingested": 5933723,
+      "schema": "items_mts",
+      "sha256": "a2d7e562100aa14f68f7b1158a224c48556e3cdd220058ac73d2f46c74ac18d6"
+    },
+    {
+      "bytes": 129612687,
+      "ingested_at": "2026-08-12T09:38:12.426547+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26599.csv",
+      "rows_ingested": 5934721,
+      "schema": "items_mts",
+      "sha256": "027db6a677296a82cf852d58f43b35565ae6d04fdb1a52815f0ac7277388408c"
+    },
+    {
+      "bytes": 129646695,
+      "ingested_at": "2026-08-12T09:38:20.687320+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26600.csv",
+      "rows_ingested": 5936353,
+      "schema": "items_mts",
+      "sha256": "56f3bc56a7f7bfdb045c953a4968b0175422f03eba247521cb60c26347ea7046"
+    },
+    {
+      "bytes": 129632118,
+      "ingested_at": "2026-08-12T09:38:28.671925+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26601.csv",
+      "rows_ingested": 5935700,
+      "schema": "items_mts",
+      "sha256": "fdab46af1bf5664aed6cc5658315b1f9aab74313ec1556f444a9ffcbccfedf4c"
+    },
+    {
+      "bytes": 129581327,
+      "ingested_at": "2026-08-12T09:38:36.364320+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26603.csv",
+      "rows_ingested": 5933527,
+      "schema": "items_mts",
+      "sha256": "7740f3beef70997d772d9fcc61657b095b28eedb324044ba7d9e2d87fdd9155e"
+    },
+    {
+      "bytes": 129512780,
+      "ingested_at": "2026-08-12T09:38:45.167453+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26606.csv",
+      "rows_ingested": 5930187,
+      "schema": "items_mts",
+      "sha256": "5a80009dc0e1ee190a0570096969d5f9377a72937ec88ec735a9709bcd258cad"
+    },
+    {
+      "bytes": 129580182,
+      "ingested_at": "2026-08-12T09:38:52.940483+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26607.csv",
+      "rows_ingested": 5933397,
+      "schema": "items_mts",
+      "sha256": "9256ec8152a4ac40d93537c47a2e3b7b5de4455cd63c60b5b1954a54b43c6296"
+    },
+    {
+      "bytes": 129583205,
+      "ingested_at": "2026-08-12T09:39:00.846751+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26609.csv",
+      "rows_ingested": 5933485,
+      "schema": "items_mts",
+      "sha256": "aa524354c08a3f5991f45e6e5ee9e943763139051dd2cba51cab2096fe26cf56"
+    },
+    {
+      "bytes": 129430362,
+      "ingested_at": "2026-08-12T09:39:08.412160+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26611.csv",
+      "rows_ingested": 5926434,
+      "schema": "items_mts",
+      "sha256": "bd4f6936660d3da5c571204d380e37c40f99dd3912b54dc15e289fdb4c4b41df"
+    },
+    {
+      "bytes": 129543334,
+      "ingested_at": "2026-08-12T09:39:15.881258+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26612.csv",
+      "rows_ingested": 5931631,
+      "schema": "items_mts",
+      "sha256": "5581589c9f6fee56165441f1eba85ae9d705d260c17073b11684c5b7128716df"
+    },
+    {
+      "bytes": 129559763,
+      "ingested_at": "2026-08-12T09:39:23.201321+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_26615.csv",
+      "rows_ingested": 5932526,
+      "schema": "items_mts",
+      "sha256": "ab92fa222bbd65a2b9c61bf3460a33d2148f093c10b707abbc2d33349de57968"
+    },
+    {
+      "bytes": 414783696,
+      "ingested_at": "2026-08-12T09:40:38.567358+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2018-01-01_00-00-01-to-2018-04-01_00-00-01.csv",
+      "rows_ingested": 18172242,
+      "schema": "items_csv",
+      "sha256": "0292aa2c9eb4dea0f6e882bd5c36fd0421457b79cf4fda4f9b026c610ce6d0d4"
+    },
+    {
+      "bytes": 465260913,
+      "ingested_at": "2026-08-12T09:41:42.902522+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2018-04-01_00-00-01-to-2018-07-01_00-00-01.csv",
+      "rows_ingested": 20014106,
+      "schema": "items_csv",
+      "sha256": "eb69350e246132db2e98a5608ec9d52d8ebc8dfedb13d50769ac8a8d591c22fb"
+    },
+    {
+      "bytes": 456481213,
+      "ingested_at": "2026-08-12T09:42:32.489684+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2018-07-01_00-00-01-to-2018-10-01_00-00-01.csv",
+      "rows_ingested": 19194334,
+      "schema": "items_csv",
+      "sha256": "b3b4bb9a0b28d476ecf7df1c3cd265aa88b5213b8691a32793b7243db643355f"
+    },
+    {
+      "bytes": 411713053,
+      "ingested_at": "2026-08-12T09:43:32.296290+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2018-10-01_00-00-01-to-2019-01-01_00-00-01.csv",
+      "rows_ingested": 17310586,
+      "schema": "items_csv",
+      "sha256": "bf521c9608c02e84435aaec28f9d76ee810f61a05f2f1e8828511add7f44906c"
+    },
+    {
+      "bytes": 485006427,
+      "ingested_at": "2026-08-12T10:09:51.963616+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2019-01-01_00-00-01-to-2019-04-01_00-00-01.csv",
+      "rows_ingested": 20391088,
+      "schema": "items_csv",
+      "sha256": "25162ee6366a7303fe272590c3bfaddac01fcb78e0ee1d26181bb620ae156a6f"
+    },
+    {
+      "bytes": 510013646,
+      "ingested_at": "2026-08-12T10:10:16.287766+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2019-04-01_00-00-01-to-2019-07-01_00-00-01.csv",
+      "rows_ingested": 21441255,
+      "schema": "items_csv",
+      "sha256": "68c43a465665fdf99d709263aefc985b7ba9201689a6495281ecb7bc122267a1"
+    },
+    {
+      "bytes": 490931636,
+      "ingested_at": "2026-08-12T10:10:40.592019+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2019-07-01_00-00-01-to-2019-10-01_00-00-01.csv",
+      "rows_ingested": 20635815,
+      "schema": "items_csv",
+      "sha256": "339005836b603097f2ae9156369079a6fa8f93048375b615d8370f9be7bc24ef"
+    },
+    {
+      "bytes": 416339270,
+      "ingested_at": "2026-08-12T10:10:58.122392+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2019-10-01_00-00-01-to-2020-01-01_00-00-01.csv",
+      "rows_ingested": 17497884,
+      "schema": "items_csv",
+      "sha256": "3757257654af5af6908d6b6e1314d00231a16fcbe6a1afbcae66315cfe48e7f4"
+    },
+    {
+      "bytes": 444640492,
+      "ingested_at": "2026-08-12T10:30:18.952906+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2020-01-01_00-00-00-to-2020-04-01_00-00-00.csv",
+      "rows_ingested": 20071226,
+      "schema": "items_csv",
+      "sha256": "21b9a2a27988af8aa71d42a063b6859c87ecfe534b93c5661e398dea82a07269"
+    },
+    {
+      "bytes": 196253941,
+      "ingested_at": "2026-08-12T10:30:28.070735+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2020-04-01_00-00-00-to-2020-07-01_00-00-00.csv",
+      "rows_ingested": 8860083,
+      "schema": "items_csv",
+      "sha256": "490e8138b3f8dd6af8f61f76169067a79b8d419f525cc76fcab918f1c69aedef"
+    },
+    {
+      "bytes": 473573085,
+      "ingested_at": "2026-08-12T10:30:51.180807+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2020-07-01_00-00-00-to-2020-10-01_00-00-00.csv",
+      "rows_ingested": 21374254,
+      "schema": "items_csv",
+      "sha256": "049db36977f3e53223587f5d5f9b4be157e48642e1e1cdf0d467f67776c73c0f"
+    },
+    {
+      "bytes": 567102620,
+      "ingested_at": "2026-08-12T10:31:24.450579+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item-from-2020-10-01_00-00-00-to-2021-01-01_00-00-00.csv",
+      "rows_ingested": 25601511,
+      "schema": "items_csv",
+      "sha256": "9768d9eb86e71de48fbe2a3b64375eb770269a07d764bcf128c3d9e01c5aa6ca"
+    },
+    {
+      "bytes": 177973840,
+      "ingested_at": "2026-08-12T10:33:00.898621+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25463.csv",
+      "rows_ingested": 6873380,
+      "schema": "items_csv",
+      "sha256": "2afc2e0fa05c0242da694ef4d235d80ddc392b2185533e5ca353f5ff72c02659"
+    },
+    {
+      "bytes": 177956384,
+      "ingested_at": "2026-08-12T10:33:09.360745+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25464.csv",
+      "rows_ingested": 6872770,
+      "schema": "items_csv",
+      "sha256": "f6c078e001a8e04585556680910d32496d159a22aa42bc644464c961b2fb9f33"
+    },
+    {
+      "bytes": 177858619,
+      "ingested_at": "2026-08-12T10:33:18.030021+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25465.csv",
+      "rows_ingested": 6868970,
+      "schema": "items_csv",
+      "sha256": "d9e2e0193d95c4af7bd0e6cc7c044cef16b4d2beaf08bf352550c9e14dce6165"
+    },
+    {
+      "bytes": 177750474,
+      "ingested_at": "2026-08-12T10:33:27.102919+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25466.csv",
+      "rows_ingested": 6864716,
+      "schema": "items_csv",
+      "sha256": "9dadb69407f4bfdb79d775d4c83a822ecaaddd1c18e79bd70d735f0380e70128"
+    },
+    {
+      "bytes": 177780161,
+      "ingested_at": "2026-08-12T10:33:36.017303+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25468.csv",
+      "rows_ingested": 6865977,
+      "schema": "items_csv",
+      "sha256": "3fe4818ad6763c38f2900757bf6837a59cc78e63e64f4a8e4ad0daf687f29b95"
+    },
+    {
+      "bytes": 177891314,
+      "ingested_at": "2026-08-12T10:33:46.172589+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25469.csv",
+      "rows_ingested": 6870092,
+      "schema": "items_csv",
+      "sha256": "c9f5979df691852381d50aa1ba23858c3593686d56b7a06988c4a06fb28ac6ae"
+    },
+    {
+      "bytes": 178017557,
+      "ingested_at": "2026-08-12T10:33:57.654525+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25470.csv",
+      "rows_ingested": 6875124,
+      "schema": "items_csv",
+      "sha256": "09fb24222f71a7e3a25f0905a5a0d82fccb2246249b2fc636a9e716f4dfd1ecb"
+    },
+    {
+      "bytes": 177716813,
+      "ingested_at": "2026-08-12T10:34:07.621395+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25472.csv",
+      "rows_ingested": 6863521,
+      "schema": "items_csv",
+      "sha256": "7a1fb5bbba107c05dc8ddd3347e7ced42e94d01942cf22c092954241ecd09e43"
+    },
+    {
+      "bytes": 177914485,
+      "ingested_at": "2026-08-12T10:34:17.007369+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25475.csv",
+      "rows_ingested": 6871136,
+      "schema": "items_csv",
+      "sha256": "bb8891c1c8f4e7ad2e0b6a9bc12db5546b90769841a6bae69a4fa3afdac4327b"
+    },
+    {
+      "bytes": 177740924,
+      "ingested_at": "2026-08-12T10:34:26.413774+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25478.csv",
+      "rows_ingested": 6864437,
+      "schema": "items_csv",
+      "sha256": "25569c830393dae4ede20ad7203b25b411c9dba8099325aa438b63f3844c6ae1"
+    },
+    {
+      "bytes": 177780599,
+      "ingested_at": "2026-08-12T10:34:36.690164+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25480.csv",
+      "rows_ingested": 6866021,
+      "schema": "items_csv",
+      "sha256": "c734e69c5dcb11ff8e7815f8d251555168dda1caad75af453ad74148f80b85d7"
+    },
+    {
+      "bytes": 177908824,
+      "ingested_at": "2026-08-12T10:34:46.444356+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2021/test_item_20220601064611_25482.csv",
+      "rows_ingested": 6870824,
+      "schema": "items_csv",
+      "sha256": "a708c37d17b7c24aa53c501fd8c9fea6a4e78e96005b4519b14a6bf1452c14b7"
+    },
+    {
+      "bytes": 1912740578,
+      "ingested_at": "2026-08-12T10:38:55.583979+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item.csv",
+      "rows_ingested": 86352341,
+      "schema": "items_mts",
+      "sha256": "04f33f21cca4c3e27bbe1e6f42db354b486d39dfec903f0dc3a5ffd39aad407b"
+    },
+    {
+      "bytes": 1978006426,
+      "ingested_at": "2026-08-12T10:45:32.909496+00:00",
+      "path": "/Users/henrirapson/autosafe_raw/items/test_item_2023_generic.csv",
+      "rows_ingested": 89302629,
+      "schema": "items_mts",
+      "sha256": "614f78c9fcc206aea2917b740ce079867e18c811c8f94dc7e6118f2da98388fc"
+    }
+  ],
+  "tool_git_sha": "1b3f6e8ae325681cd298edff5c202837cbac2ad0"
+}
