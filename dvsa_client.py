@@ -81,9 +81,13 @@ class MOTTest:
     completed_at: Optional[datetime] = None
 
 
-# Ascending semantic chronology for one vehicle's tests (D13 serving
-# analogue). True time-of-day wins when present; otherwise a FAILED test
-# precedes the PASSED/other result that resolved it on the same day.
+# Ascending chronology for one vehicle's tests (D13 serving analogue).
+# True time-of-day IDENTIFIES intra-day order whenever present -- and the
+# live DVSA API always supplies it. The outcome fallback below is
+# deterministic REPRESENTATION for timestamp-less inputs (unit tests,
+# replays) only: per the amended D13 contract it is not a claim of
+# chronology, and positional features computed from timestamp-less same-day
+# pairs are representation-determined, not chronology-determined.
 # test_number is a determinism tiebreak only -- like the lake's test_id, it
 # must never be treated as chronology in its own right.
 _RESULT_RANK = {"FAILED": 1, "PASSED": 3}

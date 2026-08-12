@@ -158,16 +158,44 @@ artifacts of an undecided rule. Evidence:
 `docs/v58/evidence/INVARIANTS_AUDIT_2026_08_12.md` addendum 2 (6ff01d9);
 `docs/v58/evidence/f7a/{f7_tie_rule_materiality.py,F7A_RESULT.json}` (15acb39).
 
-**The rule.** A vehicle's tests order by `(test_date, type_rank, outcome_rank,
-test_id)`:
+**The rule (amended same day, owner review): semantic chronology and
+deterministic representation are DIFFERENT THINGS and must never be
+conflated.**
 
-- `type_rank`: `NT` 0 — the initial test precedes everything; `PL`/`PV`/`RT` 1 —
-  a retest follows the test it retests; `ES`/`EI` 2 — appeals contest an
-  earlier result, so they sort last.
-- `outcome_rank`: non-results (`ABANDONED`/`ABORTED`/`ABORTED_VE`/`REFUSED`) 0 —
-  an interrupted attempt precedes the completed test that follows it; `FAIL` 1
-  before `PRS` 2 before `PASS` 3 — a failure precedes its same-day resolution.
-- `test_id` LAST, as a pure determinism tiebreak. It is never chronology.
+*Chronology — what the data actually establishes:*
+
+- `test_date` orders days. Fully identified.
+- `type_rank` orders within a day ONLY where DVSA semantics genuinely
+  establish sequence: `NT` 0 (the initial test precedes its retests and
+  appeals), `PL`/`PV`/`RT` 1 (a retest follows the test it retests), `ES`/`EI`
+  2 (an appeal contests an earlier result). These are *strata*: order BETWEEN
+  strata is established; order WITHIN a stratum is NOT.
+- At serving, the DVSA API's full `completed_at` timestamp identifies
+  intra-day order whenever present.
+- Nothing else identifies chronology. In particular, two same-day `NT`
+  records are NOT established to have occurred FAIL→PASS merely because
+  FAIL < PASS in some rank.
+
+*Representation — determinism only:* `outcome_rank` and `test_id` may be used
+to make output row order deterministic, **but no feature, cycle-membership
+decision, label, or historical state may depend on their ordering where
+within-day chronology is otherwise unidentified.** Where chronology within a
+same-day equivalence class cannot be established from authoritative semantics
+or timestamps, downstream logic must be order-invariant/set-based, explicitly
+`AMBIGUOUS`, or redesigned so chronology is unnecessary. Chronology is never
+silently invented. A deterministic wrong chronology is still wrong.
+
+*Consequences implemented in the cycle builder:* cycles operate at
+day-cluster grain. A cluster's outcome is a SET computation: a FAIL resolved
+by a definitive pass in a strictly LATER stratum (NT-FAIL → RT-PASS) yields
+that resolution — identified; a FAIL and a definitive pass in the SAME
+stratum yields `AMBIGUOUS` — never a manufactured sequence; `AMBIGUOUS` does
+not extend a fail→retest chain (it is not an assertion of unresolved
+failure). `cycle_id` is `min(test_id)` as a pure identifier;
+`prev_cycle_test_id` is the resolving row's id only when uniquely
+identified, else NULL — an explicit unknown, never an arbitrary pick. The
+decisive invariant, enforced by the permutation falsifiers: **changing an
+arbitrary ordering choice must not change model information.**
 
 Scope: the lake cycle builder and its SQL twin (this commit); the untracked
 streaming/sharded builders and the research-repo history builders must adopt
