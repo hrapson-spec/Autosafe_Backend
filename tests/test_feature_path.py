@@ -107,3 +107,47 @@ def test_v55_anomaly_substitutes_previous_reading():
     assert feats['mileage_anomaly_flag'] == 1
     assert feats['mileage_plausible_flag'] == 0
     assert feats['has_prev_mileage'] == 1
+
+
+class TestD13ServingChronology:
+    """Serving analogue of decision D13: same-day ties must be deterministic
+    and follow true chronology when DVSA provides it."""
+
+    def _t(self, day, result, hhmm=None, num="1"):
+        from datetime import datetime
+        from dvsa_client import MOTTest
+        completed = datetime(2025, 7, day, *divmod(hhmm, 100)) if hhmm else None
+        return MOTTest(test_date=datetime(2025, 7, day), test_result=result,
+                       expiry_date=None, odometer_value=10000, odometer_unit="mi",
+                       test_number=num, defects=[], completed_at=completed)
+
+    def test_timestamp_orders_same_day_pair_regardless_of_array_order(self):
+        from dvsa_client import mot_chronology_key
+        fail = self._t(2, "FAILED", hhmm=930, num="2")
+        rt = self._t(2, "PASSED", hhmm=1445, num="1")
+        for arr in ([rt, fail], [fail, rt]):
+            newest_first = sorted(arr, key=mot_chronology_key, reverse=True)
+            assert newest_first[0] is rt and newest_first[1] is fail
+
+    def test_outcome_fallback_when_no_timestamps(self):
+        # No time-of-day: the FAILED test precedes the PASSED resolution, so
+        # newest-first puts PASSED at index 0 -- for either array order.
+        from dvsa_client import mot_chronology_key
+        fail = self._t(2, "FAILED", num="9")
+        rt = self._t(2, "PASSED", num="3")
+        for arr in ([rt, fail], [fail, rt]):
+            newest_first = sorted(arr, key=mot_chronology_key, reverse=True)
+            assert newest_first[0] is rt
+
+    def test_client_parses_full_timestamp(self):
+        from datetime import datetime
+        from dvsa_client import DVSAClient
+        client = DVSAClient.__new__(DVSAClient)
+        assert client._parse_datetime('2025-07-02T10:30:00.000Z') == \
+            datetime(2025, 7, 2, 10, 30, 0)
+        assert client._parse_datetime('2025-07-02T10:30:00Z') == \
+            datetime(2025, 7, 2, 10, 30, 0)
+        assert client._parse_datetime('2025-07-02') is None   # no intra-day info
+        assert client._parse_datetime(None) is None
+        # the truncation contract of _parse_date is untouched
+        assert client._parse_date('2025-07-02T10:30:00.000Z') == datetime(2025, 7, 2)

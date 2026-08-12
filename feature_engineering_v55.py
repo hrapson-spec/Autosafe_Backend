@@ -193,8 +193,14 @@ def engineer_features(
     features = {}
     tests = history.mot_tests
 
-    # Sort tests by date (newest first)
-    tests = sorted(tests, key=lambda t: t.test_date, reverse=True)
+    # Sort tests newest-first by TRUE chronology (D13 serving analogue):
+    # completedDate time-of-day when present, else FAILED-before-PASSED
+    # within the day (a failure precedes its resolution), test_number as a
+    # pure determinism tiebreak. Never rely on API array order -- it is
+    # undefined by contract and was measured nondeterministic on ~8% of
+    # vehicle-days (same-day retest pairs).
+    from dvsa_client import mot_chronology_key
+    tests = sorted(tests, key=mot_chronology_key, reverse=True)
 
     # Get latest test for temporal features
     latest_test = tests[0] if tests else None

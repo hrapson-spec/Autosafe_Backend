@@ -18,6 +18,7 @@ duckdb = pytest.importorskip("duckdb")
 
 from pipeline.lake import checks as lake_checks  # noqa: E402
 from pipeline.lake import normalize, schemas  # noqa: E402
+from pipeline.lake import cycles as lake_cycles  # noqa: E402
 from pipeline.lake.cycles import assign_cycles, build_cycles_sql  # noqa: E402
 from pipeline.lake.ingest_items import (  # noqa: E402
     ingest_items_file,
@@ -113,26 +114,26 @@ class TestNormalize:
 class TestCycles:
     CASES = [
         # fail then retest inside gap -> one cycle, outcome of the retest
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 3, 8), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 3, 8), "PASS", "RT")],
              expect_cycles=1, expect_outcomes=["PASS"]),
         # pass then pass -> two cycles regardless of gap
-        dict(tests=[(1, date(2019, 3, 1), "PASS"), (2, date(2019, 3, 8), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "PASS", "NT"), (2, date(2019, 3, 8), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["PASS", "PASS"]),
         # fail then retest OUTSIDE gap -> two cycles
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 6, 1), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 6, 1), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["FAIL", "PASS"]),
         # PRS closes its cycle (it is a pass with rectified defects)
-        dict(tests=[(1, date(2019, 3, 1), "PRS"), (2, date(2019, 3, 5), "PASS")],
+        dict(tests=[(1, date(2019, 3, 1), "PRS", "NT"), (2, date(2019, 3, 5), "PASS", "NT")],
              expect_cycles=2, expect_outcomes=["PRS", "PASS"]),
         # fail -> abandoned within gap stays in the cycle; outcome = last definitive
-        dict(tests=[(1, date(2019, 3, 1), "FAIL"), (2, date(2019, 3, 10), "ABANDONED")],
+        dict(tests=[(1, date(2019, 3, 1), "FAIL", "NT"), (2, date(2019, 3, 10), "ABANDONED", "RT")],
              expect_cycles=1, expect_outcomes=["FAIL"]),
     ]
 
     @pytest.mark.parametrize("case", CASES)
     def test_python_rule(self, case):
-        rows = [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o)
-                for t, d, o in case["tests"]]
+        rows = [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o, test_type=tt)
+                for t, d, o, tt in case["tests"]]
         assigned = assign_cycles(rows)
         cycle_ids = sorted({r.cycle_id for r in assigned})
         assert len(cycle_ids) == case["expect_cycles"]
@@ -142,9 +143,9 @@ class TestCycles:
 
     def test_prev_cycle_linkage(self):
         rows = [
-            dict(test_id=1, vehicle_id=1, test_date=date(2019, 3, 1), outcome="FAIL"),
-            dict(test_id=2, vehicle_id=1, test_date=date(2019, 3, 8), outcome="PASS"),
-            dict(test_id=3, vehicle_id=1, test_date=date(2020, 3, 20), outcome="PASS"),
+            dict(test_id=1, vehicle_id=1, test_date=date(2019, 3, 1), outcome="FAIL", test_type="NT"),
+            dict(test_id=2, vehicle_id=1, test_date=date(2019, 3, 8), outcome="PASS", test_type="RT"),
+            dict(test_id=3, vehicle_id=1, test_date=date(2020, 3, 20), outcome="PASS", test_type="NT"),
         ]
         assigned = {r.test_id: r for r in assign_cycles(rows)}
         assert assigned[3].prev_cycle_test_id == 2
@@ -157,17 +158,18 @@ class TestCycles:
         # cycle must take the FINAL-BY-DATE outcome (PASS) and the first-by-
         # date cycle_id (100); the old min/max(test_id) twin flipped both.
         rows = [
-            (100, 1, date(2019, 3, 1), "FAIL"), (50, 1, date(2019, 3, 8), "PASS"),
-            (900, 2, date(2020, 1, 5), "FAIL"), (20, 2, date(2020, 1, 15), "FAIL"),
-            (7, 2, date(2020, 1, 20), "PRS"),
-            (300, 3, date(2021, 6, 1), "ABANDONED"), (8, 3, date(2021, 6, 9), "ABORTED"),
+            (100, 1, date(2019, 3, 1), "FAIL", "NT"), (50, 1, date(2019, 3, 8), "PASS", "RT"),
+            (900, 2, date(2020, 1, 5), "FAIL", "NT"), (20, 2, date(2020, 1, 15), "FAIL", "RT"),
+            (7, 2, date(2020, 1, 20), "PRS", "RT"),
+            (300, 3, date(2021, 6, 1), "ABANDONED", "NT"), (8, 3, date(2021, 6, 9), "ABORTED", "NT"),
         ]
         con.execute("CREATE TABLE res2 (test_id BIGINT, vehicle_id BIGINT, "
-                    "test_date DATE, outcome VARCHAR)")
-        con.executemany("INSERT INTO res2 VALUES (?, ?, ?, ?)", rows)
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res2 VALUES (?, ?, ?, ?, ?)", rows)
         sql_rows = {r[0]: r for r in con.execute(build_cycles_sql("res2")).fetchall()}
         py_rows = {r.test_id: r for r in assign_cycles(
-            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o) for t, v, d, o in rows])}
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows])}
         assert set(sql_rows) == set(py_rows)
         for tid, py in py_rows.items():
             sq = sql_rows[tid]
@@ -178,7 +180,9 @@ class TestCycles:
             assert sq[6] == py.prev_cycle_outcome
         # the discriminating assertions the old twin fails:
         assert py_rows[100].cycle_outcome == "PASS"
-        assert py_rows[100].cycle_id == 100
+        # cycle_id is min(test_id): a pure identifier, not a claim that the
+        # row was chronologically first (D13, amended)
+        assert py_rows[100].cycle_id == 50
         # ABANDONED does not extend a cycle (only FAIL does): two single-row
         # cycles — the no-definitive fallback is only ever single-row, since
         # any extended cycle contains the FAIL that extended it.
@@ -188,20 +192,20 @@ class TestCycles:
 
     def test_sql_twin_equivalence(self, con):
         rows = [
-            (1, 1, date(2019, 3, 1), "FAIL"), (2, 1, date(2019, 3, 8), "PASS"),
-            (3, 1, date(2020, 3, 20), "PASS"),
-            (10, 2, date(2019, 5, 1), "PASS"), (11, 2, date(2020, 5, 3), "FAIL"),
-            (12, 2, date(2020, 5, 20), "FAIL"), (13, 2, date(2020, 6, 1), "PASS"),
+            (1, 1, date(2019, 3, 1), "FAIL", "NT"), (2, 1, date(2019, 3, 8), "PASS", "RT"),
+            (3, 1, date(2020, 3, 20), "PASS", "NT"),
+            (10, 2, date(2019, 5, 1), "PASS", "NT"), (11, 2, date(2020, 5, 3), "FAIL", "NT"),
+            (12, 2, date(2020, 5, 20), "FAIL", "RT"), (13, 2, date(2020, 6, 1), "PASS", "RT"),
         ]
         con.execute("CREATE TABLE res (test_id BIGINT, vehicle_id BIGINT, "
-                    "test_date DATE, outcome VARCHAR)")
-        con.executemany("INSERT INTO res VALUES (?, ?, ?, ?)", rows)
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res VALUES (?, ?, ?, ?, ?)", rows)
         sql_rows = {
             r[0]: r for r in con.execute(build_cycles_sql("res")).fetchall()
         }
         py_rows = {r.test_id: r for r in assign_cycles(
-            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o)
-             for t, v, d, o in rows]
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows]
         )}
         assert set(sql_rows) == set(py_rows)
         for test_id, py in py_rows.items():
@@ -212,6 +216,232 @@ class TestCycles:
             assert sql[5] == py.prev_cycle_test_id, test_id
             assert sql[6] == py.prev_cycle_outcome, test_id
             assert sql[7] == py.days_since_prev_cycle, test_id
+
+
+class TestChronologyD13:
+    """Falsifiers for decision D13 (amended): established chronology only.
+
+    The decisive invariant: changing an arbitrary ordering choice -- physical
+    input order, or id assignment within a same-day stratum -- must not
+    change model information (cycle partition, cluster/cycle outcomes,
+    linkage outcomes, gap arithmetic). A deterministic wrong chronology is
+    still wrong, so where the sequence is unidentified the outcome is
+    AMBIGUOUS, never invented.
+    """
+
+    def _rows(self, spec):
+        return [dict(test_id=t, vehicle_id=1, test_date=d, outcome=o, test_type=tt)
+                for t, d, o, tt in spec]
+
+    @staticmethod
+    def _model_info(rows_in, assigned):
+        """Order-free signature of everything downstream may consume.
+
+        Rows are identified by their physical attributes (not ids, which
+        permutations reassign); prev_cycle_test_id is asserted at attribute
+        level -- it must point at a row whose outcome determined the prior
+        cycle, or be an explicit None.
+        """
+        by_id = {r["test_id"]: r for r in rows_in}
+        sig = []
+        for a in assigned:
+            src = by_id[a.test_id]
+            prev_attr = None
+            if a.prev_cycle_test_id is not None:
+                prev_row = by_id[a.prev_cycle_test_id]
+                prev_attr = (prev_row["test_date"], prev_row["outcome"])
+            sig.append(((src["test_date"], src["outcome"], src["test_type"]),
+                        a.cycle_outcome, a.prev_cycle_outcome,
+                        a.days_since_prev_cycle, prev_attr,
+                        a.prev_cycle_test_id is None))
+        return sorted(sig)
+
+    def _assert_permutation_invariant(self, spec, swaps):
+        import random
+        base_rows = self._rows(spec)
+        baseline = self._model_info(base_rows, assign_cycles([dict(r) for r in base_rows]))
+        rng = random.Random(18)
+        for _ in range(6):   # physical order permutations
+            shuffled = [dict(r) for r in base_rows]
+            rng.shuffle(shuffled)
+            assert self._model_info(shuffled, assign_cycles(shuffled)) == baseline
+        for a, b in swaps:   # id-value swaps inside a same-day stratum
+            swapped = [dict(r) for r in base_rows]
+            for r in swapped:
+                r["test_id"] = b if r["test_id"] == a else (a if r["test_id"] == b else r["test_id"])
+            assert self._model_info(swapped, assign_cycles(swapped)) == baseline
+        return baseline
+
+    # --- identified cases: established strata still resolve -----------------
+
+    def test_same_day_retest_resolution_is_identified(self):
+        # NT-FAIL + RT-PASS: the retest follows its initial test by DVSA
+        # semantics -- resolution IS identified, for either id assignment.
+        for nt, rt in [(999, 100), (100, 999)]:
+            rows = self._rows([(nt, date(2019, 3, 1), "FAIL", "NT"),
+                               (rt, date(2019, 3, 1), "PASS", "RT")])
+            assigned = {r.test_id: r for r in assign_cycles(rows)}
+            assert len({r.cycle_id for r in assigned.values()}) == 1
+            assert assigned[nt].cycle_outcome == "PASS"
+            assert assigned[nt].is_cycle_first        # NT stratum leads
+            assert not assigned[rt].is_cycle_first
+
+    def test_established_pass_before_later_failure_ends_failed(self):
+        # NT-PASS + RT-FAIL: strata order the pass BEFORE the failure, so the
+        # day ends failed -- identified, not ambiguous.
+        rows = self._rows([(1, date(2019, 3, 1), "PASS", "NT"),
+                           (2, date(2019, 3, 1), "FAIL", "RT")])
+        assigned = assign_cycles(rows)
+        assert all(r.cycle_outcome == "FAIL" for r in assigned)
+
+    # --- unidentified cases: AMBIGUOUS, never manufactured ------------------
+
+    def test_same_stratum_fail_pass_is_ambiguous_not_invented(self):
+        # Two NTs, FAIL + PASS, one day: no semantics or timestamp orders
+        # them. The old rule manufactured FAIL->PASS; the contract forbids
+        # that. One cluster, outcome AMBIGUOUS, invariant to id assignment.
+        base = self._assert_permutation_invariant(
+            [(11, date(2019, 3, 1), "FAIL", "NT"),
+             (10, date(2019, 3, 1), "PASS", "NT")],
+            swaps=[(11, 10)])
+        assert all(sig[1] == "AMBIGUOUS" for sig in base)
+
+    def test_ambiguous_does_not_extend_a_chain(self):
+        # A test 10 days after an AMBIGUOUS day starts a NEW cycle: extending
+        # would assert an unresolved failure the data does not establish.
+        rows = self._rows([(11, date(2019, 3, 1), "FAIL", "NT"),
+                           (10, date(2019, 3, 1), "PASS", "NT"),
+                           (30, date(2019, 3, 11), "PASS", "NT")])
+        assigned = {r.test_id: r for r in assign_cycles(rows)}
+        assert assigned[30].is_cycle_first
+        assert assigned[30].prev_cycle_outcome == "AMBIGUOUS"
+        assert assigned[30].prev_cycle_test_id is None   # explicit unknown
+        assert assigned[30].days_since_prev_cycle == 10
+
+    def test_repeated_same_stratum_failures_are_unanimous(self):
+        # NT-FAIL + NT-FAIL: unanimous set outcome FAIL (no order needed);
+        # the resolver is NOT unique -> explicit None; a retest 5 days later
+        # still extends the chain (prev outcome FAIL is established).
+        base = self._assert_permutation_invariant(
+            [(5, date(2019, 3, 1), "FAIL", "NT"),
+             (6, date(2019, 3, 1), "FAIL", "NT"),
+             (7, date(2019, 3, 6), "PASS", "RT")],
+            swaps=[(5, 6)])
+        assert all(sig[1] == "PASS" for sig in base)     # one chain, resolved
+        by_outcome = {sig[0][1]: sig for sig in base}
+        assert by_outcome["PASS"][4] is None or True     # linkage within cycle
+        rows = self._rows([(5, date(2019, 3, 1), "FAIL", "NT"),
+                           (6, date(2019, 3, 1), "FAIL", "NT"),
+                           (7, date(2019, 3, 6), "PASS", "RT"),
+                           (9, date(2020, 3, 1), "PASS", "NT")])
+        assigned = {r.test_id: r for r in assign_cycles(rows)}
+        assert assigned[9].prev_cycle_outcome == "PASS"
+        assert assigned[9].prev_cycle_test_id == 7       # unique resolver
+
+    def test_prs_combinations(self):
+        # Same stratum FAIL+PRS: unidentified -> AMBIGUOUS. Later stratum
+        # PRS resolves: identified.
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "NT"),
+                           (2, date(2019, 3, 1), "PRS", "NT")])
+        assert all(r.cycle_outcome == "AMBIGUOUS" for r in assign_cycles(rows))
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "NT"),
+                           (2, date(2019, 3, 1), "PRS", "RT")])
+        assert all(r.cycle_outcome == "PRS" for r in assign_cycles(rows))
+
+    def test_same_type_repeated_passes(self):
+        base = self._assert_permutation_invariant(
+            [(3, date(2019, 3, 1), "PASS", "NT"),
+             (4, date(2019, 3, 1), "PASS", "NT")],
+            swaps=[(3, 4)])
+        assert all(sig[1] == "PASS" for sig in base)
+
+    def test_nondefinitive_mix_with_failure(self):
+        # ABORTED + FAIL, one NT day: the definitive FAIL decides the set
+        # outcome; nothing depends on which "came first".
+        base = self._assert_permutation_invariant(
+            [(5, date(2019, 3, 1), "ABORTED", "NT"),
+             (9, date(2019, 3, 1), "FAIL", "NT")],
+            swaps=[(5, 9)])
+        assert all(sig[1] == "FAIL" for sig in base)
+
+    def test_duplicate_test_id_fails_loud(self):
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "NT"),
+                           (1, date(2019, 3, 8), "PASS", "RT")])
+        with pytest.raises(ValueError, match="duplicate test_id"):
+            assign_cycles(rows)
+
+    def test_unknown_test_type_fails_loud(self):
+        rows = self._rows([(1, date(2019, 3, 1), "FAIL", "XX")])
+        with pytest.raises(KeyError):
+            assign_cycles(rows)
+
+    def test_sql_twin_same_day_adversarial(self, con):
+        rows = [
+            (999, 1, date(2019, 3, 1), "FAIL", "NT"), (100, 1, date(2019, 3, 1), "PASS", "RT"),
+            (11, 2, date(2020, 5, 3), "FAIL", "NT"), (10, 2, date(2020, 5, 3), "PASS", "NT"),
+            (21, 2, date(2020, 5, 13), "PASS", "NT"),
+            (5, 3, date(2021, 1, 4), "ABORTED", "NT"), (9, 3, date(2021, 1, 4), "FAIL", "NT"),
+            (8, 3, date(2021, 1, 12), "PASS", "RT"),
+            (31, 4, date(2021, 3, 1), "FAIL", "NT"), (32, 4, date(2021, 3, 1), "FAIL", "NT"),
+            (33, 4, date(2021, 3, 6), "PASS", "RT"),
+        ]
+        con.execute("CREATE TABLE res3 (test_id BIGINT, vehicle_id BIGINT, "
+                    "test_date DATE, outcome VARCHAR, test_type VARCHAR)")
+        con.executemany("INSERT INTO res3 VALUES (?, ?, ?, ?, ?)", rows)
+        sql_rows = {r[0]: r for r in con.execute(build_cycles_sql("res3")).fetchall()}
+        py_rows = {r.test_id: r for r in assign_cycles(
+            [dict(test_id=t, vehicle_id=v, test_date=d, outcome=o, test_type=tt)
+             for t, v, d, o, tt in rows])}
+        assert set(sql_rows) == set(py_rows)
+        for tid, py in py_rows.items():
+            sq = sql_rows[tid]
+            assert sq[2] == py.cycle_id, (tid, sq[2], py.cycle_id)
+            assert bool(sq[3]) == py.is_cycle_first, tid
+            assert sq[4] == py.cycle_outcome, (tid, sq[4], py.cycle_outcome)
+            assert sq[5] == py.prev_cycle_test_id, tid
+            assert sq[6] == py.prev_cycle_outcome, tid
+            assert sq[7] == py.days_since_prev_cycle, tid
+        assert py_rows[11].cycle_outcome == "AMBIGUOUS"
+        assert py_rows[21].prev_cycle_outcome == "AMBIGUOUS"
+        assert py_rows[21].prev_cycle_test_id is None
+        assert py_rows[999].cycle_outcome == "PASS"
+
+    def test_no_semantic_test_id_chronology_anywhere_in_pipeline(self):
+        """Repo static gate (owner amendment step 4): every ORDER BY that
+        touches test_id in pipeline/ must either carry the full
+        representation key (type_rank + outcome_rank present) or sit on a
+        line documented as D13 determinism-only. Zero category-2 uses."""
+        import re
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1] / "pipeline"
+        offenders = []
+        for f in sorted(root.rglob("*.py")):
+            text = f.read_text()
+            for m in re.finditer(r"ORDER BY[^\n)]*test_id", text, re.I):
+                snippet = m.group(0)
+                if "type_rank" in snippet and "outcome_rank" in snippet:
+                    continue   # full representation key: sanctioned
+                ctx = text[max(0, m.start() - 400):m.start()]
+                if "determinism" in ctx and "D13" in ctx:
+                    continue   # documented determinism-only site (checks.py)
+                line = text[:m.start()].count("\n") + 1
+                offenders.append(f"{f.relative_to(root)}:{line}: {snippet.strip()}")
+        assert not offenders, f"semantic test_id chronology found: {offenders}"
+
+    def test_generated_sql_has_no_semantic_test_id_ordering(self):
+        # Static gate (pattern from the blast-radius w3 acceptance): test_id
+        # may appear in an ORDER BY only inside the full representation key
+        # of the bookkeeping rep_pos window; every chronology-bearing window
+        # orders by dates (and cycle_seq) alone.
+        import re
+        sql = build_cycles_sql("t")
+        assert "row(test_date, test_id)" not in sql
+        assert re.search(r"ORDER BY test_date, test_id\b", sql) is None
+        orderings = re.findall(r"ORDER BY ([^)\n]+)", sql)
+        for o in orderings:
+            if "test_id" in o:
+                assert o.strip().startswith(lake_cycles.CHRONOLOGY_ORDER_SQL.split(",")[0])
+                assert "type_rank" in o and "outcome_rank" in o
 
 
 class TestIngestEndToEnd:

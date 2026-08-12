@@ -69,6 +69,9 @@ def check_vehicle_continuity(con, results_relation: str,
                median(gap) AS median_gap
         FROM (
             SELECT vehicle_id, test_date, first_use_date,
+                   -- test_id here is a determinism tiebreak, not chronology
+                   -- (D13): lag(test_date) is invariant under any reordering
+                   -- of same-day ties, since the date multiset is unchanged.
                    date_diff('day', lag(test_date) OVER (PARTITION BY vehicle_id
                                                           ORDER BY test_date, test_id),
                              test_date) AS gap

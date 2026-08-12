@@ -146,6 +146,70 @@ the target definition:
 Therefore reproducing it, or failing to, cannot determine the correct target
 population. Do not delete it and do not conceal the discrepancy.
 
+## D13. Within-day chronology: semantic order, never test_id (2026-08-12)
+
+`test_id` carries no chronological meaning within a day: id order agrees with
+FAIL-first outcome order on 49.91% of same-day FAIL+definitive pairs — chance
+(research repo independently: 49.92%). F7a quantified the consequence on the
+canonical fulldepth frame: 37.24% of targets-with-priors carry a within-day
+tie, and reversing the tie order flips ≥1 of the 104 features on 65.1% of
+exposed targets (0/1,000 tie-free controls) — ~24% of feature vectors were
+artifacts of an undecided rule. Evidence:
+`docs/v58/evidence/INVARIANTS_AUDIT_2026_08_12.md` addendum 2 (6ff01d9);
+`docs/v58/evidence/f7a/{f7_tie_rule_materiality.py,F7A_RESULT.json}` (15acb39).
+
+**The rule (amended same day, owner review): semantic chronology and
+deterministic representation are DIFFERENT THINGS and must never be
+conflated.**
+
+*Chronology — what the data actually establishes:*
+
+- `test_date` orders days. Fully identified.
+- `type_rank` orders within a day ONLY where DVSA semantics genuinely
+  establish sequence: `NT` 0 (the initial test precedes its retests and
+  appeals), `PL`/`PV`/`RT` 1 (a retest follows the test it retests), `ES`/`EI`
+  2 (an appeal contests an earlier result). These are *strata*: order BETWEEN
+  strata is established; order WITHIN a stratum is NOT.
+- At serving, the DVSA API's full `completed_at` timestamp identifies
+  intra-day order whenever present.
+- Nothing else identifies chronology. In particular, two same-day `NT`
+  records are NOT established to have occurred FAIL→PASS merely because
+  FAIL < PASS in some rank.
+
+*Representation — determinism only:* `outcome_rank` and `test_id` may be used
+to make output row order deterministic, **but no feature, cycle-membership
+decision, label, or historical state may depend on their ordering where
+within-day chronology is otherwise unidentified.** Where chronology within a
+same-day equivalence class cannot be established from authoritative semantics
+or timestamps, downstream logic must be order-invariant/set-based, explicitly
+`AMBIGUOUS`, or redesigned so chronology is unnecessary. Chronology is never
+silently invented. A deterministic wrong chronology is still wrong.
+
+*Consequences implemented in the cycle builder:* cycles operate at
+day-cluster grain. A cluster's outcome is a SET computation: a FAIL resolved
+by a definitive pass in a strictly LATER stratum (NT-FAIL → RT-PASS) yields
+that resolution — identified; a FAIL and a definitive pass in the SAME
+stratum yields `AMBIGUOUS` — never a manufactured sequence; `AMBIGUOUS` does
+not extend a fail→retest chain (it is not an assertion of unresolved
+failure). `cycle_id` is `min(test_id)` as a pure identifier;
+`prev_cycle_test_id` is the resolving row's id only when uniquely
+identified, else NULL — an explicit unknown, never an arbitrary pick. The
+decisive invariant, enforced by the permutation falsifiers: **changing an
+arbitrary ordering choice must not change model information.**
+
+Scope: the lake cycle builder and its SQL twin (this commit); the untracked
+streaming/sharded builders and the research-repo history builders must adopt
+the same key before any cycle-derived feature is trusted (the research lake
+carries `test_type` too — decide once, apply everywhere). The serving analogue
+is stronger: the DVSA API's `completedDate` carries true time-of-day, which
+serving must stop truncating; this rule is serving's fallback for exact-
+timestamp ties only.
+
+Not decided here: regeneration scale (arbiter: F7b re-stream + rescore vs the
+0.002052 floor, with calibration deltas — pooled AUC alone can hide per-cohort
+harm) and the D12 label question. Population membership (D7) is unaffected —
+it is per-row and order-free by construction.
+
 ## D12. OPEN: when, if ever, to migrate the target from FAIL to FAIL+PRS
 
 The terminology is settled — this is not a question about what PRS means.
