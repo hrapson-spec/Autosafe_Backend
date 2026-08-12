@@ -204,3 +204,25 @@ failure = cycle-first row outcome FAIL): as-implemented 23.670% (denom
 1,573,060); same-day-repaired 24.831% (1,498,298); DVSA final basis NT/F
 24.934% (1,504,549) — same-day-repaired sits 0.10pp from final basis, the
 unrepaired arm 1.26pp below.
+
+## Defect #19 (2026-08-12, found by the invariants-audit session): 2022
+## results year silently skipped — REPAIRED
+
+The 2021 zip carries a test_result_2022/ spillover subdirectory; its manifest
+paths satisfied the runner's substring year-skip, so year 2022 was never
+extracted (zip sat fully downloaded) and the lake held 18 years while being
+reported as complete. Repaired: substring fallback removed (markers are the
+sole skip authority), 2022 ingested 08:18 (157s, chunked). CONSEQUENCE: the
+invalidated 2026-08-11 continuity PASS was additionally computed on an
+INCOMPLETE (18-year) lake; the queued re-verification is the first gate run
+over the true 19 years.
+
+## Near-miss (2026-08-12 08:2X, flagged live by the d7-cycles session): the
+## stage-3 runner's INLINE formal-gate step — uncapped spill in shared .tmp —
+## re-fired after the 2022 repair and drove free space to 1.4GiB before being
+## stopped. The items runner fail-closed at its floor exactly as designed
+## (zero corruption). The inline gate step is SUPERSEDED by gate_reverify.py
+## (isolated per-PID temp, hard cap, one attempt); its exit lines in runner
+## logs after 08:15 are non-authoritative. Root class: the temp-isolation
+## sweep missed the runner's inline gate (credit: invariants session's
+## wait_idle/self-exclusion observation).
