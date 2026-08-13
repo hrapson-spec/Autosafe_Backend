@@ -1,0 +1,33 @@
+{
+ "out_path": "out/b0/b0_confirm2025h2_eb.parquet",
+ "source_frame": "out/frames_confirm/recipe=confirm2025h2/rung=all/frame/*.parquet",
+ "b0_frame": "out/b0/b0_confirm2025h2.parquet",
+ "drop_in_replacement": true,
+ "label": "y_final",
+ "rows": 166266,
+ "vehicles": 163071,
+ "eb_unified_prior_range": [
+  0.023395086453612945,
+  0.4897310945141986
+ ],
+ "prior_strength_pseudocounts": 50.0,
+ "replaced_columns": [
+  "model_age_fail_rate_eb",
+  "make_age_fail_rate_eb",
+  "eb_unified_prior"
+ ],
+ "carried_unchanged": [
+  "prior_fail_rate_smoothed"
+ ],
+ "tables_from": "out/frames_fullpop/recipe=fullpop/rung=r1m/frame/*.parquet",
+ "frozen_at": "2023-12-31",
+ "scope": "FROZEN TABLES: fitted once over the source window (tables_from, ends 2023-12-31) and applied unchanged to every later target row \u2014 the serving-faithful semantics for eval/confirm/drift frames.",
+ "as_of_rule": "frozen at source-window end; leakage-safe ONLY because the windows are disjoint (hard-asserted: every target row is strictly later than every source row).",
+ "simplifications": [
+  "EB shrinkage is a fixed pseudo-count prior (m=50) toward the parent level, not a fitted Beta-Binomial; the module consumes artifacts and never exposes m.",
+  "age_band mirrors get_age_band on int-truncated years; a NULL first_use_date takes the module's default band '3-5' (module :629 vehicle_age default 5).",
+  "model key is the lake model_id ('MAKE MODEL'); serving keys on f'{make} {model}' -- the [KEY] consolidate_models caveat applies.",
+  "prior_fail_rate_smoothed is NOT recomputed: it is a per-vehicle ratio, not a fleet table, and moving it would confound the prior-scope contrast.",
+  "rates are fitted on the same label as the cell (y_final); a rate fitted on the other basis would not match the target."
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "out_path": "out/b0/b0_fullpop_eb.parquet",
+ "source_frame": "out/frames_fullpop/recipe=fullpop/rung=r1m/frame/*.parquet",
+ "b0_frame": "out/b0/b0_fullpop.parquet",
+ "drop_in_replacement": true,
+ "label": "y_final",
+ "rows": 1004208,
+ "vehicles": 298088,
+ "eb_unified_prior_range": [
+  0.018688496808226863,
+  0.5404727264965309
+ ],
+ "prior_strength_pseudocounts": 50.0,
+ "replaced_columns": [
+  "model_age_fail_rate_eb",
+  "make_age_fail_rate_eb",
+  "eb_unified_prior"
+ ],
+ "carried_unchanged": [
+  "prior_fail_rate_smoothed"
+ ],
+ "tables_from": null,
+ "frozen_at": null,
+ "scope": "PER-RUNG / FIXED FLEET: expanding tables fitted over the frame glob itself (PREREG_STAGE2 section 5, OWNER-AMEND-10).",
+ "as_of_rule": "expanding, STRICTLY EARLIER CALENDAR DAYS: each target's rates exclude its own date. A frozen end-of-period table would leak every later outcome into every earlier row.",
+ "simplifications": [
+  "EB shrinkage is a fixed pseudo-count prior (m=50) toward the parent level, not a fitted Beta-Binomial; the module consumes artifacts and never exposes m.",
+  "age_band mirrors get_age_band on int-truncated years; a NULL first_use_date takes the module's default band '3-5' (module :629 vehicle_age default 5).",
+  "model key is the lake model_id ('MAKE MODEL'); serving keys on f'{make} {model}' -- the [KEY] consolidate_models caveat applies.",
+  "prior_fail_rate_smoothed is NOT recomputed: it is a per-vehicle ratio, not a fleet table, and moving it would confound the prior-scope contrast.",
+  "rates are fitted on the same label as the cell (y_final); a rate fitted on the other basis would not match the target."
+ ]
+}

@@ -1,0 +1,817 @@
+{
+ "measured_at": "2026-08-13",
+ "measured_by": "R3 factory engineer, duckdb 1.5.5 (contract-pinned venv)",
+ "lake": "/Users/henrirapson/autosafe/autosafe_lake",
+ "method": "exact per-partition SEMI/ANTI JOIN on test_id; no sampling; memory_limit 1800MB threads 3",
+ "partitions": {
+  "2015": {
+   "n_results_rows": 37490736,
+   "n_results_distinct_test_id": 37490736,
+   "n_item_rows": 70077368,
+   "n_item_distinct_test_id": 20898031,
+   "n_results_with_items": 20898031,
+   "join_rate": 0.557419,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 47983,
+     "with_items": 8058,
+     "zero_items": 39925
+    },
+    "ABORTED": {
+     "n": 217237,
+     "with_items": 13012,
+     "zero_items": 204225
+    },
+    "ABORTED_VE": {
+     "n": 242,
+     "with_items": 8,
+     "zero_items": 234
+    },
+    "FAIL": {
+     "n": 8250099,
+     "with_items": 8250097,
+     "zero_items": 2
+    },
+    "PASS": {
+     "n": 26315007,
+     "with_items": 9966688,
+     "zero_items": 16348319
+    },
+    "PRS": {
+     "n": 2660168,
+     "with_items": 2660168,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.621255,
+   "fail_bearing_zero_items": 2,
+   "non_definitive_zero_items": 244384,
+   "non_definitive_n": 265462
+  },
+  "2016": {
+   "n_results_rows": 37693380,
+   "n_results_distinct_test_id": 37693380,
+   "n_item_rows": 69784106,
+   "n_item_distinct_test_id": 21031551,
+   "n_results_with_items": 21031551,
+   "join_rate": 0.557964,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 26329,
+     "with_items": 2967,
+     "zero_items": 23362
+    },
+    "ABORTED": {
+     "n": 186152,
+     "with_items": 24683,
+     "zero_items": 161469
+    },
+    "ABORTED_VE": {
+     "n": 27,
+     "with_items": 8,
+     "zero_items": 19
+    },
+    "FAIL": {
+     "n": 8091378,
+     "with_items": 8091378,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 26781876,
+     "with_items": 10304897,
+     "zero_items": 16476979
+    },
+    "PRS": {
+     "n": 2607618,
+     "with_items": 2607618,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.615229,
+   "fail_bearing_zero_items": 0,
+   "non_definitive_zero_items": 184850,
+   "non_definitive_n": 212508
+  },
+  "2017": {
+   "n_results_rows": 38056161,
+   "n_results_distinct_test_id": 38056161,
+   "n_item_rows": 71195133,
+   "n_item_distinct_test_id": 21410418,
+   "n_results_with_items": 21410418,
+   "join_rate": 0.562601,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 24928,
+     "with_items": 2390,
+     "zero_items": 22538
+    },
+    "ABORTED": {
+     "n": 210521,
+     "with_items": 28608,
+     "zero_items": 181913
+    },
+    "ABORTED_VE": {
+     "n": 28,
+     "with_items": 2,
+     "zero_items": 26
+    },
+    "FAIL": {
+     "n": 7991182,
+     "with_items": 7991182,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 27296486,
+     "with_items": 10855221,
+     "zero_items": 16441265
+    },
+    "PRS": {
+     "n": 2533016,
+     "with_items": 2533015,
+     "zero_items": 1
+    }
+   },
+   "pass_zero_item_rate": 0.602322,
+   "fail_bearing_zero_items": 1,
+   "non_definitive_zero_items": 204477,
+   "non_definitive_n": 235477
+  },
+  "2018": {
+   "n_results_rows": 38681801,
+   "n_results_distinct_test_id": 38681801,
+   "n_item_rows": 74691268,
+   "n_item_distinct_test_id": 22165284,
+   "n_results_with_items": 22165284,
+   "join_rate": 0.573016,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 25875,
+     "with_items": 2444,
+     "zero_items": 23431
+    },
+    "ABORTED": {
+     "n": 203663,
+     "with_items": 26719,
+     "zero_items": 176944
+    },
+    "ABORTED_VE": {
+     "n": 30,
+     "with_items": 3,
+     "zero_items": 27
+    },
+    "FAIL": {
+     "n": 8096301,
+     "with_items": 8096301,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 27970529,
+     "with_items": 11654414,
+     "zero_items": 16316115
+    },
+    "PRS": {
+     "n": 2385403,
+     "with_items": 2385403,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.583332,
+   "fail_bearing_zero_items": 0,
+   "non_definitive_zero_items": 200402,
+   "non_definitive_n": 229568
+  },
+  "2019": {
+   "n_results_rows": 39310698,
+   "n_results_distinct_test_id": 39310698,
+   "n_item_rows": 79966042,
+   "n_item_distinct_test_id": 23275686,
+   "n_results_with_items": 23275686,
+   "join_rate": 0.592095,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 23779,
+     "with_items": 1933,
+     "zero_items": 21846
+    },
+    "ABORTED": {
+     "n": 196085,
+     "with_items": 26886,
+     "zero_items": 169199
+    },
+    "ABORTED_VE": {
+     "n": 53,
+     "with_items": 3,
+     "zero_items": 50
+    },
+    "FAIL": {
+     "n": 7892046,
+     "with_items": 7892046,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 28888822,
+     "with_items": 13044905,
+     "zero_items": 15843917
+    },
+    "PRS": {
+     "n": 2309913,
+     "with_items": 2309913,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.548445,
+   "fail_bearing_zero_items": 0,
+   "non_definitive_zero_items": 191095,
+   "non_definitive_n": 219917
+  },
+  "2020": {
+   "n_results_rows": 38594013,
+   "n_results_distinct_test_id": 38594013,
+   "n_item_rows": 75907074,
+   "n_item_distinct_test_id": 22264880,
+   "n_results_with_items": 22264880,
+   "join_rate": 0.5769,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 21344,
+     "with_items": 1747,
+     "zero_items": 19597
+    },
+    "ABORTED": {
+     "n": 190989,
+     "with_items": 25471,
+     "zero_items": 165518
+    },
+    "ABORTED_VE": {
+     "n": 31,
+     "with_items": 4,
+     "zero_items": 27
+    },
+    "FAIL": {
+     "n": 7296397,
+     "with_items": 7296397,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 28969655,
+     "with_items": 12825665,
+     "zero_items": 16143990
+    },
+    "PRS": {
+     "n": 2115597,
+     "with_items": 2115596,
+     "zero_items": 1
+    }
+   },
+   "pass_zero_item_rate": 0.557272,
+   "fail_bearing_zero_items": 1,
+   "non_definitive_zero_items": 185142,
+   "non_definitive_n": 212364
+  },
+  "2021": {
+   "n_results_rows": 40380646,
+   "n_results_distinct_test_id": 40380646,
+   "n_item_rows": 82426968,
+   "n_item_distinct_test_id": 23834491,
+   "n_results_with_items": 23834491,
+   "join_rate": 0.590245,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 23632,
+     "with_items": 2027,
+     "zero_items": 21605
+    },
+    "ABORTED": {
+     "n": 201843,
+     "with_items": 28564,
+     "zero_items": 173279
+    },
+    "ABORTED_VE": {
+     "n": 57,
+     "with_items": 12,
+     "zero_items": 45
+    },
+    "FAIL": {
+     "n": 7661743,
+     "with_items": 7661743,
+     "zero_items": 0
+    },
+    "PASS": {
+     "n": 30408140,
+     "with_items": 14056914,
+     "zero_items": 16351226
+    },
+    "PRS": {
+     "n": 2085231,
+     "with_items": 2085231,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.537725,
+   "fail_bearing_zero_items": 0,
+   "non_definitive_zero_items": 194929,
+   "non_definitive_n": 225532
+  },
+  "2022": {
+   "n_results_rows": 41632878,
+   "n_results_distinct_test_id": 41632878,
+   "n_item_rows": 86352341,
+   "n_item_distinct_test_id": 24869910,
+   "n_results_with_items": 24869910,
+   "join_rate": 0.597362,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 23897,
+     "with_items": 1988,
+     "zero_items": 21909
+    },
+    "ABORTED": {
+     "n": 208239,
+     "with_items": 30226,
+     "zero_items": 178013
+    },
+    "ABORTED_VE": {
+     "n": 20,
+     "with_items": 2,
+     "zero_items": 18
+    },
+    "FAIL": {
+     "n": 7710461,
+     "with_items": 7710332,
+     "zero_items": 129
+    },
+    "PASS": {
+     "n": 31605478,
+     "with_items": 15042607,
+     "zero_items": 16562871
+    },
+    "PRS": {
+     "n": 2084783,
+     "with_items": 2084755,
+     "zero_items": 28
+    }
+   },
+   "pass_zero_item_rate": 0.524051,
+   "fail_bearing_zero_items": 157,
+   "non_definitive_zero_items": 199940,
+   "non_definitive_n": 232156
+  },
+  "2023": {
+   "n_results_rows": 42216721,
+   "n_results_distinct_test_id": 42216721,
+   "n_item_rows": 89302629,
+   "n_item_distinct_test_id": 25506643,
+   "n_results_with_items": 25506643,
+   "join_rate": 0.604183,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 25892,
+     "with_items": 2274,
+     "zero_items": 23618
+    },
+    "ABORTED": {
+     "n": 220944,
+     "with_items": 34711,
+     "zero_items": 186233
+    },
+    "ABORTED_VE": {
+     "n": 23,
+     "with_items": 3,
+     "zero_items": 20
+    },
+    "FAIL": {
+     "n": 7904922,
+     "with_items": 7904903,
+     "zero_items": 19
+    },
+    "PASS": {
+     "n": 32050690,
+     "with_items": 15550503,
+     "zero_items": 16500187
+    },
+    "PRS": {
+     "n": 2014250,
+     "with_items": 2014249,
+     "zero_items": 1
+    }
+   },
+   "pass_zero_item_rate": 0.514815,
+   "fail_bearing_zero_items": 20,
+   "non_definitive_zero_items": 209871,
+   "non_definitive_n": 246859
+  },
+  "2024": {
+   "n_results_rows": 42637055,
+   "n_results_distinct_test_id": 42637055,
+   "n_item_rows": 91827424,
+   "n_item_distinct_test_id": 25983217,
+   "n_results_with_items": 25983217,
+   "join_rate": 0.609405,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 27406,
+     "with_items": 0,
+     "zero_items": 27406
+    },
+    "ABORTED": {
+     "n": 227789,
+     "with_items": 0,
+     "zero_items": 227789
+    },
+    "ABORTED_VE": {
+     "n": 21,
+     "with_items": 0,
+     "zero_items": 21
+    },
+    "FAIL": {
+     "n": 7973149,
+     "with_items": 7966202,
+     "zero_items": 6947
+    },
+    "PASS": {
+     "n": 32461170,
+     "with_items": 16071656,
+     "zero_items": 16389514
+    },
+    "PRS": {
+     "n": 1947520,
+     "with_items": 1945359,
+     "zero_items": 2161
+    }
+   },
+   "pass_zero_item_rate": 0.504896,
+   "fail_bearing_zero_items": 9108,
+   "non_definitive_zero_items": 255216,
+   "non_definitive_n": 255216
+  },
+  "2025": {
+   "n_results_rows": 42728066,
+   "n_results_distinct_test_id": 42728066,
+   "n_item_rows": 92473454,
+   "n_item_distinct_test_id": 26141545,
+   "n_results_with_items": 26141545,
+   "join_rate": 0.611812,
+   "n_orphan_item_test_ids": 0,
+   "by_outcome": {
+    "ABANDONED": {
+     "n": 28034,
+     "with_items": 0,
+     "zero_items": 28034
+    },
+    "ABORTED": {
+     "n": 228004,
+     "with_items": 0,
+     "zero_items": 228004
+    },
+    "ABORTED_VE": {
+     "n": 16,
+     "with_items": 0,
+     "zero_items": 16
+    },
+    "FAIL": {
+     "n": 7870072,
+     "with_items": 7870069,
+     "zero_items": 3
+    },
+    "PASS": {
+     "n": 32721483,
+     "with_items": 16391019,
+     "zero_items": 16330464
+    },
+    "PRS": {
+     "n": 1880457,
+     "with_items": 1880457,
+     "zero_items": 0
+    }
+   },
+   "pass_zero_item_rate": 0.499075,
+   "fail_bearing_zero_items": 3,
+   "non_definitive_zero_items": 256054,
+   "non_definitive_n": 256054
+  }
+ },
+ "monthly_fail_bearing_zero_items": [
+  {
+   "y": 2022,
+   "m": 1,
+   "n": 928781,
+   "zero": 1
+  },
+  {
+   "y": 2022,
+   "m": 2,
+   "n": 819597,
+   "zero": 5
+  },
+  {
+   "y": 2022,
+   "m": 3,
+   "n": 996556,
+   "zero": 3
+  },
+  {
+   "y": 2022,
+   "m": 4,
+   "n": 572291,
+   "zero": 5
+  },
+  {
+   "y": 2022,
+   "m": 5,
+   "n": 634998,
+   "zero": 10
+  },
+  {
+   "y": 2022,
+   "m": 6,
+   "n": 698729,
+   "zero": 7
+  },
+  {
+   "y": 2022,
+   "m": 7,
+   "n": 734534,
+   "zero": 11
+  },
+  {
+   "y": 2022,
+   "m": 8,
+   "n": 831132,
+   "zero": 15
+  },
+  {
+   "y": 2022,
+   "m": 9,
+   "n": 947173,
+   "zero": 22
+  },
+  {
+   "y": 2022,
+   "m": 10,
+   "n": 1005585,
+   "zero": 16
+  },
+  {
+   "y": 2022,
+   "m": 11,
+   "n": 962005,
+   "zero": 42
+  },
+  {
+   "y": 2022,
+   "m": 12,
+   "n": 663863,
+   "zero": 20
+  },
+  {
+   "y": 2023,
+   "m": 1,
+   "n": 919916,
+   "zero": 0
+  },
+  {
+   "y": 2023,
+   "m": 2,
+   "n": 823691,
+   "zero": 2
+  },
+  {
+   "y": 2023,
+   "m": 3,
+   "n": 976971,
+   "zero": 1
+  },
+  {
+   "y": 2023,
+   "m": 4,
+   "n": 599572,
+   "zero": 0
+  },
+  {
+   "y": 2023,
+   "m": 5,
+   "n": 667892,
+   "zero": 0
+  },
+  {
+   "y": 2023,
+   "m": 6,
+   "n": 761025,
+   "zero": 0
+  },
+  {
+   "y": 2023,
+   "m": 7,
+   "n": 772537,
+   "zero": 1
+  },
+  {
+   "y": 2023,
+   "m": 8,
+   "n": 850464,
+   "zero": 0
+  },
+  {
+   "y": 2023,
+   "m": 9,
+   "n": 938831,
+   "zero": 2
+  },
+  {
+   "y": 2023,
+   "m": 10,
+   "n": 1015861,
+   "zero": 1
+  },
+  {
+   "y": 2023,
+   "m": 11,
+   "n": 948164,
+   "zero": 3
+  },
+  {
+   "y": 2023,
+   "m": 12,
+   "n": 644248,
+   "zero": 10
+  },
+  {
+   "y": 2024,
+   "m": 1,
+   "n": 936401,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 2,
+   "n": 849811,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 3,
+   "n": 909455,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 4,
+   "n": 730437,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 5,
+   "n": 705162,
+   "zero": 1
+  },
+  {
+   "y": 2024,
+   "m": 6,
+   "n": 736882,
+   "zero": 2
+  },
+  {
+   "y": 2024,
+   "m": 7,
+   "n": 836771,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 8,
+   "n": 804583,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 9,
+   "n": 901422,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 10,
+   "n": 1008736,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 11,
+   "n": 877417,
+   "zero": 0
+  },
+  {
+   "y": 2024,
+   "m": 12,
+   "n": 623592,
+   "zero": 9105
+  },
+  {
+   "y": 2025,
+   "m": 1,
+   "n": 888128,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 2,
+   "n": 807857,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 3,
+   "n": 939139,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 4,
+   "n": 733025,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 5,
+   "n": 713927,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 6,
+   "n": 758836,
+   "zero": 1
+  },
+  {
+   "y": 2025,
+   "m": 7,
+   "n": 825299,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 8,
+   "n": 761208,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 9,
+   "n": 921723,
+   "zero": 1
+  },
+  {
+   "y": 2025,
+   "m": 10,
+   "n": 966165,
+   "zero": 1
+  },
+  {
+   "y": 2025,
+   "m": 11,
+   "n": 809844,
+   "zero": 0
+  },
+  {
+   "y": 2025,
+   "m": 12,
+   "n": 625378,
+   "zero": 0
+  }
+ ],
+ "anomalies": {
+  "dark_day_2024_12_31": {
+   "n_tests": 41349,
+   "n_with_items": 0,
+   "n_fail_bearing": 9105,
+   "neighbour_2024_12_30_coverage": 0.6268,
+   "completed_ts_rows_present": 41349,
+   "ingested_source": "dft_test_item_extract_202412.csv",
+   "ingested_bytes": 279587213,
+   "published_bytes": 279587213,
+   "ingest_lossless": true,
+   "alternate_publication": "MOT Testing data failure item (2024)/test_item_202412.csv",
+   "alternate_uncompressed_bytes": 320742396
+  },
+  "non_definitive_publisher_gap_2024_2025": {
+   "n_tests": 511270,
+   "n_with_items": 0,
+   "schema_epoch": "results_extracts/items_extracts"
+  },
+  "scattered_row_loss_2022": {
+   "n_fail_bearing_zero_items": 157,
+   "max_per_day": 7
+  }
+ }
+}

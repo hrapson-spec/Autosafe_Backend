@@ -1,0 +1,2138 @@
+{
+ "dry_run": false,
+ "contract_version": "factory-contract-v2 (2026-08-12; B0 removed, packets view + panel-first)",
+ "generated_utc": "2026-08-13T08:39:09.389604+00:00",
+ "duckdb_version": "1.5.5",
+ "code_sha256": "f0949f8a2324dfe9a8fc63fa240743b8caafd011bba8854cdc25c6605c2202f4",
+ "inputs": {
+  "results": {
+   "kind": "path_glob",
+   "pattern": "/private/tmp/claude-501/-Users-henrirapson/8a63890e-ab45-4b34-aa64-28cfebe748f3/scratchpad/fullpop_restricted_results.parquet",
+   "n_files": 1,
+   "bytes": 92125796
+  },
+  "items": {
+   "kind": "path_glob",
+   "pattern": "/Users/henrirapson/autosafe/autosafe_lake/items/**/*.parquet",
+   "n_files": 74,
+   "bytes": 7771317825
+  },
+  "completed_ts": null,
+  "lookup_sha256": {
+   "item_detail_csv": "7fc4c8f5bb7e8df248fe5925ed034c6af59f24183b634009c57083a0eabfc1a7",
+   "item_group_csv": "19490787806c90f6cd366770cbd136d08b28b9545211658b0afb0e6c20e439cc"
+  },
+  "location_csv": "/Users/henrirapson/autosafe_raw/lookup/mdr_rfr_location.csv"
+ },
+ "input_years": [
+  2015,
+  2016,
+  2017,
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023
+ ],
+ "config": {
+  "staging_dir": "/private/tmp/claude-501/-Users-henrirapson/8a63890e-ab45-4b34-aa64-28cfebe748f3/scratchpad/factory_stage_fullpop",
+  "output_dir": "out/frames_fullpop",
+  "memory_limit": "4GB",
+  "temp_directory": "/private/tmp/claude-501/-Users-henrirapson/8a63890e-ab45-4b34-aa64-28cfebe748f3/scratchpad/duck_tmp_fullpop",
+  "max_temp_directory_size": "8GiB",
+  "n_buckets": 256,
+  "target_classes": [
+   "3",
+   "4"
+  ],
+  "history_classes": "UNFILTERED",
+  "fail_basis": "final",
+  "defect_detail": "counts",
+  "emit_packets": true,
+  "max_priors": null,
+  "pathology_bound": 80,
+  "write_batch_rows": 50000,
+  "p4_certification_path": "out/p4_crosstab_certification.json",
+  "serve_view_classes_path": "out/serve_view_classes.json",
+  "threads": 2
+ },
+ "salts": {
+  "sample": "mp2026s1",
+  "eval": "mp2026eval",
+  "confirmation": "mp2026conf",
+  "bucket": "mp2026bucket",
+  "rule": "u = hash(CAST(vehicle_id AS VARCHAR) || salt) / 2^64"
+ },
+ "rungs": [
+  {
+   "name": "r1m",
+   "base": 0.007907350288468564,
+   "enriched": 0.007907350288468564,
+   "target_rows": 1000000
+  }
+ ],
+ "recipes": [
+  {
+   "name": "fullpop",
+   "target_start_inclusive": "2020-01-01",
+   "target_end_exclusive": "2024-01-01",
+   "eval_slice": false,
+   "confirmation": false,
+   "salt": "mp2026s1"
+  }
+ ],
+ "eval_slice_definitions": {
+  "eval_2024_selection": {
+   "salt": "mp2026eval",
+   "target_rows": 4000000,
+   "window": [
+    "2024-01-01",
+    "2025-01-01"
+   ]
+  },
+  "eval_2025h1_drift": {
+   "salt": "mp2026eval",
+   "target_rows": 4000000,
+   "window": [
+    "2025-01-01",
+    "2025-07-01"
+   ]
+  }
+ },
+ "confirmation_slice_definition": {
+  "name": "confirm_2025h2",
+  "salt": "mp2026conf",
+  "predicate": "test_type = 'NT' AND outcome IN ('PASS','FAIL','PRS') AND test_date >= DATE '2025-07-01' AND test_date < DATE '2026-01-01'",
+  "selection": "u = hash(CAST(vehicle_id AS VARCHAR) || 'mp2026conf') / 2^64; include iff u < threshold pinned in the pre-registration",
+  "status": "DEFINITION EMITTED, NEVER BUILT BY THE DEFAULT PATH"
+ },
+ "columns": {
+  "n_meta": 26,
+  "n_new_b1_b6": 137,
+  "cap": 150,
+  "by_block": {
+   "B1": 26,
+   "B2": 50,
+   "B3": 18,
+   "B4": 14,
+   "B5": 15,
+   "B6": 14
+  },
+  "deployability_classes": {
+   "recipe": "UNCLASSIFIED",
+   "rung": "UNCLASSIFIED",
+   "tgt_id": "UNCLASSIFIED",
+   "vehicle_id": "UNCLASSIFIED",
+   "tgt_date": "UNCLASSIFIED",
+   "tgt_year": "UNCLASSIFIED",
+   "tgt_outcome": "UNCLASSIFIED",
+   "y_final": "UNCLASSIFIED",
+   "y_initial": "UNCLASSIFIED",
+   "tgt_test_class_id": "UNCLASSIFIED",
+   "tgt_test_type": "UNCLASSIFIED",
+   "tgt_miles": "UNCLASSIFIED",
+   "tgt_make": "UNCLASSIFIED",
+   "tgt_model": "UNCLASSIFIED",
+   "tgt_model_id": "UNCLASSIFIED",
+   "tgt_fuel": "UNCLASSIFIED",
+   "tgt_colour": "UNCLASSIFIED",
+   "tgt_cc": "UNCLASSIFIED",
+   "tgt_fud": "UNCLASSIFIED",
+   "tgt_pc": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "tgt_age_at_test": "UNCLASSIFIED",
+   "tgt_taxonomy_era": "UNCLASSIFIED",
+   "sample_u": "UNCLASSIFIED",
+   "sample_bucket": "UNCLASSIFIED",
+   "enrichment_stratum": "UNCLASSIFIED",
+   "inclusion_weight": "UNCLASSIFIED",
+   "b1_n_prior_test_days": "production-common",
+   "b1_n_prior_tests": "production-common",
+   "b1_n_prior_initials": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b1_n_prior_final_fails": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b1_n_prior_initial_fails": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b1_first_prior_date": "production-common",
+   "b1_last_prior_date": "production-common",
+   "b1_history_years": "production-common",
+   "b1_observable_years": "production-common",
+   "b1_observable_years_status": "production-common",
+   "b1_history_coverage_grade": "production-common",
+   "b1_left_censor_flag": "production-common",
+   "b1_first_use_missing_flag": "production-common",
+   "b1_age_at_target_years": "production-common",
+   "b1_density_per_observable_year": "production-common",
+   "b1_opportunity_adjusted_density": "production-common",
+   "b1_n_prior_years_observed": "production-common",
+   "b1_max_gap_days": "production-common",
+   "b1_mean_gap_days": "production-common",
+   "b1_n_prior_nonresult_days": "production-common",
+   "b1_n_prior_test_days_cap2y": "production-common",
+   "b1_n_prior_initials_cap2y": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b1_history_years_cap2y": "production-common",
+   "b1_n_prior_test_days_cap5y": "production-common",
+   "b1_n_prior_initials_cap5y": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b1_history_years_cap5y": "production-common",
+   "b2_brakes_n_days": "bridge-dependent",
+   "b2_brakes_days_since": "bridge-dependent",
+   "b2_brakes_max_run": "bridge-dependent",
+   "b2_brakes_persistence": "bridge-dependent",
+   "b2_suspension_n_days": "bridge-dependent",
+   "b2_suspension_days_since": "bridge-dependent",
+   "b2_suspension_max_run": "bridge-dependent",
+   "b2_suspension_persistence": "bridge-dependent",
+   "b2_tyres_n_days": "bridge-dependent",
+   "b2_tyres_days_since": "bridge-dependent",
+   "b2_tyres_max_run": "bridge-dependent",
+   "b2_tyres_persistence": "bridge-dependent",
+   "b2_steering_n_days": "bridge-dependent",
+   "b2_steering_days_since": "bridge-dependent",
+   "b2_steering_max_run": "bridge-dependent",
+   "b2_steering_persistence": "bridge-dependent",
+   "b2_visibility_n_days": "bridge-dependent",
+   "b2_visibility_days_since": "bridge-dependent",
+   "b2_visibility_max_run": "bridge-dependent",
+   "b2_visibility_persistence": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_n_days": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_days_since": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_max_run": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_persistence": "bridge-dependent",
+   "b2_body_chassis_structure_n_days": "bridge-dependent",
+   "b2_body_chassis_structure_days_since": "bridge-dependent",
+   "b2_body_chassis_structure_max_run": "bridge-dependent",
+   "b2_body_chassis_structure_persistence": "bridge-dependent",
+   "b2_other_n_days": "bridge-dependent",
+   "b2_other_days_since": "bridge-dependent",
+   "b2_other_max_run": "bridge-dependent",
+   "b2_other_persistence": "bridge-dependent",
+   "b2_breadth_categories": "bridge-dependent",
+   "b2_last_day_n_categories": "bridge-dependent",
+   "b2_n_items_total": "bridge-dependent",
+   "b2_n_catalogue_miss_items": "bridge-dependent",
+   "b2_brakes_n_days_cap2y": "bridge-dependent",
+   "b2_suspension_n_days_cap2y": "bridge-dependent",
+   "b2_tyres_n_days_cap2y": "bridge-dependent",
+   "b2_steering_n_days_cap2y": "bridge-dependent",
+   "b2_visibility_n_days_cap2y": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_n_days_cap2y": "bridge-dependent",
+   "b2_body_chassis_structure_n_days_cap2y": "bridge-dependent",
+   "b2_brakes_n_days_cap5y": "bridge-dependent",
+   "b2_suspension_n_days_cap5y": "bridge-dependent",
+   "b2_tyres_n_days_cap5y": "bridge-dependent",
+   "b2_steering_n_days_cap5y": "bridge-dependent",
+   "b2_visibility_n_days_cap5y": "bridge-dependent",
+   "b2_lamps_reflectors_and_electrical_equipment_n_days_cap5y": "bridge-dependent",
+   "b2_body_chassis_structure_n_days_cap5y": "bridge-dependent",
+   "b3_n_days_fine_severity_observable": "p4-dependent",
+   "b3_severity_observability_status": "p4-dependent",
+   "b3_n_dangerous_items": "p4-dependent",
+   "b3_n_dangerous_days": "p4-dependent",
+   "b3_days_since_dangerous": "p4-dependent",
+   "b3_n_major_items": "p4-dependent",
+   "b3_n_major_days": "p4-dependent",
+   "b3_days_since_major": "p4-dependent",
+   "b3_n_minor_items": "p4-dependent",
+   "b3_n_minor_days": "p4-dependent",
+   "b3_days_since_minor": "p4-dependent",
+   "b3_n_prs_items": "p4-dependent",
+   "b3_n_prs_item_days": "p4-dependent",
+   "b3_days_since_prs_item": "p4-dependent",
+   "b3_n_fail_items_initial": "p4-dependent",
+   "b3_n_fail_items_final": "p4-dependent",
+   "b3_n_advisory_items": "p4-dependent",
+   "b3_fail_item_rectified_share": "p4-dependent",
+   "b4_n_adv_to_fail_transitions": "bridge-dependent",
+   "b4_adv_to_fail_categories": "bridge-dependent",
+   "b4_days_since_adv_to_fail": "bridge-dependent",
+   "b4_n_recurrence_after_repair": "bridge-dependent",
+   "b4_recurrence_categories": "bridge-dependent",
+   "b4_days_since_recurrence": "bridge-dependent",
+   "b4_burden_delta_1": "bridge-dependent",
+   "b4_burden_delta_2": "bridge-dependent",
+   "b4_burden_mean_last3": "bridge-dependent",
+   "b4_burden_x_age": "bridge-dependent",
+   "b4_mileage_band": "bridge-dependent",
+   "b4_burden_x_mileage_band_ord": "bridge-dependent",
+   "b4_deterioration_slope": "bridge-dependent",
+   "b4_deterioration_slope_n_days": "bridge-dependent",
+   "b5_n_prior_multi_test_days": "production-common",
+   "b5_max_tests_on_a_prior_day": "production-common",
+   "b5_n_prior_days_pass_and_fail": "production-common",
+   "b5_n_prior_nondefinitive_days": "production-common",
+   "b5_n_prior_ambiguous_days": "production-common",
+   "b5_n_prior_mileage_conflict_days": "production-common",
+   "b5_last_day_n_tests": "production-common",
+   "b5_last_day_n_distinct_outcomes": "production-common",
+   "b5_last_day_has_pass": "production-common",
+   "b5_last_day_has_fail": "production-common",
+   "b5_last_day_has_prs": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b5_last_day_has_nonresult": "production-common",
+   "b5_days_since_prior_day": "production-common",
+   "b5_gap_annual_band_flag": "production-common",
+   "b5_covid_straddle_flag": "production-common",
+   "b6_lat_nearside_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_lat_offside_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_lat_centre_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_lat_inner_outer_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_lat_unknown_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_long_front_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_long_rear_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_long_unknown_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_vert_upper_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_vert_lower_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_vert_inner_outer_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_vert_unknown_n": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_pos_n_total": "UNCLASSIFIED_RESEARCH_ONLY_INPUT",
+   "b6_location_map_status": "UNCLASSIFIED_RESEARCH_ONLY_INPUT"
+  }
+ },
+ "packets": {
+  "emitted": true,
+  "shape": "long (one row per target x prior; zero-prior targets emit one NULL-prior row)",
+  "columns": [
+   "tgt_id",
+   "vehicle_id",
+   "tgt_date",
+   "tgt_make",
+   "tgt_model",
+   "tgt_fuel",
+   "tgt_cc",
+   "tgt_fud",
+   "tgt_pc",
+   "n_priors",
+   "p_test_id",
+   "p_date",
+   "p_result",
+   "p_outcome",
+   "p_miles",
+   "p_ttype",
+   "p_n_items",
+   "defects_json"
+  ],
+  "defect_keys": [
+   "rfr",
+   "code",
+   "disp",
+   "sev",
+   "sect",
+   "cat",
+   "comp",
+   "dang",
+   "loc",
+   "pos"
+  ],
+  "no_free_text": true,
+  "result_map": {
+   "PASS": "PASSED",
+   "PRS": "PASSED",
+   "FAIL": "FAILED",
+   "ABANDONED": "ABANDONED",
+   "ABORTED": "ABANDONED",
+   "ABORTED_VE": "ABANDONED",
+   "REFUSED": "ABANDONED"
+  }
+ },
+ "preflight": {
+  "p4_certification": {
+   "per_year": {
+    "2018": {
+     "crosstab": [
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 5442769
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 1547076
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 292542
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 33161
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 4335
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 1094279
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 2332319
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 173545
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 2707
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 9
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 1193503
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 128881
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 309
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 12410592
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 1871450
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 189629
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 163
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 5
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 12318
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 30
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 30758
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 4643
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 566
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 1831
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 15911390
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 435
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1024
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 35
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 6
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 45
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 3895
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 11786
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 1572238
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 10522329
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 154
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 1590822
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 48329
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 4699
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 1793
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 2169
+      },
+      {
+       "era": "pre_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 1
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 1449
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 8225720
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 9834496
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 18753
+      },
+      {
+       "era": "pre_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 1011
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 22
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 158834
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 4487
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 7762
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 150
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 10
+      },
+      {
+       "era": "pre_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 3
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "PASS",
+       "n": 27970529,
+       "has_f": 0,
+       "has_p": 0
+      },
+      {
+       "outcome": "PRS",
+       "n": 2385403,
+       "has_f": 0,
+       "has_p": 2385403
+      },
+      {
+       "outcome": "FAIL",
+       "n": 8096301,
+       "has_f": 8096301,
+       "has_p": 216841
+      }
+     ]
+    },
+    "2019": {
+     "crosstab": [
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 2971122
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 6086
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 75156
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 3729
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 3380
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 3
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 54646
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 6078
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 7
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 4027867
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 1852805
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 283032
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 5778
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 14743604
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 2
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 19150280
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 3130588
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 354957
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 306
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 25
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 30103694
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 632
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 57
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1307
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 7
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 260334
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 12803
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 7690
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 243
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 24
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2909798
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "FAIL",
+       "n": 7892046,
+       "has_f": 7892046,
+       "has_p": 207404
+      },
+      {
+       "outcome": "PRS",
+       "n": 2309913,
+       "has_f": 0,
+       "has_p": 2309913
+      },
+      {
+       "outcome": "PASS",
+       "n": 28888822,
+       "has_f": 0,
+       "has_p": 0
+      }
+     ]
+    },
+    "2020": {
+     "crosstab": [
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 232793
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 7359
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 12260
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 274
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 28
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED_VE",
+       "n": 5
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 3
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3686728
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 1776142
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 246142
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 5432
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 53933
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 5470
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 5
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 14011501
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 2
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 29804258
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1200
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 603
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 44
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 9
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 17075275
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2841537
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 347208
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 297
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 19
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2745556
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 2972447
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 69096
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 3339
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 4785
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 3319
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 4
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "PRS",
+       "n": 2115597,
+       "has_f": 0,
+       "has_p": 2115596
+      },
+      {
+       "outcome": "FAIL",
+       "n": 7296397,
+       "has_f": 7296397,
+       "has_p": 181091
+      },
+      {
+       "outcome": "PASS",
+       "n": 28969655,
+       "has_f": 0,
+       "has_p": 0
+      }
+     ]
+    },
+    "2021": {
+     "crosstab": [
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 15450293
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 3401359
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 75490
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 3864
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 3505
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 4299
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 12
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 61758
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 6286
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 19
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 33454690
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 676
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1249
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 45
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 3
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 1970383
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3570762
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 247510
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 5853
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2899142
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 196971
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 8484
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 12565
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 293
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 26
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED_VE",
+       "n": 3
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 2
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2781381
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 17894007
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 375732
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 286
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 19
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "PASS",
+       "n": 30408140,
+       "has_f": 0,
+       "has_p": 0
+      },
+      {
+       "outcome": "FAIL",
+       "n": 7661743,
+       "has_f": 7661743,
+       "has_p": 182546
+      },
+      {
+       "outcome": "PRS",
+       "n": 2085231,
+       "has_f": 0,
+       "has_p": 2085231
+      }
+     ]
+    },
+    "2022": {
+     "crosstab": [
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 176712
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 13187
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 9491
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 227
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 35
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 3
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 249034
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 2059337
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3623763
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 5803
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 36373416
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1127
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 48
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 662
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 7
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 3741500
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 3988
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 80318
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 3852
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3941
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 17522211
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2769731
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 411620
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 346
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 15
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 16133057
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 2
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 3095016
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 68046
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 5841
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 4
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "PASS",
+       "n": 31605478,
+       "has_f": 0,
+       "has_p": 0
+      },
+      {
+       "outcome": "FAIL",
+       "n": 7710461,
+       "has_f": 7710332,
+       "has_p": 183720
+      },
+      {
+       "outcome": "PRS",
+       "n": 2084783,
+       "has_f": 0,
+       "has_p": 2084755
+      }
+     ]
+    },
+    "2023": {
+     "crosstab": [
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 156301
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 14636
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 10817
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 229
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 31
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 4
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 1
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 3991843
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3656
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 90313
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PASS",
+       "n": 3793
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 4469
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 15
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED",
+       "n": 79569
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 6260
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "ABORTED_VE",
+       "n": 6
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 3707447
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 2164979
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 249400
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "FAIL",
+       "n": 5733
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 3145210
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 17723901
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 2661086
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "PRS",
+       "n": 430661
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": true,
+       "outcome": "PRS",
+       "n": 311
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABORTED",
+       "n": 17
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "FAIL",
+       "n": 16837933
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 2
+      },
+      {
+       "era": "post_2018",
+       "code": "A",
+       "d_marked": false,
+       "outcome": "PASS",
+       "n": 38012005
+      },
+      {
+       "era": "post_2018",
+       "code": "F",
+       "d_marked": true,
+       "outcome": "ABANDONED",
+       "n": 1171
+      },
+      {
+       "era": "post_2018",
+       "code": "M",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 797
+      },
+      {
+       "era": "post_2018",
+       "code": "P",
+       "d_marked": false,
+       "outcome": "ABANDONED",
+       "n": 32
+      }
+     ],
+     "per_test": [
+      {
+       "outcome": "PRS",
+       "n": 2014250,
+       "has_f": 0,
+       "has_p": 2014249
+      },
+      {
+       "outcome": "PASS",
+       "n": 32050690,
+       "has_f": 0,
+       "has_p": 0
+      },
+      {
+       "outcome": "FAIL",
+       "n": 7904922,
+       "has_f": 7904903,
+       "has_p": 183645
+      }
+     ]
+    }
+   },
+   "checks": {
+    "C1_D_never_on_minor": {
+     "on_fail": 22537471,
+     "on_other": 78948,
+     "pass": true
+    },
+    "C2_no_lowercase_m_no_code_D": {
+     "m": 0,
+     "D": 0,
+     "pass": true
+    },
+    "C3_fail_has_F": {
+     "rate": 0.9999968214335034,
+     "pass": true
+    },
+    "C4_prs_has_P": {
+     "rate": 0.9999976914512207,
+     "pass": true
+    },
+    "C5_pass_with_F_anomaly": {
+     "rate": 0.0,
+     "pass": true
+    }
+   },
+   "verdict": "PASS",
+   "years_covered": [
+    "2018",
+    "2019",
+    "2020",
+    "2021",
+    "2022",
+    "2023"
+   ]
+  },
+  "years": [
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023
+  ],
+  "effective_target_years": {
+   "fullpop": [
+    2020,
+    2021,
+    2022,
+    2023
+   ]
+  },
+  "unknown_vocabulary_rows": 0,
+  "n_class4_rfr_ids": 4432,
+  "location_map": "present",
+  "unknown_disposition_rows": 0,
+  "vehicles_over_pathology_bound": 0,
+  "serve_view": {
+   "available": true,
+   "path": "out/serve_view_classes.json",
+   "version": null,
+   "class_codes": [
+    "bridge-dependent",
+    "p4-dependent",
+    "production-common",
+    "research-only"
+   ],
+   "classes_declared": false,
+   "n_features_classified": 104,
+   "n_blocks_classified": 6
+  },
+  "serve_view_research_only_conflicts": [],
+  "n_new_columns": 137
+ },
+ "prepare": {
+  "vehicle_day_rows_by_year": {
+   "2015": 311473,
+   "2016": 313634,
+   "2017": 316967,
+   "2018": 322307,
+   "2019": 328180,
+   "2020": 324078,
+   "2021": 339994,
+   "2022": 351151,
+   "2023": 356653
+  },
+  "event_rows": {
+   "fullpop": 1152764
+  },
+  "staging_dir": "/private/tmp/claude-501/-Users-henrirapson/8a63890e-ab45-4b34-aa64-28cfebe748f3/scratchpad/factory_stage_fullpop",
+  "staged_files": {
+   "vehicle_day": 2791,
+   "events/fullpop": 571
+  },
+  "restrict_max_u": 0.0090838582
+ },
+ "results": {
+  "recipes": {
+   "fullpop": {
+    "window": {
+     "name": "fullpop",
+     "target_start_inclusive": "2020-01-01",
+     "target_end_exclusive": "2024-01-01",
+     "eval_slice": false,
+     "confirmation": false,
+     "salt": "mp2026s1"
+    },
+    "rungs": {
+     "r1m": {
+      "rows": 1004208,
+      "packet_rows": 5560040,
+      "base_threshold": 0.007907350288468564,
+      "enriched_threshold": 0.007907350288468564,
+      "target_rows": 1000000,
+      "enriched_rows": 0,
+      "enriched_share": 0.0,
+      "enriched_share_within_cap": true
+     }
+    }
+   }
+  }
+ }
+}

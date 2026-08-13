@@ -1,0 +1,27 @@
+{
+ "out_path": "out/b0/b0_fullpop.parquet",
+ "n_targets": 1004208,
+ "n_vehicles": 298088,
+ "n_features": 104,
+ "module_path": "/Users/henrirapson/autosafe/feature_engineering_v55.py",
+ "module_failure_vocabulary": [
+  "DANGEROUS",
+  "F",
+  "FAIL",
+  "MAJOR"
+ ],
+ "module_advisory_vocabulary": [
+  "A",
+  "ADVISORY"
+ ],
+ "defect_text_source": "section",
+ "defect_text_caveat": "the lake carries NO defect free text; text is the catalogue SECTION name (r2b_build_v57.py:70-72 training-direction emulation), not live tester text. The text->taxonomy precision gate is UNRUN: every component/mech_decay/text_* feature is catalogue-text parity, not live-text parity (SERVE_VIEW finding 1).",
+ "defect_type_mapping": {
+  "dangerous_mark D": "DANGEROUS",
+  "F not D": "MAJOR",
+  "M": "MINOR",
+  "A": "ADVISORY",
+  "P": "PRS"
+ },
+ "join_key": "test_id"
+}

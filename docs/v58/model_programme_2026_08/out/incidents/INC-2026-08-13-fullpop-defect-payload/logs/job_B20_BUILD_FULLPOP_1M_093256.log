@@ -1,0 +1,27 @@
+BUILD_MANIFEST written to out/frames_fullpop/BUILD_MANIFEST.json
+{
+ "recipes": {
+  "fullpop": {
+   "window": {
+    "name": "fullpop",
+    "target_start_inclusive": "2020-01-01",
+    "target_end_exclusive": "2024-01-01",
+    "eval_slice": false,
+    "confirmation": false,
+    "salt": "mp2026s1"
+   },
+   "rungs": {
+    "r1m": {
+     "rows": 1004208,
+     "packet_rows": 5560040,
+     "base_threshold": 0.007907350288468564,
+     "enriched_threshold": 0.007907350288468564,
+     "target_rows": 1000000,
+     "enriched_rows": 0,
+     "enriched_share": 0.0,
+     "enriched_share_within_cap": true
+    }
+   }
+  }
+ }
+}
