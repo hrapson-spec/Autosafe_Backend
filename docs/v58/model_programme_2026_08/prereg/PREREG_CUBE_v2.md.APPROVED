@@ -1,0 +1,55 @@
+# PREREG_CUBE_v2 — OWNER APPROVAL
+
+Approved by: **Henri Rapson (owner)**
+Approved on: **2026-08-13**
+Recorded by: programme lead, on the owner's explicit instruction ("Approve").
+
+## What is approved
+
+| Binding | Value |
+|---|---|
+| Commit | `c8a76dd6b3d762a2a942e976a24e78a3c000ae86` |
+| File | `docs/v58/model_programme_2026_08/prereg/PREREG_CUBE_v2.md` |
+| Content sha256 (as committed) | `6dda6a5b989855b5dcb63b39d84656b7bd280a15abff725628ea717a58b1181f` |
+| Git blob id | `83f494e03899a0d975ee243cfffafef13d3a5182` |
+
+Double-bound deliberately: the commit fixes the repository state, the content sha256 fixes the
+exact bytes of the contract. Either alone is weaker. Working-tree copy verified identical to the
+committed blob at the time of approval.
+
+The owner reviewed the full contract text before approving, and all fourteen required provisions
+were located by line in the committed file prior to approval.
+
+## What this approval does NOT cover
+
+- **`PREREG_CUBE_v1.md`** (`30371fc3bbc47c9b…`) is **NOT approved**. It is committed unmodified for
+  lineage only. It predates the 2026-08-13 fullpop incident and omits eight of the fourteen required
+  provisions. It must never be cited as the governing contract.
+- **No release of held cells.** `B21_FINAL_S101/S202/S303`, `B22B_DRIFT_SCORE`, `B23_SEALED_READ`,
+  `B24_COHORT_RANKING_READ` and `B24B_SHAP` remain `# HELD-OWNER-SELECTION` and require a separate,
+  explicit owner release following validation (§14).
+- **No re-entry to cube fitting.** All seven re-entry criteria in §15 remain open. Approval of the
+  contract is not satisfaction of the contract.
+- **No canonical adoption of acquired data.** §13 authorises acquisition and forensic
+  reconciliation only. `test_item_202412.csv` remains quarantined forensic evidence; neither the
+  DfT nor the DVSA 2023 release becomes authoritative by virtue of this approval.
+
+## What this approval unblocks
+
+Substrate remediation and reversible investigation, ahead of cube work in the queue:
+
+1. builder/consumer capability contract fix (§5);
+2. fullpop rebuild and its reconciliation gates (§6);
+3. KILL-25 partition and quarantine via versioned exclusion manifest (§7);
+4. mileage quarantine and the three-arm sensitivity programme (§8);
+5. D13 permutation-invariance remediation across 18 columns (§9);
+6. the second-pass duplicate and redundancy analysis (§10);
+7. DVSA 2023 acquisition and publisher reconciliation (§13);
+8. `test_item_202412.csv` quarantined forensic validation (§13);
+9. construction and banking of `safe_core_v1` (§3).
+
+## Standing conditions
+
+- Change control per §"Change control": any change after the first candidate screen requires an
+  attached failing test (deviate-with-test) and its own commit. **Never edited in place.**
+- If this file's recorded hashes cease to match the committed contract, the approval is void.
