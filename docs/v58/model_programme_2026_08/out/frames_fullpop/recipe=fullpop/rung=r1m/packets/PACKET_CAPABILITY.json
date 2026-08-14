@@ -1,0 +1,332 @@
+{
+ "packet_schema_version": 2,
+ "contract_version": "factory-contract-v2 (2026-08-12; B0 removed, packets view + panel-first)",
+ "defect_payload_mode": "rows",
+ "defect_keys": [
+  "rfr",
+  "code",
+  "disp",
+  "sev",
+  "sect",
+  "cat",
+  "comp",
+  "dang",
+  "loc",
+  "pos"
+ ],
+ "items_observability_states": [
+  "present_with_defects",
+  "present_zero_defects",
+  "assumed_zero_defects",
+  "unavailable",
+  "expected_missing"
+ ],
+ "items_coverage_mode": "assumed_covered",
+ "item_coverage_ledger": {
+  "path": "factory/item_coverage_ledger.csv",
+  "sha256": "4c75c011782a9260466517fafbb183b4e8800c040339e0d5458045fba3d14eb9",
+  "coverage_mode": "assumed_covered",
+  "n_rules": 2,
+  "has_default_rule": false,
+  "rules": [
+   {
+    "coverage": "expected_missing",
+    "test_date": "2024-12-31",
+    "schema_epoch": null,
+    "outcome_class": null,
+    "attribution": "publication_short",
+    "specificity": 1,
+    "note": "Whole-day blackout. 0 of 41,349 tests carry items; 2024-12-30 sits at 0.6268. completed_ts carries all 41,349 rows for the day, so the tests exist and items were expected. The ingested dft_test_item_extract_202412.csv is 279,587,213 bytes, byte-exact with DVSA's published member, so ingestion lost nothing and the publication is short. All 9,105 globally item-less fail-bearing 2024 tests fall on this single date. Measured 2026-08-13, ITEM_OBSERVABILITY_DESIGN.md 1.3, independently reproduced by lead."
+   },
+   {
+    "coverage": "unavailable",
+    "test_date": null,
+    "schema_epoch": "results_extracts",
+    "outcome_class": "non_definitive",
+    "attribution": "publication_short",
+    "specificity": 2,
+    "note": "Non-definitive outcomes (ABANDONED/ABORTED/ABORTED_VE) stopped carrying items at the results_extracts publisher boundary. Whole-population: 2015-2023 carried items on 7.94% to 14.98% of non-definitive tests, rising monotonically; 2024 = 0 of 255,216; 2025 = 0 of 256,054. A clean cliff on the schema-epoch boundary rather than a gradual decline, so this is a publication policy change, not data loss. Declared unavailable rather than expected_missing because these items were never published for this record class under this epoch. Measured 2026-08-13, ITEM_OBSERVABILITY_DESIGN.md 1.4, independently reproduced by lead."
+   }
+  ],
+  "resolution_order": "cell rules first (most specific wins; they NEVER consult the join), then join, then the fail-bearing definitional impossibility, then the covered-cell residual."
+ },
+ "item_join": {
+  "grain": "staged vehicle_day atoms, per input year",
+  "coverage_mode": "assumed_covered",
+  "by_year": {
+   "2015": {
+    "tests": 340533,
+    "items_observed": 340532,
+    "items_unobserved": 1,
+    "items_with_defects": 189775,
+    "items_zero_defects": 150757,
+    "items_unavailable": 0,
+    "items_expected_missing": 1,
+    "item_join_rate": 0.5572881336023234,
+    "item_observed_rate": 0.9999970634270394
+   },
+   "2016": {
+    "tests": 342461,
+    "items_observed": 342461,
+    "items_unobserved": 0,
+    "items_with_defects": 191017,
+    "items_zero_defects": 151444,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5577773819500614,
+    "item_observed_rate": 1.0
+   },
+   "2017": {
+    "tests": 345965,
+    "items_observed": 345965,
+    "items_unobserved": 0,
+    "items_with_defects": 194005,
+    "items_zero_defects": 151960,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5607648172502999,
+    "item_observed_rate": 1.0
+   },
+   "2018": {
+    "tests": 351419,
+    "items_observed": 351419,
+    "items_unobserved": 0,
+    "items_with_defects": 201225,
+    "items_zero_defects": 150194,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5726070588101383,
+    "item_observed_rate": 1.0
+   },
+   "2019": {
+    "tests": 357924,
+    "items_observed": 357924,
+    "items_unobserved": 0,
+    "items_with_defects": 211980,
+    "items_zero_defects": 145944,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5922486337881785,
+    "item_observed_rate": 1.0
+   },
+   "2020": {
+    "tests": 350845,
+    "items_observed": 350845,
+    "items_unobserved": 0,
+    "items_with_defects": 202190,
+    "items_zero_defects": 148655,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5762943750089071,
+    "item_observed_rate": 1.0
+   },
+   "2021": {
+    "tests": 367442,
+    "items_observed": 367442,
+    "items_unobserved": 0,
+    "items_with_defects": 216640,
+    "items_zero_defects": 150802,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.5895896495229179,
+    "item_observed_rate": 1.0
+   },
+   "2022": {
+    "tests": 379012,
+    "items_observed": 379011,
+    "items_unobserved": 1,
+    "items_with_defects": 226255,
+    "items_zero_defects": 152756,
+    "items_unavailable": 0,
+    "items_expected_missing": 1,
+    "item_join_rate": 0.5969599907126951,
+    "item_observed_rate": 0.9999973615611115
+   },
+   "2023": {
+    "tests": 384636,
+    "items_observed": 384636,
+    "items_unobserved": 0,
+    "items_with_defects": 232295,
+    "items_zero_defects": 152341,
+    "items_unavailable": 0,
+    "items_expected_missing": 0,
+    "item_join_rate": 0.6039346291038801,
+    "item_observed_rate": 1.0
+   }
+  },
+  "total": {
+   "tests": 3220237,
+   "items_observed": 3220235,
+   "items_unobserved": 2,
+   "items_with_defects": 1865382,
+   "items_zero_defects": 1354853,
+   "items_unavailable": 0,
+   "items_expected_missing": 2,
+   "item_join_rate": 0.5792685445201704,
+   "item_observed_rate": 0.9999993789277001
+  },
+  "states": [
+   "present_with_defects",
+   "present_zero_defects",
+   "assumed_zero_defects",
+   "unavailable",
+   "expected_missing"
+  ],
+  "residual_note": "inside a covered cell a PASS with zero items is undecidable; bounded by the same-cell fail-bearing miss rate (<=1.6e-5 measured whole-population). Not papered over: those rows are emitted as 'present_zero_defects' (certified cell) or 'assumed_zero_defects' (undeclared cell)."
+ },
+ "source_partition_availability": {
+  "2015": {
+   "tests": 340533,
+   "items_observed": 340532,
+   "items_unobserved": 1,
+   "items_with_defects": 189775,
+   "items_zero_defects": 150757,
+   "items_unavailable": 0,
+   "items_expected_missing": 1,
+   "item_join_rate": 0.5572881336023234,
+   "item_observed_rate": 0.9999970634270394
+  },
+  "2016": {
+   "tests": 342461,
+   "items_observed": 342461,
+   "items_unobserved": 0,
+   "items_with_defects": 191017,
+   "items_zero_defects": 151444,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5577773819500614,
+   "item_observed_rate": 1.0
+  },
+  "2017": {
+   "tests": 345965,
+   "items_observed": 345965,
+   "items_unobserved": 0,
+   "items_with_defects": 194005,
+   "items_zero_defects": 151960,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5607648172502999,
+   "item_observed_rate": 1.0
+  },
+  "2018": {
+   "tests": 351419,
+   "items_observed": 351419,
+   "items_unobserved": 0,
+   "items_with_defects": 201225,
+   "items_zero_defects": 150194,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5726070588101383,
+   "item_observed_rate": 1.0
+  },
+  "2019": {
+   "tests": 357924,
+   "items_observed": 357924,
+   "items_unobserved": 0,
+   "items_with_defects": 211980,
+   "items_zero_defects": 145944,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5922486337881785,
+   "item_observed_rate": 1.0
+  },
+  "2020": {
+   "tests": 350845,
+   "items_observed": 350845,
+   "items_unobserved": 0,
+   "items_with_defects": 202190,
+   "items_zero_defects": 148655,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5762943750089071,
+   "item_observed_rate": 1.0
+  },
+  "2021": {
+   "tests": 367442,
+   "items_observed": 367442,
+   "items_unobserved": 0,
+   "items_with_defects": 216640,
+   "items_zero_defects": 150802,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.5895896495229179,
+   "item_observed_rate": 1.0
+  },
+  "2022": {
+   "tests": 379012,
+   "items_observed": 379011,
+   "items_unobserved": 1,
+   "items_with_defects": 226255,
+   "items_zero_defects": 152756,
+   "items_unavailable": 0,
+   "items_expected_missing": 1,
+   "item_join_rate": 0.5969599907126951,
+   "item_observed_rate": 0.9999973615611115
+  },
+  "2023": {
+   "tests": 384636,
+   "items_observed": 384636,
+   "items_unobserved": 0,
+   "items_with_defects": 232295,
+   "items_zero_defects": 152341,
+   "items_unavailable": 0,
+   "items_expected_missing": 0,
+   "item_join_rate": 0.6039346291038801,
+   "item_observed_rate": 1.0
+  }
+ },
+ "publisher_schema_epochs": [
+  "results_csv",
+  "results_mts"
+ ],
+ "build_config": {
+  "staging_dir": "/private/tmp/claude-501/-Users-henrirapson/7c76ec55-3bf7-455f-a462-ca2a5d7096ab/scratchpad/factory_stage_fullpop_v2",
+  "output_dir": "out/frames_fullpop",
+  "memory_limit": "4GB",
+  "temp_directory": "/private/tmp/claude-501/-Users-henrirapson/7c76ec55-3bf7-455f-a462-ca2a5d7096ab/scratchpad/duck_tmp_fullpop_v2",
+  "max_temp_directory_size": "8GiB",
+  "n_buckets": 256,
+  "target_classes": [
+   "3",
+   "4"
+  ],
+  "history_classes": "UNFILTERED",
+  "fail_basis": "final",
+  "defect_detail": "rows",
+  "emit_packets": true,
+  "max_priors": null,
+  "pathology_bound": 80,
+  "write_batch_rows": 50000,
+  "p4_certification_path": "out/p4_crosstab_certification.json",
+  "serve_view_classes_path": "out/serve_view_classes.json",
+  "item_coverage_csv": "factory/item_coverage_ledger.csv",
+  "consumers": [],
+  "threads": 2
+ },
+ "source_sha256": {
+  "lookup": {
+   "item_detail_csv": "7fc4c8f5bb7e8df248fe5925ed034c6af59f24183b634009c57083a0eabfc1a7",
+   "item_group_csv": "19490787806c90f6cd366770cbd136d08b28b9545211658b0afb0e6c20e439cc"
+  },
+  "item_coverage_ledger": "4c75c011782a9260466517fafbb183b4e8800c040339e0d5458045fba3d14eb9",
+  "results": {
+   "kind": "path_glob",
+   "pattern": "out/fullpop_restricted_results_input.parquet",
+   "n_files": 1,
+   "bytes": 92125796
+  },
+  "items": {
+   "kind": "path_glob",
+   "pattern": "/Users/henrirapson/autosafe/autosafe_lake/items/**/*.parquet",
+   "n_files": 74,
+   "bytes": 7771317825
+  },
+  "build_config_sha256": "2231edbaccdf55fcef437610e080c3653f1d5e92848ef0467e54d21fe21af413"
+ },
+ "code_sha256": "25474f906084fdfaea1109ed1dced9c30e740780930fa0b6b763612e03ae4f9d",
+ "duckdb_version": "1.5.5",
+ "recipe": "fullpop",
+ "rung": "r1m",
+ "capability_source": "declared",
+ "notes": "defects_json: populated | '[]' (observed, no defect items) | NULL (detail unavailable, or payload mode != 'rows'). p_items_observability names the state per prior test. No consumer may read a NULL as 'no defect' (PREREG_CUBE_v2 \u00a74)."
+}

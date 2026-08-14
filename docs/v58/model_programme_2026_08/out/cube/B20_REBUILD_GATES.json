@@ -1,0 +1,1231 @@
+{
+ "generated": "2026-08-14 08:31:00",
+ "prereg": "PREREG_CUBE_v2 \u00a76",
+ "gates": {
+  "G1_target_rows": {
+   "pass": true,
+   "n_old": 1004208,
+   "n_new": 1004208,
+   "only_old": 0,
+   "only_new": 0
+  },
+  "G2_vehicles": {
+   "pass": true,
+   "vehicle_set_diff": 0
+  },
+  "G5_no_multiplication": {
+   "pass": true,
+   "dup_tgt_old": 0,
+   "dup_tgt_new": 0
+  },
+  "G3_labels_dates": {
+   "pass": true,
+   "mismatched_rows": 0
+  },
+  "G4_non_defect_fields": {
+   "pass": true,
+   "columns_checked": 25,
+   "mismatched_rows": 0
+  },
+  "G6_observability": {
+   "pass": true,
+   "distribution": {
+    "present_with_defects": {
+     "n": 2912327,
+     "null_payload": 0
+    },
+    "assumed_zero_defects": {
+     "n": 2571120,
+     "null_payload": 0
+    },
+    "null": {
+     "n": 76592,
+     "null_payload": 76592
+    },
+    "expected_missing": {
+     "n": 1,
+     "null_payload": 1
+    }
+   },
+   "observed_with_null_payload": 0,
+   "unobserved_with_payload": 0
+  },
+  "G7_defect_count_sample": {
+   "pass": true,
+   "targets_sampled": 20000,
+   "prior_rows_checked": 109041,
+   "disagreements": 0
+  },
+  "G8_no_new_constants": {
+   "pass": true,
+   "columns_went_constant_in_rebuild": []
+  }
+ },
+ "before_after": {
+  "columns": 137,
+  "incident_constants_now_live": 0
+ },
+ "before_after_table": [
+  {
+   "column": "b1_age_at_target_years",
+   "card_old_train": 14394,
+   "card_new_train": 14394,
+   "null_old": 44,
+   "null_new": 44,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_density_per_observable_year",
+   "card_old_train": 37642,
+   "card_new_train": 37642,
+   "null_old": 16,
+   "null_new": 16,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_first_prior_date",
+   "card_old_train": 2971,
+   "card_new_train": 2971,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_first_use_missing_flag",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_history_coverage_grade",
+   "card_old_train": 4,
+   "card_new_train": 4,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_history_years",
+   "card_old_train": 3280,
+   "card_new_train": 3280,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_history_years_cap2y",
+   "card_old_train": 729,
+   "card_new_train": 729,
+   "null_old": 84871,
+   "null_new": 84871,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_history_years_cap5y",
+   "card_old_train": 1825,
+   "card_new_train": 1825,
+   "null_old": 77149,
+   "null_new": 77149,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_last_prior_date",
+   "card_old_train": 2793,
+   "card_new_train": 2793,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_left_censor_flag",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_max_gap_days",
+   "card_old_train": 1860,
+   "card_new_train": 1860,
+   "null_old": 156530,
+   "null_new": 156530,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_mean_gap_days",
+   "card_old_train": 13939,
+   "card_new_train": 13939,
+   "null_old": 156530,
+   "null_new": 156530,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_final_fails",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_initial_fails",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_initials",
+   "card_old_train": 21,
+   "card_new_train": 21,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_initials_cap2y",
+   "card_old_train": 12,
+   "card_new_train": 12,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_initials_cap5y",
+   "card_old_train": 18,
+   "card_new_train": 18,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_nonresult_days",
+   "card_old_train": 4,
+   "card_new_train": 4,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_test_days",
+   "card_old_train": 28,
+   "card_new_train": 28,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_test_days_cap2y",
+   "card_old_train": 12,
+   "card_new_train": 12,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_test_days_cap5y",
+   "card_old_train": 20,
+   "card_new_train": 20,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_tests",
+   "card_old_train": 31,
+   "card_new_train": 31,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_n_prior_years_observed",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_observable_years",
+   "card_old_train": 6673,
+   "card_new_train": 6673,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_observable_years_status",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b1_opportunity_adjusted_density",
+   "card_old_train": 50166,
+   "card_new_train": 50166,
+   "null_old": 64725,
+   "null_new": 64725,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_days_since",
+   "card_old_train": 2859,
+   "card_new_train": 2859,
+   "null_old": 867728,
+   "null_new": 867728,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_max_run",
+   "card_old_train": 16,
+   "card_new_train": 16,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_n_days",
+   "card_old_train": 16,
+   "card_new_train": 16,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_n_days_cap2y",
+   "card_old_train": 8,
+   "card_new_train": 8,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_n_days_cap5y",
+   "card_old_train": 12,
+   "card_new_train": 12,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_body_chassis_structure_persistence",
+   "card_old_train": 101,
+   "card_new_train": 101,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_days_since",
+   "card_old_train": 3215,
+   "card_new_train": 3215,
+   "null_old": 509943,
+   "null_new": 509943,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_max_run",
+   "card_old_train": 16,
+   "card_new_train": 16,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_n_days",
+   "card_old_train": 16,
+   "card_new_train": 16,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_n_days_cap2y",
+   "card_old_train": 8,
+   "card_new_train": 8,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_n_days_cap5y",
+   "card_old_train": 12,
+   "card_new_train": 12,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_brakes_persistence",
+   "card_old_train": 126,
+   "card_new_train": 126,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_breadth_categories",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_days_since",
+   "card_old_train": 3211,
+   "card_new_train": 3211,
+   "null_old": 632829,
+   "null_new": 632829,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_max_run",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_n_days",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_n_days_cap2y",
+   "card_old_train": 7,
+   "card_new_train": 7,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_n_days_cap5y",
+   "card_old_train": 11,
+   "card_new_train": 11,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_lamps_reflectors_and_electrical_equipment_persistence",
+   "card_old_train": 119,
+   "card_new_train": 119,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_last_day_n_categories",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_n_catalogue_miss_items",
+   "card_old_train": 7,
+   "card_new_train": 7,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_n_items_total",
+   "card_old_train": 169,
+   "card_new_train": 169,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_other_days_since",
+   "card_old_train": 3163,
+   "card_new_train": 3163,
+   "null_old": 662038,
+   "null_new": 662038,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_other_max_run",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_other_n_days",
+   "card_old_train": 15,
+   "card_new_train": 15,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_other_persistence",
+   "card_old_train": 123,
+   "card_new_train": 123,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_days_since",
+   "card_old_train": 3112,
+   "card_new_train": 3112,
+   "null_old": 912208,
+   "null_new": 912208,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_max_run",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_n_days",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_n_days_cap2y",
+   "card_old_train": 7,
+   "card_new_train": 7,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_n_days_cap5y",
+   "card_old_train": 11,
+   "card_new_train": 11,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_steering_persistence",
+   "card_old_train": 103,
+   "card_new_train": 103,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_days_since",
+   "card_old_train": 3164,
+   "card_new_train": 3164,
+   "null_old": 622729,
+   "null_new": 622729,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_max_run",
+   "card_old_train": 17,
+   "card_new_train": 17,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_n_days",
+   "card_old_train": 17,
+   "card_new_train": 17,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_n_days_cap2y",
+   "card_old_train": 8,
+   "card_new_train": 8,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_n_days_cap5y",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_suspension_persistence",
+   "card_old_train": 130,
+   "card_new_train": 130,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_days_since",
+   "card_old_train": 3215,
+   "card_new_train": 3215,
+   "null_old": 435104,
+   "null_new": 435104,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_max_run",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_n_days",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_n_days_cap2y",
+   "card_old_train": 7,
+   "card_new_train": 7,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_n_days_cap5y",
+   "card_old_train": 11,
+   "card_new_train": 11,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_tyres_persistence",
+   "card_old_train": 109,
+   "card_new_train": 109,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_days_since",
+   "card_old_train": 3229,
+   "card_new_train": 3229,
+   "null_old": 747397,
+   "null_new": 747397,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_max_run",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_n_days",
+   "card_old_train": 13,
+   "card_new_train": 13,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_n_days_cap2y",
+   "card_old_train": 7,
+   "card_new_train": 7,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_n_days_cap5y",
+   "card_old_train": 12,
+   "card_new_train": 12,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b2_visibility_persistence",
+   "card_old_train": 106,
+   "card_new_train": 106,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_days_since_dangerous",
+   "card_old_train": 2024,
+   "card_new_train": 2024,
+   "null_old": 828726,
+   "null_new": 828726,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_days_since_major",
+   "card_old_train": 2030,
+   "card_new_train": 2030,
+   "null_old": 577183,
+   "null_new": 577183,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_days_since_minor",
+   "card_old_train": 2021,
+   "card_new_train": 2021,
+   "null_old": 826655,
+   "null_new": 826655,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_days_since_prs_item",
+   "card_old_train": 3239,
+   "card_new_train": 3239,
+   "null_old": 740976,
+   "null_new": 740976,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_fail_item_rectified_share",
+   "card_old_train": 302,
+   "card_new_train": 302,
+   "null_old": 427415,
+   "null_new": 427415,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_advisory_items",
+   "card_old_train": 134,
+   "card_new_train": 134,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_dangerous_days",
+   "card_old_train": 8,
+   "card_new_train": 8,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_dangerous_items",
+   "card_old_train": 18,
+   "card_new_train": 18,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_days_fine_severity_observable",
+   "card_old_train": 20,
+   "card_new_train": 20,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_fail_items_final",
+   "card_old_train": 82,
+   "card_new_train": 82,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_fail_items_initial",
+   "card_old_train": 82,
+   "card_new_train": 82,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_major_days",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_major_items",
+   "card_old_train": 56,
+   "card_new_train": 56,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_minor_days",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_minor_items",
+   "card_old_train": 31,
+   "card_new_train": 31,
+   "null_old": 79297,
+   "null_new": 79297,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_prs_item_days",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_n_prs_items",
+   "card_old_train": 21,
+   "card_new_train": 21,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b3_severity_observability_status",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_adv_to_fail_categories",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_burden_delta_1",
+   "card_old_train": 80,
+   "card_new_train": 80,
+   "null_old": 156530,
+   "null_new": 156531,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_burden_delta_2",
+   "card_old_train": 78,
+   "card_new_train": 78,
+   "null_old": 238107,
+   "null_new": 238107,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_burden_mean_last3",
+   "card_old_train": 101,
+   "card_new_train": 101,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_burden_x_age",
+   "card_old_train": 95074,
+   "card_new_train": 95074,
+   "null_old": 76596,
+   "null_new": 76596,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_burden_x_mileage_band_ord",
+   "card_old_train": 191,
+   "card_new_train": 191,
+   "null_old": 81705,
+   "null_new": 81705,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_days_since_adv_to_fail",
+   "card_old_train": 2764,
+   "card_new_train": 2764,
+   "null_old": 774740,
+   "null_new": 774740,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_days_since_recurrence",
+   "card_old_train": 2590,
+   "card_new_train": 2590,
+   "null_old": 845208,
+   "null_new": 845208,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_deterioration_slope",
+   "card_old_train": 698697,
+   "card_new_train": 698697,
+   "null_old": 156530,
+   "null_new": 156531,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_deterioration_slope_n_days",
+   "card_old_train": 28,
+   "card_new_train": 28,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_mileage_band",
+   "card_old_train": 5,
+   "card_new_train": 5,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_n_adv_to_fail_transitions",
+   "card_old_train": 24,
+   "card_new_train": 24,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_n_recurrence_after_repair",
+   "card_old_train": 29,
+   "card_new_train": 29,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b4_recurrence_categories",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_covid_straddle_flag",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_days_since_prior_day",
+   "card_old_train": 2149,
+   "card_new_train": 2149,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_gap_annual_band_flag",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_has_fail",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_has_nonresult",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_has_pass",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_has_prs",
+   "card_old_train": 2,
+   "card_new_train": 2,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_n_distinct_outcomes",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_last_day_n_tests",
+   "card_old_train": 5,
+   "card_new_train": 5,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_max_tests_on_a_prior_day",
+   "card_old_train": 6,
+   "card_new_train": 6,
+   "null_old": 76592,
+   "null_new": 76592,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_n_prior_ambiguous_days",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_n_prior_days_pass_and_fail",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_n_prior_mileage_conflict_days",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_n_prior_multi_test_days",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b5_n_prior_nondefinitive_days",
+   "card_old_train": 3,
+   "card_new_train": 3,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_lat_centre_n",
+   "card_old_train": 10,
+   "card_new_train": 10,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_lat_inner_outer_n",
+   "card_old_train": 9,
+   "card_new_train": 9,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_lat_nearside_n",
+   "card_old_train": 51,
+   "card_new_train": 51,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_lat_offside_n",
+   "card_old_train": 41,
+   "card_new_train": 41,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_lat_unknown_n",
+   "card_old_train": 115,
+   "card_new_train": 115,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_location_map_status",
+   "card_old_train": 1,
+   "card_new_train": 1,
+   "null_old": 0,
+   "null_new": 0,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_long_front_n",
+   "card_old_train": 50,
+   "card_new_train": 50,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_long_rear_n",
+   "card_old_train": 64,
+   "card_new_train": 64,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_long_unknown_n",
+   "card_old_train": 99,
+   "card_new_train": 99,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_pos_n_total",
+   "card_old_train": 135,
+   "card_new_train": 135,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_vert_inner_outer_n",
+   "card_old_train": 20,
+   "card_new_train": 20,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_vert_lower_n",
+   "card_old_train": 15,
+   "card_new_train": 15,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_vert_unknown_n",
+   "card_old_train": 165,
+   "card_new_train": 165,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  },
+  {
+   "column": "b6_vert_upper_n",
+   "card_old_train": 14,
+   "card_new_train": 14,
+   "null_old": 228947,
+   "null_new": 228947,
+   "was_incident_constant": false
+  }
+ ],
+ "observability_by_prior_year": [
+  {
+   "year": 2015,
+   "present_with_defects": 265732,
+   "assumed_zero_defects": 303566,
+   "unobserved": 0,
+   "n": 569298
+  },
+  {
+   "year": 2016,
+   "present_with_defects": 315090,
+   "assumed_zero_defects": 338858,
+   "unobserved": 0,
+   "n": 653948
+  },
+  {
+   "year": 2017,
+   "present_with_defects": 377199,
+   "assumed_zero_defects": 375659,
+   "unobserved": 0,
+   "n": 752858
+  },
+  {
+   "year": 2018,
+   "present_with_defects": 457378,
+   "assumed_zero_defects": 406293,
+   "unobserved": 0,
+   "n": 863671
+  },
+  {
+   "year": 2019,
+   "present_with_defects": 547407,
+   "assumed_zero_defects": 424753,
+   "unobserved": 0,
+   "n": 972160
+  },
+  {
+   "year": 2020,
+   "present_with_defects": 431033,
+   "assumed_zero_defects": 348920,
+   "unobserved": 0,
+   "n": 779953
+  },
+  {
+   "year": 2021,
+   "present_with_defects": 326641,
+   "assumed_zero_defects": 241266,
+   "unobserved": 0,
+   "n": 567907
+  },
+  {
+   "year": 2022,
+   "present_with_defects": 182745,
+   "assumed_zero_defects": 126780,
+   "unobserved": 1,
+   "n": 309526
+  },
+  {
+   "year": 2023,
+   "present_with_defects": 9102,
+   "assumed_zero_defects": 5025,
+   "unobserved": 0,
+   "n": 14127
+  }
+ ]
+}

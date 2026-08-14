@@ -137,3 +137,35 @@ loss:
 The ingested `dft_test_item_extract_202412.csv` is byte-exact with DVSA's published member
 (279,587,213 bytes) — our ingestion lost nothing. **Expectation and attribution are therefore
 distinct fields**, and the observability state model is being amended accordingly.
+
+---
+
+## 9. REMEDIATION EXECUTED — 2026-08-14
+
+Rebuild run 08:19–08:27 with `--defect-detail rows` + `--item-coverage-csv
+factory/item_coverage_ledger.csv`, same input parquet as the defective build
+(sha `d19ca426…`, preserved at `out/fullpop_restricted_results_input.parquet`).
+Defective artifacts moved (bytes verified against §4 checksums) to
+`defective_artifacts/` in this directory before the rebuild wrote.
+
+New packets: 5,483,447 / 5,560,040 `defects_json` non-null; schema v2 with
+`PACKET_CAPABILITY.json`. B20B ran under the new preflight: first attempt
+REFUSED on one `expected_missing` prior (1 row in 5,560,040 — the 2022
+fail-bearing scatter); re-run with the declared, manifest-recorded
+`--unobserved-defect-policy empty`. B20C/D/E rebuilt (label `y_final`
+deliberately unchanged — §6 permits only defect payloads, observability and
+derived features to change; the `y_initial` migration belongs to safe_core_v1).
+
+**All nine reconciliation gates PASS** (`out/cube/B20_REBUILD_GATES.json`):
+G1 rows 1,004,208 = 1,004,208, set-identical · G2 vehicles identical ·
+G3 labels/dates 0 mismatches · G4 25 non-defect columns 0 mismatches ·
+G5 no duplication · G6 observed states carry payload, unobserved carry NULL,
+0 violations either direction · G7 enumeration falsifier: 20,000 targets,
+109,041 prior rows, defect counts recomputed independently from the lake,
+**0 disagreements** · G8 no column went constant in the rebuild ·
+G9 before/after table emitted; `dominant_mechanism` train support repaired
+(OLD train LEAK 0% → NEW 7.016% vs eval 9.809% — the automatic-failure
+condition is cleared).
+
+Held cells remain held. Re-entry criteria outstanding: safe_core_v1, KILL-25
+reclassification, mileage and D13 repair, R4/R6 blocking-control PASS.
