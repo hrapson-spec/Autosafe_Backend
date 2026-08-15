@@ -248,3 +248,61 @@ directions, in order:
    retraining at all. The highest ratio of value to compute anywhere in this programme.
 3. **Genuinely new information** — external signals or channels the lake does not contain.
    Not more re-encodings of what it does.
+
+---
+
+# CORRECTION — the "free calibration win" is NOT a live product item
+
+`out/RECALIB_T0_PROBE.json`
+
+An earlier reading of this work called calibration "the most actionable item, available
+today". **That was wrong, and the error was mine.** The miscalibration measured (slope
+1.4145, intercept −0.7913) was the frozen score scored against **B3** — a target it was
+never trained for, at 9.5% prevalence instead of 22.9%. Over-prediction there is arithmetic,
+not a defect.
+
+Measured on **its own** target, the same score is already well calibrated:
+
+| arm | Brier | cal intercept | cal slope |
+|---|---:|---:|---:|
+| frozen raw, on T0 | 0.157797 | −0.0060 | **0.9863** |
+| frozen + Platt OOF, on T0 | 0.157795 | −0.0001 | 0.9999 |
+
+Recalibration buys a Brier improvement of **0.000002** (0.001% relative).
+
+Decile reliability confirms it is not a global average masking local damage:
+
+| | T0 (own target) | B3 |
+|---|---|---|
+| decile ratio range (observed/predicted) | **0.990 – 1.041** | 0.127 – 0.626 |
+| max deviation | **4.1%** | 87.3% |
+| top decile (where the product acts) | 0.5143 pred / 0.5104 obs → **0.992** | 0.5143 / 0.3220 → 0.626 |
+
+**Conclusion: there is no calibration work to do on the current product.** The ~97%-free
+recalibration finding remains true and useful, but it is strictly *conditional on adopting
+B3* — a change already recommended against on ~1pp of commercial value. It is not an
+independent win and should not be cited as one.
+
+## Consequence: this lane is closed
+
+With the burden null and this correction, the existing substrate has been exhausted on this
+target:
+
+| lever | result |
+|---|---|
+| change the target (T0 → B3) | **+0.0067**, replicated 4/4 — the real effect |
+| change the learner (CatBoost → LightGBM) | +0.0016, ~4× smaller |
+| add mirrored history features | **NULL** (+1.7e-04, one seed negative) |
+| recalibrate | **no defect to fix** on the product's own target |
+| product concentration gained, end to end | **~1 percentage point** |
+
+Every remaining direction requires something this programme cannot supply from the current
+substrate: a **product decision** (adopt B3 and accept what it changes for users),
+**compute that is currently blocked** (Stage 3 capacity needs seed 505 or a prereg
+amendment), or **genuinely new information** — an external channel, not another re-encoding
+of the lake.
+
+Recommendation: **stop optimising here.** The honest summary is that high defect burden is
+substantially more learnable than generic MOT failure, that this is an objective effect
+rather than a representation gap, and that it is worth about one percentage point of
+real-world concentration.

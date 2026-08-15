@@ -131,12 +131,15 @@ def main() -> int:
     ap.add_argument("--labels", default="out/TARGET_SEVERITY_LABELS.parquet")
     ap.add_argument("--frozen", default="out/fits/s2/preds/s2.D.cum.b0-6.seed101.parquet")
     ap.add_argument("--trained", default="out/fits/sev/preds/sev.B3.seed101.parquet")
+    ap.add_argument("--target", default="b3", choices=("b3","m1","t0"))
     ap.add_argument("--out", default="out/SEV_RECALIB_PROBE.json")
     a = ap.parse_args()
 
     lab = pq.read_table(ROOT / a.labels)
     L = {n: np.asarray(lab.column(n)) for n in lab.schema.names}
-    y = (L["n_major_or_dangerous"] >= 3).astype(np.float64)
+    y = {"b3": L["n_major_or_dangerous"] >= 3,
+         "m1": L["n_sections_with_md"] >= 2,
+         "t0": L["y_final"] == 1}[a.target].astype(np.float64)
     ids = [int(t) for t in L["test_id"]]
 
     def load(path):
