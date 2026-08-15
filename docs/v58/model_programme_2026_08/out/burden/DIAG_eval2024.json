@@ -1,0 +1,23 @@
+{
+ "n_targets": 330665,
+ "n_with_priors": 312040,
+ "n_prior_pairs": 1957832,
+ "G_strict_date_violations": 0,
+ "G_self_reference_violations": 0,
+ "prior_year_floor": 2015,
+ "columns": [
+  "bd_n_prior_initials",
+  "bd_md_last",
+  "bd_md_mean",
+  "bd_md_max",
+  "bd_md_sum",
+  "bd_md_last3_mean",
+  "bd_md_trend",
+  "bd_sec_last",
+  "bd_sec_mean",
+  "bd_sec_max",
+  "bd_sec_persistence",
+  "bd_sec_repeat_last2"
+ ],
+ "out": "out/burden/burden_eval2024.parquet"
+}

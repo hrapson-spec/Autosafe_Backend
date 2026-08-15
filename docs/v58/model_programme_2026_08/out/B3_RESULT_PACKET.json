@@ -1,0 +1,120 @@
+{
+ "title": "B3 direct-training result packet",
+ "status": "CONFIRMED-AT-K4",
+ "status_note": "Pre-registered gate specified k=5 with sign consistency. Seed 505 was NEVER RUN (stopped early by owner decision). Strongly replicated, NOT formally k=5-confirmed. sigma_hat is LOW-K-PROVISIONAL (mde.FLOOR_MEASURED_MIN_K = 5). This status is recorded as-run and must not be altered retrospectively.",
+ "target_definition": {
+  "name": "B3",
+  "rule": "target initial MOT has >= 3 major-or-dangerous failing items",
+  "expression": "count(items WHERE rfr_type_code IN ('F','P')) >= 3",
+  "severity_note": "major_or_dangerous is the F+P initial-presentation basis. n_dangerous is FAIL-GATED (disposition in F/P AND dangerous_mark='D'); a D-marked ADVISORY is NOT dangerous.",
+  "builder": "scripts/analysis/severity_collect.py"
+ },
+ "population": {
+  "target_population": "DVSA initial tests only (test_type='NT')",
+  "outcomes_included": [
+   "PASS",
+   "FAIL",
+   "PRS"
+  ],
+  "exclusions": [
+   "ABANDONED",
+   "ABORTED",
+   "ABORTED_VE",
+   "retests (RT/PL/PV)",
+   "appeals (EI/ES)"
+  ],
+  "row_filter_covid_hole": "tgt_date < DATE '2020-03-30' OR tgt_date > DATE '2021-03-31'",
+  "train_window": "2020-01-02 .. 2023-12-31 (COVID hole removed)",
+  "eval_window": "2024-01-01 .. 2024-12-31",
+  "regime": "100% post-2018-05-20; era_pre2018_share = 0.0"
+ },
+ "counts": {
+  "train_rows": 755389,
+  "train_vehicles": 284972,
+  "train_b3_prevalence": 0.098305641199435,
+  "eval_rows": 330665,
+  "eval_vehicles": 315300,
+  "eval_b3_positives": 31463,
+  "eval_b3_prevalence": 0.09515068120303026
+ },
+ "feature_manifest": {
+  "n_features": 241,
+  "resolution_note": "featureset=[] with an EXPLICIT 241-column list. blocks.py resolves B1..B6 to 247 today because the B2 item-observability index was added after the benchmark ran; the v1 frame lacks those 6 columns, so the banked 241 was recovered by intersecting the resolved set with the frame schema (deviation D-S2-1).",
+  "columns_sha256": "9eaf2196211b3dcc8e13447b33842a065e8c93a1cac2721d5f4387d1e7667b40",
+  "extra_frame": "out/b0/b0_flat4y_eb.parquet",
+  "extra_eval_frame": "out/b0/b0_eval2024_eb.parquet"
+ },
+ "arms": {
+  "treatment": "sev.B3",
+  "control": "sev.CTRL",
+  "only_intended_difference": "training target (label)",
+  "config_diff": [
+   "label"
+  ]
+ },
+ "per_seed": [
+  {
+   "seed": 101,
+   "treat_auroc": 0.7974717605328282,
+   "control_auroc": 0.7906228416914656,
+   "delta": 0.006848918841362628
+  },
+  {
+   "seed": 202,
+   "treat_auroc": 0.7973697640210772,
+   "control_auroc": 0.7909256749536313,
+   "delta": 0.006444089067445868
+  },
+  {
+   "seed": 303,
+   "treat_auroc": 0.7976737434737894,
+   "control_auroc": 0.7909252536569021,
+   "delta": 0.006748489816887249
+  },
+  {
+   "seed": 404,
+   "treat_auroc": 0.7972102377200829,
+   "control_auroc": 0.7904065656800305,
+   "delta": 0.006803672040052389
+  }
+ ],
+ "seeds_run": [
+  101,
+  202,
+  303,
+  404
+ ],
+ "seed_not_run": 505,
+ "mean_delta": 0.006711292441437033,
+ "sd_delta": 0.0001828080085859301,
+ "min_delta": 0.006444089067445868,
+ "max_delta": 0.006848918841362628,
+ "spread": 0.00040482977391675945,
+ "all_positive": true,
+ "config_sha": {
+  "sev.B3": "1d5e126eaa10ae20097a593810e08eb137cd7a51c372f106005057752d957fde",
+  "sev.CTRL": "3efa037a437945ce67604dfb3aa0cae0b8d96639490f866cfbdb112deeb99334"
+ },
+ "artifact_sha256": {
+  "out/configs/sev.B3.json": "4dc0fc7e278182e2918c4c954edb2e4329f34eaca141f9e5fe7923a08c8a3460",
+  "out/configs/sev.CTRL.json": "61e6cc18b4e820925c384efca96e9efcaea3600b61efe37783f44ddee6d5a857",
+  "out/TARGET_SEVERITY_LABELS.parquet": "0828281a3a7fdc9300cd50f0853b6542db0de46b54ab4c1e4253b712334ce178",
+  "out/TRAIN_SEVERITY_LABELS.parquet": "c3beddc0a81bcda5d2a5ed0e1d2cdd4223e353e4ebaed333156bdfc740ead9d6",
+  "scripts/analysis/severity_collect.py": "dd0f1672684f3ee5bb78ad271db0e57f9bd341c4335986aefb81304a38e34c71",
+  "scripts/analysis/sev_confirm_verdict.py": "826220b2b9758e107ab34e73f4e57171ed9bc6258ea9d057de7f82d9745aa6ab",
+  "out/fits/sev/sev.B3.seed101.json": "44a525d3ceac7aa0da9e431f62d306349b22c358c71fb179c369df45dedc4792",
+  "out/fits/sev/sev.CTRL.seed101.json": "80fd64261d56c8cc6f35845775cae6c8770f32a7e7585e6b9876ec092bf3f60c",
+  "out/fits/sev/sev.B3.seed202.json": "73d898c1125aa7f147f25d7d062c2d7e8eb2b786533d9a7ce71b870dbeb808ea",
+  "out/fits/sev/sev.CTRL.seed202.json": "6cf2fac0243075017c1c359e1bca0f25a03c031cfa51abd4bf2fde7054231521",
+  "out/fits/sev/sev.B3.seed303.json": "47b6c190be7ecfca5536f6c4d2890e8b94ff7385bb1a6b3ee2cd7b453d55bfbb",
+  "out/fits/sev/sev.CTRL.seed303.json": "40dbdcac60bcf5843b5c0293a564d7f29203e562565770eccc166cfd15959e76",
+  "out/fits/sev/sev.B3.seed404.json": "3f533556ef28b4ee2a98fa51f528dbe0f49326c7c5611c3fe6832f23f26719a2",
+  "out/fits/sev/sev.CTRL.seed404.json": "876cd06285e091f972949ad9e75eb9fc30ec7885db9d8aea6012cb14f57cfb37"
+ },
+ "git_head": "14367cdf9f994ec146df1b0cf35b7b0e9e4c4e97",
+ "interpreter": "/Users/henrirapson/autosafe-v58/.venv/bin/python (duckdb 1.5.5)",
+ "audit": {
+  "checks_failed": 0,
+  "verdict": "PASS \u2014 the only intended causal difference between arms is the training target"
+ }
+}

@@ -1,0 +1,52 @@
+{
+ "title": "AutoSafe B3 reference baseline (frozen 2026-08-15)",
+ "target": "B3 = target initial MOT has >=3 major-or-dangerous (F+P) failing items",
+ "model": "LightGBM, config sev.B3.lgbm (clone of s3.lgbm.adopted.1m, label only)",
+ "grade": "full",
+ "n_features": 241,
+ "rung": "flat4y r1m",
+ "train_rows": 755389,
+ "eval": "eval2024, 330,665 rows / 315,300 vehicles",
+ "b3_prevalence_eval": 0.09515068120303026,
+ "per_seed": [
+  {
+   "seed": 101,
+   "auroc": 0.7990424304258774,
+   "auprc": 0.29873745747501385
+  },
+  {
+   "seed": 202,
+   "auroc": 0.7989610926443313,
+   "auprc": 0.2979643128013993
+  },
+  {
+   "seed": 303,
+   "auroc": 0.7992178330062338,
+   "auprc": 0.29893941442477057
+  },
+  {
+   "seed": 404,
+   "auroc": 0.799054482741635,
+   "auprc": 0.29833406637961757
+  },
+  {
+   "seed": 505,
+   "auroc": 0.7990235508935838,
+   "auprc": 0.29819722470472027
+  }
+ ],
+ "k": 5,
+ "mean_auroc": 0.7990598779423322,
+ "sd_auroc": 9.534347880827838e-05,
+ "spread": 0.0002567403619024855,
+ "sec_per_fit": 58,
+ "supersedes": "frozen failure-trained s2.D.cum.b0-6 (0.790623 on B3)",
+ "caveats": [
+  "LightGBM margin over RealMLP (+0.000486) is NOT capacity-controlled (full vs screen); RealMLP at full grade untested",
+  "LightGBM has NO established seed-variance floor (mde.BANKED_SIGMA['lightgbm'] is None, NO-FLOOR by design)",
+  "B3 promotion to the PRODUCT's primary target is NOT implied: commercial delta is ~1pp top-decile concentration",
+  "B3 direct-training result is CONFIRMED-AT-K4, not formally k=5-confirmed"
+ ],
+ "git_head": "14367cdf9f994ec146df1b0cf35b7b0e9e4c4e97",
+ "config_sha256": "b46d6771510706d12f6b1e8c3a7628fabac881bea746a87e41c54f77432f99cc"
+}

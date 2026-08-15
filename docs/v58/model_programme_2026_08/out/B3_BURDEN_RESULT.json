@@ -1,0 +1,63 @@
+{
+ "prereg": "prereg/PREREG_B3_BURDEN_2026_08_15.md",
+ "target": "y_b3",
+ "model": "LightGBM",
+ "n_features": {
+  "base": 241,
+  "burden": 253
+ },
+ "k": 5,
+ "per_seed": [
+  {
+   "seed": 101,
+   "base": 0.799013756860016,
+   "burden": 0.7990518589319503,
+   "delta": 3.810207193433168e-05
+  },
+  {
+   "seed": 202,
+   "base": 0.7990808038549713,
+   "burden": 0.7989629130583624,
+   "delta": -0.00011789079660884383
+  },
+  {
+   "seed": 303,
+   "base": 0.7990248134559323,
+   "burden": 0.7993458195214106,
+   "delta": 0.0003210060654782465
+  },
+  {
+   "seed": 404,
+   "base": 0.7989163094181411,
+   "burden": 0.7993855281190845,
+   "delta": 0.0004692187009434079
+  },
+  {
+   "seed": 505,
+   "base": 0.7990481283950914,
+   "burden": 0.7991760606282136,
+   "delta": 0.00012793223312212998
+  }
+ ],
+ "mean_delta": 0.00016767365497385444,
+ "sd_delta": 0.00023149269675832074,
+ "all_positive": false,
+ "negative_seeds": [
+  202
+ ],
+ "bands": {
+  "null": "<+0.0007",
+  "detectable": "+0.0007..+0.002",
+  "adopt": ">=+0.002 AND all positive",
+  "halt": ">=+0.010"
+ },
+ "verdict": "NULL",
+ "interpretation": "Prior major/dangerous BURDEN adds nothing on top of the existing 241-col substrate. mean +1.68e-04 is 4x below the NULL band and inside LightGBM's own measured refit nuisance (1.74e-04); one seed is negative. => The +0.0067 from direct B3 training is OBJECTIVE-SHAPING, not a missing representation. The substrate already encodes the extractable prior-burden information.",
+ "scope": "LightGBM, B3, flat4y r1m, eval2024. Not tested on other learners or rungs.",
+ "leakage_gates": {
+  "strict_date_violations": 0,
+  "self_reference_violations": 0,
+  "train_prior_pairs": 4527736,
+  "eval_prior_pairs": 1957832
+ }
+}
