@@ -1,0 +1,941 @@
+{
+ "artifact": "ADVSTRUCT canonical-system ontology and census",
+ "prereg": "prereg/PREREG_ADVSTRUCT_2026_08_15.md",
+ "prereg_sha256_16": "35ee4828c47f4b88",
+ "ontology_version": "ADVSTRUCT_ONTOLOGY_V1",
+ "systems": [
+  "wheels_tyres",
+  "brakes",
+  "suspension",
+  "steering",
+  "body_structure",
+  "lamps_electrical",
+  "visibility",
+  "noise_emissions",
+  "seatbelts_srs"
+ ],
+ "excluded_buckets": [
+  "noncomponent",
+  "identification",
+  "not_tested"
+ ],
+ "crosswalk_normalised": {
+  "tyres": "wheels_tyres",
+  "wheels": "wheels_tyres",
+  "road wheels": "wheels_tyres",
+  "brakes": "brakes",
+  "brake performance": "brakes",
+  "suspension": "suspension",
+  "steering": "steering",
+  "body chassis structure": "body_structure",
+  "body structure and attachments": "body_structure",
+  "body structure and general items": "body_structure",
+  "towbars": "body_structure",
+  "lamps reflectors and electrical equipment": "lamps_electrical",
+  "lamps reflectors electrical equipment": "lamps_electrical",
+  "visibility": "visibility",
+  "driver s view of the road": "visibility",
+  "noise emissions and leaks": "noise_emissions",
+  "exhaust emissions": "noise_emissions",
+  "exhaust fuel and emissions": "noise_emissions",
+  "fuel and exhaust": "noise_emissions",
+  "seat belts": "seatbelts_srs",
+  "seat belts and supplementary restraint systems": "seatbelts_srs",
+  "seat belt installation check": "seatbelts_srs",
+  "seat belt installation checks": "seatbelts_srs",
+  "supplementary restraint systems": "seatbelts_srs",
+  "non component advisories": "noncomponent",
+  "identification of the vehicle": "identification",
+  "registration plates and vin": "identification",
+  "items not tested": "not_tested",
+  "motor tricycles and quadricycles": "not_tested",
+  "buses and coaches supplementary tests": "not_tested",
+  "driving controls and speed limiters": "not_tested",
+  "speedometer and speed limiter": "not_tested"
+ },
+ "secondary_grain_category_projection": {
+  "body chassis structure": "Body_Chassis_Structure",
+  "body structure and attachments": "Body_Chassis_Structure",
+  "body structure and general items": "Body_Chassis_Structure",
+  "brake performance": "Brakes",
+  "brakes": "Brakes",
+  "buses and coaches supplementary tests": null,
+  "driver s view of the road": "Visibility",
+  "driving controls and speed limiters": null,
+  "exhaust emissions": null,
+  "exhaust fuel and emissions": null,
+  "fuel and exhaust": null,
+  "identification of the vehicle": null,
+  "items not tested": null,
+  "lamps reflectors and electrical equipment": "Lamps_Reflectors_And_Electrical_Equipment",
+  "lamps reflectors electrical equipment": "Lamps_Reflectors_And_Electrical_Equipment",
+  "motor tricycles and quadricycles": null,
+  "noise emissions and leaks": null,
+  "non component advisories": null,
+  "registration plates and vin": null,
+  "road wheels": "Tyres",
+  "seat belt installation check": null,
+  "seat belt installation checks": null,
+  "seat belts": null,
+  "seat belts and supplementary restraint systems": null,
+  "speedometer and speed limiter": null,
+  "steering": "Steering",
+  "supplementary restraint systems": null,
+  "suspension": "Suspension",
+  "towbars": null,
+  "tyres": "Tyres",
+  "visibility": "Visibility",
+  "wheels": "Tyres"
+ },
+ "census": {
+  "train_flat4y": {
+   "n_advisory_items": 6849584,
+   "n_distinct_raw_sections": 21,
+   "raw_sections": {
+    "Tyres": {
+     "canonical": "wheels_tyres",
+     "n": 2006512,
+     "by_year": {
+      "2005": 1116,
+      "2006": 7110,
+      "2007": 12176,
+      "2008": 19372,
+      "2009": 30253,
+      "2010": 41756,
+      "2011": 55810,
+      "2012": 70036,
+      "2013": 85461,
+      "2014": 103253,
+      "2015": 115588,
+      "2016": 132630,
+      "2017": 151860,
+      "2018": 220390,
+      "2019": 328675,
+      "2020": 281325,
+      "2021": 218523,
+      "2022": 125220,
+      "2023": 5958
+     }
+    },
+    "Brakes": {
+     "canonical": "brakes",
+     "n": 1980253,
+     "by_year": {
+      "2005": 906,
+      "2006": 7169,
+      "2007": 12971,
+      "2008": 22220,
+      "2009": 33375,
+      "2010": 38151,
+      "2011": 38740,
+      "2012": 67204,
+      "2013": 90622,
+      "2014": 115834,
+      "2015": 132125,
+      "2016": 149891,
+      "2017": 185235,
+      "2018": 235701,
+      "2019": 303126,
+      "2020": 245987,
+      "2021": 188806,
+      "2022": 106180,
+      "2023": 6010
+     }
+    },
+    "Suspension": {
+     "canonical": "suspension",
+     "n": 1372784,
+     "by_year": {
+      "2005": 685,
+      "2006": 4226,
+      "2007": 7279,
+      "2008": 11521,
+      "2009": 16873,
+      "2010": 23866,
+      "2011": 34023,
+      "2012": 47045,
+      "2013": 60623,
+      "2014": 76957,
+      "2015": 92675,
+      "2016": 112013,
+      "2017": 141022,
+      "2018": 160464,
+      "2019": 195712,
+      "2020": 163475,
+      "2021": 135991,
+      "2022": 83628,
+      "2023": 4706
+     }
+    },
+    "Non-component advisories": {
+     "canonical": "noncomponent",
+     "n": 386487,
+     "by_year": {
+      "2016": 27462,
+      "2017": 71288,
+      "2018": 75808,
+      "2019": 80372,
+      "2020": 60710,
+      "2021": 44895,
+      "2022": 24687,
+      "2023": 1265
+     }
+    },
+    "Driver's View of the Road": {
+     "canonical": "visibility",
+     "n": 143997,
+     "by_year": {
+      "2005": 183,
+      "2006": 1085,
+      "2007": 1986,
+      "2008": 3281,
+      "2009": 4856,
+      "2010": 6657,
+      "2011": 8642,
+      "2012": 11486,
+      "2013": 14608,
+      "2014": 16671,
+      "2015": 18286,
+      "2016": 19958,
+      "2017": 24295,
+      "2018": 12003
+     }
+    },
+    "Noise, emissions and leaks": {
+     "canonical": "noise_emissions",
+     "n": 137945,
+     "by_year": {
+      "2018": 18434,
+      "2019": 41753,
+      "2020": 32679,
+      "2021": 27157,
+      "2022": 16804,
+      "2023": 1118
+     }
+    },
+    "Steering": {
+     "canonical": "steering",
+     "n": 133933,
+     "by_year": {
+      "2005": 170,
+      "2006": 907,
+      "2007": 1250,
+      "2008": 1988,
+      "2009": 3209,
+      "2010": 4489,
+      "2011": 6168,
+      "2012": 7445,
+      "2013": 8803,
+      "2014": 9272,
+      "2015": 10190,
+      "2016": 11681,
+      "2017": 12944,
+      "2018": 13376,
+      "2019": 15229,
+      "2020": 11885,
+      "2021": 9292,
+      "2022": 5337,
+      "2023": 298
+     }
+    },
+    "Lamps, Reflectors and Electrical Equipment": {
+     "canonical": "lamps_electrical",
+     "n": 120053,
+     "by_year": {
+      "2005": 43,
+      "2006": 436,
+      "2007": 892,
+      "2008": 1644,
+      "2009": 2277,
+      "2010": 3613,
+      "2011": 5138,
+      "2012": 8414,
+      "2013": 10607,
+      "2014": 14100,
+      "2015": 16594,
+      "2016": 19387,
+      "2017": 24494,
+      "2018": 12414
+     }
+    },
+    "Body, chassis, structure": {
+     "canonical": "body_structure",
+     "n": 116534,
+     "by_year": {
+      "2018": 15040,
+      "2019": 34473,
+      "2020": 28540,
+      "2021": 23666,
+      "2022": 13933,
+      "2023": 882
+     }
+    },
+    "Exhaust, Fuel and Emissions": {
+     "canonical": "noise_emissions",
+     "n": 82569,
+     "by_year": {
+      "2005": 246,
+      "2006": 1478,
+      "2007": 2462,
+      "2008": 3937,
+      "2009": 5878,
+      "2010": 7434,
+      "2011": 10360,
+      "2012": 4350,
+      "2013": 5464,
+      "2014": 6980,
+      "2015": 8026,
+      "2016": 9002,
+      "2017": 11504,
+      "2018": 5448
+     }
+    },
+    "Lamps, reflectors and electrical equipment": {
+     "canonical": "lamps_electrical",
+     "n": 78931,
+     "by_year": {
+      "2018": 11127,
+      "2019": 24000,
+      "2020": 19314,
+      "2021": 15620,
+      "2022": 8390,
+      "2023": 480
+     }
+    },
+    "Wheels": {
+     "canonical": "wheels_tyres",
+     "n": 77916,
+     "by_year": {
+      "2005": 27,
+      "2006": 127,
+      "2007": 289,
+      "2008": 562,
+      "2009": 1195,
+      "2010": 2256,
+      "2011": 3248,
+      "2012": 3633,
+      "2013": 4998,
+      "2014": 5865,
+      "2015": 6303,
+      "2016": 6338,
+      "2017": 6774,
+      "2018": 8948,
+      "2019": 10103,
+      "2020": 7849,
+      "2021": 6004,
+      "2022": 3234,
+      "2023": 163
+     }
+    },
+    "Registration Plates and VIN": {
+     "canonical": "identification",
+     "n": 70146,
+     "by_year": {
+      "2010": 787,
+      "2011": 3214,
+      "2012": 5032,
+      "2013": 7623,
+      "2014": 9780,
+      "2015": 11297,
+      "2016": 11949,
+      "2017": 13927,
+      "2018": 6537
+     }
+    },
+    "Identification of the vehicle": {
+     "canonical": "identification",
+     "n": 68735,
+     "by_year": {
+      "2018": 10148,
+      "2019": 20370,
+      "2020": 16614,
+      "2021": 13380,
+      "2022": 7820,
+      "2023": 403
+     }
+    },
+    "Seat Belts and Supplementary Restraint Systems": {
+     "canonical": "seatbelts_srs",
+     "n": 24762,
+     "by_year": {
+      "2005": 21,
+      "2006": 207,
+      "2007": 307,
+      "2008": 459,
+      "2009": 824,
+      "2010": 1184,
+      "2011": 1382,
+      "2012": 1804,
+      "2013": 2268,
+      "2014": 2974,
+      "2015": 3199,
+      "2016": 3708,
+      "2017": 4216,
+      "2018": 2209
+     }
+    },
+    "Seat belts and supplementary restraint systems": {
+     "canonical": "seatbelts_srs",
+     "n": 22195,
+     "by_year": {
+      "2018": 3416,
+      "2019": 6728,
+      "2020": 5071,
+      "2021": 4310,
+      "2022": 2489,
+      "2023": 181
+     }
+    },
+    "Body, Structure and General Items": {
+     "canonical": "body_structure",
+     "n": 20901,
+     "by_year": {
+      "2005": 9,
+      "2006": 126,
+      "2007": 237,
+      "2008": 442,
+      "2009": 447,
+      "2010": 713,
+      "2011": 874,
+      "2012": 1163,
+      "2013": 1479,
+      "2014": 2060,
+      "2015": 2576,
+      "2016": 3663,
+      "2017": 4442,
+      "2018": 2670
+     }
+    },
+    "Visibility": {
+     "canonical": "visibility",
+     "n": 3098,
+     "by_year": {
+      "2018": 460,
+      "2019": 973,
+      "2020": 768,
+      "2021": 554,
+      "2022": 319,
+      "2023": 24
+     }
+    },
+    "Towbars": {
+     "canonical": "body_structure",
+     "n": 1360,
+     "by_year": {
+      "2009": 16,
+      "2010": 97,
+      "2011": 80,
+      "2012": 119,
+      "2013": 110,
+      "2014": 149,
+      "2015": 144,
+      "2016": 254,
+      "2017": 220,
+      "2018": 171
+     }
+    },
+    "__NULL__": {
+     "canonical": "__catalogue_miss__",
+     "n": 433,
+     "by_year": {
+      "2005": 2,
+      "2006": 23,
+      "2007": 29,
+      "2008": 43,
+      "2009": 153,
+      "2010": 57,
+      "2011": 15,
+      "2012": 4,
+      "2013": 11,
+      "2014": 9,
+      "2015": 27,
+      "2016": 11,
+      "2017": 13,
+      "2018": 14,
+      "2019": 12,
+      "2021": 6,
+      "2022": 4
+     }
+    },
+    "Motor tricycles and quadricycles": {
+     "canonical": "not_tested",
+     "n": 40,
+     "by_year": {
+      "2012": 5,
+      "2014": 3,
+      "2015": 4,
+      "2016": 4,
+      "2017": 4,
+      "2018": 20
+     }
+    }
+   },
+   "per_canonical": {
+    "wheels_tyres": 2084428,
+    "brakes": 1980253,
+    "suspension": 1372784,
+    "noncomponent": 386487,
+    "noise_emissions": 220514,
+    "lamps_electrical": 198984,
+    "visibility": 147095,
+    "identification": 138881,
+    "body_structure": 138795,
+    "steering": 133933,
+    "seatbelts_srs": 46957,
+    "__catalogue_miss__": 433,
+    "not_tested": 40
+   },
+   "unknown_sections": {}
+  },
+  "eval2024": {
+   "n_advisory_items": 2736177,
+   "n_distinct_raw_sections": 21,
+   "raw_sections": {
+    "Tyres": {
+     "canonical": "wheels_tyres",
+     "n": 861589,
+     "by_year": {
+      "2005": 244,
+      "2006": 1419,
+      "2007": 2268,
+      "2008": 3602,
+      "2009": 5882,
+      "2010": 8450,
+      "2011": 11399,
+      "2012": 15329,
+      "2013": 18681,
+      "2014": 23643,
+      "2015": 27188,
+      "2016": 32114,
+      "2017": 37676,
+      "2018": 56530,
+      "2019": 87023,
+      "2020": 102015,
+      "2021": 122614,
+      "2022": 142789,
+      "2023": 154848,
+      "2024": 7875
+     }
+    },
+    "Brakes": {
+     "canonical": "brakes",
+     "n": 774233,
+     "by_year": {
+      "2005": 209,
+      "2006": 1452,
+      "2007": 2505,
+      "2008": 4349,
+      "2009": 6230,
+      "2010": 7627,
+      "2011": 7657,
+      "2012": 13767,
+      "2013": 19045,
+      "2014": 25313,
+      "2015": 29304,
+      "2016": 34637,
+      "2017": 43424,
+      "2018": 56934,
+      "2019": 74793,
+      "2020": 84239,
+      "2021": 101302,
+      "2022": 116596,
+      "2023": 136861,
+      "2024": 7989
+     }
+    },
+    "Suspension": {
+     "canonical": "suspension",
+     "n": 538101,
+     "by_year": {
+      "2005": 175,
+      "2006": 882,
+      "2007": 1552,
+      "2008": 2437,
+      "2009": 3496,
+      "2010": 4896,
+      "2011": 6811,
+      "2012": 9244,
+      "2013": 12386,
+      "2014": 15661,
+      "2015": 19690,
+      "2016": 24113,
+      "2017": 30602,
+      "2018": 36077,
+      "2019": 44285,
+      "2020": 52474,
+      "2021": 70145,
+      "2022": 88133,
+      "2023": 108320,
+      "2024": 6722
+     }
+    },
+    "Non-component advisories": {
+     "canonical": "noncomponent",
+     "n": 164996,
+     "by_year": {
+      "2016": 6426,
+      "2017": 16807,
+      "2018": 18686,
+      "2019": 20578,
+      "2020": 21338,
+      "2021": 24396,
+      "2022": 27605,
+      "2023": 27500,
+      "2024": 1660
+     }
+    },
+    "Noise, emissions and leaks": {
+     "canonical": "noise_emissions",
+     "n": 72824,
+     "by_year": {
+      "2018": 3940,
+      "2019": 8572,
+      "2020": 9673,
+      "2021": 12895,
+      "2022": 16858,
+      "2023": 19570,
+      "2024": 1316
+     }
+    },
+    "Body, chassis, structure": {
+     "canonical": "body_structure",
+     "n": 62267,
+     "by_year": {
+      "2018": 3167,
+      "2019": 7106,
+      "2020": 8438,
+      "2021": 11352,
+      "2022": 14002,
+      "2023": 17083,
+      "2024": 1119
+     }
+    },
+    "Steering": {
+     "canonical": "steering",
+     "n": 42725,
+     "by_year": {
+      "2005": 48,
+      "2006": 202,
+      "2007": 296,
+      "2008": 409,
+      "2009": 672,
+      "2010": 850,
+      "2011": 1237,
+      "2012": 1545,
+      "2013": 1874,
+      "2014": 1913,
+      "2015": 2065,
+      "2016": 2305,
+      "2017": 2705,
+      "2018": 2909,
+      "2019": 3244,
+      "2020": 3546,
+      "2021": 4568,
+      "2022": 5511,
+      "2023": 6442,
+      "2024": 384
+     }
+    },
+    "Lamps, reflectors and electrical equipment": {
+     "canonical": "lamps_electrical",
+     "n": 41277,
+     "by_year": {
+      "2018": 2463,
+      "2019": 5225,
+      "2020": 5887,
+      "2021": 7881,
+      "2022": 8869,
+      "2023": 10317,
+      "2024": 635
+     }
+    },
+    "Identification of the vehicle": {
+     "canonical": "identification",
+     "n": 37541,
+     "by_year": {
+      "2018": 2271,
+      "2019": 4570,
+      "2020": 5234,
+      "2021": 6720,
+      "2022": 8259,
+      "2023": 9931,
+      "2024": 556
+     }
+    },
+    "Driver's View of the Road": {
+     "canonical": "visibility",
+     "n": 32741,
+     "by_year": {
+      "2005": 43,
+      "2006": 230,
+      "2007": 404,
+      "2008": 663,
+      "2009": 981,
+      "2010": 1407,
+      "2011": 1805,
+      "2012": 2456,
+      "2013": 3237,
+      "2014": 3785,
+      "2015": 4276,
+      "2016": 4791,
+      "2017": 5710,
+      "2018": 2953
+     }
+    },
+    "Wheels": {
+     "canonical": "wheels_tyres",
+     "n": 28397,
+     "by_year": {
+      "2005": 7,
+      "2006": 25,
+      "2007": 79,
+      "2008": 100,
+      "2009": 232,
+      "2010": 456,
+      "2011": 625,
+      "2012": 827,
+      "2013": 1149,
+      "2014": 1380,
+      "2015": 1513,
+      "2016": 1541,
+      "2017": 1667,
+      "2018": 2279,
+      "2019": 2550,
+      "2020": 2687,
+      "2021": 3305,
+      "2022": 3603,
+      "2023": 4151,
+      "2024": 221
+     }
+    },
+    "Lamps, Reflectors and Electrical Equipment": {
+     "canonical": "lamps_electrical",
+     "n": 24700,
+     "by_year": {
+      "2005": 16,
+      "2006": 99,
+      "2007": 156,
+      "2008": 328,
+      "2009": 460,
+      "2010": 646,
+      "2011": 1005,
+      "2012": 1711,
+      "2013": 2077,
+      "2014": 2808,
+      "2015": 3495,
+      "2016": 4062,
+      "2017": 5155,
+      "2018": 2682
+     }
+    },
+    "Exhaust, Fuel and Emissions": {
+     "canonical": "noise_emissions",
+     "n": 16233,
+     "by_year": {
+      "2005": 53,
+      "2006": 311,
+      "2007": 503,
+      "2008": 760,
+      "2009": 1070,
+      "2010": 1448,
+      "2011": 2022,
+      "2012": 857,
+      "2013": 1032,
+      "2014": 1348,
+      "2015": 1589,
+      "2016": 1763,
+      "2017": 2353,
+      "2018": 1124
+     }
+    },
+    "Registration Plates and VIN": {
+     "canonical": "identification",
+     "n": 15111,
+     "by_year": {
+      "2010": 157,
+      "2011": 638,
+      "2012": 1097,
+      "2013": 1583,
+      "2014": 2166,
+      "2015": 2461,
+      "2016": 2644,
+      "2017": 2985,
+      "2018": 1380
+     }
+    },
+    "Seat belts and supplementary restraint systems": {
+     "canonical": "seatbelts_srs",
+     "n": 11744,
+     "by_year": {
+      "2018": 761,
+      "2019": 1479,
+      "2020": 1615,
+      "2021": 2095,
+      "2022": 2529,
+      "2023": 3042,
+      "2024": 223
+     }
+    },
+    "Seat Belts and Supplementary Restraint Systems": {
+     "canonical": "seatbelts_srs",
+     "n": 5392,
+     "by_year": {
+      "2005": 4,
+      "2006": 51,
+      "2007": 65,
+      "2008": 112,
+      "2009": 164,
+      "2010": 286,
+      "2011": 311,
+      "2012": 363,
+      "2013": 510,
+      "2014": 610,
+      "2015": 670,
+      "2016": 859,
+      "2017": 923,
+      "2018": 464
+     }
+    },
+    "Body, Structure and General Items": {
+     "canonical": "body_structure",
+     "n": 4179,
+     "by_year": {
+      "2005": 8,
+      "2006": 33,
+      "2007": 67,
+      "2008": 88,
+      "2009": 86,
+      "2010": 138,
+      "2011": 226,
+      "2012": 242,
+      "2013": 327,
+      "2014": 408,
+      "2015": 514,
+      "2016": 727,
+      "2017": 834,
+      "2018": 481
+     }
+    },
+    "Visibility": {
+     "canonical": "visibility",
+     "n": 1693,
+     "by_year": {
+      "2018": 117,
+      "2019": 254,
+      "2020": 283,
+      "2021": 312,
+      "2022": 350,
+      "2023": 357,
+      "2024": 20
+     }
+    },
+    "Towbars": {
+     "canonical": "body_structure",
+     "n": 318,
+     "by_year": {
+      "2009": 4,
+      "2010": 24,
+      "2011": 16,
+      "2012": 32,
+      "2013": 28,
+      "2014": 39,
+      "2015": 37,
+      "2016": 62,
+      "2017": 50,
+      "2018": 26
+     }
+    },
+    "__NULL__": {
+     "canonical": "__catalogue_miss__",
+     "n": 106,
+     "by_year": {
+      "2006": 2,
+      "2007": 4,
+      "2008": 8,
+      "2009": 36,
+      "2010": 24,
+      "2011": 4,
+      "2012": 4,
+      "2013": 2,
+      "2014": 2,
+      "2015": 5,
+      "2016": 2,
+      "2017": 4,
+      "2018": 3,
+      "2019": 2,
+      "2021": 1,
+      "2022": 2,
+      "2024": 1
+     }
+    },
+    "Motor tricycles and quadricycles": {
+     "canonical": "not_tested",
+     "n": 10,
+     "by_year": {
+      "2011": 1,
+      "2012": 2,
+      "2015": 1,
+      "2017": 2,
+      "2018": 4
+     }
+    }
+   },
+   "per_canonical": {
+    "wheels_tyres": 889986,
+    "brakes": 774233,
+    "suspension": 538101,
+    "noncomponent": 164996,
+    "noise_emissions": 89057,
+    "body_structure": 66764,
+    "lamps_electrical": 65977,
+    "identification": 52652,
+    "steering": 42725,
+    "visibility": 34434,
+    "seatbelts_srs": 17136,
+    "__catalogue_miss__": 106,
+    "not_tested": 10
+   },
+   "unknown_sections": {}
+  }
+ },
+ "folding_effect": {
+  "train_flat4y": {
+   "n_targets_with_advisory_on_last_day": 416627,
+   "mean_breadth_raw_sect": 1.622713,
+   "mean_breadth_all_canonical": 1.616427,
+   "mean_breadth_systems_only": 1.42947,
+   "vintage_folding": {
+    "mean_inflation": 0.006286,
+    "n_targets_inflated": 2619,
+    "max_inflation": 1
+   },
+   "nonsystem_exclusion": {
+    "mean_drop": 0.186956,
+    "n_targets_affected": 75325,
+    "max_drop": 2
+   },
+   "n_unknown_section_rows": 0
+  },
+  "eval2024": {
+   "n_targets_with_advisory_on_last_day": 148674,
+   "mean_breadth_raw_sect": 1.647349,
+   "mean_breadth_all_canonical": 1.640865,
+   "mean_breadth_systems_only": 1.472383,
+   "vintage_folding": {
+    "mean_inflation": 0.006484,
+    "n_targets_inflated": 964,
+    "max_inflation": 1
+   },
+   "nonsystem_exclusion": {
+    "mean_drop": 0.168483,
+    "n_targets_affected": 24200,
+    "max_drop": 2
+   },
+   "n_unknown_section_rows": 0
+  }
+ },
+ "gates": {
+  "fail_closed_unknown_sections": {},
+  "passed": true
+ }
+}
