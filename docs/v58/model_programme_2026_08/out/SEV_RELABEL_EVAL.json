@@ -1,0 +1,20 @@
+{
+ "src": "out/frames_eval/recipe=eval2024/rung=all/frame/part_*.parquet",
+ "dst": "/Users/henrirapson/autosafe-v58/docs/v58/model_programme_2026_08/out/frames_sev/eval/recipe=eval2024/rung=all/frame",
+ "parts": 7,
+ "rows": 330665,
+ "targets_without_label": 0,
+ "positives": {
+  "y_b3": 31463,
+  "y_m1": 39707
+ },
+ "part_sha256": {
+  "part_00000.parquet": "7b1f13a3974a159dbff5c2ea4663b406ea8dfc69be8e80d868b60c78597496e4",
+  "part_00001.parquet": "97bcbcb4002793201ac75ceb2c1d90dce2a9dfbe67e48a2690cb7ec6c8eed2d2",
+  "part_00002.parquet": "d53b5404a19ec3d14d382c6a8b55844eb7b2bd78e2e97360109f6464d456288f",
+  "part_00003.parquet": "88311c1972af39b4ac63c322611b3583a54e829a52ba473f61da7ab188fe21a2",
+  "part_00004.parquet": "a8c519a758bc294f9e242560e5973b81f098f181c23bfcf67594541d9eb99ade",
+  "part_00005.parquet": "0f113e426a5e0322b544a9647f9327e4a963cb22f130763d6ed1c0edb36aa95d",
+  "part_00006.parquet": "800a4a0ea534f28949a26f97bb6dd18bdfa1361174d0c34260daf65a3fa20b6f"
+ }
+}

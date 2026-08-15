@@ -1,0 +1,33 @@
+{
+ "src": "out/frames/recipe=flat4y/rung=r1m/frame/part_*.parquet",
+ "dst": "/Users/henrirapson/autosafe-v58/docs/v58/model_programme_2026_08/out/frames_sev/train/recipe=flat4y/rung=r1m/frame",
+ "parts": 20,
+ "rows": 999999,
+ "targets_without_label": 0,
+ "positives": {
+  "y_b3": 99837,
+  "y_m1": 125589
+ },
+ "part_sha256": {
+  "part_00000.parquet": "843f014bbdbc0e1afbcb2e5e5079983617702abb50f184bcc2b210fc03de03a8",
+  "part_00001.parquet": "490888a56edad88032276dc2ca5470a4aa1e2fc61a4d2f115e51b5fa0f827e07",
+  "part_00002.parquet": "55b539fa86519ab035f8127bf98c1d69b8820b802c102ab685cd958c4cdedcaf",
+  "part_00003.parquet": "da6547ad2861fe70127fbfe691f665281fc4d86b2fc564a18e2d2dd5fe9032b5",
+  "part_00004.parquet": "b67337571b9834341a517022d225e1a813a191ea666ff1c552c5d1063dd8db47",
+  "part_00005.parquet": "4f9cf3f96d78a3b7fb0013ee1cdf91ef55cff94f2a96bd991f4f01d5b553adb9",
+  "part_00006.parquet": "4c44e2ca40c1789c96bfd9585575221385b4c1ca4e621aba9f46517a98f4e107",
+  "part_00007.parquet": "8e30de893b1a3683df9b2e7105b1cd53b3e5fbc6c9677b2d01c1528fdeb12b5d",
+  "part_00008.parquet": "2bf756c524cef8a03fe73ae831c6665cf4dcce74a53cdf2320992a45ca56b7c7",
+  "part_00009.parquet": "b77eff58f88b65aca8e7452e1880ed550fde16ed69d3f61de0441d27062b8fc3",
+  "part_00010.parquet": "5016580178627aca3d14f95e739dee42a0783af3e9ac3e77fc724b2e11a67cd7",
+  "part_00011.parquet": "85b0309c951fd2f15295e89f1ce2cc958197ea2e2ef6e7970029174e4db87f87",
+  "part_00012.parquet": "6c377b889a3bbdd2a966197b8ccacba6291adeb3b47208d75f38bdcd9bbff16f",
+  "part_00013.parquet": "e5645d21d9208514c215f7e89375984030ad66538da15e3dc4a08e5aade3708b",
+  "part_00014.parquet": "6256a2008b066449f30c446b5cd311ec65ff24e9f99bed2850dedb9e1744b165",
+  "part_00015.parquet": "b4c8d299c156a554fbcc73c84d04dfa1cd74bfd4b13e360c45088a5c8def8069",
+  "part_00016.parquet": "1eea4a71be2ac3a18ed11e2f4af5057a48ee73549a2f410a961a1dc3b1ff00d1",
+  "part_00017.parquet": "fc2a05117ff81da92c2263e101c41d32a3bd919ccccee8a50b485d2a0fb56324",
+  "part_00018.parquet": "c6b76c3aad4645678b7df3385ddc47418589f8bdbd96e5253610f0978ece023c",
+  "part_00019.parquet": "8f08febddafe22903921570122043c44adc3844918edc5fb014bf653220638af"
+ }
+}

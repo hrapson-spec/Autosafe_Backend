@@ -1,0 +1,56 @@
+{
+ "prereg": "prereg/PREREG_SEVERITY_STAGE2_2026_08_15.md",
+ "label": "b3",
+ "k": 4,
+ "seeds_used": [
+  101,
+  202,
+  303,
+  404
+ ],
+ "seeds_missing": [],
+ "per_seed": [
+  {
+   "seed": 101,
+   "treat_auroc": 0.7974717605328282,
+   "control_auroc": 0.7906228416914656,
+   "delta": 0.006848918841362628
+  },
+  {
+   "seed": 202,
+   "treat_auroc": 0.7973697640210772,
+   "control_auroc": 0.7909256749536313,
+   "delta": 0.006444089067445868
+  },
+  {
+   "seed": 303,
+   "treat_auroc": 0.7976737434737894,
+   "control_auroc": 0.7909252536569021,
+   "delta": 0.006748489816887249
+  },
+  {
+   "seed": 404,
+   "treat_auroc": 0.7972102377200829,
+   "control_auroc": 0.7904065656800305,
+   "delta": 0.006803672040052389
+  }
+ ],
+ "mean_delta": 0.006711292441437033,
+ "sigma_hat_paired": 0.0001828080085859301,
+ "se_delta": 0.00037585820202157825,
+ "mde_at_k": 0.0010836945151710049,
+ "boot_point": 0.006711292441437089,
+ "boot_ci": [
+  0.006002500719257955,
+  0.0074758377977705015
+ ],
+ "reps_used": 1000,
+ "all_seeds_positive": true,
+ "trigger": 0.005,
+ "ci_is_not_a_gate": true,
+ "verdict": "CONFIRMED",
+ "k_prereg": 5,
+ "stopped_early_by_owner": true,
+ "sigma_status": "LOW-K-PROVISIONAL",
+ "verdict_qualified": "CONFIRMED-AT-K4 (mean and sign conditions met; one seed short of the pre-registered k=5, so sigma_hat is LOW-K-PROVISIONAL per mde.FLOOR_MEASURED_MIN_K and is NOT admissible as a MEASURED on-surface floor for Stage 3.)"
+}

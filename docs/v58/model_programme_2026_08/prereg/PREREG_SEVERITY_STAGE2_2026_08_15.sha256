@@ -1,0 +1,130 @@
+# Freeze record — PREREG_SEVERITY_STAGE2_2026_08_15
+frozen_utc: 2026-08-15T12:18:12Z
+stage2_fit_artifacts_at_freeze: 0
+interpreter: /Users/henrirapson/autosafe-v58/.venv/bin/python (duckdb 1.5.5, pinned)
+factory suite: 199 passed, 2 skipped, 0 failed
+stage2 patch tests: 10 passed;  stage1 analysis tests: 24 passed
+labels reproduce identically on duckdb 1.5.4 and 1.5.5 (content EXCEPT both ways = 0)
+sha256:
+6758f0bc88ca752cd2b8902459164cc46aaf0187a23e3350bdbdcd79a569310f  prereg/PREREG_SEVERITY_STAGE2_2026_08_15.md
+dd0f1672684f3ee5bb78ad271db0e57f9bd341c4335986aefb81304a38e34c71  scripts/analysis/severity_collect.py
+234d5d004c29599c4bbc314f8e7d81558b307ee93449686ad977925da3e2d757  scripts/analysis/severity_relabel_frames.py
+5d61c4abfd547784bee0652555ee98a6505e6129043c6ceec4f423e167a512ad  scripts/analysis/severity_analyze.py
+52b38e06886c1a4682e0c832ae9c790ec531c6147d89f0084f9e7cbce853a480  scripts/analysis/test_severity_stage2.py
+86f85a64e5811c4578a744e403c3d339ffe9f213d2d8d7132cde6d575440b19a  factory/runners/fit_contract.py
+6e72c207cddf75a113ed1141c209218b3766d61795f8dedf2d703fce9260ee08  out/configs/sev.B3.json
+feb12fe25e14ed8af41d09cb0e3f9c1af5184d470f93db1be0d4eac6c82d07ec  out/configs/sev.M1.json
+c2d5808dad7710e186081f11c7a6a6ca85b58dc1d7169ba5b2bace36e114f2a9  out/configs/sev.CTRL.json
+0828281a3a7fdc9300cd50f0853b6542db0de46b54ab4c1e4253b712334ce178  out/TARGET_SEVERITY_LABELS.parquet
+c3beddc0a81bcda5d2a5ed0e1d2cdd4223e353e4ebaed333156bdfc740ead9d6  out/TRAIN_SEVERITY_LABELS.parquet
+8cf579609965c26142fc624441dff2e23d14ab3109593e218da8d9673cffb415  out/SEV_RELABEL_TRAIN.json
+3205d9a23ebe7796e02cfbd384b9e15c1c8e12ec6cc3284843ac5b80d3776d11  out/SEV_RELABEL_EVAL.json
+
+## DEVIATION D-S2-1 (recorded 2026-08-15, BEFORE any Stage-2 fit result existed)
+
+PREREG §3 stated the config diff vs s2.D.cum.b0-6.json would be 'exactly one key:
+label'. That turned out to be IMPOSSIBLE, and G1 caught it on its first run.
+
+resolve_featureset(B1..B6, extras) on TODAY's blocks.py returns 247 columns, not the
+241 the benchmark used: the B2 item-observability index (6 cols) was added to
+blocks.py AFTER the canonical fit ran on 2026-08-12. The v1 training frame does not
+carry them, so the canonical config no longer loads against its own frame:
+  ValueError: frame is missing requested columns
+  ['b2_item_observability_status', 'b2_n_prior_days_items_observed', ...] (6 total)
+
+=> The canonical s2.D.cum.b0-6 fit is NOT reproducible today from its own config.
+This independently confirms NY_COMPARISON_AUDIT_2026_08_15.md finding S-1 and uses
+its prescribed recovery: intersect the resolved set with the frame schema.
+
+  resolved today       : 247
+  available in v1 pair : 241   <- matches banked n_features exactly
+  missing from v1      : 6     <- exactly the B2 item-observability index
+
+All three Stage-2 configs therefore pin featureset=[] and extra_columns=<explicit
+241, in benchmark order>. The three differ from EACH OTHER only in 'label', so the
+target remains the only difference between the control and the B3/M1 arms. Whether
+the reconstruction is faithful to the BANKED benchmark is exactly what G1 tests.
+
+sha256 after deviation:
+4dc0fc7e278182e2918c4c954edb2e4329f34eaca141f9e5fe7923a08c8a3460  out/configs/sev.B3.json
+b3159e5f7b63dac334f86c03a476cea9520bb286e589310c841aa6cf0ab2b298  out/configs/sev.M1.json
+61e6cc18b4e820925c384efca96e9efcaea3600b61efe37783f44ddee6d5a857  out/configs/sev.CTRL.json
+3629425a692bead335510daac0cead693e3835b922d0c0c0b5243d03a0ed3e89  scripts/analysis/sev_stage2_verdict.py
+
+## G1 OUTCOME + MEASURED REFIT NUISANCE (2026-08-15, before the B3 read)
+
+G1 null-change control (sev.CTRL, label y_final, copied frames, seed 101):
+  AUROC 0.7133278601031884  vs banked 0.7133041237871912   ABS DIFF 2.374e-05
+  quantization 'unavailable:CatBoostError' == benchmark's string   n_features 241
+  rung_rows 755389 == banked.  Pre-registered band |d| < 1e-4 => PASS, proceed.
+
+NOT bit-exact, and the cause is NOT a numerical epsilon: comparing the control's
+predictions to the banked ones gives corr 0.9937, max|dp| 0.265, mean|dp| 0.0096,
+and ZERO identical predictions. A nominally-identical refit produces a MATERIALLY
+DIFFERENT MODEL with equivalent ranking.
+
+That makes sev.CTRL a planted null control. Measured refit nuisance, by label:
+  T0  +2.37e-05     B3  -6.87e-04     M1  -2.36e-04     S1  +7.47e-05
+  B3 nuisance 95% CI [-9.89e-04, -3.76e-04] -- EXCLUDES ZERO.
+
+=> A pure refit, with no target change and no substrate change, yields a
+'statistically significant' B3 effect. This is STAGE2_INFERENCE_RULE_FINAL:227
+demonstrated directly on this experiment rather than cited, and it vindicates
+PREREG SS5's decision to exclude 'CI excludes zero' from the gate.
+
+It also validates the imported sigma: |nuisance| 6.87e-04 = 0.8x the on-surface
+sigma-hat 8.61e-04 used for MDE(k=1). The +0.005 trigger sits ~7x above it.
+
+CONSEQUENCE for reporting: the pre-registered primary (B3-trained vs BANKED frozen)
+carries this nuisance. A matched secondary (B3-trained vs sev.CTRL, both on copied
+frames, same seed/environment, target the ONLY difference) is better controlled and
+will be reported alongside -- labelled, NOT substituted for the primary.
+
+80fd64261d56c8cc6f35845775cae6c8770f32a7e7585e6b9876ec092bf3f60c  out/fits/sev/sev.CTRL.seed101.json
+bf490f32c06f8f37e7b7c15f9a39a49ca5e2b525484dd453d4a5607d20068ef6  out/SEV_STAGE2_NULLCONTROL.json
+
+## STAGE 2 RESULTS (2026-08-15, final)
+B3  primary +0.006162 [+0.005401,+0.006969]  matched +0.006849  -> ESCALATE
+M1  primary +0.003992 [+0.003355,+0.004601]  matched +0.004228  -> DETECTABLE-SUB-TRIGGER
+Null control (refit only, B3 label) -0.000687 [-0.000989,-0.000376]  CI EXCLUDES ZERO
+M1-trained scores B3 at 0.797181 vs B3-trained's 0.797472 (diff 0.00029).
+Spearman B3-trained vs M1-trained 0.99201; vs T0-trained 0.96374 / 0.97244.
+Multi-seed confirmation JUSTIFIED but NOT LAUNCHED (owner rule).
+final sha256:
+44a525d3ceac7aa0da9e431f62d306349b22c358c71fb179c369df45dedc4792  out/fits/sev/sev.B3.seed101.json
+56cda7894fd82b8a6aaeef1f48cdf85cf28c661c709248b030aec38ad63433f6  out/fits/sev/sev.M1.seed101.json
+18e8bb2a7d6062adc527c69c8830d4cb5b9a940e35c453bf9006f1f1d33846f3  out/SEVERITY_STAGE2_RESULT.json
+04984b2ca519599b3167c13397435d5c58f530241efbfc9617d5642f4906bcaf  out/SEVERITY_STAGE2_MATCHED.json
+7bfbc2640e1517d2f39e96f886b54d9440bc5471403bb3d8cc21a0b483a54017  out/SEVERITY_STAGE2_M1_RESULT.json
+6c48383a1033a9da78926091659c22ed539e12f6abe1c4f5c8a54c92bff0554c  out/SEVERITY_STAGE2_M1_MATCHED.json
+6dd2bb24e7e0fc8abe228dd9fd9fc8296ad9fea309a9ce4e38d8fb796ad50cdc  out/SEVERITY_STAGE2_2026_08_15.md
+
+## CONFIRMATION RUN — STOPPED EARLY AT k=4 (owner decision, 2026-08-15)
+Paired B3-vs-own-control per seed:
+  101 +0.006849 | 202 +0.006444 | 303 +0.006748 | 404 +0.006804
+  mean +0.006711 | 4/4 positive | spread 0.000405 | sigma_hat 1.828e-04 | ~37 sigma
+  seed-mean bootstrap CI [+0.006003,+0.007476] (reported, NOT a gate)
+
+Prereg specified k=5 with sign consistency. Seed 505 was NEVER FITTED.
+  -> verdict recorded as CONFIRMED-AT-K4, not 'confirmed'
+  -> sigma_hat is LOW-K-PROVISIONAL (mde.py:77 FLOOR_MEASURED_MIN_K = 5), NOT
+     admissible as a MEASURED on-surface floor
+  -> STAGE 3 IS NOT UNBLOCKED: PREREG_SEVERITY_STAGE3 SS6 keys its +/-0.002 band to a
+     measured sigma_hat. Executing it needs seed 505, or an amendment justifying the
+     band from the low-k value.
+The delta itself is not in doubt at this precision: reversal needed the remaining
+seed ~30 sigma from the observed four.
+
+Also delivered this round (all outside the Stage-2 prereg, separately recorded):
+  - out/SEV_RECALIB_PROBE.json : 96.95% of the Brier gap recoverable WITHOUT
+    retraining (OOF Platt); AUROC unmovable by monotone recalibration
+  - out/SEVERITY_PY_REPAIR_2026_08_15.md : severity.py dangerous now FAIL-GATED
+  - prereg/PREREG_SEVERITY_STAGE3_2026_08_15.md : DRAFTED, conditional, NOT frozen
+
+final sha256:
+b6f2813114e17e60b1211d0bd1eedaccf7275b5c349b2af154a94a6b6ea00369  out/SEVERITY_STAGE2_CONFIRM.json
+570fd2ba9fb03e3a4f7b02a49697b22a108e56cacd2ac51309f179934a1743a8  out/SEV_RECALIB_PROBE.json
+fee4efd238b404d62b4a9d4c5a5010177d6c5e109cfedf7b1ba9bbfd8d6dcaa7  out/SEVERITY_PY_REPAIR_2026_08_15.md
+b0a54edfb6fa4d4caf4fdf292c1b786ee0702c6af2adf5e83fb919197c85fbea  prereg/PREREG_SEVERITY_STAGE3_2026_08_15.md
+a8620ff5b24fc7fe06f28a7098f041f4fadca67dc521388f7c338490ebe08751  factory/severity.py
+e639396d904e021bcf93cd5626b24f55c2bded99a22ff670c148632090d9b5f3  factory/tests/test_severity_fail_gating.py

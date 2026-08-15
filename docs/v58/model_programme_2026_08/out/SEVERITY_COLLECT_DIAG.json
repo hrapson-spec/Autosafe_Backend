@@ -1,0 +1,66 @@
+{
+ "n_eval_rows": 330665,
+ "n_eval_rows_joined_results": 330665,
+ "n_eval_rows_with_items": 203019,
+ "n_target_item_rows": 737315,
+ "G0.3_unknown_disposition": 0,
+ "G0.4_items_not_post2018": 0,
+ "G0.5_d_marked_non_failure_items": 91,
+ "G0.6_catalogue_miss_items": 139,
+ "G0.7_legacy_rfr_fail_items": 0,
+ "target_class_mix": {
+  "4": 330561,
+  "3": 104
+ },
+ "target_test_type_mix": {
+  "NT": 330665
+ },
+ "target_outcome_mix": {
+  "PASS": 236783,
+  "FAIL": 75647,
+  "PRS": 18235
+ },
+ "frame_vs_lake_outcome_disagreement": 0,
+ "disposition_mix": {
+  "A": 456319,
+  "F": 200786,
+  "M": 52478,
+  "P": 27732
+ },
+ "sections_present": 14,
+ "G0.9_forbidden_column_refs": 0,
+ "G0.9_statements_scanned": 26,
+ "sections": [
+  "Body, chassis, structure",
+  "Brakes",
+  "Buses and coaches supplementary tests",
+  "Identification of the vehicle",
+  "Lamps, reflectors and electrical equipment",
+  "Noise, emissions and leaks",
+  "Road Wheels",
+  "Seat belt installation check",
+  "Seat belts and supplementary restraint systems",
+  "Speedometer and speed limiter",
+  "Steering",
+  "Suspension",
+  "Tyres",
+  "Visibility"
+ ],
+ "section_to_category_secondary": {
+  "Body, chassis, structure": "Body_Chassis_Structure",
+  "Brakes": "Brakes",
+  "Buses and coaches supplementary tests": null,
+  "Identification of the vehicle": null,
+  "Lamps, reflectors and electrical equipment": "Lamps_Reflectors_And_Electrical_Equipment",
+  "Noise, emissions and leaks": null,
+  "Road Wheels": "Tyres",
+  "Seat belt installation check": null,
+  "Seat belts and supplementary restraint systems": null,
+  "Speedometer and speed limiter": null,
+  "Steering": "Steering",
+  "Suspension": "Suspension",
+  "Tyres": "Tyres",
+  "Visibility": "Visibility"
+ },
+ "out": "out/TARGET_SEVERITY_LABELS.parquet"
+}

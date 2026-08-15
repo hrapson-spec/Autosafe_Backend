@@ -1,0 +1,37 @@
+# Freeze record — PREREG_SEVERITY_2026_08_15
+frozen_utc: 2026-08-15T11:36:23Z
+result_files_present_at_freeze: 0
+tests: 24 passed (scripts/analysis/test_severity_analyze.py)
+sha256:
+c0ee0247e0b9cbdf3bfb95093c4534d3f7fade57634d5e5f785f5ec8db1a48fa  prereg/PREREG_SEVERITY_2026_08_15.md
+1d51c54fb51fa097dc810a1139121cc4702c895e636bc4d99327a8399e764da2  scripts/analysis/severity_collect.py
+b1263c8056bd2f65fd7f678c779ef3dd509528584a78b5650b1fdbdfd2ae0cf6  scripts/analysis/severity_analyze.py
+d2ed9d4ed75b537e2236aff7dfe2cdd2c8fb3fa3c4c7033db87782f746743869  scripts/analysis/test_severity_analyze.py
+
+## POST-RUN AMENDMENT (2026-08-15, after results existed)
+Three code changes were made AFTER the freeze above. None altered the definition
+of any statistic, and none was made while an outcome number was visible.
+
+D1  severity_collect.py — G0.9 originally scanned this file's own source and
+    self-matched on its FORBIDDEN_COLUMNS declaration, so the first run aborted.
+    Rewritten to scan the SQL actually executed (RecordingConnection): a strictly
+    stronger check. Made before any label or result file existed.
+D2  severity_analyze.py — _decompose now accepts precomputed wg_tot/wg_b1 so the
+    bootstrap hoists two outcome-independent bincounts out of the outcome loop.
+    Mathematically identical; covered by test_integer_weights_equal_row_replication
+    and test_mixture_identity_holds. Made after labels existed but before any
+    outcome number was computed (only G0.1/G0.2/label-agreement had been printed).
+D3  severity_analyze.py — component (DVSA section) labels were omitted from the
+    bootstrap, so they would have carried no CI, which the brief requires. Added to
+    the same shared resample. Same timing as D2.
+
+Deviation recorded in the prereg body §3 (fail-gated n_dangerous) stands unchanged.
+
+final_utc: 2026-08-15T11:45:53Z
+final sha256:
+c0ee0247e0b9cbdf3bfb95093c4534d3f7fade57634d5e5f785f5ec8db1a48fa  prereg/PREREG_SEVERITY_2026_08_15.md
+293ccb9eac0b3823796475e479edde034584e537b7dfbef4d5b990f32b62905f  scripts/analysis/severity_collect.py
+5d61c4abfd547784bee0652555ee98a6505e6129043c6ceec4f423e167a512ad  scripts/analysis/severity_analyze.py
+d2ed9d4ed75b537e2236aff7dfe2cdd2c8fb3fa3c4c7033db87782f746743869  scripts/analysis/test_severity_analyze.py
+0828281a3a7fdc9300cd50f0853b6542db0de46b54ab4c1e4253b712334ce178  out/TARGET_SEVERITY_LABELS.parquet
+13bbc78fa010b8adbd438e62be71a25c2b236d887aa92ee4da8dd083d37521ef  out/SEVERITY_RESULT.json
