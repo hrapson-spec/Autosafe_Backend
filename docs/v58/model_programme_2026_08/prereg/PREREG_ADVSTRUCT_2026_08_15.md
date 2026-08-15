@@ -1,697 +1,705 @@
-# PREREG — Advisory structure as a measurement of latent systemic deterioration
+# PREREG — Advisory structure as a prognostic signature of future multi-defect burden
 
-**Written 2026-08-15 BEFORE any advisory-structure feature was built and before any
-performance number, breadth gradient or cell rate existed.** The only numbers quoted below
-are (a) figures already banked by earlier studies and cited to their artifacts, and
-(b) row/vehicle counts read from banked label parquets. No `adv_*` column has been computed.
+**Revision 2, 2026-08-15. Written BEFORE any `adv_*` column was built and before any
+performance number, breadth gradient or cell rate existed.** Revision 1 was committed
+(`480bf22`) but **deliberately never sha-frozen** — no `.sha256` sidecar was ever generated.
+This is therefore a **pre-freeze revision, not a post-freeze amendment**. The full change
+ledger is §17.
 
-Owner: Henri. Design decisions taken in the commissioning session are recorded in §3.
+The only numbers quoted are (a) figures banked by earlier studies, cited to their artifacts,
+(b) row/vehicle counts read from banked label parquets, and (c) a read-only vocabulary census
+of raw section strings. **No outcome rate conditional on any advisory quantity has been
+computed.**
+
+Owner: Henri.
 
 ---
 
-## 1. Hypothesis and causal frame
+## 1. Claim under test
 
-The working hypothesis is that AutoSafe detects a **persistent latent state of systemic
-vehicle deterioration / accumulated maintenance debt**. `Y_B3` and `Y_M1` are highly
-predictable because they are downstream manifestations of that state; isolated dangerous
-defects are less predictable because they carry more idiosyncratic component-level noise.
+**This experiment does not attempt to prove that a latent systemic deterioration state
+exists.** The confirmatory claim is narrower and falsifiable:
 
-**Immediate hypothesis under test:**
+> Do the **breadth, persistence and trajectory** of prior recorded advisories across vehicle
+> systems provide a **stable prognostic signature** of future multi-defect burden **beyond
+> advisory count** — consistent with, but not proof of, persistent multi-system deterioration?
 
-> The breadth, persistence and trajectory of prior advisories across vehicle systems predict
-> future high defect burden **above and beyond** the total number of advisories.
+**The estimand is prognosis under the naturally occurring maintenance and repair behaviour
+present in the data.** An advisory is not an inert observation: it is a notification that can
+itself trigger repair. So the quantity measured is *"given that this vehicle was advised in
+this pattern, and given how owners and garages actually responded in this population, what
+happens next"* — not a counterfactual risk under no repair. Every downstream statement must
+respect that scope.
 
-Intended DAG (advisory breadth is a **measurement**, never a cause):
+This matters for interpretation. A null on breadth is consistent with **either** "breadth
+carries no prognostic information" **or** "breadth carries information that owners act on, and
+the acting cancels the signal." This design cannot separate those, and does not claim to.
+
+Structure hypothesised, not asserted:
 
 ```
 age / design / usage / environment
               │
               ▼
-     latent deterioration ─────────────► continuing deterioration
-              │                                     │
-    ┌─────────┼─────────┐                           ▼
-    ▼         ▼         ▼                    future defect burden
-  tyres    brakes   suspension …               ┌────┴────┐
-    │         │         │                      ▼         ▼
-    └────► prior advisories ◄────┐          Y_B3      Y_M1
-              │                  │
-              ▼                  └── inspection process (CONFOUND, §10)
+   persistent multi-system deterioration ─────► continuing deterioration
+              │                                          │
+    ┌─────────┼─────────┐                                ▼
+    ▼         ▼         ▼                        future defect burden
+  tyres    brakes   suspension …                    ┌────┴────┐
+    │         │         │                           ▼         ▼
+    └──► prior advisories ──► owner/garage ──►    Y_B3      Y_M1
+              │               response/repair
+              ▼                    (IN the estimand, not adjusted away)
    depth / breadth / persistence / trajectory
               │
+              ├── inspection & recording process (CONFOUND, §10)
               ▼
         AutoSafe observes
 ```
 
-**Competing pathway, explicitly modelled:** `advisory → owner/garage response → repair →
-lower future risk`. Under this pathway a single advisory is *protective*, and only
-**non-resolution** carries risk. This is why §5.H exists and why disappearance is never
-labelled "repair" — repair invoices are not observed.
+Advisory structure is treated throughout as a **measurement**, never as a cause.
 
 ---
 
-## 2. Prior-art audit — what already exists
-
-This is recorded first because it determines what every ladder delta actually means.
+## 2. Prior art — what exists and what it settles
 
 ### 2.1 Concepts already in the frame
 
-Source `factory/blocks.py` unless noted.
+Source `factory/blocks.py`.
 
-| Concept | Existing columns | Gap this study fills |
+| Concept | Existing columns | Gap |
 |---|---|---|
-| Depth | `b3_n_advisory_items` :308 (whole history); `b2_n_items_total` :272; `b4_burden_mean_last3` / `_delta_1` / `_delta_2` :319-321 | no advisory-only windowed counts; no max-burden-on-any-prior-day |
-| Breadth | `b2_breadth_categories` :270; `b2_last_day_n_categories` :271; `b7d_last_fail_day_n_categories` :390 | **all are "any disposition"** (:264) — advisory-only breadth does not exist |
+| Depth | `b3_n_advisory_items` :308 (whole history); `b2_n_items_total` :272; `b4_burden_mean_last3`/`_delta_1`/`_delta_2` :319-321 | no advisory-only windowed counts; no max-burden-on-any-prior-day |
+| Breadth | `b2_breadth_categories` :270; `b2_last_day_n_categories` :271; `b7d_last_fail_day_n_categories` :390 | **all "any disposition"** (:264) — advisory-only breadth absent |
 | Persistence | `b2_{cat}_max_run` :266; `b2_{cat}_persistence` :267 | same disposition gap |
-| Spread / emergence | — | absent entirely |
-| Trajectory | `b4_deterioration_slope` :325 (items/yr); `b7d_recent3day_minus_earlier_burden` :404 | **breadth**-slope and acceleration absent; `1→3→5` vs `5→3→1` is not currently representable |
-| Concentration | — | absent entirely |
+| Spread / emergence | — | absent |
+| Trajectory | `b4_deterioration_slope` :325; `b7d_recent3day_minus_earlier_burden` :404 | **breadth**-slope/volatility absent |
+| Concentration | — | absent |
 | Recency | `b2_{cat}_days_since` :265; `b3_days_since_*` :296-305 | no advisory-specific days-since; no recency-weighted breadth |
-| Resolution proxies | `b4_n_adv_to_fail_transitions` :313; `b4_n_recurrence_after_repair` :316; `b7d_n_adv_to_minor_transitions` :405 | resolved/unresolved section counts and recurrence-after-disappearance absent |
+| Resolution proxies | `b4_n_adv_to_fail_transitions` :313; `b4_n_recurrence_after_repair` :316 | resolved/unresolved system counts, recurrence-after-disappearance absent |
 
-**The honest description of this study's increment: a disposition-split of the existing B2
-cube at a finer taxonomic grain, plus four concepts that do not exist at all** (spread,
-concentration, breadth-trajectory, recency-weighted breadth).
+### 2.2 ⚠ AutoSafe ALREADY contains a coarse advisory channel
 
-### 2.2 ⚠ B0 already carries an advisory channel
-
-`out/SERVE_VIEW_AUDIT.md` enumerates B0's advisory features, including:
+This is a correction to Revision 1's framing. It is **not** the case that advisory information
+is absent from the model. `out/SERVE_VIEW_AUDIT.md` enumerates B0's advisory features:
 
 | # | column | note |
 |---|---|---|
 | 4 | `advisory_trend` | `defect.type=='ADVISORY'` counts on last 2 tests |
-| 6 | `prev_count_advisory` | across history; tagged `[ABA]` — type-word only, no taxonomy needed |
+| 6 | `prev_count_advisory` | across history; `[ABA]` — type-word only, no taxonomy |
 | 19 | `advisory_cohort_delta` | vs cohort artifact |
-| **23** | **`multi_system_advisory_count`** | **components with ≥1 advisory (5 cats) — this is advisory breadth** |
+| **23** | **`multi_system_advisory_count`** | **components with ≥1 advisory (5 cats) — coarse advisory breadth, in production V55 today** |
 | 30 | `front_end_advisory_intensity` | steering+suspension+tyres |
-| 34-50 | per-component advisory family | brakes / tyres / suspension: `has_prior_*`, `tests_since_*`, `advisory_in_last_1/2_*`, `advisory_streak_len_*` |
+| 34-50 | per-component advisory family | brakes/tyres/suspension: `has_prior_*`, `tests_since_*`, `advisory_in_last_1/2_*`, `advisory_streak_len_*` |
 
-At least 23 B0 columns consume the advisory channel. **The exact list is enumerated at
-Phase 1 and frozen into `out/ADVSTRUCT_B0_ADVISORY_COLUMNS.json`; the number above is a
-lower bound read from the audit table, not a verified census.**
+≥23 B0 columns consume the advisory channel. **What is untested is not "does advisory
+information help" but "does a richer canonical-system, longitudinal representation of it help
+beyond the coarse representation already present."**
 
-**Consequence, and the single most important interpretive rule in this prereg:**
+Exact membership is enumerated at Phase 2 and frozen to
+`out/ADVSTRUCT_B0_ADVISORY_COLUMNS.json`. The count above is a lower bound read from the audit
+table, not a verified census.
+
+**Consequence — the interpretive rule this whole design turns on:**
 
 ```
-L0 − L0m  = value of the advisory CHANNEL at its current crude representation
-L2 − L1   = value of a better REPRESENTATION of breadth, GIVEN the channel
+L0m → L0   = value of the EXISTING coarse advisory channel      [MANDATORY, §8.2]
+base → ADV = value of the RICHER representation, given that channel
 ```
 
-`L1 − L0` and `L2 − L1` do **not** measure the value of depth or breadth. Reporting either
-without `L0 − L0m` repeats the representation-vs-channel error `PREREG_B7.md` §2 was written
-to prevent.
+A descriptive-positive / model-null result is **uninterpretable without the first number**. It
+cannot distinguish *"the richer representation is redundant because B0 already carries the
+advisory channel"* from *"the model does not use advisory information materially."* The
+ablation is therefore unconditional.
 
-### 2.3 Standing evidence that cuts against the hypothesis
-
-Declared in advance so that a null is not later reported as a surprise.
+### 2.3 Standing evidence, declared in advance
 
 | Artifact | Result |
 |---|---|
-| `out/B7_PRIMARY_RESULT.json` | 34 richer-history columns → Δ = **+7.754e-4**, CI [5.920e-4, 9.537e-4], k=2, against `floor_F` **1.78e-3**. `clears_floor: false`. Class `SUB-FLOOR-POSITIVE` |
-| same | its control arm **FIRED at −9.134e-3** (`b7.ctrl.b0-minus-ebprior` vs `b7.cum.b0`) |
-| `out/NY_COHORT_STUDY_2026_08_15.md` | persistence-cohort ΔAUROC **−0.0238**, CI [−0.0291, −0.0185]; sign reversed; ΔMB-c −0.0195 ⇒ **82% case-mix** |
-| same | 85.8% of lowest-quartile-risk failures are clean-history vehicles |
-| `out/INTERVAL_AUDIT_2026_08_15.md` | perfect interval-mileage oracle worth ~0.012 univariate AUC; deployable proxies "already exhausted" |
-| `out/SEVERITY_RESULT_2026_08_15.md` | `Y_S1` AUROC 0.6545 — **0.059 worse** than broad failure |
+| `out/B3_BURDEN_RESULT.json` | 12 prior-burden columns → mean **+1.68e-04**, sd 2.31e-04, **one seed negative** → pre-registered **NULL**, inside LightGBM's 1.74e-04 refit nuisance |
+| ⚠ but `burden_features.py:52` | `rfr_type_code IN ('F','P')` — **advisory items structurally excluded from all 12 columns**; its own prereg §6 names *"advisory persistence"* as out of scope |
+| `out/CANONICAL_CEILING_STATEMENT.md` | ratified: "the binding constraint is neither the objective nor the representation" |
+| `out/B7_PRIMARY_RESULT.json` | 34 richer-history columns → +7.754e-4 vs floor 1.78e-3, `clears_floor: false`; **its control FIRED at −9.134e-3** |
+| `out/NY_COHORT_STUDY_2026_08_15.md` | persistence-cohort ΔAUROC **−0.0238**, sign reversed, 82% case-mix |
+| `out/SEVERITY_RESULT_2026_08_15.md` | `Y_S1` 0.6545 — 0.059 **worse** than broad failure |
 
-The prior probability that the ladder produces a floor-clearing gain is therefore **low**.
-This study is commissioned anyway because the *descriptive* estimand (§7) is well powered,
-independent of the fit surface, and has never been measured.
+The burden null is the **fail-disposition twin** of this study: a structurally similar "does
+distinct-system breadth add beyond item count" question, on the wrong disposition, at
+single-day grain, with no trajectory/concentration/spread/recency/resolution. It is a strong
+analogical prior, **not** a substitute.
+
+**Prior probability of a model-side null is high, and pre-declared as such.** The value of this
+work rests on §7, which needs no model.
 
 ---
 
-## 3. Scope, naming, banking posture
+## 3. Scope, naming, target roles, banking posture
 
-### 3.1 Naming (resolves two live collisions)
+### 3.1 Naming
 
-| Referent | Symbol | Definition |
+`B3` is also an 18-column feature block, so outcomes carry a `Y_` prefix. `H0`–`H4` are the NY
+cohort study's strata, so ladder rungs are `L*`.
+
+### 3.2 ⚠ Target roles — asymmetric by design
+
+| Target | Definition | **Role** |
 |---|---|---|
-| ordinary initial MOT failure | `Y_T0` | `y_final = 1` |
-| high major/dangerous count | `Y_B3` | `n_major_or_dangerous >= 3` |
-| multi-system major/dangerous | `Y_M1` | `n_sections_with_md >= 2` |
-| **novel-system** multi-system | `Y_M1N` | `n_sections_with_md >= 2` **and** ≥1 such section carries **no advisory on any prior item-observable day** |
-| dangerous defect | `Y_S1` | `n_dangerous >= 1`, fail-gated |
+| **`Y_B3`** | `n_major_or_dangerous >= 3` | **PRIMARY. Sole trigger for the MOVED decision.** |
+| `Y_M1` | `n_sections_with_md >= 2` | Confirmatory only |
+| `Y_S1` | `n_dangerous >= 1`, fail-gated | Falsifier / reference contrast |
+| `Y_M1N` | `Y_M1` **and** ≥1 such section carries no advisory on any prior item-observable day | **EXPLORATORY ONLY — never confirmatory** |
+| `Y_T0` | `y_final = 1` | Reference |
 
-`Y_B3` is written with the `Y_` prefix throughout because **`B3` is also an 18-column feature
-block**. Ladder rungs are `L0`…`L7`, not `H0`…`H6`, because **`H0`–`H4` are the NY cohort
-study's strata**.
+⚠ **`Y_M1N` cannot be a clean confirmatory test of advisory breadth**, because its outcome
+definition itself depends on whether future failing sections appeared in prior advisory
+history. It is constructed from the same object it is meant to test. It is retained because
+the spread-versus-persistence distinction is interesting, and it is fenced to exploratory.
 
-### 3.2 `Y_M1N` — why it exists
-
-`Y_M1` is itself a breadth target. Prior-section-breadth → `Y_M1` is the same construct one
-step apart, so `Y_M1` is flattered relative to `Y_B3` (a count target) **by construction, not
-by theory**, and the headline `B3/M1 > T0 > S1` prediction is partly guaranteed. `Y_M1N`
-requires deterioration in a section with no prior advisory and therefore cannot be satisfied
-by same-construct autocorrelation. It is the sharp test of *spreading* rather than
-*persisting* deterioration.
+⚠ `Y_M1` is construct-coupled to breadth in the opposite direction — prior-system-breadth →
+future-system-count is the same construct one step apart. Hence confirmatory, not primary.
+`Y_B3` is a **count** target and is the only clean one.
 
 ### 3.3 Banking posture
 
 | Component | Posture |
 |---|---|
-| §7 descriptive falsification | **prereg-bankable** — never touches the fit surface |
-| §8 ladder | **EXPLORATORY / NOT-BANKABLE-AS-VERDICT** — runs under owner override while `D13_REPAIR → D13_SEMANTIC_LOCK → BASELINE_REENTRY_LOCK` remain open, same posture as `out/B7_OVERRIDE_RECORD_2026_08_15.md` |
+| §7 descriptive | **prereg-bankable** — never touches the fit surface |
+| §8 model results | **EXPLORATORY / NOT-BANKABLE-AS-VERDICT** |
 
-⚠ **Working-tree precondition.** At the time of writing, `factory/{atoms,blocks,emit,state}.py`
-and `factory/tests/test_falsifiers.py` are modified and uncommitted on branch
-`claude/autosave-defects-history-xqutcw`. Phase 1 does not start until that state is committed
-or reverted; otherwise no result is reproducible. Staging is path-limited — never `git add -A`
-in this repo.
+⚠ The model half stays exploratory while `D13_REPAIR → D13_SEMANTIC_LOCK →
+BASELINE_REENTRY_LOCK` remain open **and** while the B7 control anomaly (−9.134e-3 on a
+nominal null) stands unexplained. Both conditions, not either.
 
-### 3.4 Deployability — declared, not assumed
+⚠ **Working-tree precondition.** `factory/{atoms,blocks,emit,state}.py` and
+`factory/tests/test_falsifiers.py` are modified and uncommitted on
+`claude/autosave-defects-history-xqutcw`. Phase 2 does not start until that is committed or
+reverted. Staging is path-limited — never `git add -A` in this repo.
 
-`out/SERVE_VIEW_AUDIT.md:10`: **`rfr_id`, `location_id` and `postcode_area` are NOT in the
-DVSA API.** `defect.type == 'ADVISORY'` is (:92, `[ABA]`).
+### 3.4 Deployability
 
-Therefore:
-
-- advisory **count** is servable today;
-- advisory **section/group is not** — it requires the text→taxonomy bridge, which the audit
-  records as **UNBUILT/ungated** with the live-text precision gate **never run** (:21, :81);
-- the `postcode_area` artefact control (§10) is research-only by the same rule.
-
-**Every `adv_*` column in this study is `research_only_input`. No adoption decision follows
-from any result here.** A deployable variant would require the `[TXT]` bridge to be built and
-gated first, and that is out of scope.
+`out/SERVE_VIEW_AUDIT.md:10`: `rfr_id`, `location_id`, `postcode_area` are **not in the DVSA
+API**; `defect.type == 'ADVISORY'` is (:92). Advisory **count** is servable; advisory **system**
+is not — the text→taxonomy bridge is UNBUILT/ungated, live-text precision gate never run
+(:21, :81). **Every `adv_*` column is `research_only_input`. No adoption decision follows.**
 
 ---
 
-## 4. Taxonomy of record
+## 4. Taxonomy — a versioned physical-system ontology
 
-**Primary grain — top-level DVSA section.** `item_name`, resolved via
-`pipeline.lake.rfr_mapping.load_rfr_mapping`, the 14 sections present in the lake. Identical
-to `sect_00..sect_13` in `out/TARGET_SEVERITY_LABELS.parquet`, so breadth and `Y_M1` are
-commensurate. `factory/taxonomy.py:4-5` records section as "the exact, verified aggregation
-level" and the only level whose code spaces survive the 2018-05-20 disjoint-code-space break.
+### 4.1 Status
 
-**Secondary grain — the 8 `CATEGORY_KEYS`** (7 canonical + `other`).
-`rfr_mapping._SECTION_TO_CATEGORY:45-84` maps ~19 top-level names to `None`, collapsing them
-into `other`. A vehicle advised on noise, seat belts, speedometer and identification scores
-**breadth = 1** at category grain and **breadth = 4** at section grain.
+The canonical-system crosswalk is an **explicit versioned ontology**, `ADVSTRUCT_ONTOLOGY_V1`,
+emitted to `out/ADVSTRUCT_TAXONOMY.json` with a `version` field and its own sha. It is a
+research artifact in its own right, not an implementation detail, and any later change to it
+increments the version and invalidates prior results rather than silently re-mapping them.
 
-The secondary cube carries **only** breadth, persistent-section count, and HHI — the three
-grain-sensitive concepts. It is **not a ladder rung**. Its single job: *is B2's 6-of-14→`other`
-compression why defect-breadth has never shown value?*
+### 4.2 Census scope — full eligible history, both frames
 
-`rfr_id` grain is rejected: breadth ≈ count, which makes the §7 within-count test degenerate.
+⚠ Revision 1 built the crosswalk from advisories on the **most recent prior day of eval2024
+only**. That is not a sufficient basis for an ontology. The census runs over **every advisory
+item on every eligible prior test-day, TRAIN and EVAL**, and reports per-raw-string volumes,
+per-year volumes (to expose catalogue vintage), and the folded-versus-unfolded breadth delta.
 
-Catalogue misses (`rfr_id` absent from the class-4 map) are **counted separately and never
-folded into a section**, per B2's existing rule (`blocks.py:273`).
+### 4.3 Fail-closed
 
-Exact section vocabulary and volumes are emitted to
-`out/ADVSTRUCT_TAXONOMY.json` at Phase 0 and frozen. Output #1 of §14 is that file.
+**Any non-null raw `sect` value not present in `ADVSTRUCT_ONTOLOGY_V1` raises and halts the
+build.** It is never silently bucketed to `other`, never dropped, never mapped by fuzzy match.
+A new catalogue vintage is a reason to version the ontology, not to guess. `NULL` `sect` is a
+distinct, expected state (catalogue miss) and is counted, not raised on.
 
----
+### 4.4 The crosswalk
 
-## 5. Feature family — `adv_*`, section grain
+Case and punctuation are normalised through `pipeline.lake.rfr_mapping._norm_item_name` — never
+a new normaliser. Vintage variants are folded. Volumes below are from the read-only eval2024
+most-recent-day preflight and are **indicative only**; §4.2's full census supersedes them.
 
-Aggregates only. No per-section × per-stat cross product: B2 already emits that at category
-grain, and redundant variants are excluded by design.
-
-All columns are **NULL-honest** against `b2_item_observability_status`. An unobservable prior
-day yields NULL, never 0. "Item-observable prior day" (`iod`) is the denominator throughout
-and is the same object as `b2_n_prior_days_items_observed`.
-
-Ordering is by **day**, never by within-day `test_id` (see §6).
-
-### 5.A Depth (7)
-
-| column | definition |
-|---|---|
-| `adv_n_last` | advisory items on the most recent `iod` |
-| `adv_n_w2` / `_w3` / `_w4` | advisory items summed over the last 2 / 3 / 4 `iod` |
-| `adv_n_max_day` | max advisory items on any single prior `iod` |
-| `adv_n_cap2y` / `_cap4y` | advisory items within the trailing 2 / 4 years before `tgt_date` |
-
-Whole-history total is **`b3_n_advisory_items` reused, not re-emitted**.
-
-### 5.B Breadth (6)
-
-| column | definition |
-|---|---|
-| `adv_breadth_last` | distinct sections advised on the most recent `iod` |
-| `adv_breadth_w2` / `_w3` / `_w4` | distinct sections advised across the last 2 / 3 / 4 `iod` |
-| `adv_breadth_max_day` | max distinct sections advised simultaneously on any prior `iod` |
-| `adv_breadth_cumulative` | distinct sections ever advised |
-
-### 5.C Persistence (5)
-
-| column | definition |
-|---|---|
-| `adv_n_persistent_sections` | sections advised on the most recent `iod` **and** on the `iod` before it |
-| `adv_max_persistence_run` | longest run of consecutive `iod` carrying the same section |
-| `adv_recur_frac` | share of ever-advised sections advised on ≥2 `iod` |
-| `adv_n_sections_ge2days` / `_ge3days` | sections advised on ≥2 / ≥3 `iod` |
-
-### 5.D Spread / emergence (5)
-
-| column | definition |
-|---|---|
-| `adv_n_new_sections_last` | sections on the most recent `iod` absent from every earlier `iod` |
-| `adv_n_dropped_sections_last` | sections on the previous `iod` absent from the most recent |
-| `adv_net_emergence_last` | new − dropped |
-| `adv_cum_new_section_rate` | `adv_breadth_cumulative` / number of `iod` |
-| `adv_days_since_new_section` | days since a section was first advised; NULL when never |
-
-### 5.E Trajectory (6)
-
-Let `B_t` = distinct sections advised on the *t*-th most recent `iod`.
-
-| column | definition |
-|---|---|
-| `adv_breadth_delta_1` | `B_1 − B_2`; NULL with <2 `iod` |
-| `adv_breadth_delta_2` | `B_2 − B_3`; NULL with <3 `iod` |
-| `adv_breadth_slope` | least-squares slope of `B` on years-before-`tgt_date`; NULL with <3 `iod` or degenerate span |
-| `adv_breadth_slope_n_days` | `iod` the slope was fitted on — its honest denominator |
-| `adv_breadth_accel` | `adv_breadth_delta_1 − adv_breadth_delta_2` |
-| `adv_trajectory_class` | ordinal, rules below |
-
-`adv_trajectory_class` rules, evaluated on the last 3 `iod` in order `B_3, B_2, B_1`, with
-`m = median(all B over history)`:
-
-| level | rule | ordinal |
+| canonical system | raw `sect` folded in | indicative n |
 |---|---|---:|
-| `insufficient` | fewer than 3 `iod` | NULL |
-| `improving` | `B_1 < B_3` and `B_1 ≤ B_2` | 0 |
-| `stable_low` | `B_1 = B_2 = B_3` and `B_1 ≤ m` | 1 |
-| `stable_high` | `B_1 = B_2 = B_3` and `B_1 > m` | 2 |
-| `mixed` | none of the above | 3 |
-| `deteriorating` | `B_1 > B_3` and `B_1 ≥ B_2` | 4 |
+| **`wheels_tyres`** | `Tyres`, `Wheels` | 137,936 |
+| `brakes` | `Brakes` | 115,144 |
+| `suspension` | `Suspension` | 92,009 |
+| `noise_emissions` | `Noise, emissions and leaks`, `Exhaust, Fuel and Emissions` | 16,236 |
+| `body_structure` | `Body, chassis, structure`, `Body, Structure and General Items` | 14,062 |
+| `lamps_electrical` | `Lamps, reflectors…`, `Lamps, Reflectors…` | 8,556 |
+| `steering` | `Steering` | 5,466 |
+| `seatbelts_srs` | `Seat belts and…`, `Seat Belts and…` | 2,513 |
+| `visibility` | `Visibility`, `Driver's View of the Road` | 304 |
 
-`1→1→1` → `stable_low`, `4→4→4` → `stable_high`, `5→3→1` → `improving`, `1→3→5` →
-`deteriorating`. Six levels, not five: `mixed` is emitted explicitly rather than folded, so no
-trajectory is silently misclassified.
+⚠ **Renamed `tyres` → `wheels_tyres`**, because `Wheels` is folded into it. A system label must
+not name a proper subset of what it contains.
 
-`1→1→1`, `4→4→4`, `5→3→1` and `1→3→5` map to four distinct `adv_trajectory_class` values and
-distinct `adv_breadth_delta_*`. **A build in which they collapse to a common latest-value
-representation is a build defect and is asserted against in the fixture suite.**
+**Excluded from breadth, retained as ADV_AUDIT exposures** — these are not vehicle systems:
 
-⚠ `adv_trajectory_class` enters models as an **ORDINAL, converted at load, not at render**.
-A rare level falling entirely on one side of the seed-dependent 80/20 split makes `quantize()`
-derive different Pool layouts and CatBoost refuses the fit — the B7
-`b1_history_coverage_grade` trap. The neural-arch imputation path reads `frame.features`
-directly and breaks on a render-time conversion. Vocabulary pinned; membership validated;
-coverage deliberately not.
+| bucket | indicative n | column |
+|---|---:|---|
+| `Non-component advisories` | 23,440 | `adv_n_noncomponent` |
+| `Identification of the vehicle`, `Registration Plates and VIN` | 8,389 | `adv_n_identification` |
+| `NULL` sect (catalogue miss) | 1 | `adv_n_catalogue_miss` |
 
-### 5.F Concentration (5)
+⚠ Vintage folding is load-bearing: unfolded counting inflates breadth as a function of
+catalogue vintage, which is a function of era — manufacturing precisely the gradient §10 exists
+to detect. The folded-versus-unfolded delta is published so the size of that artefact is on
+record.
 
-Over sections advised on the most recent `iod`, with shares `p_s` = section items / total items.
+### 4.5 Alternative-grain sensitivity
 
-| column | definition |
-|---|---|
-| `adv_items_per_affected_section_last` | `adv_n_last / adv_breadth_last` |
-| `adv_max_section_share_last` | `max p_s` |
-| `adv_hhi_last` | `Σ p_s²` |
-| `adv_entropy_last` | `−Σ p_s log p_s` |
-| `adv_hhi_cumulative` | HHI over all advisory items in history |
+The 8-key `CATEGORY_KEYS` cube (`ADV_GRAIN`, §5.2) is retained as a **coarser** alternative
+grain, run as a sensitivity analysis on `Y_B3` only. Its job: does the answer depend on grain?
+`rfr_id` grain is rejected — breadth ≈ count, degenerating §7.
 
-### 5.G Recency (5)
+---
 
-| column | definition |
-|---|---|
-| `adv_days_since_any` | days since the most recent advisory item |
-| `adv_median_days_since_advised_section` | median over ever-advised sections of days since that section was last advised |
-| `adv_rw_breadth_hl1y` / `_hl3y` | recency-weighted breadth, exponential half-life 1 / 3 years |
-| `adv_rw_persistent_breadth_hl1y` | as above, restricted to sections advised on ≥2 `iod` |
+## 5. Feature family
 
-### 5.H Resolution / non-resolution proxies (6)
+### 5.1 ⚠ Four groups, not one block
 
-**Disappearance is never labelled "repair".** Repair invoices are not observed. These are
-resolution *proxies* and the evidence pack must say so at every use.
+Revision 1 conflated structural signal with observability bookkeeping and reported an
+inconsistent column count. Corrected:
 
-| column | definition |
-|---|---|
-| `adv_n_unresolved_sections` | sections advised on some `iod` and advised again on the next `iod` |
-| `adv_n_resolved_sections` | sections advised and then absent on every later `iod` |
-| `adv_resolved_share` | resolved / (resolved + unresolved) |
-| `adv_n_recur_after_gap` | sections advised → absent ≥1 `iod` → advised again |
-| `adv_n_adv_to_md_sections` | sections carrying an advisory and later an M/D item, section grain |
-| `adv_days_since_adv_to_md` | days since the most recent such transition |
+| group | n | contents | **which arms** |
+|---|---:|---|---|
+| **`ADV_CORE`** | 45 | breadth, persistence, spread, trajectory primitives, concentration, recency, resolution, depth | **treatment arm only** |
+| **`ADV_COVERAGE`** | 7 | observability + era exposure denominators | **BOTH arms** |
+| **`ADV_AUDIT`** | 5 | non-component / identification / catalogue-miss exposures, nominal trajectory class | **BOTH arms** |
+| `ADV_GRAIN` | 8 | category-grain breadth / persistence / HHI | sensitivity arm only |
 
-`adv_n_adv_to_md_sections` is the section-grain analogue of `b4_adv_to_fail_categories` :314,
-which is category grain. Both are emitted; the difference is itself a grain measurement.
+⚠ **`ADV_COVERAGE` and `ADV_AUDIT` sit in BOTH fit arms.** Otherwise a positive Δ could be
+driven by catalogue coverage or observability artefacts rather than advisory structure, and
+would be indistinguishable from one. This is the single most important structural change in
+Revision 2.
 
-### 5.I Era exposure (4) — enters at `L1`
+Arm sizes: **base = 241 + 12 = 253**, **ADV = 253 + 45 = 298**, grain sensitivity = 253 + 8 =
+261.
 
-Mandated by the §10 confound. These are denominators, not predictors.
+⚠ The base arm is 253, not the burden study's 241, so cross-study Δ comparison is approximate.
+The pure-241 `Y_B3` baseline is already banked at k=5 (`out/B3_REFERENCE_BASELINE.json`, mean
+0.7990599, sd 9.53e-05) and is reported as the bridge — no new fits required.
 
-| column | definition |
-|---|---|
-| `adv_n_item_obs_days_pre2018` / `_post2018` | `iod` on either side of 2018-05-20 |
-| `adv_pre2018_exposure_share` | pre-2018 share of `iod` |
-| `adv_exposure_status` | `no_priors` / `pre_only` / `post_only` / `spanning` |
+### 5.2 `ADV_CORE` (45)
 
-**Total: 49 columns**, section grain. Plus 8 secondary-grain robustness columns outside the
-ladder.
+All at `ADVSTRUCT_ONTOLOGY_V1` system grain. Aggregates only — no per-system × per-stat cross
+product. "iod" = item-observable prior test-day.
+
+**Depth (7)** — `adv_n_last`, `adv_n_w2/_w3/_w4`, `adv_n_max_day`, `adv_n_cap2y`, `adv_n_cap4y`.
+Whole-history total is `b3_n_advisory_items`, reused not re-emitted.
+
+**Breadth (6)** — `adv_breadth_last`, `_w2/_w3/_w4`, `_max_day`, `_cumulative`.
+
+**Persistence (5)** — `adv_n_persistent_systems`, `_max_persistence_run`, `_recur_frac`,
+`_n_systems_ge2days`, `_n_systems_ge3days`.
+
+**Spread (5)** — `adv_n_new_systems_last`, `_n_dropped_systems_last`, `_net_emergence_last`,
+`_cum_new_system_rate`, `_days_since_new_system`.
+
+**Trajectory (6) — numeric primitives only** — `adv_breadth_delta_1`, `_delta_2`,
+`_breadth_slope`, `_breadth_slope_n_days`, `_breadth_accel`, `_breadth_volatility` (sd of
+per-day breadth over iod).
+
+⚠ **`adv_trajectory_class` is NOT an ordinal and is NOT in any fit arm.** Revision 1 encoded it
+as an ordinal to dodge a CatBoost quantise trap. That was wrong: `stable_low`, `stable_high`,
+`improving`, `worsening`, `mixed` have **no defensible scalar ordering** — placing `stable_high`
+above `improving` on a number line asserts a comparison the data does not support. It is frozen
+as **nominal**, emitted to `ADV_AUDIT` for descriptive reporting only. The six numeric
+primitives above carry the trajectory information into the model, and they separate `1→1→1`,
+`4→4→4`, `5→3→1`, `1→3→5` on `_delta_1`/`_slope`/`_volatility` without asserting an order.
+
+**Concentration (5)** — `adv_items_per_affected_system_last`, `_max_system_share_last`,
+`_hhi_last`, `_entropy_last`, `_hhi_cumulative`.
+
+**Recency (5)** — `adv_days_since_any`, `_median_days_since_advised_system`,
+`_rw_breadth_hl1y`, `_rw_breadth_hl3y`, `_rw_persistent_breadth_hl1y`.
+
+**Resolution proxies (6)** — `adv_n_unresolved_systems`, `_n_resolved_systems`,
+`_resolved_share`, `_n_recur_after_gap`, `_n_adv_to_md_systems`, `_days_since_adv_to_md`.
+⚠ **Disappearance is never labelled "repair".** Repair invoices are not observed. These are
+resolution *proxies* and the deliverable says so at every use. Per §1 they are part of the
+estimand, not a nuisance to adjust away.
+
+### 5.3 `ADV_COVERAGE` (7, both arms)
+
+`adv_n_prior_days`, `adv_n_item_obs_days`, `adv_observability_status`,
+`adv_n_item_obs_days_pre2018`, `adv_n_item_obs_days_post2018`, `adv_pre2018_exposure_share`,
+`adv_exposure_status`.
+
+### 5.4 `ADV_AUDIT` (5, both arms)
+
+`adv_n_noncomponent`, `adv_n_identification`, `adv_n_catalogue_miss`,
+`adv_n_unknown_system` (fail-closed counter, must be 0 in any emitted build),
+`adv_trajectory_class` (nominal).
+
+### 5.5 ⚠ Three-state NULL semantics
+
+Revision 1 collapsed two distinct unknowns. Corrected — three states, distinguished everywhere:
+
+| state | counts | rates / slopes / trajectory |
+|---|---|---|
+| **no prior test** | **0, and certain** | **NULL** — undefined, not zero |
+| **prior history observable, zero advisories** | **0, and certain** | **0** where the denominator is defined; NULL where it is not (e.g. slope with <3 iod) |
+| **prior history present, items unobservable** | **NULL** | **NULL** |
+
+A count may legitimately be a certain zero in the first two states. A **rate, share, slope,
+volatility or trajectory measure is NULL whenever its denominator or minimum support is
+undefined**, in every state. `adv_observability_status` names which state applies per row.
+Reuse `blocks.item_graded` (`blocks.py:613-629`) and `blocks._coverage_status` (:770-781) —
+do not reimplement the three-state logic a third time.
+
+### 5.6 ⚠ Same-day duplication
+
+The most recent prior day can carry multiple tests — 8.8% of eval targets, and a fail followed
+by a retest will re-record the same physical advisory. Naive day-level counting inflates depth
+and can inflate breadth.
+
+**Deduplicate at `(tgt_id, p_date, canonical_system, item_key)`** before any count, where
+`item_key` = `rfr_id` when present, else the normalised item text. Day-union is then the state
+representation.
+
+⚠ **Permutation invariance does not settle this.** The D13 falsifier proves features are
+invariant to within-day row order; it says nothing about whether day-union is the semantically
+right state. That is an open modelling choice, declared here, and tested by a **tied-prior-day
+sensitivity analysis**: re-run §7 restricted to targets whose most recent prior day carries
+exactly one test, and report whether the gradient changes.
 
 ---
 
 ## 6. Leakage audit
 
-### 6.1 Rules
-
-| Rule | Applies to | Basis |
-|---|---|---|
-| strictly-earlier **calendar day** | every `adv_*` | matches `b1_n_prior_test_days`, `blocks.py:229` |
-| **never** use within-day `test_id` ordering | `_last`, `_delta_*`, `_new_sections_last`, `_dropped_*` | 35.09% of targets carry a prior day with **both** a PASS and a FAIL record; within-day `test_id` order agrees with truth at **49.91%** — chance |
-| target-day items wholly excluded | all | severity labels are computed *from* the target test; exclusion keyed on `(test_id, vehicle_id, tgt_date)` |
-| `tgt_date`-anchored only | `_days_since_*`, `_cap2y/4y`, `_rw_*` | `tgt_date` is known at prediction time |
-| NULL, never 0, on unobservable days | all | `b2_item_observability_status` contract |
-
-⚠ The forbidden-column scan runs against **the SQL actually executed**, not module source.
-The G0.9 self-match trap fired when a source-scanning guard matched its own
-`FORBIDDEN_COLUMNS` declaration.
-
-### 6.2 Two-sided control — a green audit proves nothing until the fixture is shown able to fail
-
-| Arm | Requirement |
+| Rule | Basis |
 |---|---|
-| **planted-leak** — inject target-day advisory count | audit **must** flag it; its incremental ΔAUC **must** be large. If the audit passes it, the audit is broken and Phase 1 halts |
-| **nominal-null** — `L0` vs `L0`, seeds varied only | must return ≈0 beyond σ. Not guaranteed: B7's control **fired at −9.134e-3** |
+| strictly-earlier calendar **day** | matches `b1_n_prior_test_days`, `blocks.py:229` |
+| **never** within-day `test_id` ordering | within-day order agrees with truth at **49.91%** — chance |
+| dedup per §5.6 before counting | — |
+| target-day items wholly excluded | labels are computed *from* the target test |
+| `tgt_date`-anchored only | known at prediction time |
+| v2 packets only | in v1, 48.7% of prior rows have `defects_json IS NULL` conflating zero-defects with unobservable |
 
-### 6.3 As-of reconstruction test
+⚠ Forbidden-column scan runs against **the SQL actually executed**, not module source — reuse
+`severity_collect.py`'s `RecordingConnection` (the G0.9 self-match trap).
 
-For a fixture sample of vehicles, `adv_breadth_last`, `adv_n_persistent_sections` and
-`adv_breadth_delta_1` are recomputed by hand from raw packets and asserted equal.
-Fixtures-only, per `FACTORY_CONTRACT.md`; the owner runs real builds.
+Fatal gates, exit 2 and write nothing: `G_strict_date_violations`,
+`G_self_reference_violations`, `adv_n_unknown_system > 0`.
+
+**Two-sided control** — a green audit proves nothing until the fixture is shown able to fail:
+
+| arm | requirement |
+|---|---|
+| planted-leak (target-day advisory count injected) | audit **must** flag it; ΔAUC **must** be large. If it passes, the audit is broken and Phase 2 halts |
+| nominal-null (`base` vs `base`, seeds only) | must return ≈0 beyond refit variability. Not guaranteed: B7's fired at −9.134e-3 |
 
 ---
 
-## 7. PRIMARY FALSIFICATION TEST — within-count breadth
+## 7. PRIMARY DESCRIPTIVE ANALYSIS — no model
 
-This is the estimand the study exists for, and it needs no model.
+### 7.1 ⚠ Hardened correctness gate
 
-### 7.1 Estimand
+Revision 1 gated on prevalence equality. **Necessary but not sufficient** — two different row
+sets can share a prevalence. Required, all of them:
 
-> Within strata of equal total prior advisory count `c`, is future `Y_B3` / `Y_M1` risk
-> increasing in prior advisory breadth `b`?
+1. **Exact `tgt_id` set equality** between label parquet and packet-derived target set.
+2. **Row-level equality** for every recomputed label against its banked value — not aggregates.
+3. **Ordered hash equality**: sort by `tgt_id`, hash the label vector, compare.
+4. **Anti-join count = 0**, both directions.
+5. Prevalence and positive counts exact against `out/SEVERITY_RESULT.json`.
 
-- **Window, primary:** the most recent item-observable prior test-day — one presentation,
-  matching the `4 advisories / 1 group … 4 advisories / 4 groups` framing.
-- **Window, secondary:** the trailing 3 `iod`. Tests whether the property is a snapshot or an
-  accumulation.
-- **Cells:** `c ∈ {2,3,4,5,6,7,8+}` × `b ∈ {1 … min(c,14)}`. `c = 1` is dropped — it forces
-  `b = 1` and carries no information.
-- **Per cell:** n, n_vehicles, `Y_B3` / `Y_M1` / `Y_M1N` rate, vehicle-clustered bootstrap CI,
-  2000 reps, shared draws (NY cohort method; vectorised resample via
-  `np.repeat(starts,counts) + arange − repeat(cumsum−counts)`).
-- **Summary statistic:** `β_breadth|count` — within-count logistic on `b`, vehicle-clustered SE.
-  One value per (count stratum × control stratum).
+Any failure halts Phase 1. No outcome number is computed until all five pass.
 
-### 7.2 Population
+### 7.2 Estimand A — breadth within count strata
 
-**Discovery on TRAIN, confirmation out-of-time on EVAL.**
+Within strata of equal total prior advisory count `c`, does future `Y_B3` risk rise with
+breadth `b`? Window primary = most recent iod; secondary = trailing 3 iod. Cells
+`c ∈ {2..7, 8+}` × `b ∈ {1..min(c,9)}`. Per cell: n, n_vehicles, rate, vehicle-clustered
+bootstrap CI (2000 reps, shared draws). Summary: `β_breadth|count`, clustered SE.
 
-| frame | rows | vehicles | targets | `Y_T0` | `Y_B3` | `Y_M1` | `Y_S1` |
-|---|---:|---:|---|---:|---:|---:|---:|
-| `out/TRAIN_SEVERITY_LABELS.parquet` | 999,999 | 297,055 | 2020-01-02 → 2023-12-31 | 0.2292 | 0.0998 | 0.1256 | 0.0801 |
-| `out/TARGET_SEVERITY_LABELS.parquet` | 330,665 | 315,300 | 2024 | 0.2288 | 0.0952 | 0.1201 | 0.0790 |
+**Cell-count grid is published BEFORE the verdict rule is frozen.** Read-only preflight on
+eval2024 (n=312,159 with an observed prior day) shows `{c=3,b=2}=12,819 · {3,3}=3,554 ·
+{4,2}=7,053 · {4,3}=3,946 · {4,4}=813`. The `{4,4}` diagonal and `c=8+` tail are thin and get
+coarsened **now**, not after seeing rates.
 
-The train/eval split doubles as a free era-stability check. The eval frame is not both
-discovery and confirmation surface.
+Zero-prior targets (18,506 eval / 76,394 train) are a **separate category**, never folded into
+the `(0,0)` cell.
 
-### 7.3 Control stratifications
+### 7.3 ⚠ Estimand B — the system-composition falsifier
 
-Each re-runs the whole table: age quartiles (`b1_age_at_target_years`); prior-depth bands
-(`b1_n_prior_test_days ∈ {1-2, 3-5, 6+}`); target year; `postcode_area` region; make-model
-group.
+**Breadth-conditional-on-count is not sufficient.** A 4-system history may simply contain
+intrinsically higher-risk systems than a 1-system history — brakes-and-suspension is not
+exchangeable with lamps-and-identification. Without this test, a positive Estimand A is
+consistent with pure composition and says nothing about structure.
 
-### 7.4 Correctness gate — before any analysis
+1. **Fit on TRAIN** an additive system-composition expectation:
+   `logit P(Y_B3) ~ Σ_s β_s · n_advisories_in_system_s`, one term per canonical system, **no
+   breadth or dispersion term**. This is the risk predicted by *which* systems were advised and
+   *how much*, with no credit for structure.
+2. **Score EVAL** with the TRAIN-fitted coefficients — frozen, never refitted on EVAL.
+3. **Test on EVAL** whether breadth and dispersion (`adv_hhi_last`, `adv_entropy_last`) predict
+   beyond it, using the additive expectation as an offset.
+4. **Report the common system combinations within each count stratum** — for `c=4`, the
+   observed multisets, their frequencies and their `Y_B3` rates — so composition is visible,
+   not just adjusted for.
 
-Recompute `Y_T0` / `Y_B3` / `Y_M1` / `Y_S1` prevalence and positive counts from the label
-parquets and assert **exact** equality with `out/SEVERITY_RESULT.json`. Proves join, label and
-grain in one shot, as the NY cohort study proved its pooled AUROC to 0.00e+00. A mismatch
-halts Phase 0.
+Estimand B, not A, is the load-bearing descriptive result.
 
-### 7.5 Cell-count preflight — an explicit gate, not an assumption
+### 7.4 Population and control stratifications
 
-The joint distribution of `(c, b)` on the last `iod` is **not known at the time of writing**.
-Phase 0 measures and publishes the full cell-count grid **before** §7.6 is frozen. If
-`{c=4, b=4}` × age-quartile is thin, the cell scheme is coarsened **then**, and the coarsening
-is recorded as a prereg amendment with its own sha. Coarsening after seeing rates is
-prohibited.
+Discovery on TRAIN (999,999 rows / 297,055 vehicles / 2020-2023), **rule frozen**, confirmation
+out-of-time on EVAL (330,665 / 2024). Stratifications: age quartiles, prior-depth bands, target
+year, `postcode_area` region, make-model group, and the §5.6 tied-prior-day restriction.
 
-### 7.6 Preregistered verdict rule
+### 7.5 Preregistered verdict
 
 | Verdict | Condition |
 |---|---|
-| **SUPPORTED** | `β > 0` with clustered CI clear of 0 in **≥5 of 7** count strata, for **both** `Y_B3` and `Y_M1`; **and** `β_survival ≥ 0.50` against age **and** prior-depth; **and** sign holds in **every** era stratum |
-| **WEAK** | pooled `β` positive and CI-clear, but `β_survival < 0.50`, or era signs disagree |
-| **FALSIFIED** | pooled `β ≤ 0`, or CI includes 0 for **both** `Y_B3` and `Y_M1` |
-| **INCONCLUSIVE** | any required stratum below **500 rows** or **50 positives** |
-
-**`β_survival` is defined, not left to judgement:**
+| **SUPPORTED** | `β > 0`, CI clear of 0, in ≥5 of 7 count strata for `Y_B3`; **and** survives **Estimand B** on EVAL; **and** `β_survival ≥ 0.50` against age **and** prior-depth; **and** sign holds in every era stratum |
+| **WEAK** | positive and CI-clear but fails Estimand B, or `β_survival < 0.50`, or era signs disagree |
+| **FALSIFIED** | `β ≤ 0`, or CI includes 0 |
+| **INCONCLUSIVE** | any required stratum below 500 rows or 50 positives |
 
 ```
-β_pooled     = within-count logistic coefficient on b, no control stratification
-β_stratified = n-weighted mean of the within-(count × control-stratum) coefficients
+β_pooled     = within-count coefficient on b, no control stratification
+β_stratified = n-weighted mean of within-(count × control-stratum) coefficients
 β_survival   = β_stratified / β_pooled
 ```
 
-`β_survival = 1` means the gradient is untouched by the control; `β_survival = 0` means the
-control fully explains it; a negative value means the gradient reverses inside strata. It is
-computed separately for age and for prior-depth, and **both** must clear 0.50 for SUPPORTED.
-
 ---
 
-## 8. The ladder
+## 8. Model contrasts
 
-### 8.1 Rungs
+### 8.1 ⚠ Mandatory existing-channel ablation — runs regardless
 
-| Rung | Featureset | n |
-|---|---|---:|
-| `L0m` | `b7.R0` **minus** the B0 advisory columns of §2.2 | `247 − |A|`, `|A| ≥ 23` ⇒ **≤ 224** |
-| `L0` | `b7.R0` (`config_sha 4c2efc7871dc1040`, `r0_n = 247`) | 247 |
-| `L1` | + Depth (5.A) + Era exposure (5.I) | 258 |
-| `L2` | + Breadth (5.B) | 264 |
-| `L3` | + Persistence (5.C) | 269 |
-| `L4` | + Spread (5.D) | 274 |
-| `L5` | + Trajectory (5.E) | 280 |
-| `L6` | + Concentration (5.F) + Recency (5.G) + Resolution (5.H) | 296 |
-| `L7` | + 5 interactions — **conditional**, §8.3 | 301 |
-
-### 8.2 Critical comparisons
-
-| Contrast | Question |
+| arm | featureset |
 |---|---|
-| `L0 − L0m` | value of the advisory **channel** at its current crude representation |
-| `L2 − L1` | does breadth add beyond count, **given the channel**? |
-| `L3 − L2` | does persistence add beyond breadth? |
-| `L4 − L3`, `L5 − L4` | does *direction* of deterioration add beyond *level*? |
-| **leave-one-out** | per-concept attribution the nested ladder cannot give |
+| `L0m` | 241 **minus** the B0 advisory columns of §2.2 |
+| `L0` | 241 |
 
-⚠ The nested ladder makes `L3 − L2` conditional on what `L2` already absorbed; with correlated
-concepts this **systematically understates later rungs**. Stage-2 precedent is that no
-individual block clears the bar and only the cumulative gain does. The **leave-one-out pass**
-(drop each concept from full `L6`, 7 cells per target) is therefore run alongside, and
-per-concept verdicts in §11 read LOO as well as cumulative.
+`Y_B3`, k=5, paired. **This runs whether or not ADV moves.** Without `(L0 − L0m)` a
+descriptive-positive / model-null cannot be interpreted, and that is the single most likely
+outcome of this study. 10 fits.
 
-### 8.3 Interactions (`L7`)
+### 8.2 Whole-block contrast
 
-Theory-driven only. **No unrestricted combinatorial search.**
+| arm | featureset | n |
+|---|---|---:|
+| base | 241 + `ADV_COVERAGE` + `ADV_AUDIT` | 253 |
+| ADV | base + `ADV_CORE` | 298 |
 
-`depth × breadth` · `breadth × persistence` · `breadth × recency` · `breadth × breadth-slope` ·
-`persistence × new-group emergence`
+k=5 paired, on `Y_B3` (primary), `Y_M1` (confirmatory), `Y_S1` (falsifier), `Y_M1N`
+(exploratory). 40 fits. Plus grain sensitivity on `Y_B3` (261 vs 253), 5 fits.
 
-Candidate latent-state signature: *high breadth + persistent sections + recently observed +
-increasing breadth = systemic unresolved deterioration.*
+Decomposition into the 8-concept ladder fires **only if `Y_B3` returns MOVED**. Stage-2
+precedent: individual blocks never clear the bar, only cumulative gain does — decomposing first
+spends fits measuring quantities guaranteed sub-floor.
 
-`L7` fires **only if a rung moved at Phase 5**. An interaction rung may not rescue a dead
-ladder.
+### 8.3 Pre-registered bands — `Y_B3` only
 
-### 8.4 Row eligibility
+Inherited from the burden prereg so the two studies are commensurable.
 
-Feature construction must not change row eligibility. **Row-count identity is asserted at
-every rung.** Any rung that drops rows triggers an explicit flag and a matched-row re-run, and
-the drop is reported.
+| mean paired Δ (k=5) | verdict |
+|---|---|
+| < +0.0007 | **NULL** |
+| +0.0007 … +0.002 | detectable, do not adopt |
+| ≥ +0.002 **and all 5 seeds positive** | **MOVED** → decomposition fires |
+| ≥ +0.010 | **HALT** — leakage audit before any interpretation |
+
+`Y_M1`/`Y_S1`/`Y_M1N` are reported against the same bands but **cannot trigger MOVED**.
 
 ---
 
 ## 9. Statistical protocol
 
-**"Bootstrap CI excludes zero" is NOT the adoption gate.** The planted nominal-null refit has
-already shown that an unchanged model can produce an apparently significant AUC difference,
-because evaluation-sample uncertainty is much smaller than training/refit nuisance. B7's
-control fired at −9.134e-3 on this very surface.
+**"Bootstrap CI excludes zero" is NOT the adoption gate.** B7's control fired at −9.134e-3 on
+this surface.
 
-| Element | Protocol |
-|---|---|
-| per-target noise | `L0` refit, **k=5 seeds**, separately for each of the 5 targets → empirical `σ_target` → `F_target`. **No target inherits `y_final`'s 1.78e-3** |
-| screen | `cb_inc @ 250k`, k=2 — the only surface with a tight measured MDE (4.34e-4) |
-| promotion | a rung promotes to 1M **only if** Δ > `MDE_screen(target, k=2)`, derived from that target's own `σ_target` measured at 250k — never from a pooled or inherited MDE |
-| confirmation | 1M, k=3, against `F_target(1M, k=3)` |
-| quantisation | rungs **must** share bit-identical borders on all common features, composed-file, verified byte-level, as B7 did. Otherwise the deltas measure border drift |
-| reporting | every Δ ships its **seed panel**, not just the mean |
-| bootstrap CIs | reported **descriptively**, explicitly labelled as not the gate |
+### 9.1 ⚠ Terminology
 
-⚠ Per-architecture floors only. The `cb_inc` floor is never applied to a neural arch, and the
-LightGBM legs remain NO-FLOOR / UNCHARACTERISED by `PREREG_STAGE3` OWNER-AMEND-4.
+`3 × (max − min)` over a k=5 seed vector (`mde.floor_from_seed_vector`) is an **empirical
+refit-variability floor**. It is **not an MDE** — it is not derived from a power calculation
+and carries no stated type-II error rate. Revision 1 used the terms interchangeably; that is
+corrected throughout. `mde.mde()` computes an MDE and is reported separately where a σ exists.
 
-⚠ 250k rank order need not hold at 1M. A 250k result is a screen, never an adopted-benchmark
-number.
+⚠ `BANKED_SIGMA["lightgbm"] = None` — NO-FLOOR by design. `FLOOR_MEASURED_MIN_K = 5`, so
+k must be 5 for the floor to report `MEASURED` rather than `LOW-K-PROVISIONAL`.
 
-**Fit budget.** 15 cells (8 rungs + 7 LOO) × 5 targets × 2 seeds = **150 screening fits**,
-plus 25 null-panel and 20 control fits. ~3-4 h serial at the 62-75 s the ledger shows.
-**One compute job at a time** — the box is 8 GB and three architecture screens died on
-2026-08-13 to swap-thrash and SIGKILL. Long runs go through the night queue, unbuffered log,
-tail path published up front.
+### 9.2 Three uncertainty quantities, all reported
+
+1. **Seed panel** — all five per-arm AUROCs, and the empirical refit-variability floor.
+2. **Paired vehicle-clustered bootstrap CI** over the evaluation set, from **saved row-level
+   predictions** (`--preds-dir`), 2000 reps, shared draws.
+3. **Seed-ensemble Δ** — mean predicted probability across the five seeds per arm, then a
+   single Δ. Removes seed noise from the point estimate; reported alongside, not instead.
+
+### 9.3 Reporting
+
+**Report raw ΔAUC and Δ/nuisance side by side.** The standardised value never replaces the raw
+effect. Cross-target comparison uses the standardised form (prevalence spans 7.9%-22.9%);
+adoption bands apply to the raw form.
+
+⚠ Bit-identical quantisation borders is a **CatBoost-only** mechanism (`fit_runner.py:137-193`);
+`_fit_lightgbm` has no borders parameter. The requirement binds on CatBoost arms only.
+
+⚠ Row-eligibility identity asserted across arms. Any drop triggers a matched-row re-run.
 
 ---
 
 ## 10. Measurement-process falsification
 
-Advisories are measurements, not physical truth: `actual condition → recorded advisory ←
-inspection process`. Apparent persistence may be persistence in **measurement practice**.
-
-### 10.1 Feasible dimensions
-
-| Dimension | Feasible | Test |
+| Dimension | Feasible | Treatment |
 |---|---|---|
-| calendar era | yes | `β_breadth|count` by target year; `adv_pre2018_exposure_share` |
-| geography | yes, coarse | `postcode_area` regions — `ingest_results.py:43`, `schemas.py:50` |
+| calendar era | yes | `β` by target year; `adv_pre2018_exposure_share` |
+| geography | yes, coarse | `postcode_area` — see §10.2 |
 | vehicle cohort | yes | make-model groups |
-| **inspection-context change** | **NO** | **no station or tester identifier exists in the lake.** This leg is DROPPED and reported as dropped, not weakened |
+| **inspection-context change** | **NO** | **no station or tester identifier exists in the lake.** DROPPED and reported as dropped |
 
-### 10.2 The discriminating prediction: level versus slope
+**Discriminating prediction:** recording drift (tests carrying ≥1 item, 59.2% → 60.4%,
+2019→2023; advisory volumes 2.9M → 39.7M/yr across 2005-2014 while fail items stayed flat)
+moves the breadth **level**. A prognostic signature predicts a stable risk **gradient** in
+breadth given count. If `β` tracks the drift, it is recording practice.
 
-Advisory recording drifts through the entire window. `DATA_ASSESSMENT.md:361-366`: advisory
-volumes rise 2.9M → 39.7M/yr across 2005-2014 while fail items stay flat at ~34-35M/yr; :450:
-share of tests carrying ≥1 item rises **53.5% (2010) → 59.2% (2019) → 60.4% (2023)**. Advisory
-rows are 695,128,834 of 1,289,329,470 items (53.9%).
+### 10.1 ⚠ Not an instrument
 
-Prior-window recency correlates with vehicle age, so this is a live mechanism for
-manufacturing the predicted breadth gradient.
+Revision 1 called leave-one-vehicle-out area advisory intensity an "instrument". **It is not.**
+Area has genuine causal routes to deterioration — roads, salt, climate, socioeconomics, fleet
+age. It violates the exclusion restriction by construction.
 
-**Recording drift moves the LEVEL of breadth. Latent deterioration predicts a stable GRADIENT
-of risk in breadth given count. If `β` tracks the drift, it is practice, not deterioration.**
+It is reported as a **cross-fitted recording-practice proxy / sensitivity variable**:
+computed leave-one-vehicle-out, **residualised on year, vehicle age, make-model group and
+mileage band** (or entered matched on them) so that what remains is closer to local recording
+practice than to local road conditions. Conclusion: if `β` shrinks materially once conditioned
+on it, breadth is partly measuring where the car was tested. Directional evidence, not
+identification.
 
-### 10.3 Two substitute instruments
+### 10.2 ⚠ Conditional persistence null
 
-- **Area-practice control.** Leave-one-vehicle-out, as-of mean advisories-per-test in the
-  vehicle's `postcode_area`. If `β` shrinks materially once conditioned on it, breadth is
-  partly measuring *where the car was tested*.
-- **Persistence excess.** Raw persistence is confounded by breadth. Compare observed
-  section-recurrence against recurrence expected under independent per-day section draws
-  matched on each vehicle's per-day breadth and marginal section frequencies. **Excess**
-  persistence is the quantity the theory is about. If excess ≈ 0 while raw persistence
-  predicts, persistence is a breadth artefact.
+Revision 1 compared observed system-recurrence against draws from an **unconditional** system
+distribution. That null is too weak — it would be rejected by year effects, system prevalence,
+or vehicle composition alone, none of which is the question.
 
-### 10.4 Built-in negative control
+The null **preserves year, per-system prevalence and vehicle composition**, permuting system
+identities within strata of (target year × per-day breadth) while holding each vehicle's day
+structure fixed. **Excess** persistence relative to *that* null is the quantity of interest. If
+excess ≈ 0 while raw persistence predicts, persistence is a breadth-and-composition artefact.
 
-`Y_S1` is the theory's own predicted negative control: the severity study already measured it
-at **0.6545**, worse than broad failure, hypothesised as acute events rather than cumulative
-deterioration.
+### 10.3 Built-in negative control
+
+`Y_S1`, already measured at 0.6545 — worse than broad failure.
 
 ---
 
-## 11. Per-concept verdicts
-
-Each of the 8 concepts receives one verdict, from four inputs: descriptive `β`, cumulative Δ,
-leave-one-out Δ, artefact survival.
+## 11. Verdicts
 
 | Verdict | Condition |
 |---|---|
-| **SUPPORTED** | descriptive evidence positive and stratification-surviving; **and** cumulative-or-LOO Δ clears `F_target` on ≥1 of `Y_B3`/`Y_M1` at **1M confirmation**; **and** survives era, geography and cohort checks |
-| **WEAK** | sub-floor positive with consistent sign across seeds and targets — B7's `SUB-FLOOR-POSITIVE` class |
+| **SUPPORTED** | §7.5 SUPPORTED (including Estimand B) **and** `Y_B3` returns MOVED **and** survives era/geography/cohort |
+| **WEAK** | sub-floor positive with consistent sign across all five seeds and both `Y_B3`/`Y_M1` |
 | **FALSIFIED** | Δ ≤ 0 with CI clear, or descriptive `β ≤ 0` |
-| **INCONCLUSIVE** | \|Δ\| < `F_target` with inconsistent sign, or a cell-count failure |
+| **INCONCLUSIVE** | \|Δ\| below the refit-variability floor with inconsistent sign, or cell-count failure |
 
-⚠ **Every INCONCLUSIVE must state the MDE it was inconclusive against.** A verdict without its
-power is not a verdict.
+⚠ Every INCONCLUSIVE **states the floor it was inconclusive against**.
 
-⚠ **SUPPORTED requires a 1M confirmation, and 1M is only reached through the screen.** A
-concept that fails the 250k screen therefore cannot be SUPPORTED under any circumstance, and
-is recorded as WEAK or INCONCLUSIVE with its screen MDE stated. This asymmetry is deliberate
-and declared in advance so it is not later mistaken for a missing analysis.
+⚠ **The expected outcome is descriptive-SUPPORTED / model-NULL.** That is a real result, not a
+failure — but only if §8.1 has run. Its interpretation is then read directly off `(L0 − L0m)`:
 
-⚠ A concept may be **SUPPORTED descriptively and FALSIFIED as a feature**. That combination is
-the expected outcome given §2.3 and is a real result, not a failure of the study: it would mean
-breadth *is* an informative measurement of latent deterioration whose information the model
-already holds through another channel.
+| `(L0 − L0m)` | reading |
+|---|---|
+| **large** | the coarse advisory channel already carries the signal; **the richer representation is redundant** |
+| **≈ 0** | the model is not using advisory information materially, coarse or rich — a different and more surprising finding |
 
 ---
 
-## 12. Cross-target prediction
+## 12. Cross-target pattern
 
-The theory predicts breadth / persistence / trajectory add materially more for `Y_B3` and
-`Y_M1` than for `Y_S1`, and plausibly more than for `Y_T0`. **That cross-target pattern matters
-as much as the absolute AUC gain.**
-
-⚠ Raw Δ is **not comparable** across targets with different prevalence. The ranking is tested
-on **Δ / σ_target**, standardised by each target's own measured refit noise from §9.
-
-⚠ **Never compare a subgroup AUROC to a pooled benchmark.** The NY cohort study established
-that pooled AUROC is high *because* it ranks across subgroups with different baselines; the
-error always flatters the subgroup.
-
-Sub-prediction: if the theory is about **spreading** rather than **persisting** deterioration,
-the spread rung `L4` benefits `Y_M1N` most.
+Prediction: breadth/persistence/trajectory add more for `Y_B3` and `Y_M1` than for `Y_S1`.
+Tested on **Δ / nuisance**, with raw Δ reported alongside. ⚠ Never compare a subgroup AUROC to
+a pooled benchmark — the NY cohort study established the error always flatters the subgroup.
 
 ---
 
-## 13. Sequencing and gates
+## 13. Sequencing
 
-| Phase | Work | Gate to pass |
-|---|---|---|
-| 0 | freeze this prereg + sha; taxonomy census; `(c,b)` cell-count preflight; prevalence correctness gate | prevalence exact; cell scheme frozen |
-| 1 | commit/revert the dirty tree; enumerate B0 advisory columns; build `adv_*`; leakage audit | planted-leak arm **caught**; nominal-null arm **quiet**; as-of reconstruction exact |
-| 2 | descriptive falsification on TRAIN → freeze pattern → confirm on EVAL | §7.6 verdict recorded before any fit |
-| 3 | per-target null panels + control arms | `σ_target` measured for all 5 |
-| 4 | 250k screen, 150 fits, cumulative + LOO | row-eligibility identity holds at every rung |
-| 5 | 1M promotion of screen survivors only | quantisation parity byte-verified |
-| 6 | artefact checks on whatever survived | — |
-| 7 | evidence pack + per-concept verdicts | — |
-
-`L7` fires only if a rung moved at Phase 5.
+1. **Freeze this revision + `.sha256`**
+2. Taxonomy census (§4.2, full history, fail-closed) + correctness gates (§7.1)
+3. **TRAIN descriptive discovery** (§7.2, §7.3)
+4. **Freeze the descriptive rule**
+5. **EVAL confirmation**
+6. Feature build + tests + two-sided leakage control (§5, §6)
+7. **Mandatory existing-channel ablation** (§8.1)
+8. Whole-block ADV contrast (§8.2)
+9. Conditional decomposition — only if the representation genuinely MOVES
 
 ---
 
 ## 14. Deliverable
 
-One evidence pack: `out/ADVSTRUCT_RESULT_2026_08_15.md` + `out/ADVSTRUCT_RESULT.json`,
-structured to these 13 outputs.
+`out/ADVSTRUCT_RESULT_2026_08_15.md` + `.json`. Thirteen outputs: ontology; feature
+definitions; per-feature leakage audit with both control arms; prevalence/distribution/
+missingness with observability denominators; within-count breadth tables; **system-composition
+falsifier results**; `(L0 − L0m)` channel ablation; whole-block contrast across four targets;
+seed panels; does breadth add beyond count; does persistence add beyond breadth; artefact
+evidence; per-concept verdicts.
 
-1. exact advisory-group taxonomy used → `out/ADVSTRUCT_TAXONOMY.json`
-2. definitions for every constructed feature
-3. leakage audit per feature, with both control arms
-4. prevalence, distribution, missingness — with observability denominators
-5. within-count breadth falsification tables for `Y_B3` and `Y_M1`
-6. `L0m`/`L0`→`L6` matched results for `Y_T0`/`Y_B3`/`Y_M1`/`Y_M1N`/`Y_S1`
-7. repeated-seed deltas for every incremental step
-8. does breadth add beyond count?
-9. does persistence add beyond breadth?
-10. does trajectory/spread add beyond static history?
-11. is the predicted `B3/M1 > T0 > S1` pattern observed — on `Δ/σ_target`?
-12. evidence the result is inspection/era artefact rather than vehicle deterioration
-13. final verdict per concept: SUPPORTED / WEAK / FALSIFIED / INCONCLUSIVE
+### 14.1 Secondary product metrics — descriptive only
 
-If the theory survives, §15 of the result document proposes the next causally motivated feature
-hypotheses. **Undirected feature generation is not an acceptable fallback if it does not.**
+AutoSafe is a ranking and triage product, so **AUROC remains the sole pre-registered adoption
+gate**, and alongside it are reported: top-decile serious-burden capture and lift, top-1%
+precision, Brier and log loss, and calibration slope/intercept.
+
+⚠ **These are secondary descriptive outputs. They are not alternative routes to adoption and
+may not rescue a failed AUC gate.** Stated here, before any number, so that reaching for one
+later is visibly a protocol violation.
 
 ---
 
 ## 15. Declared risks
 
-1. **The ladder is likely to return sub-floor.** Every comparable precedent (§2.3) did. This is
-   declared now so a null is a result, not a disappointment, and so no primary is rescued
-   post-hoc.
-2. **`L0` already carries the advisory channel.** Without `L0 − L0m` the ladder deltas are
-   uninterpretable. This is the study's most likely misreading.
-3. **Recording drift can manufacture the predicted gradient.** §10.2 is the load-bearing check,
-   not a footnote.
-4. **No station identifier exists.** The strongest available artefact test cannot be run;
-   §10.3 substitutes are weaker and are labelled as such.
-5. **Cell counts are unmeasured.** §7.5 may force coarsening. Coarsening after seeing rates is
-   prohibited.
-6. **`Y_M1` is construct-coupled to breadth.** `Y_M1N` exists to break it; if `Y_M1N` is too
-   rare to estimate, that sub-prediction is reported INCONCLUSIVE rather than dropped.
-7. **The fit surface is under owner override with D13 open.** No ladder number is bankable as a
-   verdict.
+1. **A model-side null is the expected outcome.** Pre-declared so it is a result, not a
+   disappointment, and so no primary is rescued post-hoc.
+2. **The estimand includes owner/garage response.** A null is consistent with "no information"
+   *or* "information that gets acted on." This design cannot separate them.
+3. **B0 already carries a coarse advisory channel.** §8.1 is what makes the null interpretable.
+4. **Recording drift can manufacture the gradient.** §10 is load-bearing.
+5. **System composition can manufacture the gradient.** §7.3 is load-bearing.
+6. **No station identifier exists.** The strongest artefact test cannot be run.
+7. **`Y_M1N` is construct-dependent** and fenced to exploratory.
+8. **The fit surface is under owner override with D13 open and the B7 control anomaly
+   unexplained.** No model number is bankable as a verdict.
 
 ---
 
-## 16. Deviations register
+## 16. Deviations
 
-Deviations from this prereg are recorded in `factory/DEVIATIONS.md` under the
-deviate-with-test rule of `FACTORY_CONTRACT.md`: a deviation ships with the test that made it
-necessary. Amendments after freeze carry their own sha and state whether any result had been
-seen at the time of amendment.
+Recorded in `factory/DEVIATIONS.md` under the deviate-with-test rule of `FACTORY_CONTRACT.md`:
+a deviation ships with the test that made it necessary. Amendments after freeze carry their own
+sha and state whether any result had been seen.
+
+---
+
+## 17. Revision ledger — R1 → R2
+
+**No performance number, breadth gradient or outcome rate had been seen at the time of this
+revision.** R1 was committed (`480bf22`) but never sha-frozen.
+
+*Found by verification against artifacts:*
+
+| # | Change |
+|---|---|
+| V1 | §4 section vocabulary was wrong — 19 raw strings, uncanonicalised, vintage-split |
+| V2 | §7/§9 named no packet set → v2 only |
+| V3 | §9 screened at k=2, unfloorable given `BANKED_SIGMA["lightgbm"] = None` → k=5 |
+| V4 | §9 required bit-identical borders "as B7 did" — CatBoost-only mechanism |
+| V5 | §8 ran 15 cells before knowing the block moves → whole-block first |
+
+*Owner amendments, 2026-08-15:*
+
+| # | Change |
+|---|---|
+| O1 | Framing narrowed: prognostic signature, not proof of a latent state; estimand explicitly under naturally occurring maintenance/repair behaviour (§1) |
+| O2 | Taxonomy: full TRAIN+EVAL history census; fail-closed on unknown non-null sections; versioned ontology; `tyres` → `wheels_tyres`; coarser-grain sensitivity retained (§4) |
+| O3 | **System-composition falsifier added** — TRAIN-fitted additive expectation, tested on EVAL; common combinations reported within count strata (§7.3) |
+| O4 | Correctness gate hardened — set equality, row-level equality, ordered hashes, anti-join = 0 (§7.1) |
+| O5 | `Y_M1N` demoted to exploratory; `Y_B3` sole MOVED trigger; `Y_M1` confirmatory; `Y_S1` falsifier (§3.2) |
+| O6 | **`adv_trajectory_class` is no longer ordinal** — nominal, out of all fit arms; six numeric primitives carry trajectory instead (§5.2) |
+| O7 | Three-state NULL semantics made explicit; rates/slopes NULL when undefined even where counts are certain zeros (§5.5) |
+| O8 | Same-day dedup at `(tgt_id, p_date, canonical_system, item_key)`; tied-prior-day sensitivity; permutation invariance explicitly declared insufficient (§5.6) |
+| O9 | Block split into `ADV_CORE` / `ADV_GRAIN` / `ADV_COVERAGE` / `ADV_AUDIT`; **coverage and audit columns in BOTH arms**; column count reconciled (§5.1) |
+| O10 | **Existing-channel ablation made mandatory and unconditional** (§8.1); §2.2 corrected to state AutoSafe already contains a coarse advisory channel |
+| O11 | Area intensity is **not** an instrument — cross-fitted recording-practice proxy, residualised/matched; persistence null made conditional on year, system prevalence and vehicle composition (§10.1, §10.2) |
+| O12 | `3 × (max−min)` renamed **empirical refit-variability floor**, not MDE; row-level predictions saved; paired clustered bootstrap and seed-ensemble Δ added; raw and standardised Δ both reported (§9) |
+| O13 | Secondary product metrics added as descriptive-only, explicitly barred from rescuing a failed AUC gate (§14.1) |
+| O14 | Model results stay EXPLORATORY while D13 locks **and** the B7 control anomaly remain open — both conditions (§3.3) |
