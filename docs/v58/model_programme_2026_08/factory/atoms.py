@@ -69,6 +69,17 @@ def item_test_atom_sql(inputs: sources.Inputs, years: Sequence[int],
             f"AS cat_{key}_fail_initial",
             f"count(*) FILTER (WHERE m.category_key = '{key}' AND {fail_final}) "
             f"AS cat_{key}_fail_final",
+            # B7D severity-transition ladder needs the rung PER CATEGORY: the
+            # contract requires an ordered prior observation of the SAME
+            # category, which the day-level n_dangerous/n_major/n_minor cannot
+            # supply (they say "something got worse", not "this got worse").
+            # Post-2018 gated exactly like their day-level twins below.
+            f"count(*) FILTER (WHERE m.category_key = '{key}' AND {post} AND "
+            f"{sever} = '{sev.SEVERITY_DANGEROUS}') AS cat_{key}_dangerous",
+            f"count(*) FILTER (WHERE m.category_key = '{key}' AND {post} AND "
+            f"{sever} = '{sev.SEVERITY_MAJOR}') AS cat_{key}_major",
+            f"count(*) FILTER (WHERE m.category_key = '{key}' AND {post} AND "
+            f"{sever} = '{sev.SEVERITY_MINOR}') AS cat_{key}_minor",
         ]
 
     pos_cols: List[str] = []
@@ -139,6 +150,12 @@ SCALAR_ITEM_COLUMNS: Sequence[str] = (
     "n_fail_items_final", "n_prs_items", "n_dangerous", "n_major", "n_minor",
     "n_unknown_disposition")
 
+#: Per-category atom suffixes. `dangerous`/`major`/`minor` are post-2018-gated
+#: and exist for the B7D severity-transition ladder. These are ATOM columns,
+#: not emitted features: they cost staged width, not contract cap.
+CATEGORY_SUFFIXES: Sequence[str] = ("n", "adv", "fail_initial", "fail_final",
+                                    "dangerous", "major", "minor")
+
 
 def _sum_item_columns(alias: str, observed: str) -> List[str]:
     """Day-level union of the item_test_atom aggregates, OVER OBSERVED TESTS ONLY.
@@ -161,7 +178,7 @@ def _sum_item_columns(alias: str, observed: str) -> List[str]:
     cols: List[str] = []
     for name in list(SCALAR_ITEM_COLUMNS) + [
             f"cat_{key}_{suffix}" for key in CATEGORY_KEYS
-            for suffix in ("n", "adv", "fail_initial", "fail_final")]:
+            for suffix in CATEGORY_SUFFIXES]:
         cols.append(
             f"CASE WHEN {n_observed} > 0 THEN "
             f"coalesce(sum({alias}.{name}) FILTER (WHERE {observed}), 0) "

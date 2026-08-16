@@ -1,0 +1,58 @@
+{
+  "$comment": "SHAPE for out/serve_view_classes.json (owner: A2). The factory validates the instance against this schema at build time and never hardcodes class codes: the vocabulary comes from the instance's `classes` array when present, otherwise from the distinct `class` values the instance itself uses. `version` and `classes` are OPTIONAL so an A2 file that omits them still loads. Extend this schema, not the factory, if A2's file grows fields.",
+  "title": "serve_view_classes",
+  "type": "object",
+  "properties": {
+    "version": {"type": "string"},
+    "generated": {"type": "string"},
+    "source_audit": {"type": "string"},
+    "invariants": {"type": "array", "items": {"type": "string"}},
+    "serve_view_columns": {"type": "array", "items": {"type": "string"}},
+    "classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {"type": "string"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "deployable": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["class"],
+        "properties": {
+          "class": {"type": "string"},
+          "flags": {"type": "array", "items": {"type": "string"}},
+          "inputs": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "string"},
+          "notes": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "blocks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["class"],
+        "properties": {
+          "class": {"type": "string"},
+          "flags": {"type": "array", "items": {"type": "string"}},
+          "notes": {"type": "string"},
+          "paths": {"type": "object", "additionalProperties": {"type": "string"}},
+          "carve_outs": {"type": "object", "additionalProperties": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

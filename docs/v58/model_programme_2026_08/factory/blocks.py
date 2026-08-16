@@ -16,14 +16,120 @@ never hardcoded here.
 """
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+from . import day_outcomes as do
+from . import rates
 from . import state as st
 from .taxonomy import (CANONICAL_CATEGORY_KEYS, CATEGORY_KEYS, LATERAL_GROUPS,
                        LONGITUDINAL_GROUPS, VERTICAL_GROUPS)
 
-#: Digital MOT records begin 2005-01-01: nothing before it is observable.
+#: Digital MOT records begin 2005-01-01. This is the ABSOLUTE lower bound on
+#: what could ever have been recorded -- NOT the floor a given build should use.
 OBSERVABLE_FLOOR = date(2005, 1, 1)
+
+
+@dataclass(frozen=True)
+class HistoryFloors:
+    """Per-channel earliest date on which history COULD have been recorded.
+
+    D-1: `OBSERVABLE_FLOOR` used to be applied unconditionally, so a build
+    loading only 2015+ still reported `b1_observable_years` reaching back to
+    2005. For a vehicle first used in 2008 with a 2023 target that claims 15.0
+    observable years against 8 loadable ones -- deflating
+    `b1_density_per_observable_year` by ~47%, worst for exactly the oldest,
+    highest-exposure vehicles, and `b1_left_censor_flag` (which fires on
+    first_use < 2005) does not mark the affected 2005-2015 cohort.
+
+    Train/eval consistency does not fix this: both sides carry the same
+    mis-specified denominator, so it is a feature-quality defect rather than a
+    parity defect, and it lands on precisely the comparison the exposure-
+    normalisation argument rests on.
+
+    `result` bounds test history; `item` and `severity` bound their own
+    channels, which start later and must not borrow the result window.
+    """
+
+    result: date = OBSERVABLE_FLOOR
+    item: date = OBSERVABLE_FLOOR
+    severity: date = OBSERVABLE_FLOOR
+    #: How `result` was chosen. Recorded in BUILD_MANIFEST; NOT a feature.
+    source: str = "digital_records_2005"
+
+    @staticmethod
+    def from_input_years(years, source: str = "build_year_list") -> "HistoryFloors":
+        """Floor each channel at the earliest year the build actually loads."""
+        if not years:
+            raise ValueError("cannot derive history floors from an empty year list")
+        floor = max(OBSERVABLE_FLOOR, date(int(min(years)), 1, 1))
+        return HistoryFloors(result=floor, item=floor, severity=floor, source=source)
+
+    def to_manifest(self):
+        return {"result": self.result.isoformat(), "item": self.item.isoformat(),
+                "severity": self.severity.isoformat(), "source": self.source}
+
+
+DEFAULT_FLOORS = HistoryFloors()
+
+# --- pinned categorical vocabularies ----------------------------------------
+# A derived status column's REACHABLE level set depends on the data window: the
+# D-1 floor correction made `full` reachable in b1_history_coverage_grade where
+# it previously was not, and a rare level ('none', 2 rows in 239) can fall
+# entirely into one side of a train/valid split. CatBoost then quantises the two
+# Pools to different layouts and refuses the fit outright -- a hard failure, not
+# a degradation.
+#
+# The fix is to declare each vocabulary ONCE and carry it on every frame, so the
+# Pool's category set is a property of the CONTRACT rather than of whichever
+# levels a particular split happened to observe.
+#
+# Validation is MEMBERSHIP, not coverage: every observed value must be in the
+# vocabulary, and no frame is required to observe every level. Requiring
+# coverage would make a legitimately homogeneous cohort un-scoreable.
+
+HISTORY_COVERAGE_GRADES: Tuple[str, ...] = ("none", "left_censored", "partial", "full")
+OBSERVABLE_YEARS_STATUSES: Tuple[str, ...] = ("observed", "left_censored_2005",
+                                              "first_use_missing")
+
+PINNED_VOCABULARIES: Dict[str, Tuple[str, ...]] = {
+    "b1_history_coverage_grade": HISTORY_COVERAGE_GRADES,
+    "b1_observable_years_status": OBSERVABLE_YEARS_STATUSES,
+}
+
+#: Which pinned vocabularies are ORDERED. An ordered grade is rendered to the
+#: model as its vocabulary INDEX -- a numeric feature whose mapping is the
+#: contract -- rather than as an unordered category. Two reasons:
+#:
+#:  1. Correctness. none < left_censored < partial < full is a real ordering,
+#:     and a categorical encoding discards it.
+#:  2. Layout stability. A categorical's Pool layout depends on which levels a
+#:     given split observes; with a rare level ('none': 2 rows in 239) a
+#:     seed-dependent train/valid split can drop it, quantize() then derives a
+#:     different layout, and CatBoost refuses the fit. An ordinal cannot vary
+#:     that way, because the mapping is declared, not inferred.
+#:
+#: Nominal vocabularies (observed / left_censored_2005 / first_use_missing have
+#: no order) stay categorical and are membership-validated only.
+ORDERED_VOCABULARIES: Tuple[str, ...] = ("b1_history_coverage_grade",)
+
+
+def vocabulary_ordinal(column: str, value: Optional[str]) -> Optional[int]:
+    """Contract-defined index of `value` within its ordered vocabulary."""
+    vocab = PINNED_VOCABULARIES[column]
+    if value is None:
+        return None
+    return vocab.index(assert_in_vocabulary(column, value))
+
+
+def assert_in_vocabulary(column: str, value: Optional[str]) -> Optional[str]:
+    """Membership check for a pinned categorical. NULL passes; a stray value raises."""
+    vocab = PINNED_VOCABULARIES.get(column)
+    if vocab is None or value is None or value in vocab:
+        return value
+    raise ValueError(
+        f"{column}={value!r} is outside its pinned vocabulary {vocab}. Either "
+        f"the emitter invented a level or the vocabulary is stale; both are "
+        f"contract changes, not runtime conditions.")
 #: A car's first MOT is due at 3 years, so the first 3 years of life offer no
 #: test opportunities (opportunity-adjusted density denominator).
 FIRST_MOT_AGE_YEARS = 3.0
@@ -38,13 +144,50 @@ ERA_CALENDAR = "calendar_derived"
 ERA_RESEARCH = "research_only_input"
 
 
+#: serve_class -- can this column ever reach a live prediction?
+SERVE_DEPLOYABLE = "deployable"
+SERVE_RESEARCH = "research_only"
+
+
 @dataclass(frozen=True)
 class ColumnSpec:
+    """One emitted column.
+
+    `era_observability` and `serve_class` are ORTHOGONAL and must not be
+    conflated. Era observability is what the DATA can support (pre-2018 has no
+    severity ladder). serve_class is what SERVING can consume (the live API
+    exposes no test_type, so anything keyed on it can never ship). A column can
+    be all_eras and research-only, or post-2018-only and deployable.
+
+    `screen_only` is a third, independent axis: a column may legitimately exist
+    in the candidate frame -- diagnostics, denominator variants under test --
+    while being permanently barred from an adopted featureset.
+    """
+
     name: str
     block: str
     dtype: str
     definition: str
     era_observability: str = ERA_ALL
+    serve_class: Optional[str] = None
+    screen_only: bool = False
+
+    def __post_init__(self):
+        if self.serve_class is None:
+            # A research-only INPUT cannot yield a deployable column, so the
+            # default is derived rather than restated at 200 call sites. An
+            # explicit serve_class always wins -- but it may only classify
+            # DOWN (see `resolved_serve_class`).
+            object.__setattr__(self, "serve_class",
+                               SERVE_RESEARCH if self.era_observability == ERA_RESEARCH
+                               else SERVE_DEPLOYABLE)
+        elif (self.era_observability == ERA_RESEARCH
+              and self.serve_class == SERVE_DEPLOYABLE):
+            raise ValueError(
+                f"{self.name}: era_observability=research_only_input cannot be "
+                f"declared serve_class=deployable. Classification may only go "
+                f"DOWN; promoting a test_type-consuming column needs an owner "
+                f"ruling and a verified live serve path, not a keyword.")
 
 
 def _cat_label(key: str) -> str:
@@ -221,13 +364,117 @@ B6_COLUMNS: List[ColumnSpec] = [
     ColumnSpec("b6_location_map_status", "B6", "VARCHAR", "present / absent -- whether mdr_rfr_location was supplied. Absent means the B6 counts are NULL, not zero.", ERA_RESEARCH),
 ]
 
+# --- B7D: deployable day-grain history (Lane D) -----------------------------
+# Day grain THROUGHOUT, under the five-state contract in day_outcomes.py.
+# AMBIGUOUS and UNAVAILABLE days are excluded from BOTH sides of every
+# proportion here; their exposure is emitted so the exclusion is auditable.
+#
+# Day grain is NOT test grain and these names do not pretend it is. There is
+# deliberately no `major_days_per_valid_test`: that is a test-grain estimand
+# Lane D cannot honestly reconstruct, because 35.09% of targets carry at least
+# one prior day whose initial/retest split is unidentifiable.
+
+B7D_COLUMNS: List[ColumnSpec] = [
+    ColumnSpec("b7d_prev_day_outcome", "B7D", "VARCHAR", "Five-state outcome of the most recent prior test-day: PASS / PRS / FAIL / AMBIGUOUS / NO_HISTORY. The deployable analogue of the immediately-preceding-event term."),
+    ColumnSpec("b7d_n_prior_fail_days", "B7D", "BIGINT", "Prior test-days whose five-state outcome is FAIL. AMBIGUOUS days are excluded, never counted as non-failures."),
+    ColumnSpec("b7d_n_prior_pass_days", "B7D", "BIGINT", "Prior test-days whose five-state outcome is PASS (PRS counted separately)."),
+    ColumnSpec("b7d_n_prior_prs_days", "B7D", "BIGINT", "Prior test-days whose five-state outcome is PRS -- a pass whose defects were real. Tagged research-only pending confirmation that PRS is visible at serving (SERVE_VIEW invariant 3).", ERA_RESEARCH),
+    ColumnSpec("b7d_n_prior_outcome_observable_days", "B7D", "BIGINT", "Prior test-days whose outcome is identified (PASS + PRS + FAIL) -- the honest denominator for every b7d proportion."),
+    ColumnSpec("b7d_n_prior_outcome_ambiguous_days", "B7D", "BIGINT", "Prior test-days carrying a definitive outcome that is NOT identified (same-stratum FAIL + pass). The excluded exposure, made visible."),
+    ColumnSpec("b7d_days_since_fail_day", "B7D", "BIGINT", "Days since the most recent prior test-day whose outcome is FAIL; NULL when never."),
+    ColumnSpec("b7d_last_day_n_fail_items", "B7D", "BIGINT", "Fail-bearing items on the most recent prior test-day; NULL when that day's detail is unobservable."),
+    ColumnSpec("b7d_last_day_max_severity_ord", "B7D", "BIGINT", "Max severity rung on the most recent prior test-day: 0 clean / 1 advisory / 2 minor / 3 major / 4 dangerous; NULL when unobservable.", ERA_POST2018),
+    ColumnSpec("b7d_last_day_n_major", "B7D", "BIGINT", "Major items on the most recent prior test-day; NULL when severity is unobservable.", ERA_POST2018),
+    ColumnSpec("b7d_last_day_n_dangerous", "B7D", "BIGINT", "Dangerous items on the most recent prior test-day; NULL when severity is unobservable.", ERA_POST2018),
+    ColumnSpec("b7d_last_fail_day_n_items", "B7D", "BIGINT", "Fail-bearing items on the most recent prior test-day that actually FAILED; NULL when never or unobservable."),
+    ColumnSpec("b7d_last_fail_day_n_categories", "B7D", "BIGINT", "Distinct categories carrying a fail-bearing item on the most recent prior FAIL day -- the breadth of the last failure; NULL when never or unobservable."),
+    ColumnSpec("b7d_last_fail_day_max_severity_ord", "B7D", "BIGINT", "Max severity rung on the most recent prior FAIL day; NULL when never or unobservable.", ERA_POST2018),
+    ColumnSpec("b7d_fail_days_per_outcome_observable_day", "B7D", "DOUBLE", "Beta-binomial smoothed share of outcome-observable prior test-days that failed; NULL without an observable day."),
+    ColumnSpec("b7d_fail_days_per_result_observable_year", "B7D", "DOUBLE", "Gamma-Poisson smoothed FAIL days per year of result-observable exposure; NULL when the window is non-positive."),
+    ColumnSpec("b7d_major_days_per_severity_observable_day", "B7D", "DOUBLE", "Beta-binomial smoothed share of severity-observable prior test-days carrying a major item; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_major_days_per_severity_observable_year", "B7D", "DOUBLE", "Gamma-Poisson smoothed major days per year of severity-observable exposure; NULL when that window is non-positive.", ERA_POST2018),
+    ColumnSpec("b7d_dangerous_days_per_severity_observable_day", "B7D", "DOUBLE", "Beta-binomial smoothed share of severity-observable prior test-days carrying a dangerous item; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_advisory_days_per_item_observable_day", "B7D", "DOUBLE", "Beta-binomial smoothed share of item-observable prior test-days carrying an advisory; NULL when no prior day is item-observable."),
+    ColumnSpec("b7d_n_fail_days_cap2y", "B7D", "BIGINT", "b7d_n_prior_fail_days restricted to the trailing 2-year window before tgt_date."),
+    ColumnSpec("b7d_n_major_days_cap2y", "B7D", "BIGINT", "Prior test-days carrying a major item, restricted to the trailing 2-year window; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_n_dangerous_days_cap2y", "B7D", "BIGINT", "Prior test-days carrying a dangerous item, restricted to the trailing 2-year window; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_last3day_fail_items_sum", "B7D", "BIGINT", "Fail-bearing items summed over the last up-to-3 item-observable prior test-days; NULL when none is observable."),
+    ColumnSpec("b7d_last3day_n_outcome_observed", "B7D", "BIGINT", "How many of the last up-to-3 prior test-days had an identified outcome -- the explicit bounded denominator for the outcome channel."),
+    ColumnSpec("b7d_last3day_n_detail_observed", "B7D", "BIGINT", "How many of the last up-to-3 prior test-days had observable defect detail -- a SEPARATE denominator from the outcome channel, never reused across the two."),
+    ColumnSpec("b7d_recent3day_minus_earlier_burden", "B7D", "DOUBLE", "Mean fail-bearing items over the last up-to-3 item-observable days minus the mean over all earlier ones; NULL until an earlier period exists."),
+    ColumnSpec("b7d_n_adv_to_minor_transitions", "B7D", "BIGINT", "Categories escalating from advisory to minor on a strictly later day; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_n_minor_to_major_transitions", "B7D", "BIGINT", "Categories escalating to major from a strictly lower rung observed earlier; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_n_major_to_dangerous_transitions", "B7D", "BIGINT", "Categories escalating to dangerous from a strictly lower rung observed earlier; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_n_severity_transition_opportunities", "B7D", "BIGINT", "Category-days where a rung was already on record and could therefore have escalated -- the honest denominator; NULL when severity was never observable.", ERA_POST2018),
+    ColumnSpec("b7d_severity_escalation_share", "B7D", "DOUBLE", "Beta-binomial smoothed share of transition opportunities that escalated; NULL without an opportunity.", ERA_POST2018),
+    ColumnSpec("b7d_days_since_severity_escalation", "B7D", "BIGINT", "Days since the most recent category severity escalation; NULL when never.", ERA_POST2018),
+    ColumnSpec("b7d_outcome_history_status", "B7D", "VARCHAR", "no_priors / none / partial / full -- outcome identifiability across this vehicle's prior test-days."),
+    ColumnSpec("b7d_severity_transition_status", "B7D", "VARCHAR", "observed / unobserved -- whether any prior day could support a category severity rung."),
+]
+
+# --- B7R: initial-presentation history (Lane R, research-only) ---------------
+# EVERY column here consumes test_type-in-history, so the whole block is
+# research_only_input by construction. It measures an information CEILING --
+# what correctly reconstructed initial-presentation state is worth if it could
+# be served -- and no adoption decision follows from it.
+#
+# Grain is the initial-presentation DAY: a prior day carrying >=1 definitive
+# NT, resolved by the same five-state rule restricted to NT rows. The
+# record-count twin is the existing b1_n_prior_initials, reused not re-emitted.
+
+B7R_COLUMNS: List[ColumnSpec] = [
+    ColumnSpec("b7r_prev_initial_outcome", "B7R", "VARCHAR", "Five-state outcome of the most recent prior initial-presentation day: PASS / PRS / FAIL / NO_HISTORY / UNAVAILABLE.", ERA_RESEARCH),
+    ColumnSpec("b7r_days_since_prev_initial", "B7R", "BIGINT", "Days since the most recent prior initial-presentation day with an identified outcome; NULL when never.", ERA_RESEARCH),
+    ColumnSpec("b7r_days_since_prev_initial_fail", "B7R", "BIGINT", "Days since the most recent prior initial presentation that FAILED; NULL when never.", ERA_RESEARCH),
+    ColumnSpec("b7r_n_prior_initial_days", "B7R", "BIGINT", "Prior initial-presentation days with an identified outcome -- the denominator for every b7r share.", ERA_RESEARCH),
+    ColumnSpec("b7r_n_prior_initial_fail_days", "B7R", "BIGINT", "Prior initial-presentation days whose outcome is FAIL.", ERA_RESEARCH),
+    ColumnSpec("b7r_n_prior_initial_prs_days", "B7R", "BIGINT", "Prior initial-presentation days whose outcome is PRS.", ERA_RESEARCH),
+    ColumnSpec("b7r_n_prior_initial_ambiguous_days", "B7R", "BIGINT", "Prior initial-presentation days whose outcome is not identified -- excluded exposure, made visible.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_share", "B7R", "DOUBLE", "Beta-binomial smoothed share of identified prior initial presentations that FAILED; NULL without one.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_adverse_share", "B7R", "DOUBLE", "Beta-binomial smoothed share of identified prior initial presentations that were FAIL or PRS; NULL without one.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_days_per_result_observable_year", "B7R", "DOUBLE", "Gamma-Poisson smoothed initial-presentation failures per year of result-observable exposure; NULL when the window is non-positive.", ERA_RESEARCH),
+    ColumnSpec("b7r_last3_n_initial_observed", "B7R", "BIGINT", "How many of the last up-to-3 initial presentations are on record -- 1 or 2 when that is all there is, never 3.", ERA_RESEARCH),
+    ColumnSpec("b7r_last3_n_initial_fail", "B7R", "BIGINT", "Failures among the last up-to-3 identified initial presentations.", ERA_RESEARCH),
+    ColumnSpec("b7r_last3_n_initial_adverse", "B7R", "BIGINT", "FAIL or PRS outcomes among the last up-to-3 identified initial presentations.", ERA_RESEARCH),
+    ColumnSpec("b7r_recent3_minus_earlier_fail_share", "B7R", "DOUBLE", "Fail share over the last up-to-3 initial presentations minus the share over all earlier ones; NULL until an earlier period exists.", ERA_RESEARCH),
+    ColumnSpec("b7r_current_initial_fail_streak", "B7R", "BIGINT", "Consecutive most-recent initial presentations that failed. A retest pass does NOT break it.", ERA_RESEARCH),
+    ColumnSpec("b7r_current_initial_pass_streak", "B7R", "BIGINT", "Consecutive most-recent initial presentations that did not fail.", ERA_RESEARCH),
+    ColumnSpec("b7r_max_initial_fail_streak", "B7R", "BIGINT", "Longest run of consecutive failing initial presentations ever observed.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_decay_num_hl1y", "B7R", "DOUBLE", "Recency-weighted count of failing initial presentations, half-life 1 year; NULL without history.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_opportunity_decay_den_hl1y", "B7R", "DOUBLE", "Recency-weighted count of initial presentations (the opportunities), half-life 1 year. Emitted so a 0.5 rate over 0.5 weighted presentations is distinguishable from 0.5 over 8.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_decay_rate_hl1y", "B7R", "DOUBLE", "Recency-weighted proportion of initial presentations that failed, half-life 1 year; NULL without history.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_decay_num_hl3y", "B7R", "DOUBLE", "Recency-weighted count of failing initial presentations, half-life 3 years; NULL without history.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_opportunity_decay_den_hl3y", "B7R", "DOUBLE", "Recency-weighted count of initial presentations, half-life 3 years.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_fail_decay_rate_hl3y", "B7R", "DOUBLE", "Recency-weighted proportion of initial presentations that failed, half-life 3 years; NULL without history.", ERA_RESEARCH),
+    ColumnSpec("b7r_prev_initial_n_fail_items", "B7R", "BIGINT", "Fail-bearing items on the most recent identified prior initial presentation; NULL when its detail is unobservable.", ERA_RESEARCH),
+    ColumnSpec("b7r_prev_initial_n_categories", "B7R", "BIGINT", "Distinct categories carrying a fail-bearing item on the most recent identified prior initial presentation; NULL when unobservable.", ERA_RESEARCH),
+    ColumnSpec("b7r_prev_initial_max_severity_ord", "B7R", "BIGINT", "Max severity rung on the most recent identified prior initial presentation; NULL when unobservable.", ERA_RESEARCH),
+    ColumnSpec("b7r_prev_initial_n_major", "B7R", "BIGINT", "Major items on the most recent identified prior initial presentation; NULL when severity is unobservable.", ERA_RESEARCH),
+    ColumnSpec("b7r_prev_initial_n_dangerous", "B7R", "BIGINT", "Dangerous items on the most recent identified prior initial presentation; NULL when severity is unobservable.", ERA_RESEARCH),
+    ColumnSpec("b7r_last3_initial_fail_items_sum", "B7R", "BIGINT", "Fail-bearing items summed over the last up-to-3 detail-observable initial presentations; NULL when none is observable.", ERA_RESEARCH),
+    ColumnSpec("b7r_last3_initial_categories_sum", "B7R", "BIGINT", "Distinct fail categories summed over the last up-to-3 detail-observable initial presentations; NULL when none is observable.", ERA_RESEARCH),
+    ColumnSpec("b7r_recent3_minus_earlier_burden", "B7R", "DOUBLE", "Mean fail-bearing items over the last up-to-3 detail-observable initial presentations minus the mean over all earlier ones; NULL until an earlier period exists.", ERA_RESEARCH),
+    ColumnSpec("b7r_fail_items_per_initial_event", "B7R", "DOUBLE", "Gamma-Poisson smoothed fail-bearing items per detail-observable initial presentation; NULL when none is observable.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_outcome_history_status", "B7R", "VARCHAR", "no_priors / none / partial / full -- outcome identifiability across this vehicle's prior initial presentations.", ERA_RESEARCH),
+    ColumnSpec("b7r_initial_detail_history_status", "B7R", "VARCHAR", "no_priors / none / partial / full -- defect-detail observability across this vehicle's prior initial presentations.", ERA_RESEARCH),
+]
+
 BLOCK_COLUMNS: Dict[str, List[ColumnSpec]] = {
     "meta": META_COLUMNS, "B1": B1_COLUMNS, "B2": B2_COLUMNS,
     "B3": B3_COLUMNS, "B4": B4_COLUMNS, "B5": B5_COLUMNS, "B6": B6_COLUMNS,
+    "B7D": B7D_COLUMNS, "B7R": B7R_COLUMNS,
 }
-NEW_BLOCKS = ("B1", "B2", "B3", "B4", "B5", "B6")
-#: Contract cap: total NEW columns across B1-B6.
-NEW_COLUMN_CAP = 150
+NEW_BLOCKS = ("B1", "B2", "B3", "B4", "B5", "B6", "B7D", "B7R")
+
+#: PHYSICAL cap: every candidate column the factory may emit into one superset
+#: frame. Screening happens here.
+PHYSICAL_CANDIDATE_CAP = 220
+#: ADOPTED cap: columns a deployable model may carry. UNCHANGED at 150 -- a
+#: research-only candidate never consumed it, so opening B7 does not raise it.
+ADOPTED_COLUMN_CAP = 150
+#: Retained name, now bound to the PHYSICAL cap. The two were the same number
+#: only while every emitted column was an adoption candidate.
+NEW_COLUMN_CAP = PHYSICAL_CANDIDATE_CAP
 
 ALL_COLUMNS: List[ColumnSpec] = [c for block in ("meta",) + NEW_BLOCKS
                                  for c in BLOCK_COLUMNS[block]]
@@ -235,7 +482,25 @@ COLUMN_NAMES: List[str] = [c.name for c in ALL_COLUMNS]
 
 
 def n_new_columns() -> int:
+    """Physical candidate columns across every new block."""
     return sum(len(BLOCK_COLUMNS[b]) for b in NEW_BLOCKS)
+
+
+def deployable_columns() -> List[ColumnSpec]:
+    """F_deployable: what a shippable model may draw on."""
+    return [c for c in ALL_COLUMNS
+            if c.block in NEW_BLOCKS
+            and c.serve_class == SERVE_DEPLOYABLE
+            and not c.screen_only]
+
+
+def n_deployable_columns() -> int:
+    return len(deployable_columns())
+
+
+def adoption_headroom() -> int:
+    """Slots left under the adopted cap, given today's deployable incumbents."""
+    return ADOPTED_COLUMN_CAP - n_deployable_columns()
 
 
 # --- helpers ----------------------------------------------------------------
@@ -277,12 +542,18 @@ def _covid_overlap_years(start: Optional[date], end: date) -> float:
 
 # --- emitters ---------------------------------------------------------------
 
-def emit_b1(state: st.AsOfState, tgt_date: date, first_use: Optional[date]) -> Dict[str, Any]:
+def emit_b1(state: st.AsOfState, tgt_date: date, first_use: Optional[date],
+            floors: HistoryFloors = DEFAULT_FLOORS) -> Dict[str, Any]:
     history_years = _years_between(state.first_date, tgt_date)
+    # D-1: the floor is the RESULT-channel floor for this build, not the
+    # absolute 2005 digital-records bound. `left_censored` therefore names the
+    # cohort whose history is truncated by THIS build, which on a 2015-basis
+    # build is the 2005-2015 cohort the old flag silently missed.
+    result_floor = floors.result
     if first_use is None:
-        obs_start, obs_status = OBSERVABLE_FLOOR, "first_use_missing"
-    elif first_use < OBSERVABLE_FLOOR:
-        obs_start, obs_status = OBSERVABLE_FLOOR, "left_censored_2005"
+        obs_start, obs_status = result_floor, "first_use_missing"
+    elif first_use < result_floor:
+        obs_start, obs_status = result_floor, "left_censored_2005"
     else:
         obs_start, obs_status = first_use, "observed"
     observable_years = max(0.0, (tgt_date - obs_start).days / DAYS_PER_YEAR)
@@ -315,9 +586,14 @@ def emit_b1(state: st.AsOfState, tgt_date: date, first_use: Optional[date]) -> D
         "b1_last_prior_date": state.last_date,
         "b1_history_years": history_years,
         "b1_observable_years": observable_years,
-        "b1_observable_years_status": obs_status,
-        "b1_history_coverage_grade": grade,
-        "b1_left_censor_flag": (first_use is not None and first_use < OBSERVABLE_FLOOR),
+        # Membership-checked at emit: a level outside the pinned vocabulary is
+        # a contract change and must fail here, not surface as a Pool-layout
+        # mismatch three stages downstream.
+        "b1_observable_years_status": assert_in_vocabulary(
+            "b1_observable_years_status", obs_status),
+        "b1_history_coverage_grade": assert_in_vocabulary(
+            "b1_history_coverage_grade", grade),
+        "b1_left_censor_flag": (first_use is not None and first_use < result_floor),
         "b1_first_use_missing_flag": first_use is None,
         "b1_age_at_target_years": _years_between(first_use, tgt_date),
         "b1_density_per_observable_year": _safe_div(float(state.n_days), observable_years),
@@ -491,15 +767,192 @@ def emit_b6(state: st.AsOfState, location_map_present: bool) -> Dict[str, Any]:
     return out
 
 
-def emit_all(state: st.AsOfState, event: dict, location_map_present: bool) -> Dict[str, Any]:
-    """All B1-B6 columns for one event, read BEFORE the target day's update."""
+def _coverage_status(observed: int, total: int) -> str:
+    """no_priors / none / partial / full. Never collapses 'none' into 'no_priors'.
+
+    'none' means the days existed and we could not read them; 'no_priors' means
+    there was nothing to read and the zeros are certain. A model that cannot
+    tell those apart will read unavailability as cleanliness.
+    """
+    if total <= 0:
+        return "no_priors"
+    if observed <= 0:
+        return "none"
+    return "full" if observed >= total else "partial"
+
+
+def emit_b7d(state: st.AsOfState, tgt_date: date,
+             priors: "rates.PriorSet") -> Dict[str, Any]:
+    """Lane D: deployable, day-grain history under the five-state contract."""
+    counts = state.day_state_counts
+    n_obs = state.n_outcome_observable_days()
+    n_fail = counts[do.FAIL]
+    n_days = state.n_days
+
+    # Exposure windows. Each rate divides by ITS OWN channel's window; sharing
+    # one would charge a vehicle for years in which the channel was dark.
+    result_years = _years_between(state.first_outcome_observable_date, tgt_date)
+    severity_years = _years_between(state.first_severity_observable_date, tgt_date)
+
+    sev_days = state.n_severity_observable_days
+    item_days = state.n_days_items_observed
+    sev_seen = sev_days > 0
+    graded = (lambda v: v if sev_seen else None)
+
+    n_major_days = state.n_major_days if sev_seen else None
+    n_dang_days = state.n_dangerous_days if sev_seen else None
+    opportunities = (state.n_severity_transition_opportunities
+                     if state.severity_transition_observed else None)
+    escalations = ((state.n_adv_to_minor + state.n_minor_to_major
+                    + state.n_major_to_dangerous)
+                   if state.severity_transition_observed else None)
+
+    return {
+        "b7d_prev_day_outcome": state.prev_day_state or do.NO_HISTORY,
+        "b7d_n_prior_fail_days": n_fail,
+        "b7d_n_prior_pass_days": counts[do.PASS],
+        "b7d_n_prior_prs_days": counts[do.PRS],
+        "b7d_n_prior_outcome_observable_days": n_obs,
+        "b7d_n_prior_outcome_ambiguous_days": counts[do.AMBIGUOUS],
+        "b7d_days_since_fail_day": state.days_since(state.last_fail_date, tgt_date),
+        "b7d_last_day_n_fail_items": state.last_day_n_fail_items,
+        "b7d_last_day_max_severity_ord": state.last_day_severity_ord,
+        "b7d_last_day_n_major": state.last_day_n_major,
+        "b7d_last_day_n_dangerous": state.last_day_n_dangerous,
+        "b7d_last_fail_day_n_items": state.last_fail_day_n_items,
+        "b7d_last_fail_day_n_categories": state.last_fail_day_n_categories,
+        "b7d_last_fail_day_max_severity_ord": state.last_fail_day_severity_ord,
+        "b7d_fail_days_per_outcome_observable_day": rates.smoothed_proportion(
+            n_fail, n_obs, priors.beta["fail_day_share"]),
+        "b7d_fail_days_per_result_observable_year": rates.smoothed_rate_per_year(
+            n_fail, result_years, priors.gamma["fail_days_per_year"]),
+        "b7d_major_days_per_severity_observable_day": rates.smoothed_proportion(
+            n_major_days, sev_days if sev_seen else None,
+            priors.beta["major_day_share"]),
+        "b7d_major_days_per_severity_observable_year": rates.smoothed_rate_per_year(
+            n_major_days, severity_years, priors.gamma["major_days_per_year"]),
+        "b7d_dangerous_days_per_severity_observable_day": rates.smoothed_proportion(
+            n_dang_days, sev_days if sev_seen else None,
+            priors.beta["dangerous_day_share"]),
+        "b7d_advisory_days_per_item_observable_day": rates.smoothed_proportion(
+            state.n_advisory_days if item_days > 0 else None,
+            item_days if item_days > 0 else None,
+            priors.beta["advisory_day_share"]),
+        "b7d_n_fail_days_cap2y": state.n_within(state.fail_day_dates, tgt_date, 2.0),
+        "b7d_n_major_days_cap2y": graded(
+            state.n_within(state.major_day_dates, tgt_date, 2.0)),
+        "b7d_n_dangerous_days_cap2y": graded(
+            state.n_within(state.dangerous_day_dates, tgt_date, 2.0)),
+        "b7d_last3day_fail_items_sum": (sum(state.last3_day_fail_items)
+                                        if state.last3_day_fail_items else None),
+        "b7d_last3day_n_outcome_observed": sum(state.last3_day_outcome_observed),
+        "b7d_last3day_n_detail_observed": sum(state.last3_day_detail_observed),
+        "b7d_recent3day_minus_earlier_burden": state.recent_minus_earlier(
+            state.last3_day_fail_items, state.sum_fail_items_all_days,
+            state.n_days_fail_items_observed),
+        "b7d_n_adv_to_minor_transitions": graded(state.n_adv_to_minor),
+        "b7d_n_minor_to_major_transitions": graded(state.n_minor_to_major),
+        "b7d_n_major_to_dangerous_transitions": graded(state.n_major_to_dangerous),
+        "b7d_n_severity_transition_opportunities": opportunities,
+        "b7d_severity_escalation_share": rates.smoothed_proportion(
+            escalations, opportunities, priors.beta["escalation_share"]),
+        "b7d_days_since_severity_escalation": state.days_since(
+            state.last_escalation_date, tgt_date),
+        "b7d_outcome_history_status": _coverage_status(n_obs, n_days),
+        "b7d_severity_transition_status": ("observed" if state.severity_transition_observed
+                                           else "unobserved"),
+    }
+
+
+def emit_b7r(state: st.AsOfState, tgt_date: date,
+             priors: "rates.PriorSet") -> Dict[str, Any]:
+    """Lane R: initial-presentation history. RESEARCH-ONLY, by construction.
+
+    Every column consumes test_type-in-history. None of them can be served, and
+    none competes for the adopted cap; the block measures an information
+    ceiling, not an adoption candidate.
+    """
+    counts = state.initial_state_counts
+    n_obs = do.outcome_observable_total(counts)
+    n_fail = counts[do.FAIL]
+    n_adverse = counts[do.FAIL] + counts[do.PRS]
+    n_total_initial_days = sum(counts.values())
+    result_years = _years_between(state.first_outcome_observable_date, tgt_date)
+
+    last3 = list(state.last3_initial)
+    last3_n = len(last3)
+    last3_fail = sum(1 for s in last3 if s == do.FAIL)
+    last3_adverse = sum(1 for s in last3 if s in (do.FAIL, do.PRS))
+    earlier_n = n_obs - last3_n
+    recent_minus_earlier = None
+    if last3_n and earlier_n > 0:
+        recent_minus_earlier = (last3_fail / last3_n) - ((n_fail - last3_fail) / earlier_n)
+
+    decayed = {k: state.decayed(k, tgt_date) for k in st.DECAY_HALF_LIVES}
+    detail_days = state.n_initial_days_detail_observed
+
+    row: Dict[str, Any] = {
+        "b7r_prev_initial_outcome": state.prev_initial_state or do.NO_HISTORY,
+        "b7r_days_since_prev_initial": state.days_since(state.prev_initial_date, tgt_date),
+        "b7r_days_since_prev_initial_fail": state.days_since(
+            state.prev_initial_fail_date, tgt_date),
+        "b7r_n_prior_initial_days": n_obs,
+        "b7r_n_prior_initial_fail_days": n_fail,
+        "b7r_n_prior_initial_prs_days": counts[do.PRS],
+        "b7r_n_prior_initial_ambiguous_days": counts[do.AMBIGUOUS],
+        "b7r_initial_fail_share": rates.smoothed_proportion(
+            n_fail, n_obs, priors.beta["initial_fail_share"]),
+        "b7r_initial_adverse_share": rates.smoothed_proportion(
+            n_adverse, n_obs, priors.beta["initial_adverse_share"]),
+        "b7r_initial_fail_days_per_result_observable_year": rates.smoothed_rate_per_year(
+            n_fail, result_years, priors.gamma["initial_fail_days_per_year"]),
+        "b7r_last3_n_initial_observed": last3_n,
+        "b7r_last3_n_initial_fail": last3_fail,
+        "b7r_last3_n_initial_adverse": last3_adverse,
+        "b7r_recent3_minus_earlier_fail_share": recent_minus_earlier,
+        "b7r_current_initial_fail_streak": state.cur_initial_fail_streak,
+        "b7r_current_initial_pass_streak": state.cur_initial_pass_streak,
+        "b7r_max_initial_fail_streak": state.max_initial_fail_streak,
+        "b7r_prev_initial_n_fail_items": state.prev_initial_n_fail_items,
+        "b7r_prev_initial_n_categories": state.prev_initial_n_categories,
+        "b7r_prev_initial_max_severity_ord": state.prev_initial_severity_ord,
+        "b7r_prev_initial_n_major": state.prev_initial_n_major,
+        "b7r_prev_initial_n_dangerous": state.prev_initial_n_dangerous,
+        "b7r_last3_initial_fail_items_sum": (sum(state.last3_initial_fail_items)
+                                             if state.last3_initial_fail_items else None),
+        "b7r_last3_initial_categories_sum": (sum(state.last3_initial_categories)
+                                             if state.last3_initial_categories else None),
+        "b7r_recent3_minus_earlier_burden": state.recent_minus_earlier(
+            state.last3_initial_fail_items, state.sum_initial_fail_items, detail_days),
+        "b7r_fail_items_per_initial_event": rates.smoothed_rate_per_year(
+            state.sum_initial_fail_items if detail_days else None,
+            float(detail_days) if detail_days else None,
+            priors.gamma["fail_items_per_initial_event"]),
+        "b7r_initial_outcome_history_status": _coverage_status(n_obs, n_total_initial_days),
+        "b7r_initial_detail_history_status": _coverage_status(detail_days, n_obs),
+    }
+    for key, (num, den) in decayed.items():
+        row[f"b7r_initial_fail_decay_num_{key}"] = num
+        row[f"b7r_initial_opportunity_decay_den_{key}"] = den
+        row[f"b7r_initial_fail_decay_rate_{key}"] = (
+            None if not num and not den else _safe_div(num, den))
+    return row
+
+
+def emit_all(state: st.AsOfState, event: dict, location_map_present: bool,
+             priors: Optional["rates.PriorSet"] = None,
+             floors: HistoryFloors = DEFAULT_FLOORS) -> Dict[str, Any]:
+    """All new-block columns for one event, read BEFORE the target day's update."""
     tgt_date = event["tgt_date"]
     first_use = event.get("tgt_fud")
+    priors = priors if priors is not None else rates.PROVISIONAL_PRIORS
     row: Dict[str, Any] = {}
-    row.update(emit_b1(state, tgt_date, first_use))
+    row.update(emit_b1(state, tgt_date, first_use, floors))
     row.update(emit_b2(state, tgt_date))
     row.update(emit_b3(state, tgt_date))
     row.update(emit_b4(state, tgt_date, row["b1_age_at_target_years"]))
     row.update(emit_b5(state, tgt_date))
     row.update(emit_b6(state, location_map_present))
+    row.update(emit_b7d(state, tgt_date, priors))
+    row.update(emit_b7r(state, tgt_date, priors))
     return row

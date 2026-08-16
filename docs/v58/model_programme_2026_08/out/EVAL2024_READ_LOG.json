@@ -1,0 +1,96 @@
+{
+ "artifact": "EVAL2024 read log \u2014 shared-surface accounting for concurrently running preregs",
+ "why": "PREREG_PERSIST_2026_08_16 \u00a74 and PREREG_ADVSTRUCT \u00a74 both consume eval2024. Both studies append here so the surface's total read count is auditable in one place.",
+ "completeness": "\u26a0 NOT a complete history. Enumerates only reads EVIDENCED by an artifact currently present in out/. Reads predating these artifacts, or whose artifacts were superseded/removed, are NOT listed. Treat as a lower bound.",
+ "kinds": {
+  "OUTCOME_CONDITIONAL": "read a quantity conditional on eval2024 outcomes",
+  "PRIOR_SIDE_ONLY": "read only prior-side structure; contaminates nothing",
+  "DERIVED_NO_NEW_READ": "arithmetic on already-published quantities",
+  "REGISTERED_NOT_YET_READ": "a frozen prereg that will read this surface but had not at the time of logging"
+ },
+ "reads": [
+  {
+   "artifact": "out/B7_K5_RESULT.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T10:30:52",
+   "note": "B7 Lane R k=5"
+  },
+  {
+   "artifact": "out/CAL_RESULT.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T11:44:09",
+   "note": "calendar-feature contrast, powered null"
+  },
+  {
+   "artifact": "out/NY_COHORT_RESULT.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T12:32:39",
+   "note": "NY cohort study; ran on banked predictions, zero refits"
+  },
+  {
+   "artifact": "out/SEVERITY_RESULT.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T12:42:21",
+   "note": "severity/burden study; per-section M/D components"
+  },
+  {
+   "artifact": "out/B3_REFERENCE_BASELINE.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T15:51:11",
+   "note": "Y_B3 LightGBM k=5 reference baseline"
+  },
+  {
+   "artifact": "out/B3_BURDEN_RESULT.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T16:20:24",
+   "note": "prior-burden block contrast, NULL"
+  },
+  {
+   "artifact": "out/ADVSTRUCT_DESCRIPTIVE_EVAL.json",
+   "kind": "OUTCOME_CONDITIONAL",
+   "mtime": "2026-08-15T22:06:40",
+   "note": "ADVSTRUCT Estimand A+B confirmation (breadth|count, breadth|composition)"
+  },
+  {
+   "artifact": "out/PERSIST_SECT_INDEX.json",
+   "kind": "PRIOR_SIDE_ONLY",
+   "mtime": "2026-08-16T10:05:21",
+   "note": "PERSIST: sect_NN mapping recovery; positive_n reproduced from banked labels, no new conditioning"
+  },
+  {
+   "artifact": "out/ADVSTRUCT_RESULT_2026_08_15.json",
+   "kind": "DERIVED_NO_NEW_READ",
+   "mtime": "2026-08-16T10:06:20",
+   "note": "ADVSTRUCT adjudication; arithmetic on already-banked CIs"
+  },
+  {
+   "artifact": "out/PERSIST_POWER_AT_BAR.json",
+   "kind": "PRIOR_SIDE_ONLY",
+   "mtime": "2026-08-16T10:09:45",
+   "note": "PERSIST: cell counts (prior-side) + published base rates; nothing conditional on persistence state"
+  },
+  {
+   "artifact": "prereg/PREREG_OVERFIT_2026_08_16.md",
+   "kind": "REGISTERED_NOT_YET_READ",
+   "mtime": "2026-08-16",
+   "note": "V58 CatBoost overfitting diagnostic: 4 arms x 2 seeds x {eval2024, drift2025h1}, frozen with sidecar, Phase-2 arms not executed as of this entry. Declares confirm2025h2 out of bounds."
+  },
+  {
+   "artifact": "prereg/PREREG_PERSIST_2026_08_16.md",
+   "kind": "REGISTERED_NOT_YET_READ",
+   "mtime": "2026-08-16",
+   "note": "PERSIST same-system persistence effect. Prior-side artifacts only at freeze time; no outcome conditional on persistence state computed."
+  }
+ ],
+ "counts": {
+  "OUTCOME_CONDITIONAL": 7,
+  "PRIOR_SIDE_ONLY": 2,
+  "DERIVED_NO_NEW_READ": 1,
+  "REGISTERED_NOT_YET_READ": 2
+ },
+ "concurrent_live_lanes": [
+  "PREREG_ADVSTRUCT_2026_08_15 (executing)",
+  "PREREG_OVERFIT_2026_08_16 (frozen, not executed)",
+  "PREREG_PERSIST_2026_08_16 (freezing)"
+ ]
+}

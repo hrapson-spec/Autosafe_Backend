@@ -1,0 +1,192 @@
+{
+ "artifact": "ADVSTRUCT descriptive adjudication (Estimand A + B, EVAL confirmation)",
+ "parent_prereg": "prereg/PREREG_ADVSTRUCT_2026_08_15.md",
+ "parent_sha256_16": "35ee4828c47f4b88",
+ "amendments": [
+  "AMENDMENT_ADVSTRUCT_A2_2026_08_15.md",
+  "AMENDMENT_ADVSTRUCT_A3_2026_08_15.md"
+ ],
+ "adjudicated": "2026-08-16",
+ "basis": "Derived entirely from banked artifacts ADVSTRUCT_DESCRIPTIVE_{TRAIN,EVAL}.json. No refit, no outcome re-read, no new query.",
+ "C1": {
+  "requirement": "beta_breadth|count CI-clear of 0 in >=5 of 6 count strata",
+  "observed_clear": 3,
+  "of": 6,
+  "strata": [
+   {
+    "stratum": "c=2",
+    "n_eval": 38366,
+    "n_vehicles": 37985,
+    "n_positive": 5635,
+    "prevalence": 0.146875,
+    "beta_train": 0.300622,
+    "beta_eval": 0.302228,
+    "ci95_eval": [
+     0.239,
+     0.366544
+    ],
+    "se_eval": 0.03253733256736348,
+    "mde80_eval": 0.09115610998641283,
+    "power_vs_train_effect": 0.9999999999998322,
+    "ci_excludes_zero": true,
+    "classification": "PASS"
+   },
+   {
+    "stratum": "c=3",
+    "n_eval": 16977,
+    "n_vehicles": 16857,
+    "n_positive": 3156,
+    "prevalence": 0.185899,
+    "beta_train": 0.254021,
+    "beta_eval": 0.275818,
+    "ci95_eval": [
+     0.205172,
+     0.343582
+    ],
+    "se_eval": 0.03530932227818462,
+    "mde80_eval": 0.09892207538746942,
+    "power_vs_train_effect": 0.9999999171488262,
+    "ci_excludes_zero": true,
+    "classification": "PASS"
+   },
+   {
+    "stratum": "c=4",
+    "n_eval": 7224,
+    "n_vehicles": 7165,
+    "n_positive": 1614,
+    "prevalence": 0.223422,
+    "beta_train": 0.120365,
+    "beta_eval": 0.148331,
+    "ci95_eval": [
+     0.070564,
+     0.225942
+    ],
+    "se_eval": 0.03963797324571758,
+    "mde80_eval": 0.11104915995631981,
+    "power_vs_train_effect": 0.8591804089339949,
+    "ci_excludes_zero": true,
+    "classification": "PASS"
+   },
+   {
+    "stratum": "c=5",
+    "n_eval": 3073,
+    "n_vehicles": 3054,
+    "n_positive": 786,
+    "prevalence": 0.255776,
+    "beta_train": 0.071712,
+    "beta_eval": -0.006864,
+    "ci95_eval": [
+     -0.113156,
+     0.094575
+    ],
+    "se_eval": 0.052993575797771614,
+    "mde80_eval": 0.14846601865699308,
+    "power_vs_train_effect": 0.2720106224429183,
+    "ci_excludes_zero": false,
+    "classification": "UNDERPOWERED"
+   },
+   {
+    "stratum": "c=6",
+    "n_eval": 1399,
+    "n_vehicles": 1391,
+    "n_positive": 416,
+    "prevalence": 0.297355,
+    "beta_train": 0.090465,
+    "beta_eval": 0.071346,
+    "ci95_eval": [
+     -0.068222,
+     0.208753
+    ],
+    "se_eval": 0.07065818609927162,
+    "mde80_eval": 0.1979549297770706,
+    "power_vs_train_effect": 0.24836455782451183,
+    "ci_excludes_zero": false,
+    "classification": "UNDERPOWERED"
+   },
+   {
+    "stratum": "c=7-8",
+    "n_eval": 845,
+    "n_vehicles": 836,
+    "n_positive": 254,
+    "prevalence": 0.300592,
+    "beta_train": 0.018741,
+    "beta_eval": 0.089882,
+    "ci95_eval": [
+     -0.061943,
+     0.243979
+    ],
+    "se_eval": 0.07804276056633766,
+    "mde80_eval": 0.21864344445260764,
+    "power_vs_train_effect": 0.042732001069393566,
+    "ci_excludes_zero": false,
+    "classification": "UNDERPOWERED"
+   }
+  ],
+  "power_analysis": {
+   "assumption": "TRAIN (discovery) effect is exactly true",
+   "expected_passes": 3.4222875074194774,
+   "distribution_of_n_clear": {
+    "0": 1.0251850688006138e-21,
+    "1": 6.1112275873685904e-09,
+    "2": 0.07376139521592014,
+    "3": 0.5052655064765571,
+    "4": 0.3483776199779284,
+    "5": 0.07011512177517659,
+    "6": 0.002480350443190272
+   },
+   "P_ge_5_of_6": 0.07259547221836686,
+   "P_ge_4_of_6": 0.42097309219629525,
+   "modal_outcome": 3,
+   "underpowered_strata": [
+    "c=5",
+    "c=6",
+    "c=7-8"
+   ],
+   "genuine_misses": []
+  },
+  "verdict": "INCONCLUSIVE",
+  "verdict_basis": "The bar was unpassable by construction. Under the discovery effect being exactly true, P(>=5 of 6) = 0.0726 and the modal outcome is 3 of 6 \u2014 which is what was observed. Every stratum with >=80% power passed; every failure was underpowered; there were no genuine misses. A gate with ~7% power against its own alternative does not discriminate between hypotheses and cannot falsify one.",
+  "floor_it_was_inconclusive_against": {
+   "c=5": 0.14846601865699308,
+   "c=6": 0.1979549297770706,
+   "c=7-8": 0.21864344445260764
+  }
+ },
+ "C2": {
+  "beta_beyond_composition": 0.046024,
+  "ci95": [
+   0.024219,
+   0.068672
+  ],
+  "ci_excludes_zero": true,
+  "matched_comparator_count_only": 0.207386,
+  "verdict": "PASS",
+  "share_absorbed_by_composition": 0.7781
+ },
+ "C3": {
+  "age_quartile": 0.539314,
+  "prior_depth_band": 0.669748,
+  "bar": 0.5,
+  "verdict": "PASS"
+ },
+ "C4": {
+  "n_target_year_groups": 1,
+  "verdict": "UNTESTABLE",
+  "why": "eval2024 spans a single target year; the stratification has one level."
+ },
+ "descriptive_verdict": {
+  "label": "SUPPORTED-ON-C2, C1 INCONCLUSIVE",
+  "reading": "The structural claim survives its load-bearing test. Breadth predicts beyond a frozen, TRAIN-fitted additive system-composition expectation, out-of-sample, with a clustered CI clear of zero (beta=+0.046024, CI [0.024219, 0.068672]). But composition absorbs 77.8% of the raw count-conditional gradient, so most of what naive breadth appears to measure is WHICH systems were advised, not HOW MANY. The residual structural signal is small and real. C1 is void as a test and is reported INCONCLUSIVE against the per-stratum floors above; the three strata it failed had 27%, 25% and 4% power.",
+  "gate_summary": {
+   "C1": "INCONCLUSIVE",
+   "C2": "PASS",
+   "C3": "PASS",
+   "C4": "UNTESTABLE"
+  }
+ },
+ "what_this_does_not_license": [
+  "No model-side claim. Sections 8.1/8.2 of the parent prereg have not run.",
+  "No statement that breadth is prognostically useful to AutoSafe: the estimand is descriptive and research-only (parent \u00a73.4).",
+  "No re-run of C1 on pooled TRAIN+EVAL \u2014 A3 \u00a74 bars moving the strata, and no owner override for that was sought or given."
+ ]
+}

@@ -945,3 +945,122 @@ def test_shap_diagnostic_ranks_and_flags_dominance(tmp_path):
     assert payload["config_sha"] == json.loads(
         open(model + ".meta.json").read())["config_sha"]
     assert os.path.exists(out)
+
+
+# --- PREREG_OVERFIT_2026_08_16: temporal ES split + planted-null shuffle -----
+
+def _temporal_frame(n_vehicles=200, rows_per=3, start=date(2018, 1, 1)):
+    """A frame where every vehicle's rows are spread across the whole window,
+    so a naive date cut WOULD straddle vehicles. That is the point: a fixture
+    in which the disjointness rule is never exercised proves nothing."""
+    import numpy as np
+
+    test_id, vehicle_id, dates = [], [], []
+    for v in range(n_vehicles):
+        for r in range(rows_per):
+            test_id.append(v * rows_per + r)
+            vehicle_id.append(v)
+            dates.append(start + timedelta(days=(r * 400) + (v % 40)))
+    n = len(test_id)
+    order = np.argsort([d.toordinal() for d in dates], kind="mergesort")
+    test_id = np.array(test_id, dtype=np.int64)[order]
+    vehicle_id = np.array(vehicle_id, dtype=np.int64)[order]
+    dates = np.array(dates, dtype=object)[order]
+    return fc.Frame(test_id=test_id, vehicle_id=vehicle_id, tgt_date=dates,
+                    tgt_outcome=np.array(["PASS"] * n),
+                    y=(np.arange(n) % 4 == 0).astype(np.int8),
+                    weight=np.ones(n),
+                    features={"x": np.arange(n, dtype=float)}, categorical=[])
+
+
+def test_temporal_split_is_strictly_ordered_and_vehicle_disjoint():
+    """PREREG_OVERFIT R5. Both invariants, on a fixture built to violate them
+    if the disjointness pass were removed."""
+    frame = _temporal_frame()
+    fit_part, valid_part = fit_runner.split_validation(frame, 0.10, seed=1,
+                                                       mode="temporal")
+    assert fit_part.n_rows > 0 and valid_part.n_rows > 0
+
+    fit_v = set(fit_part.vehicle_id.tolist())
+    val_v = set(valid_part.vehicle_id.tolist())
+    assert not (fit_v & val_v), "a vehicle straddles the temporal split"
+
+    fit_max = max(fc._as_date(d) for d in fit_part.tgt_date)
+    val_min = min(fc._as_date(d) for d in valid_part.tgt_date)
+    assert fit_max < val_min, f"fit part reaches {fit_max} >= valid start {val_min}"
+
+    # the drop is real and must be visible, not silently absorbed
+    assert fit_part.n_rows + valid_part.n_rows < frame.n_rows
+
+
+def test_temporal_split_fixture_can_actually_fail():
+    """A green invariance test proves nothing until the fixture is shown able to
+    fail. Reproduce the split WITHOUT the disjointness pass and assert that the
+    very assertions above then break."""
+    import numpy as np
+
+    frame = _temporal_frame()
+    days = np.array([fc._as_date(d).toordinal() for d in frame.tgt_date])
+    cut = np.quantile(days, 0.90, method="lower")
+    valid_mask = days > cut
+    naive_fit = fit_runner._subset(frame, ~valid_mask)      # no straddle removal
+    naive_val = fit_runner._subset(frame, valid_mask)
+    assert set(naive_fit.vehicle_id.tolist()) & set(naive_val.vehicle_id.tolist()), (
+        "fixture is too easy: no vehicle straddles the cut, so the disjointness "
+        "pass is never exercised and the passing test above is vacuous")
+
+
+def test_temporal_split_rejects_an_unsupportable_fraction():
+    frame = _temporal_frame()
+    with pytest.raises(ValueError, match="cannot support fraction"):
+        fit_runner.split_validation(frame, 0.0, seed=1, mode="temporal")
+
+
+def test_split_validation_mode_default_is_unchanged():
+    """The new key must be inert when absent: byte-identical partitions."""
+    frame = _temporal_frame()
+    a_fit, a_val = fit_runner.split_validation(frame, 0.15, seed=7)
+    b_fit, b_val = fit_runner.split_validation(frame, 0.15, seed=7, mode="vehicle")
+    assert a_fit.test_id.tolist() == b_fit.test_id.tolist()
+    assert a_val.test_id.tolist() == b_val.test_id.tolist()
+    with pytest.raises(ValueError, match="must be 'vehicle' or 'temporal'"):
+        fit_runner.split_validation(frame, 0.15, seed=7, mode="random")
+
+
+def test_planted_null_shuffles_train_labels_only(tmp_path):
+    """PREREG_OVERFIT R6. The shuffle must be a PERMUTATION of the training
+    label (positive count preserved), must be recorded, and must leave the eval
+    frame's labels alone -- otherwise the arm compares two shuffles instead of
+    scoring noise against the real target."""
+    frames = _frames(tmp_path)
+    config = dict(BASE_CONFIG, shuffle_label_seed=90210)
+    payload = fit_runner.run_fit(config, frames["train"], frames["eval"], 101,
+                                 "of.nullfix", "OF", str(tmp_path / "fits"))
+    shuffle = payload["convergence_state"]["label_shuffle"]
+    assert shuffle["seed"] == 90210
+    assert shuffle["positives_before"] == shuffle["positives_after"] > 0
+    assert shuffle["eval_labels_touched"] is False
+
+    # the eval labels are untouched: identical positive count to the control run
+    control = fit_runner.run_fit(BASE_CONFIG, frames["train"], frames["eval"],
+                                 101, "of.nullctrl", "OF", str(tmp_path / "fits"))
+    import pyarrow.parquet as pq
+    a = pq.read_table(payload["keyed_preds_path"], columns=["y"])["y"].to_numpy()
+    b = pq.read_table(control["keyed_preds_path"], columns=["y"])["y"].to_numpy()
+    assert a.tolist() == b.tolist()
+
+    # The permutation must actually move rows -- a near-identity draw would be
+    # a silently useless null. NOT asserted here: that the shuffled arm scores
+    # below the control. This fixture lake carries no real signal (the control
+    # itself lands at ~0.48 on it), so an ordering assertion would be testing
+    # fixture noise. R6's chance-level read belongs on the real frame.
+    changed = payload["convergence_state"]["label_shuffle"]["n_positions_changed"]
+    assert changed > 0.1 * shuffle["n_rows"], f"only {changed} rows moved"
+
+
+def test_shuffle_key_absent_is_inert(tmp_path):
+    frames = _frames(tmp_path)
+    payload = fit_runner.run_fit(BASE_CONFIG, frames["train"], frames["eval"],
+                                 101, "of.inert", "OF", str(tmp_path / "fits"))
+    assert "label_shuffle" not in payload["convergence_state"]
+    assert payload["convergence_state"]["valid_split"] == "vehicle"

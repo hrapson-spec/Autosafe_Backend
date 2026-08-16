@@ -1,0 +1,34 @@
+{
+ "artifact": "PERSIST-1 Phase 0 freeze record",
+ "prereg": "prereg/PREREG_PERSIST_2026_08_16.md",
+ "sha256": "424dfdd4af84ea5661ba4dc14599a0eb1cb91bed8fce68c53a9de65b85ef959e",
+ "sha256_16": "424dfdd4af84ea56",
+ "frozen_utc": "2026-08-16T09:32:16Z",
+ "frozen_local": "2026-08-16 10:32:16 BST",
+ "freeze_preconditions_verified": {
+  "validation_script": "scripts/analysis/persist_check_prereg_consistency.py",
+  "validation_result": "PASSED \u2014 all \u00a79 tables reproduce from source counts; governance checklist 10/10; banned terminology absent; no heuristic tau inflation",
+  "referenced_artifacts_exist": true,
+  "no_persistence_conditioned_outcome_computed": true,
+  "outcome_artifacts_present": [
+   "PERSIST_POWER_AT_BAR.json",
+   "PERSIST_SECT_INDEX.json",
+   "PERSIST_B0_ADVISORY_COLUMNS.json"
+  ]
+ },
+ "frozen_companion_artifacts": {
+  "out/PERSIST_SECT_INDEX.json": "7459f1cbef1c8ee0190577cdd6607e8803c64383d81f2f8736dcd0ecd7ef24fe",
+  "out/PERSIST_POWER_AT_BAR.json": "db9fefaf7699425073cba15681d110279fa7ade01648392899bc726e0d56e395",
+  "out/PERSIST_B0_ADVISORY_COLUMNS.json": "45507bb413ff4c2f0e2542273f5399eb7af1205dfada8ac146a12dd87c26a827",
+  "out/EVAL2024_READ_LOG.json": "4cb1a91173b6f67a6c8704187653519032ea6dbd32964d3f98a60fa2c08d031d",
+  "out/ADVSTRUCT_TAXONOMY.json": "ffea2f42ff419f4b3873010e14d06175ba3bb4a179cbc9198cceb075c792d27c",
+  "out/ADVSTRUCT_RESULT_2026_08_15.json": "905e85cae08e7f09c41c3741304da1443bb418ad08572adca1006f00cd29e0e8"
+ },
+ "concurrent_live_lanes": [
+  "PREREG_ADVSTRUCT_2026_08_15 (executing)",
+  "PREREG_OVERFIT_2026_08_16 (frozen 89cf85be\u2026, not executed)",
+  "PREREG_PERSIST_2026_08_16 (this)"
+ ],
+ "immutability": "From this timestamp the prereg is immutable. Any methodological alteration goes to factory/DEVIATIONS.md recording: what changed, when, why, whether any persistence-conditioned outcome had already been observed, and the likely direction of bias. The hashed prereg is never silently edited.",
+ "next_action": "Phase 1 \u2014 episode reconstruction and multi-day state history. First persistence-conditioned outcome may now be computed."
+}

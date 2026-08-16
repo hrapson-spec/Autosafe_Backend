@@ -107,6 +107,17 @@ class BuildConfig:
     #: the repaired serving vocabulary) or 'initial' (F+P, the corrected lake
     #: fail-bearing set). OPEN RULING [P4] -- recorded in the manifest.
     fail_basis: str = "final"
+    #: Per-channel earliest date on which history COULD have been recorded.
+    #: None => derive from the build's own input years (see `resolve_floors`).
+    #: NEVER left at the absolute 2005 bound on a build that loads less: that
+    #: is defect D-1, which inflated b1_observable_years for every vehicle
+    #: first used before the earliest loaded year.
+    history_floors: Optional[blocks.HistoryFloors] = None
+    #: A REFERENCE manifest whose floors this build must reproduce. Set on every
+    #: eval / drift / confirmation build; leave None for the training build that
+    #: defines them. A mismatch RAISES before any feature is emitted, because a
+    #: silently different denominator makes a paired contrast meaningless.
+    inherit_floors_from: Optional[str] = None
     #: What the packets view carries in `defects_json`. THIS IS A CAPABILITY,
     #: not a formatting knob: `counts`/`none` mean a consumer that reads defect
     #: items cannot be served, and `consumers` below is how that is asserted.
@@ -228,6 +239,49 @@ class Factory:
         self.consumers: List[capability.ConsumerRequirement] = []
         self.schema_epochs: Tuple[str, ...] = ()
         self.item_observability: Dict[str, Any] = {}
+        #: Resolved in preflight, so a floor divergence raises before a byte of
+        #: output exists rather than after a 1.5h build.
+        self.floors: Optional[blocks.HistoryFloors] = None
+
+    # --- history floors (D-1) -----------------------------------------------
+
+    def resolve_floors(self, years: Sequence[int]) -> blocks.HistoryFloors:
+        """Resolve the per-channel history floors for THIS build.
+
+        Precedence: an explicit `history_floors` wins; otherwise derive from the
+        build's own input years. `inherit_floors_from` then verifies the result
+        against a reference manifest and RAISES on any divergence -- eval, drift
+        and confirmation frames must carry the training build's denominators or
+        every paired contrast between them is measuring two different questions.
+        """
+        cfg = self.config
+        floors = cfg.history_floors or blocks.HistoryFloors.from_input_years(years)
+        if cfg.inherit_floors_from:
+            with open(cfg.inherit_floors_from, encoding="utf-8") as fh:
+                reference = json.load(fh)
+            expected = (reference.get("config", {}) or {}).get("history_floors")
+            if not expected:
+                raise gates.GateFailure(
+                    f"reference manifest {cfg.inherit_floors_from} records no "
+                    f"history_floors: it predates D-1 and cannot be inherited "
+                    f"from. Rebuild the training frame first.")
+            actual = floors.to_manifest()
+            drift = {k: (expected.get(k), actual.get(k))
+                     for k in ("result", "item", "severity")
+                     if expected.get(k) != actual.get(k)}
+            if drift:
+                raise gates.GateFailure(
+                    f"history-floor divergence vs {cfg.inherit_floors_from}: "
+                    f"{drift}. A downstream frame MUST reproduce the training "
+                    f"build's denominators; inheriting a different floor would "
+                    f"silently change b1_observable_years between arms.")
+            floors = blocks.HistoryFloors(
+                result=date.fromisoformat(expected["result"]),
+                item=date.fromisoformat(expected["item"]),
+                severity=date.fromisoformat(expected["severity"]),
+                source=f"inherited:{expected.get('source', 'unknown')}")
+        self.floors = floors
+        return floors
 
     # --- connection ---------------------------------------------------------
 
@@ -258,6 +312,9 @@ class Factory:
 
         report["p4_certification"] = gates.assert_p4_certified(
             cfg.p4_certification_path or "")
+        # D-1: resolve/verify the history floors here, so a divergence from the
+        # reference manifest costs a preflight, not a 1.5h build.
+        report["history_floors"] = self.resolve_floors(years).to_manifest()
         self.inputs.assert_lookup_present()
 
         # --- BUILDER/CONSUMER CAPABILITY (PREREG_CUBE_v2 §5) -----------------
@@ -659,7 +716,8 @@ ORDER BY d.vehicle_id, d.test_date
             "tgt_taxonomy_era": ev.get("tgt_taxonomy_era"),
             "sample_u": ev.get("u"), "sample_bucket": bucket,
         }
-        feature_row.update(blocks.emit_all(state, ev, location_present))
+        feature_row.update(blocks.emit_all(state, ev, location_present,
+                                          floors=self.floors or blocks.DEFAULT_FLOORS))
         stratum = sampling.enrichment_stratum(
             n_prior_dangerous_days=int(state.n_dangerous_days),
             days_since_prior_fail_day=state.days_since(state.last_fail_date, day.test_date),
@@ -774,6 +832,7 @@ ORDER BY d.vehicle_id, d.test_date
                 "location_csv": self.inputs.location_csv,
             },
             "input_years": sorted(int(y) for y in years),
+            "history_floors": (self.floors or self.resolve_floors(years)).to_manifest(),
             "config": self.config.as_manifest(),
             "salts": {"sample": sampling.SAMPLE_SALT, "eval": sampling.EVAL_SALT,
                       "confirmation": sampling.CONFIRMATION_SALT,

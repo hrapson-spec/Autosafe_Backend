@@ -1,0 +1,560 @@
+{
+ "frame": "eval2024",
+ "prereg_sha256_16": "35ee4828c47f4b88",
+ "amendment_a2_sha256_16": "3579ed437b6674dc",
+ "primary_target": "y_b3",
+ "n_analysed": 312159,
+ "boot_reps": 2000,
+ "estimand_a": {
+  "strata": {
+   "c=2": {
+    "n": 38366,
+    "n_positive": 5635,
+    "n_vehicles": 37985,
+    "prevalence": 0.146875,
+    "distinct_breadth_levels": 2,
+    "beta_breadth": 0.302228,
+    "ci95": [
+     0.239,
+     0.366544
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=3": {
+    "n": 16977,
+    "n_positive": 3156,
+    "n_vehicles": 16857,
+    "prevalence": 0.185899,
+    "distinct_breadth_levels": 3,
+    "beta_breadth": 0.275818,
+    "ci95": [
+     0.205172,
+     0.343582
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=4": {
+    "n": 7224,
+    "n_positive": 1614,
+    "n_vehicles": 7165,
+    "prevalence": 0.223422,
+    "distinct_breadth_levels": 4,
+    "beta_breadth": 0.148331,
+    "ci95": [
+     0.070564,
+     0.225942
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=5": {
+    "n": 3073,
+    "n_positive": 786,
+    "n_vehicles": 3054,
+    "prevalence": 0.255776,
+    "distinct_breadth_levels": 5,
+    "beta_breadth": -0.006864,
+    "ci95": [
+     -0.113156,
+     0.094575
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   },
+   "c=6": {
+    "n": 1399,
+    "n_positive": 416,
+    "n_vehicles": 1391,
+    "prevalence": 0.297355,
+    "distinct_breadth_levels": 6,
+    "beta_breadth": 0.071346,
+    "ci95": [
+     -0.068222,
+     0.208753
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   },
+   "c=7-8": {
+    "n": 845,
+    "n_positive": 254,
+    "n_vehicles": 836,
+    "prevalence": 0.300592,
+    "distinct_breadth_levels": 6,
+    "beta_breadth": 0.089882,
+    "ci95": [
+     -0.061943,
+     0.243979
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   }
+  },
+  "cells": {
+   "c=2_b1": {
+    "n": 11170,
+    "n_positive": 1355,
+    "rate": 0.121307,
+    "thin": false
+   },
+   "c=2_b2": {
+    "n": 27196,
+    "n_positive": 4280,
+    "rate": 0.157376,
+    "thin": false
+   },
+   "c=3_b1": {
+    "n": 1040,
+    "n_positive": 173,
+    "rate": 0.166346,
+    "thin": false
+   },
+   "c=3_b2": {
+    "n": 9422,
+    "n_positive": 1554,
+    "rate": 0.164933,
+    "thin": false
+   },
+   "c=3_b3": {
+    "n": 6515,
+    "n_positive": 1429,
+    "rate": 0.21934,
+    "thin": false
+   },
+   "c=4_b1": {
+    "n": 129,
+    "n_positive": 27,
+    "rate": 0.209302,
+    "thin": true
+   },
+   "c=4_b2": {
+    "n": 2062,
+    "n_positive": 412,
+    "rate": 0.199806,
+    "thin": false
+   },
+   "c=4_b3": {
+    "n": 3783,
+    "n_positive": 854,
+    "rate": 0.225747,
+    "thin": false
+   },
+   "c=4_b4": {
+    "n": 1250,
+    "n_positive": 321,
+    "rate": 0.2568,
+    "thin": false
+   },
+   "c=5_b1": {
+    "n": 15,
+    "n_positive": 3,
+    "rate": 0.2,
+    "thin": true
+   },
+   "c=5_b2": {
+    "n": 426,
+    "n_positive": 115,
+    "rate": 0.269953,
+    "thin": true
+   },
+   "c=5_b3": {
+    "n": 1445,
+    "n_positive": 374,
+    "rate": 0.258824,
+    "thin": false
+   },
+   "c=5_b4": {
+    "n": 997,
+    "n_positive": 234,
+    "rate": 0.234704,
+    "thin": false
+   },
+   "c=5_b5": {
+    "n": 190,
+    "n_positive": 60,
+    "rate": 0.315789,
+    "thin": true
+   },
+   "c=6_b1": {
+    "n": 4,
+    "n_positive": 1,
+    "rate": 0.25,
+    "thin": true
+   },
+   "c=6_b2": {
+    "n": 111,
+    "n_positive": 30,
+    "rate": 0.27027,
+    "thin": true
+   },
+   "c=6_b3": {
+    "n": 487,
+    "n_positive": 138,
+    "rate": 0.283368,
+    "thin": true
+   },
+   "c=6_b4": {
+    "n": 576,
+    "n_positive": 177,
+    "rate": 0.307292,
+    "thin": false
+   },
+   "c=6_b5": {
+    "n": 205,
+    "n_positive": 67,
+    "rate": 0.326829,
+    "thin": true
+   },
+   "c=6_b6": {
+    "n": 16,
+    "n_positive": 3,
+    "rate": 0.1875,
+    "thin": true
+   },
+   "c=7-8_b2": {
+    "n": 34,
+    "n_positive": 8,
+    "rate": 0.235294,
+    "thin": true
+   },
+   "c=7-8_b3": {
+    "n": 192,
+    "n_positive": 57,
+    "rate": 0.296875,
+    "thin": true
+   },
+   "c=7-8_b4": {
+    "n": 350,
+    "n_positive": 99,
+    "rate": 0.282857,
+    "thin": true
+   },
+   "c=7-8_b5": {
+    "n": 207,
+    "n_positive": 72,
+    "rate": 0.347826,
+    "thin": true
+   },
+   "c=7-8_b6": {
+    "n": 57,
+    "n_positive": 15,
+    "rate": 0.263158,
+    "thin": true
+   },
+   "c=7-8_b7": {
+    "n": 5,
+    "n_positive": 3,
+    "rate": 0.6,
+    "thin": true
+   }
+  }
+ },
+ "estimand_b": {
+  "population": "eligible count strata only (A2.2); c=0 and c=1 excluded",
+  "additive_fit_on": "train_flat4y",
+  "coefficients": {
+   "intercept": -1.885404,
+   "wheels_tyres": -0.035481,
+   "brakes": 0.103025,
+   "suspension": 0.23883,
+   "steering": 0.403551,
+   "body_structure": 0.367217,
+   "lamps_electrical": 0.37126,
+   "visibility": -0.088342,
+   "noise_emissions": 0.349271,
+   "seatbelts_srs": 0.329931
+  },
+  "tested_on": "held-out frame, coefficients frozen",
+  "n": 67884,
+  "matched_comparator_breadth_given_total_count_only": 0.207386,
+  "breadth": {
+   "beta_beyond_composition": 0.046024,
+   "ci95": [
+    0.024219,
+    0.068672
+   ],
+   "boot_ok": 2000,
+   "ci_excludes_zero": true
+  },
+  "items_per_system": {
+   "beta_beyond_composition": -0.119861,
+   "ci95": [
+    -0.163391,
+    -0.076955
+   ],
+   "boot_ok": 2000,
+   "ci_excludes_zero": true
+  },
+  "common_combinations": {
+   "c=2": {
+    "wheels_tyres+brakes": {
+     "n": 8845,
+     "rate": 0.120294
+    },
+    "wheels_tyres+suspension": {
+     "n": 5139,
+     "rate": 0.15217
+    },
+    "brakes": {
+     "n": 4618,
+     "rate": 0.124946
+    },
+    "wheels_tyres": {
+     "n": 4219,
+     "rate": 0.083195
+    },
+    "brakes+suspension": {
+     "n": 4179,
+     "rate": 0.163915
+    },
+    "suspension": {
+     "n": 2132,
+     "rate": 0.186679
+    },
+    "wheels_tyres+noise_emissions": {
+     "n": 1251,
+     "rate": 0.168665
+    },
+    "brakes+noise_emissions": {
+     "n": 1023,
+     "rate": 0.194526
+    }
+   },
+   "c=3": {
+    "wheels_tyres+brakes": {
+     "n": 3527,
+     "rate": 0.119365
+    },
+    "brakes+suspension": {
+     "n": 1986,
+     "rate": 0.187815
+    },
+    "wheels_tyres+brakes+suspension": {
+     "n": 1910,
+     "rate": 0.185864
+    },
+    "wheels_tyres+suspension": {
+     "n": 1705,
+     "rate": 0.171848
+    },
+    "wheels_tyres+brakes+noise_emissions": {
+     "n": 503,
+     "rate": 0.230616
+    },
+    "brakes+suspension+noise_emissions": {
+     "n": 445,
+     "rate": 0.224719
+    },
+    "brakes": {
+     "n": 439,
+     "rate": 0.157175
+    },
+    "wheels_tyres+suspension+noise_emissions": {
+     "n": 414,
+     "rate": 0.200483
+    }
+   },
+   "c=4": {
+    "wheels_tyres+brakes+suspension": {
+     "n": 1410,
+     "rate": 0.190071
+    },
+    "brakes+suspension": {
+     "n": 684,
+     "rate": 0.222222
+    },
+    "wheels_tyres+brakes": {
+     "n": 675,
+     "rate": 0.145185
+    },
+    "wheels_tyres+suspension": {
+     "n": 336,
+     "rate": 0.181548
+    },
+    "brakes+suspension+noise_emissions": {
+     "n": 310,
+     "rate": 0.274194
+    },
+    "wheels_tyres+brakes+suspension+noise_emissions": {
+     "n": 252,
+     "rate": 0.234127
+    },
+    "wheels_tyres+brakes+noise_emissions": {
+     "n": 240,
+     "rate": 0.258333
+    },
+    "brakes+suspension+body_structure": {
+     "n": 237,
+     "rate": 0.206751
+    }
+   },
+   "c=5": {
+    "wheels_tyres+brakes+suspension": {
+     "n": 606,
+     "rate": 0.244224
+    },
+    "wheels_tyres+brakes+suspension+noise_emissions": {
+     "n": 234,
+     "rate": 0.25641
+    },
+    "brakes+suspension": {
+     "n": 195,
+     "rate": 0.292308
+    },
+    "wheels_tyres+brakes+suspension+body_structure": {
+     "n": 146,
+     "rate": 0.253425
+    },
+    "brakes+suspension+body_structure": {
+     "n": 133,
+     "rate": 0.270677
+    },
+    "brakes+suspension+noise_emissions": {
+     "n": 125,
+     "rate": 0.288
+    },
+    "wheels_tyres+brakes": {
+     "n": 98,
+     "rate": 0.163265
+    },
+    "wheels_tyres+brakes+suspension+lamps_electrical": {
+     "n": 90,
+     "rate": 0.233333
+    }
+   }
+  }
+ },
+ "control_survival": {
+  "beta_pooled": 0.257852,
+  "controls": {
+   "age_quartile": {
+    "beta_stratified": 0.139063,
+    "beta_survival": 0.539314,
+    "n_groups": 4
+   },
+   "prior_depth_band": {
+    "beta_stratified": 0.172696,
+    "beta_survival": 0.669748,
+    "n_groups": 3
+   },
+   "target_year": {
+    "beta_stratified": 0.257852,
+    "beta_survival": 1.0,
+    "n_groups": 1
+   },
+   "postcode_area": {
+    "beta_stratified": 0.369159,
+    "beta_survival": 1.43167,
+    "n_groups": 119
+   },
+   "make": {
+    "beta_stratified": 0.287218,
+    "beta_survival": 1.113884,
+    "n_groups": 139
+   }
+  }
+ },
+ "tied_day_sensitivity": {
+  "n_untied": 284587,
+  "estimand_a": {
+   "c=2": {
+    "n": 33284,
+    "n_positive": 4687,
+    "n_vehicles": 32977,
+    "prevalence": 0.140818,
+    "distinct_breadth_levels": 2,
+    "beta_breadth": 0.323567,
+    "ci95": [
+     0.253997,
+     0.40142
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=3": {
+    "n": 14474,
+    "n_positive": 2586,
+    "n_vehicles": 14377,
+    "prevalence": 0.178665,
+    "distinct_breadth_levels": 3,
+    "beta_breadth": 0.307179,
+    "ci95": [
+     0.226229,
+     0.387011
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=4": {
+    "n": 6111,
+    "n_positive": 1322,
+    "n_vehicles": 6059,
+    "prevalence": 0.216331,
+    "distinct_breadth_levels": 4,
+    "beta_breadth": 0.172814,
+    "ci95": [
+     0.085821,
+     0.263204
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": true,
+    "verdict_eligible": true
+   },
+   "c=5": {
+    "n": 2605,
+    "n_positive": 640,
+    "n_vehicles": 2589,
+    "prevalence": 0.245681,
+    "distinct_breadth_levels": 5,
+    "beta_breadth": -0.034099,
+    "ci95": [
+     -0.144574,
+     0.087669
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   },
+   "c=6": {
+    "n": 1192,
+    "n_positive": 345,
+    "n_vehicles": 1185,
+    "prevalence": 0.28943,
+    "distinct_breadth_levels": 6,
+    "beta_breadth": 0.059645,
+    "ci95": [
+     -0.08078,
+     0.199924
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   },
+   "c=7-8": {
+    "n": 713,
+    "n_positive": 215,
+    "n_vehicles": 705,
+    "prevalence": 0.301543,
+    "distinct_breadth_levels": 6,
+    "beta_breadth": 0.102181,
+    "ci95": [
+     -0.060903,
+     0.272514
+    ],
+    "boot_ok": 2000,
+    "ci_excludes_zero": false,
+    "verdict_eligible": true
+   }
+  }
+ }
+}

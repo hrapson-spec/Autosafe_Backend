@@ -1,0 +1,285 @@
+{
+ "artifact": "PERSIST_SECT_INDEX \u2014 recovered sect_NN -> section_name mapping",
+ "why": "severity_collect.write_labels() assigns the index positionally from SELECT DISTINCT section_name FROM sect_md ORDER BY 1 and persists no names. Replayed here with severity_collect's own expressions.",
+ "source_script": "scripts/analysis/severity_collect.py:169-221",
+ "eval2024": [
+  {
+   "index": 0,
+   "column": "sect_00_n_md",
+   "section_name": "Body, chassis, structure",
+   "positive_n": 11273
+  },
+  {
+   "index": 1,
+   "column": "sect_01_n_md",
+   "section_name": "Brakes",
+   "positive_n": 22522
+  },
+  {
+   "index": 2,
+   "column": "sect_02_n_md",
+   "section_name": "Buses and coaches supplementary tests",
+   "positive_n": 8
+  },
+  {
+   "index": 3,
+   "column": "sect_03_n_md",
+   "section_name": "Identification of the vehicle",
+   "positive_n": 1141
+  },
+  {
+   "index": 4,
+   "column": "sect_04_n_md",
+   "section_name": "Lamps, reflectors and electrical equipment",
+   "positive_n": 36503
+  },
+  {
+   "index": 5,
+   "column": "sect_05_n_md",
+   "section_name": "Noise, emissions and leaks",
+   "positive_n": 10527
+  },
+  {
+   "index": 6,
+   "column": "sect_06_n_md",
+   "section_name": "Road Wheels",
+   "positive_n": 1281
+  },
+  {
+   "index": 7,
+   "column": "sect_07_n_md",
+   "section_name": "Seat belt installation check",
+   "positive_n": 20
+  },
+  {
+   "index": 8,
+   "column": "sect_08_n_md",
+   "section_name": "Seat belts and supplementary restraint systems",
+   "positive_n": 3283
+  },
+  {
+   "index": 9,
+   "column": "sect_09_n_md",
+   "section_name": "Speedometer and speed limiter",
+   "positive_n": 13
+  },
+  {
+   "index": 10,
+   "column": "sect_10_n_md",
+   "section_name": "Steering",
+   "positive_n": 6388
+  },
+  {
+   "index": 11,
+   "column": "sect_11_n_md",
+   "section_name": "Suspension",
+   "positive_n": 28845
+  },
+  {
+   "index": 12,
+   "column": "sect_12_n_md",
+   "section_name": "Tyres",
+   "positive_n": 21416
+  },
+  {
+   "index": 13,
+   "column": "sect_13_n_md",
+   "section_name": "Visibility",
+   "positive_n": 15341
+  }
+ ],
+ "flat4y_train": [
+  {
+   "index": 0,
+   "column": "sect_00_n_md",
+   "section_name": "Body, chassis, structure",
+   "positive_n": 36257
+  },
+  {
+   "index": 1,
+   "column": "sect_01_n_md",
+   "section_name": "Brakes",
+   "positive_n": 71306
+  },
+  {
+   "index": 2,
+   "column": "sect_02_n_md",
+   "section_name": "Buses and coaches supplementary tests",
+   "positive_n": 10
+  },
+  {
+   "index": 3,
+   "column": "sect_03_n_md",
+   "section_name": "Identification of the vehicle",
+   "positive_n": 3743
+  },
+  {
+   "index": 4,
+   "column": "sect_04_n_md",
+   "section_name": "Lamps, reflectors and electrical equipment",
+   "positive_n": 118622
+  },
+  {
+   "index": 5,
+   "column": "sect_05_n_md",
+   "section_name": "Noise, emissions and leaks",
+   "positive_n": 30715
+  },
+  {
+   "index": 6,
+   "column": "sect_06_n_md",
+   "section_name": "Road Wheels",
+   "positive_n": 3475
+  },
+  {
+   "index": 7,
+   "column": "sect_07_n_md",
+   "section_name": "Seat belt installation check",
+   "positive_n": 67
+  },
+  {
+   "index": 8,
+   "column": "sect_08_n_md",
+   "section_name": "Seat belts and supplementary restraint systems",
+   "positive_n": 11041
+  },
+  {
+   "index": 9,
+   "column": "sect_09_n_md",
+   "section_name": "Speedometer and speed limiter",
+   "positive_n": 57
+  },
+  {
+   "index": 10,
+   "column": "sect_10_n_md",
+   "section_name": "Steering",
+   "positive_n": 17921
+  },
+  {
+   "index": 11,
+   "column": "sect_11_n_md",
+   "section_name": "Suspension",
+   "positive_n": 90560
+  },
+  {
+   "index": 12,
+   "column": "sect_12_n_md",
+   "section_name": "Tyres",
+   "positive_n": 63672
+  },
+  {
+   "index": 13,
+   "column": "sect_13_n_md",
+   "section_name": "Visibility",
+   "positive_n": 49996
+  }
+ ],
+ "train_eval_mapping_identical": true,
+ "verification_vs_SEVERITY_RESULT_seed101": {
+  "checked": 14,
+  "mismatches": [],
+  "all_match": true
+ },
+ "ontology_bridge": {
+  "ontology_version": "ADVSTRUCT_ONTOLOGY_V1",
+  "note": "Many-to-one. wheels_tyres and seatbelts_srs each take TWO outcome sections; summing is required. Three sections fall in excluded buckets and are barred from the same-system outcome.",
+  "systems": {
+   "wheels_tyres": [
+    {
+     "column": "sect_06_n_md",
+     "section_name": "Road Wheels",
+     "positive_n_eval2024": 1281
+    },
+    {
+     "column": "sect_12_n_md",
+     "section_name": "Tyres",
+     "positive_n_eval2024": 21416
+    }
+   ],
+   "brakes": [
+    {
+     "column": "sect_01_n_md",
+     "section_name": "Brakes",
+     "positive_n_eval2024": 22522
+    }
+   ],
+   "suspension": [
+    {
+     "column": "sect_11_n_md",
+     "section_name": "Suspension",
+     "positive_n_eval2024": 28845
+    }
+   ],
+   "steering": [
+    {
+     "column": "sect_10_n_md",
+     "section_name": "Steering",
+     "positive_n_eval2024": 6388
+    }
+   ],
+   "body_structure": [
+    {
+     "column": "sect_00_n_md",
+     "section_name": "Body, chassis, structure",
+     "positive_n_eval2024": 11273
+    }
+   ],
+   "lamps_electrical": [
+    {
+     "column": "sect_04_n_md",
+     "section_name": "Lamps, reflectors and electrical equipment",
+     "positive_n_eval2024": 36503
+    }
+   ],
+   "visibility": [
+    {
+     "column": "sect_13_n_md",
+     "section_name": "Visibility",
+     "positive_n_eval2024": 15341
+    }
+   ],
+   "noise_emissions": [
+    {
+     "column": "sect_05_n_md",
+     "section_name": "Noise, emissions and leaks",
+     "positive_n_eval2024": 10527
+    }
+   ],
+   "seatbelts_srs": [
+    {
+     "column": "sect_07_n_md",
+     "section_name": "Seat belt installation check",
+     "positive_n_eval2024": 20
+    },
+    {
+     "column": "sect_08_n_md",
+     "section_name": "Seat belts and supplementary restraint systems",
+     "positive_n_eval2024": 3283
+    }
+   ]
+  },
+  "excluded": {
+   "identification": [
+    {
+     "column": "sect_03_n_md",
+     "section_name": "Identification of the vehicle",
+     "positive_n_eval2024": 1141
+    }
+   ],
+   "not_tested": [
+    {
+     "column": "sect_02_n_md",
+     "section_name": "Buses and coaches supplementary tests",
+     "positive_n_eval2024": 8
+    },
+    {
+     "column": "sect_09_n_md",
+     "section_name": "Speedometer and speed limiter",
+     "positive_n_eval2024": 13
+    }
+   ]
+  },
+  "all_14_sections_mapped": true,
+  "all_9_systems_reachable": true
+ }
+}

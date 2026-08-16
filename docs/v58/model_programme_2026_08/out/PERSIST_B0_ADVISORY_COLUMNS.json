@@ -1,0 +1,95 @@
+{
+ "artifact": "PERSIST L0m membership \u2014 the advisory columns removed from the 241-col baseline",
+ "frozen_for": "PREREG_PERSIST_2026_08_16.md \u00a710.5",
+ "generated": "2026-08-16",
+ "reproducibility": "Tier 1 is regenerated mechanically by this script's regex over the live FEATURE_NAMES. Tier 2 is a declared list; every entry carries a file:line citation and the script asserts each name exists in FEATURE_NAMES.",
+ "b0_source_module": "/Users/henrirapson/autosafe/feature_engineering_v55.py",
+ "b0_n_features": 104,
+ "tier1_name_matched": {
+  "regex": "advis|_adv_|prev_adv",
+  "n": 27,
+  "columns": [
+   "advisory_trend",
+   "prev_count_advisory",
+   "prev_adv_brakes",
+   "prev_adv_suspension",
+   "prev_adv_steering",
+   "prev_adv_tyres",
+   "advisory_cohort_delta",
+   "multi_system_advisory_count",
+   "front_end_advisory_intensity",
+   "has_prior_advisory_brakes",
+   "tests_since_last_advisory_brakes",
+   "advisory_in_last_1_brakes",
+   "advisory_in_last_2_brakes",
+   "advisory_streak_len_brakes",
+   "has_prior_advisory_tyres",
+   "miles_since_last_advisory_tyres",
+   "tests_since_last_advisory_tyres",
+   "advisory_in_last_1_tyres",
+   "advisory_in_last_2_tyres",
+   "advisory_streak_len_tyres",
+   "has_prior_advisory_suspension",
+   "miles_since_last_advisory_suspension",
+   "tests_since_last_advisory_suspension",
+   "advisory_in_last_1_suspension",
+   "advisory_in_last_2_suspension",
+   "advisory_streak_len_suspension",
+   "has_advisory_history"
+  ]
+ },
+ "tier2_code_verified_derived": {
+  "n": 26,
+  "columns": {
+   "brake_system_stress": "feature_engineering_v55.py:870 = prev_adv_brakes + age_factor",
+   "historic_negligence_ratio_smoothed": "\u2026:886 = prev_count_advisory / len(tests)",
+   "negligence_band": "\u2026:894-901 banding of historic_negligence_ratio_smoothed",
+   "raw_behavioral_count": "\u2026:904 = prev_count_advisory (exact alias)",
+   "mech_decay_brake": "\u2026:610 = len(component_advisories['brakes']) * 0.2",
+   "mech_decay_suspension": "\u2026:611 = len(component_advisories['suspension']) * 0.2",
+   "mech_decay_structure": "\u2026:612 = len(component_advisories['structure']) * 0.2",
+   "mech_decay_steering": "\u2026:613 = len(component_advisories['steering']) * 0.2",
+   "mech_decay_index": "\u2026:620 = max(mech_decay_*)",
+   "mech_decay_index_normalized": "\u2026:621+ age-normalisation of mech_decay_index",
+   "mech_risk_driver": "\u2026:641-649 argmax over mech_decay_* values",
+   "text_corrosion_index": "\u2026:584 text_signals_total, incremented ONLY inside the ADVISORY branch (:381-393)",
+   "text_wear_index": "\u2026:584 idem",
+   "text_leak_index": "\u2026:584 idem",
+   "text_damage_index": "\u2026:584 idem",
+   "text_corrosion_index_log": "\u2026:585 log1p of the above",
+   "text_wear_index_log": "\u2026:585 idem",
+   "text_leak_index_log": "\u2026:585 idem",
+   "text_damage_index_log": "\u2026:585 idem",
+   "has_corrosion_history": "\u2026:586 = text count > 0",
+   "has_wear_history": "\u2026:586 idem",
+   "has_leak_history": "\u2026:586 idem",
+   "has_damage_history": "\u2026:586 idem",
+   "mechanism_count": "\u2026:590-591 = len(mechanisms with text_signals_total>0)",
+   "max_severity_score": "\u2026:605 = 1 if len(all_advisories) > 0 (advisory-gated)",
+   "dominant_mechanism": "\u2026:595-602 argmax over text_signals_total"
+  }
+ },
+ "tier1_other_blocks": {
+  "n": 4,
+  "columns": {
+   "b3_n_advisory_items": "blocks.py:308 \u2014 prior advisory items, disposition A. Purely advisory.",
+   "b4_n_adv_to_fail_transitions": "blocks.py:313 \u2014 advisory\u2192fail transitions.",
+   "b4_adv_to_fail_categories": "blocks.py:314 \u2014 categories with \u22651 advisory\u2192fail transition.",
+   "b4_days_since_adv_to_fail": "blocks.py:315 \u2014 days since most recent advisory\u2192fail transition."
+  }
+ },
+ "L0m_removes": {
+  "n_b0": 53,
+  "n_other_blocks": 4,
+  "n_total": 57,
+  "baseline_n": 241,
+  "L0m_n": 184
+ },
+ "tier3_residual_NOT_removed": {
+  "note": "B2's 50 per-category columns (b2_{cat}_n_days/_days_since/_max_run/_persistence, b2_breadth_categories, b2_last_day_n_categories, b2_n_items_total) are computed over ANY DISPOSITION (blocks.py:262-272), so they carry advisory information mixed with minor/major/dangerous and cannot be cleanly attributed. L0m does NOT remove them. This is the principal reason (L0 \u2212 L0m) \u2248 0 CANNOT be read as 'AutoSafe uses no advisory information'.",
+  "n_approx": 50,
+  "block": "B2"
+ },
+ "interpretive_constraint": "L0m is a DECLARED-MEMBERSHIP ablation, not a lineage purge. Retained features may still encode advisory-derived or highly correlated information (tier 3). Therefore (L0 \u2212 L0m) \u2248 0 means 'the removed block carries no unique marginal signal conditional on the remaining features' \u2014 NOT 'AutoSafe does not use advisory information'. The stronger claim requires a separate lineage-purged ablation and is OUT OF SCOPE for PERSIST-1 unless separately preregistered.",
+ "audit_correction": "out/SERVE_VIEW_AUDIT.md and PREREG_ADVSTRUCT \u00a72.2 record '\u226523 B0 advisory columns'. Code inspection finds 53 of 104 B0 columns are advisory-derived \u2014 the audit counted only name-matched ones and missed the text_*/mech_decay_*/negligence families, all of which are advisory-gated at source."
+}

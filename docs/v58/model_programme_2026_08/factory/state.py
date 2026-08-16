@@ -24,10 +24,25 @@ from typing import Any, Deque, Dict, List, Optional, Sequence, Set, Tuple
 # questions": a public alias in pipeline/lake/cycles.py would be preferable to
 # either importing a private name or re-implementing the rule (which the
 # contract forbids).
-from pipeline.lake.cycles import AMBIGUOUS, DEFINITIVE, _cluster_outcome
+# Routed through day_outcomes: `cycles` is decommissioned as a substrate and
+# day_outcomes.py is the factory's single quarantined boundary to its
+# set-based semantics (pinned by test_b7.py::test_no_b7_module_imports_cycles).
+from .day_outcomes import CLUSTER_AMBIGUOUS as AMBIGUOUS
+from .day_outcomes import DEFINITIVE
+from .day_outcomes import cluster_outcome as _cluster_outcome
 
+from . import atoms
+from . import day_outcomes as do
 from . import observability as obs
 from .taxonomy import CATEGORY_KEYS
+
+#: Half-lives for the B7R recency-weighted proportion, in days. Pre-registered;
+#: adding one is a contract change, not a tuning knob.
+DECAY_HALF_LIVES: Dict[str, float] = {"hl1y": 365.25, "hl3y": 3 * 365.25}
+
+#: Scalar item columns B7 may read, so a typo raises instead of silently
+#: reading as "unobservable" (see `_update_b7`).
+ATOM_ITEM_COLUMNS = frozenset(atoms.SCALAR_ITEM_COLUMNS)
 
 DAYS_PER_YEAR = 365.25
 #: COVID MOT-extension window (contract, B5).
@@ -156,6 +171,18 @@ class DayAtom:
     def cat_fail(self, key: str, basis: str) -> Optional[int]:
         return self._cat(f"cat_{key}_fail_{basis}")
 
+    # Per-category severity rungs (post-2018 gated in the atom). NULL, not 0,
+    # when the day's items are unobservable -- the B7D transition ladder must
+    # never read an unobserved category as "clean".
+    def cat_dangerous(self, key: str) -> Optional[int]:
+        return self._cat(f"cat_{key}_dangerous")
+
+    def cat_major(self, key: str) -> Optional[int]:
+        return self._cat(f"cat_{key}_major")
+
+    def cat_minor(self, key: str) -> Optional[int]:
+        return self._cat(f"cat_{key}_minor")
+
     def prior_tests(self) -> List[PriorTest]:
         # MECHANISM M4 CLOSED at state.py:118 (`int(t.get("n_items") or 0)`):
         # an unobservable count is carried into the packets view as NULL.
@@ -199,7 +226,99 @@ class AsOfState:
     n_ambiguous_days: int = 0
     n_nonresult_only_days: int = 0
     last_fail_date: Optional[date] = None
+    #: legacy PASS-union-PRS counter, retained unchanged. B7D splits the two
+    #: (day_state_counts), because PRS is a fail-bearing pass and collapsing it
+    #: into PASS discards the distinction Lane R is built to measure.
     last_pass_date: Optional[date] = None
+
+    # --- B7: the five-state day contract (factory/day_outcomes.py) --------
+    #: S_d counts. n = PASS + PRS + FAIL is the ONLY honest denominator for a
+    #: Lane D proportion; AMBIGUOUS and UNAVAILABLE are excluded from BOTH
+    #: numerator and denominator and carried here so the exclusion is visible.
+    day_state_counts: Dict[str, int] = field(default_factory=do.empty_state_counts)
+    #: S_d of the most recent prior day. None until there is one.
+    prev_day_state: Optional[str] = None
+    #: ascending prior-day dates by state/severity, for the trailing windows
+    fail_day_dates: List[date] = field(default_factory=list)
+    major_day_dates: List[date] = field(default_factory=list)
+    dangerous_day_dates: List[date] = field(default_factory=list)
+    #: earliest prior day on which severity was gradable. The per-year severity
+    #: rates divide by THIS window, not by b1_observable_years -- a vehicle
+    #: whose history predates 2018-05-20 has result exposure it does not have
+    #: severity exposure for, and sharing one denominator would understate
+    #: every severity rate for exactly the oldest vehicles.
+    first_severity_observable_date: Optional[date] = None
+    #: earliest prior day carrying an identified outcome (result exposure).
+    first_outcome_observable_date: Optional[date] = None
+
+    # --- B7D: last-day and last-FAIL-day snapshots ------------------------
+    # `last_day_*` above describes the most recent prior day whatever it was;
+    # these describe the most recent prior day that actually FAILED, which is
+    # the event the request asked about and which nothing currently captures.
+    last_day_n_fail_items: Optional[int] = None
+    last_day_n_major: Optional[int] = None
+    last_day_n_dangerous: Optional[int] = None
+    last_day_severity_ord: Optional[int] = None
+    last_fail_day_n_items: Optional[int] = None
+    last_fail_day_n_categories: Optional[int] = None
+    last_fail_day_severity_ord: Optional[int] = None
+
+    # --- B7D: last-three observed days ------------------------------------
+    # Two SEPARATE observability channels. Outcome-observable and
+    # detail-observable are not the same set, and reusing one denominator for
+    # both is the error this split exists to prevent.
+    last3_day_fail_items: Deque[int] = field(default_factory=lambda: deque(maxlen=3))
+    last3_day_outcome_observed: Deque[int] = field(default_factory=lambda: deque(maxlen=3))
+    last3_day_detail_observed: Deque[int] = field(default_factory=lambda: deque(maxlen=3))
+    sum_fail_items_all_days: int = 0
+    n_days_fail_items_observed: int = 0
+    #: item-observable prior days carrying >=1 advisory (advisory-rate numerator)
+    n_advisory_days: int = 0
+
+    # --- B7D: severity-transition ladder (post-2018 only) -----------------
+    #: per-category highest severity rung seen so far (day_outcomes ordinals).
+    #: A transition needs an ORDERED prior observation of the same category, so
+    #: "ever advisory, later major" does not qualify on its own.
+    cat_severity_rung: Dict[str, int] = field(default_factory=dict)
+    n_adv_to_minor: int = 0
+    n_minor_to_major: int = 0
+    n_major_to_dangerous: int = 0
+    n_severity_transition_opportunities: int = 0
+    last_escalation_date: Optional[date] = None
+    severity_transition_observed: bool = False
+
+    # --- B7R: initial-presentation channel (research-only) ----------------
+    # Grain is the initial-presentation DAY: a prior day carrying >=1 definitive
+    # NT, whose state is resolved by the SAME five-state rule restricted to NT
+    # rows. That keeps D13 (no within-day order) while giving streaks and the
+    # last-three window a well-defined sequence. The RECORD-count twin is the
+    # existing b1_n_prior_initials -- reused, never re-emitted.
+    initial_state_counts: Dict[str, int] = field(default_factory=do.empty_state_counts)
+    prev_initial_state: Optional[str] = None
+    prev_initial_date: Optional[date] = None
+    prev_initial_fail_date: Optional[date] = None
+    last3_initial: Deque[str] = field(default_factory=lambda: deque(maxlen=3))
+    cur_initial_fail_streak: int = 0
+    cur_initial_pass_streak: int = 0
+    max_initial_fail_streak: int = 0
+    prev_initial_n_fail_items: Optional[int] = None
+    prev_initial_n_categories: Optional[int] = None
+    prev_initial_severity_ord: Optional[int] = None
+    prev_initial_n_major: Optional[int] = None
+    prev_initial_n_dangerous: Optional[int] = None
+    last3_initial_fail_items: Deque[int] = field(default_factory=lambda: deque(maxlen=3))
+    last3_initial_categories: Deque[int] = field(default_factory=lambda: deque(maxlen=3))
+    sum_initial_fail_items: int = 0
+    n_initial_days_detail_observed: int = 0
+
+    # --- B7R: recency-weighted proportion ---------------------------------
+    # Decay-FORWARD accumulators. Holding sum(2**(t_i/h)) would overflow across
+    # a 20-year history; instead every accumulator is discounted to the current
+    # anchor date on each fold, then discounted once more to tgt_date at emit.
+    # Exact, and numerically stable.
+    decay_num: Dict[str, float] = field(default_factory=lambda: {k: 0.0 for k in DECAY_HALF_LIVES})
+    decay_den: Dict[str, float] = field(default_factory=lambda: {k: 0.0 for k in DECAY_HALF_LIVES})
+    decay_anchor: Optional[date] = None
 
     # same-day multiset
     n_multi_test_days: int = 0
@@ -589,6 +708,212 @@ class AsOfState:
 
         # packets payload
         self.prior_tests.extend(day.prior_tests())
+
+        # B7 last, so it folds a fully-settled day.
+        self._update_b7(day)
+
+    # --- B7 -------------------------------------------------------------
+
+    def _update_b7(self, day: DayAtom) -> None:
+        """Fold one day into the B7 accumulators. Called at the END of update()."""
+        state = do.day_state(day.tests)
+        self.day_state_counts[state] += 1
+        self.prev_day_state = state
+        if state == do.FAIL:
+            self.fail_day_dates.append(day.test_date)
+        if do.is_outcome_observable(state) and self.first_outcome_observable_date is None:
+            self.first_outcome_observable_date = day.test_date
+        if day.severity_observable and self.first_severity_observable_date is None:
+            self.first_severity_observable_date = day.test_date
+
+        obs_ok = day.items_observed
+
+        def item(name: str) -> Optional[int]:
+            """NULL-preserving read that REFUSES an unregistered column name.
+
+            `DayAtom.item` returns None for a name that is not in the atom, so a
+            typo would silently become "unobservable" -- indistinguishable from
+            a real NULL and invisible to every schema check.
+            """
+            if name not in ATOM_ITEM_COLUMNS:
+                raise KeyError(f"{name!r} is not an atom item column")
+            value = day.item(name)
+            return None if value is None else int(value)
+
+        n_fail_items = item("n_fail_items_" + self.fail_basis) if obs_ok else None
+        sev_ok = obs_ok and day.severity_observable
+        n_major = item("n_major") if sev_ok else None
+        n_dangerous = item("n_dangerous") if sev_ok else None
+        n_minor = item("n_minor") if sev_ok else None
+        n_adv = item("n_advisory_items") if obs_ok else None
+        sev_ord = do.severity_ordinal(n_dangerous, n_major, n_minor, n_adv)
+
+        # last-day severity snapshot (NULL, never 0, when unobservable)
+        self.last_day_n_fail_items = n_fail_items
+        self.last_day_n_major = n_major
+        self.last_day_n_dangerous = n_dangerous
+        self.last_day_severity_ord = sev_ord
+        if day.severity_observable:
+            if (n_major or 0) > 0:
+                self.major_day_dates.append(day.test_date)
+            if (n_dangerous or 0) > 0:
+                self.dangerous_day_dates.append(day.test_date)
+
+        # last-FAIL-day snapshot: only a day that actually failed updates it.
+        if state == do.FAIL:
+            self.last_fail_day_n_items = n_fail_items
+            self.last_fail_day_severity_ord = sev_ord
+            self.last_fail_day_n_categories = (
+                sum(1 for k in CATEGORY_KEYS if (day.cat_fail(k, self.fail_basis) or 0) > 0)
+                if obs_ok else None)
+
+        # last-three observed days, two independent observability channels
+        self.last3_day_outcome_observed.append(1 if do.is_outcome_observable(state) else 0)
+        self.last3_day_detail_observed.append(1 if obs_ok else 0)
+        if obs_ok:
+            self.last3_day_fail_items.append(n_fail_items or 0)
+            self.sum_fail_items_all_days += n_fail_items or 0
+            self.n_days_fail_items_observed += 1
+            if (n_adv or 0) > 0:
+                self.n_advisory_days += 1
+
+        if day.severity_observable and obs_ok:
+            self._update_severity_transitions(day)
+        self._update_initial_channel(day, n_fail_items, sev_ord, n_major, n_dangerous, obs_ok)
+
+    def _update_severity_transitions(self, day: DayAtom) -> None:
+        """Category-level escalation up the advisory/minor/major/dangerous ladder.
+
+        A transition is counted only when the SAME category was observed at a
+        strictly lower rung on a strictly earlier day. An opportunity is any
+        category already carrying a rung -- the honest denominator, without
+        which an escalation count is just a proxy for history depth.
+        """
+        self.severity_transition_observed = True
+        for key in CATEGORY_KEYS:
+            rung = do.severity_ordinal(day.cat_dangerous(key), day.cat_major(key),
+                                       day.cat_minor(key), day.cat_adv(key))
+            if rung is None:
+                continue
+            prior = self.cat_severity_rung.get(key)
+            if prior is not None:
+                self.n_severity_transition_opportunities += 1
+                if rung > prior:
+                    if prior <= 1 and rung == 2:
+                        self.n_adv_to_minor += 1
+                    elif prior <= 2 and rung == 3:
+                        self.n_minor_to_major += 1
+                    elif prior <= 3 and rung == 4:
+                        self.n_major_to_dangerous += 1
+                    self.last_escalation_date = day.test_date
+            if rung > 0:
+                self.cat_severity_rung[key] = max(prior or 0, rung)
+
+    def _update_initial_channel(self, day: DayAtom, n_fail_items: Optional[int],
+                                sev_ord: Optional[int], n_major: Optional[int],
+                                n_dangerous: Optional[int], obs_ok: bool) -> None:
+        """B7R: the initial-presentation DAY channel (research-only).
+
+        The day's initial state is the SAME five-state rule applied to the NT
+        rows only. All NT rows share a type rank, so an NT-FAIL + NT-PASS day
+        resolves to AMBIGUOUS rather than inventing a sequence.
+        """
+        nt_rows = [t for t in day.tests if t.get("ttype") == "NT"]
+        if not nt_rows:
+            return
+        state = do.day_state(nt_rows)
+        self.initial_state_counts[state] += 1
+        if not do.is_outcome_observable(state):
+            # An unidentified initial day breaks nothing and counts nowhere;
+            # its exposure lives in initial_state_counts.
+            return
+
+        self.prev_initial_state = state
+        self.prev_initial_date = day.test_date
+        self.last3_initial.append(state)
+
+        failed = state == do.FAIL
+        if failed:
+            self.prev_initial_fail_date = day.test_date
+            self.cur_initial_fail_streak += 1
+            self.cur_initial_pass_streak = 0
+            self.max_initial_fail_streak = max(self.max_initial_fail_streak,
+                                               self.cur_initial_fail_streak)
+        else:
+            # A retest pass does NOT reach here: only NT rows do. That is what
+            # keeps a retest from silently ending an initial-failure streak.
+            self.cur_initial_pass_streak += 1
+            self.cur_initial_fail_streak = 0
+
+        self._decay_to(day.test_date)
+        for key in DECAY_HALF_LIVES:
+            self.decay_den[key] += 1.0
+            if failed:
+                self.decay_num[key] += 1.0
+
+        self.prev_initial_state = state
+        self.prev_initial_n_fail_items = n_fail_items
+        self.prev_initial_severity_ord = sev_ord
+        self.prev_initial_n_major = n_major
+        self.prev_initial_n_dangerous = n_dangerous
+        self.prev_initial_n_categories = (
+            sum(1 for k in CATEGORY_KEYS if (day.cat_fail(k, self.fail_basis) or 0) > 0)
+            if obs_ok else None)
+        if obs_ok:
+            self.last3_initial_fail_items.append(n_fail_items or 0)
+            self.last3_initial_categories.append(self.prev_initial_n_categories or 0)
+            self.sum_initial_fail_items += n_fail_items or 0
+            self.n_initial_days_detail_observed += 1
+
+    def _decay_to(self, when: date) -> None:
+        """Discount every decay accumulator forward to `when`. Idempotent."""
+        if self.decay_anchor is None:
+            self.decay_anchor = when
+            return
+        elapsed = (when - self.decay_anchor).days
+        if elapsed <= 0:
+            return
+        for key, half_life in DECAY_HALF_LIVES.items():
+            factor = 2.0 ** (-elapsed / half_life)
+            self.decay_num[key] *= factor
+            self.decay_den[key] *= factor
+        self.decay_anchor = when
+
+    def decayed(self, key: str, target: date) -> Tuple[Optional[float], Optional[float]]:
+        """(numerator, denominator) discounted to `target`. NULL before any event.
+
+        Returned as a PAIR and emitted as a pair: a rate of 0.5 over 0.5
+        weighted presentations is not the evidence 0.5 over 8 is, and a lone
+        ratio cannot tell the model which it is looking at.
+        """
+        if self.decay_anchor is None or self.decay_den[key] <= 0:
+            return None, None
+        elapsed = max(0, (target - self.decay_anchor).days)
+        factor = 2.0 ** (-elapsed / DECAY_HALF_LIVES[key])
+        return self.decay_num[key] * factor, self.decay_den[key] * factor
+
+    def n_outcome_observable_days(self) -> int:
+        """n -- the ONLY honest denominator for a Lane D proportion."""
+        return do.outcome_observable_total(self.day_state_counts)
+
+    def n_within(self, dates: List[date], target: date, cap_years: float) -> int:
+        """Count of `dates` inside the trailing window before `target`."""
+        return len(dates) - self._window_start(dates, target, cap_years)
+
+    def recent_minus_earlier(self, recent: Deque[int], total: int,
+                             n_observed: int) -> Optional[float]:
+        """Mean over the last<=3 observed days minus the mean over the rest.
+
+        Replaces a global OLS slope: robust to irregular test spacing, and it
+        answers "is it getting worse lately" without pretending the history is
+        evenly sampled. NULL until there is an earlier period to compare to.
+        """
+        if n_observed <= len(recent) or not recent:
+            return None
+        recent_mean = sum(recent) / len(recent)
+        earlier_n = n_observed - len(recent)
+        earlier_mean = (total - sum(recent)) / earlier_n
+        return recent_mean - earlier_mean
 
 
 def covid_straddle(prior_date: Optional[date], target_date: date) -> bool:

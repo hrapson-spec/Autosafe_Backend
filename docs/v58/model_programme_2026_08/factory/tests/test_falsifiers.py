@@ -126,7 +126,14 @@ CROSSTAB = [
     ("post_2018", "P", None, "P", severity.SEVERITY_MAJOR),
     ("post_2018", "F", "D", "F", severity.SEVERITY_DANGEROUS),
     ("post_2018", "P", "D", "P", severity.SEVERITY_DANGEROUS),
-    ("post_2018", "M", "D", "M", severity.SEVERITY_DANGEROUS),
+    # AMENDED 2026-08-15 (severity fail-gating repair). This row previously expected
+    # SEVERITY_DANGEROUS and so PINNED THE DEFECT: classify_severity tested
+    # dangerous_mark BEFORE disposition, grading non-failing items dangerous. Under DVSA
+    # rules a dangerous defect is a failure, so only F/P can be dangerous.
+    ("post_2018", "M", "D", "M", severity.SEVERITY_MINOR),
+    # COVERAGE GAP CLOSED: A+D was never in this crosstab, yet it is the case that
+    # actually occurs -- 73,814 items post-2018 lake-wide (M+D occurs 0 times).
+    ("post_2018", "A", "D", "A", severity.SEVERITY_ADVISORY),
 ]
 
 RAISERS = [("post_2018", "m"), ("post_2018", "D"), ("post_2018", "X"),
@@ -201,17 +208,23 @@ def test_f4_emit_before_update(tmp_path):
 # --- F5: censoring ----------------------------------------------------------
 
 @pytest.mark.parametrize("first_use,expected_status,expected_censored", [
+    # UPDATED for D-1. These cases are now stated against the BUILD's resolved
+    # result floor, not the absolute 2005 bound. The fixture loads 2015+, so a
+    # 2010 first-use is censored BY THIS BUILD -- which is precisely the
+    # 2005-2015 cohort the old flag silently reported as `observed`. The
+    # pre-D-1 expectations pinned the defect, so they had to move.
     (date(1998, 6, 1), "left_censored_2005", True),
-    (date(2010, 6, 1), "observed", False),
+    (date(2010, 6, 1), "left_censored_2005", True),
     (None, "first_use_missing", False),
 ])
 def test_f5_censoring(tmp_path, first_use, expected_status, expected_censored):
-    lake = FixtureLake(str(tmp_path / f"lake_{expected_status}"))
+    lake = FixtureLake(str(tmp_path / f"lake_{expected_status}_{first_use}"))
     lake.add_test(TestRow(test_id=1, vehicle_id=3, test_date=date(2015, 1, 1),
                           first_use_date=first_use))
     lake.add_test(TestRow(test_id=2, vehicle_id=3, test_date=date(2020, 1, 1),
                           first_use_date=first_use))
-    _, rows, _ = run_factory(lake, tmp_path / f"run_{expected_status}", [RECIPE])
+    _, rows, _ = run_factory(lake, tmp_path / f"run_{expected_status}_{first_use}",
+                             [RECIPE])
     row = [r for r in rows if r["tgt_id"] == 2][0]
 
     assert row["b1_observable_years_status"] == expected_status
@@ -224,9 +237,17 @@ def test_f5_censoring(tmp_path, first_use, expected_status, expected_censored):
     else:
         assert row["b1_age_at_target_years"] == pytest.approx(
             (date(2020, 1, 1) - first_use).days / 365.25)
-    start = max(first_use or date(2005, 1, 1), date(2005, 1, 1))
+    # D-1: the window opens at the BUILD's resolved result floor, which the
+    # fixture derives from its loaded years (2015+), not at the absolute 2005
+    # bound. Under the old rule this vehicle claimed 15.0 observable years
+    # against 5 loadable ones -- a ~3x inflated exposure denominator on exactly
+    # the oldest vehicles.
+    build_floor = date(2015, 1, 1)
+    start = max(first_use or build_floor, build_floor)
     assert row["b1_observable_years"] == pytest.approx(
         (date(2020, 1, 1) - start).days / 365.25)
+    assert row["b1_observable_years"] < 15.0, (
+        "the corrected floor must not claim exposure the build cannot observe")
 
 
 # --- F6: enrichment as-of ---------------------------------------------------
@@ -613,7 +634,13 @@ def test_f12_capped_columns_are_d13_invariant(tmp_path):
     _, rows_b, _ = run_factory(_capped_depth_vehicle(str(tmp_path / "b"), True),
                                tmp_path / "rb", [RECIPE])
     capped = [c for c in blocks.COLUMN_NAMES if c.endswith(("_cap2y", "_cap5y"))]
-    assert len(capped) == 20, "the capped family must be in the compared projection"
+    # Derived from the registry, not a literal: the guard's job is to prove the
+    # compared projection is non-empty and covers every capped column, and a
+    # hardcoded census makes adding one look like an invariance failure.
+    registry_capped = [c.name for c in blocks.ALL_COLUMNS
+                       if c.name.endswith(("_cap2y", "_cap5y"))]
+    assert capped and capped == registry_capped, (
+        "the capped family must be in the compared projection")
     a = {r["tgt_id"]: r for r in rows_a}[100]
     b = {r["tgt_id"]: r for r in rows_b}[100]
     assert [a[c] for c in capped] == [b[c] for c in capped]
