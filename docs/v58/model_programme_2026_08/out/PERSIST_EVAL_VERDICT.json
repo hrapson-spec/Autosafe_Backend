@@ -1,0 +1,24 @@
+{
+ "rule": "AMENDMENT_PERSIST_A1 \u00a74.2",
+ "p0_eval": 0.10545395334487427,
+ "bar_eval_pp": 2.1090790668974857,
+ "effect_pp": 1.6859260442683595,
+ "ci95": [
+  1.3468384729617866,
+  2.0266742753881184
+ ],
+ "C1": false,
+ "C1a": true,
+ "C1b": true,
+ "C1c": false,
+ "C2": true,
+ "C3": true,
+ "OPT": {
+  "8B_monotone": false,
+  "8C_sharpening": true,
+  "8G_placebo": true,
+  "any": true
+ },
+ "powered": true,
+ "verdict": "NOT SUPPORTED"
+}

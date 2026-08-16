@@ -1,0 +1,63 @@
+{
+ "artifact": "PERSIST falsification legs 8B/8C/8D/8E \u2014 eval2024",
+ "estimator": "persist_estimator.py (frozen membership, IRLS)",
+ "prereg_sha256_16": "424dfdd4af84ea56",
+ "legs": {
+  "8B_dose_response": {
+   "raw": [
+    {
+     "run": "0",
+     "n": 116686,
+     "events": 12305,
+     "raw_rate": 0.10545395334487427
+    },
+    {
+     "run": "1",
+     "n": 36070,
+     "events": 4798,
+     "raw_rate": 0.1330191294704741
+    },
+    {
+     "run": "2",
+     "n": 11316,
+     "events": 1535,
+     "raw_rate": 0.1356486390950866
+    },
+    {
+     "run": "3+",
+     "n": 8232,
+     "events": 1108,
+     "raw_rate": 0.1345966958211856
+    }
+   ],
+   "adjusted_vs_run0": {
+    "1": {
+     "risk_diff_pp": 1.670289558495822,
+     "relative_risk": 1.158390416434493,
+     "n": 152756
+    },
+    "2": {
+     "risk_diff_pp": 1.5046043343430124,
+     "relative_risk": 1.1426787983398203,
+     "n": 128002
+    },
+    "3+": {
+     "risk_diff_pp": 1.793398817624524,
+     "relative_risk": 1.1700646358661806,
+     "n": 124918
+    }
+   },
+   "monotone": false
+  },
+  "8C_anatomical": {
+   "n_AA_with_item_detail": 55618,
+   "same_rfr": 41769,
+   "same_rfr_share": 0.7509978783846956,
+   "same_rfr_loc": 26907,
+   "same_rfr_loc_share": 0.48378222877485705,
+   "chance_baseline": 0.28088087582066795,
+   "lift_over_chance": 2.6737237848267745,
+   "note": "raw shares are uninterpretable without the baseline: systems with few distinct RfR codes force same-item recurrence by construction"
+  }
+ }
+}

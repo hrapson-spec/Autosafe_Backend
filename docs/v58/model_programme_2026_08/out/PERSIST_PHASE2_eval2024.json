@@ -1,0 +1,417 @@
+{
+ "artifact": "PERSIST Phase 2 bootstrap \u2014 eval2024",
+ "provenance": {
+  "git_commit": "d393d7a53d6e54603c514ef5a0208f4d7864ca0f",
+  "git_dirty": false,
+  "estimator_sha256": "fb01f0630b108694f1850e665e3b558935ee2100442475af1ef0e40c7556778b",
+  "driver_sha256": "e5e2b77de81db0612138c5a69b90e55c169a3ab6ddabb76e4df662c3084bd386",
+  "state_sha256": "cf029a56e87f68fdb923229097efb93d718161c9177bc4ef2bc949945951b2e4",
+  "labels_sha256": "0828281a3a7fdc9300cd50f0853b6542db0de46b54ab4c1e4253b712334ce178",
+  "prereg_sha256_16": "424dfdd4af84ea56",
+  "versions": {
+   "python": "3.11.14",
+   "numpy": "1.26.3",
+   "pandas": "2.2.0",
+   "sklearn": "1.9.0",
+   "duckdb": "1.5.5"
+  },
+  "controls": [
+   "n_adv_sys_t",
+   "n_items_sys_t",
+   "tot_adv_t",
+   "n_advised_systems_t",
+   "tot_min_t",
+   "tot_md_t",
+   "n_episodes",
+   "n_prior_fail_sysdays",
+   "prior_md_items",
+   "interval_days"
+  ],
+  "alpha": 0.05,
+  "interval": "percentile",
+  "ci_method": "numpy.percentile, linear interpolation, [2.5, 97.5]"
+ },
+ "membership": {
+  "denominator_systems": 9,
+  "cohortB_own_estimate": [
+   "wheels_tyres",
+   "brakes",
+   "suspension",
+   "steering",
+   "body_structure",
+   "lamps_electrical",
+   "visibility",
+   "noise_emissions",
+   "seatbelts_srs"
+  ],
+  "cohortA_own_estimate": [
+   "wheels_tyres",
+   "brakes",
+   "suspension",
+   "steering",
+   "body_structure",
+   "lamps_electrical",
+   "noise_emissions"
+  ],
+  "eligibility_B": {
+   "wheels_tyres": {
+    "eligible": true,
+    "n": 61163,
+    "n_pos": 5895,
+    "n_treated": 19262,
+    "reason": "sufficient"
+   },
+   "brakes": {
+    "eligible": true,
+    "n": 50128,
+    "n_pos": 5897,
+    "n_treated": 16493,
+    "reason": "sufficient"
+   },
+   "suspension": {
+    "eligible": true,
+    "n": 31413,
+    "n_pos": 5101,
+    "n_treated": 11465,
+    "reason": "sufficient"
+   },
+   "steering": {
+    "eligible": true,
+    "n": 3906,
+    "n_pos": 519,
+    "n_treated": 772,
+    "reason": "sufficient"
+   },
+   "body_structure": {
+    "eligible": true,
+    "n": 8745,
+    "n_pos": 884,
+    "n_treated": 2187,
+    "reason": "sufficient"
+   },
+   "lamps_electrical": {
+    "eligible": true,
+    "n": 2838,
+    "n_pos": 578,
+    "n_treated": 640,
+    "reason": "sufficient"
+   },
+   "visibility": {
+    "eligible": true,
+    "n": 203,
+    "n_pos": 17,
+    "n_treated": 9,
+    "reason": "sufficient"
+   },
+   "noise_emissions": {
+    "eligible": true,
+    "n": 12149,
+    "n_pos": 772,
+    "n_treated": 4319,
+    "reason": "sufficient"
+   },
+   "seatbelts_srs": {
+    "eligible": true,
+    "n": 1759,
+    "n_pos": 83,
+    "n_treated": 471,
+    "reason": "sufficient"
+   }
+  },
+  "eligibility_A": {
+   "wheels_tyres": {
+    "eligible": true,
+    "n": 10403,
+    "n_pos": 824,
+    "n_treated": 2876,
+    "reason": "sufficient"
+   },
+   "brakes": {
+    "eligible": true,
+    "n": 7769,
+    "n_pos": 697,
+    "n_treated": 1880,
+    "reason": "sufficient"
+   },
+   "suspension": {
+    "eligible": true,
+    "n": 4021,
+    "n_pos": 557,
+    "n_treated": 1080,
+    "reason": "sufficient"
+   },
+   "steering": {
+    "eligible": true,
+    "n": 491,
+    "n_pos": 49,
+    "n_treated": 69,
+    "reason": "sufficient"
+   },
+   "body_structure": {
+    "eligible": true,
+    "n": 926,
+    "n_pos": 75,
+    "n_treated": 195,
+    "reason": "sufficient"
+   },
+   "lamps_electrical": {
+    "eligible": true,
+    "n": 311,
+    "n_pos": 51,
+    "n_treated": 53,
+    "reason": "sufficient"
+   },
+   "visibility": {
+    "eligible": false,
+    "n": 44,
+    "n_pos": 1,
+    "n_treated": 2,
+    "reason": "n_pos=1<10; n_treated=2<5"
+   },
+   "noise_emissions": {
+    "eligible": true,
+    "n": 1246,
+    "n_pos": 62,
+    "n_treated": 383,
+    "reason": "sufficient"
+   },
+   "seatbelts_srs": {
+    "eligible": false,
+    "n": 161,
+    "n_pos": 4,
+    "n_treated": 47,
+    "reason": "n_pos=4<10"
+   }
+  },
+  "rule": "eligibility declared once from the full sample; ineligible systems take the pooled coefficient via offset in EVERY replicate and keep their rows in the denominator; membership never varies"
+ },
+ "weights": "vary with each vehicle-level resample (PREREG \u00a76.3, owner ruling)",
+ "point": {
+  "cohortB": {
+   "standardised_risk_diff_pp": 1.6859260442683595,
+   "tau": 0.0796917049447259,
+   "tau2": 0.0063507678369972495,
+   "pooled_log_odds": 0.13907412321216825,
+   "n_systems_in_denominator": 9,
+   "n_systems_own_estimate": 9,
+   "systems_own_estimate": [
+    "wheels_tyres",
+    "brakes",
+    "suspension",
+    "steering",
+    "body_structure",
+    "lamps_electrical",
+    "visibility",
+    "noise_emissions",
+    "seatbelts_srs"
+   ],
+   "per_system": {
+    "wheels_tyres": {
+     "n": 61163,
+     "role": "own(shrunk)",
+     "beta_used": 0.2019330543070948,
+     "beta_raw": 0.21022783501982625,
+     "se": 0.028948900735462187,
+     "shrinkage_weight": 0.8834244833895126,
+     "risk_diff_pp": 1.791437709612584
+    },
+    "brakes": {
+     "n": 50128,
+     "role": "own(shrunk)",
+     "beta_used": 0.2325406745692159,
+     "beta_raw": 0.24538898058335804,
+     "se": 0.029546629397872528,
+     "shrinkage_weight": 0.8791485373555712,
+     "risk_diff_pp": 2.414987173491935
+    },
+    "suspension": {
+     "n": 31413,
+     "role": "own(shrunk)",
+     "beta_used": 0.06711682755383103,
+     "beta_raw": 0.05502026318994404,
+     "se": 0.03267433234200463,
+     "shrinkage_weight": 0.8560855579899769,
+     "risk_diff_pp": 0.9040281082258165
+    },
+    "steering": {
+     "n": 3906,
+     "role": "own(shrunk)",
+     "beta_used": 0.10109326566903291,
+     "beta_raw": 0.010664965019570741,
+     "se": 0.12296539806723863,
+     "shrinkage_weight": 0.2957799745573353,
+     "risk_diff_pp": 1.185733657299569
+    },
+    "body_structure": {
+     "n": 8745,
+     "role": "own(shrunk)",
+     "beta_used": 0.156209182369675,
+     "beta_raw": 0.1735964892897727,
+     "se": 0.08027613865855711,
+     "shrinkage_weight": 0.49634660379268414,
+     "risk_diff_pp": 1.4254655898582744
+    },
+    "lamps_electrical": {
+     "n": 2838,
+     "role": "own(shrunk)",
+     "beta_used": 0.1070539632045475,
+     "beta_raw": 0.0434581397111073,
+     "se": 0.11230928621693485,
+     "shrinkage_weight": 0.33488292265764796,
+     "risk_diff_pp": 1.7442593669385629
+    },
+    "visibility": {
+     "n": 203,
+     "role": "own(shrunk)",
+     "beta_used": 0.14269668909547084,
+     "beta_raw": 1.061437140117605,
+     "se": 1.269116209613377,
+     "shrinkage_weight": 0.0039274838831422805,
+     "risk_diff_pp": 0.9672412605263886
+    },
+    "noise_emissions": {
+     "n": 12149,
+     "role": "own(shrunk)",
+     "beta_used": 0.11155631129352715,
+     "beta_raw": 0.0849559459491621,
+     "se": 0.07835197896949923,
+     "shrinkage_weight": 0.5084763255219904,
+     "risk_diff_pp": 0.6712025090915223
+    },
+    "seatbelts_srs": {
+     "n": 1759,
+     "role": "own(shrunk)",
+     "beta_used": 0.13146714084711908,
+     "beta_raw": 0.055491892229334275,
+     "se": 0.2518505934608681,
+     "shrinkage_weight": 0.09101195643618895,
+     "risk_diff_pp": 0.6067168340793242
+    }
+   },
+   "n_rows": 172304
+  },
+  "cohortA": {
+   "standardised_risk_diff_pp": 1.695898333990882,
+   "tau": 0.22165263277660352,
+   "tau2": 0.04912988961679986,
+   "pooled_log_odds": 0.23448777466754897,
+   "n_systems_in_denominator": 9,
+   "n_systems_own_estimate": 7,
+   "systems_own_estimate": [
+    "wheels_tyres",
+    "brakes",
+    "suspension",
+    "steering",
+    "body_structure",
+    "lamps_electrical",
+    "noise_emissions"
+   ],
+   "per_system": {
+    "wheels_tyres": {
+     "n": 10403,
+     "role": "own(shrunk)",
+     "beta_used": 0.30409540642256805,
+     "beta_raw": 0.31261734860180407,
+     "se": 0.07755570619734019,
+     "shrinkage_weight": 0.8909255260190319,
+     "risk_diff_pp": 2.3277549933721393
+    },
+    "brakes": {
+     "n": 7769,
+     "role": "own(shrunk)",
+     "beta_used": 0.27390179951884824,
+     "beta_raw": 0.2801784963192693,
+     "se": 0.0884531036959364,
+     "shrinkage_weight": 0.8626264463873988,
+     "risk_diff_pp": 2.3236064760116633
+    },
+    "suspension": {
+     "n": 4021,
+     "role": "own(shrunk)",
+     "beta_used": -0.11246107915921402,
+     "beta_raw": -0.19242953380428998,
+     "se": 0.1064141835753246,
+     "shrinkage_weight": 0.8126839716775012,
+     "risk_diff_pp": -1.3192785261831204
+    },
+    "steering": {
+     "n": 491,
+     "role": "own(shrunk)",
+     "beta_used": 0.31181564454391697,
+     "beta_raw": 0.5587711746551689,
+     "se": 0.3961085790600398,
+     "shrinkage_weight": 0.23845768818052393,
+     "risk_diff_pp": 2.8101119012798788
+    },
+    "body_structure": {
+     "n": 926,
+     "role": "own(shrunk)",
+     "beta_used": 0.17008019504193503,
+     "beta_raw": 0.059568251886913004,
+     "se": 0.29034143051880773,
+     "shrinkage_weight": 0.36821264202959525,
+     "risk_diff_pp": 1.307623494001586
+    },
+    "lamps_electrical": {
+     "n": 311,
+     "role": "own(shrunk)",
+     "beta_used": 0.3254535020819725,
+     "beta_raw": 0.6216604590618766,
+     "se": 0.39997387273884333,
+     "shrinkage_weight": 0.2349487220585447,
+     "risk_diff_pp": 4.134830280620812
+    },
+    "visibility": {
+     "n": 44,
+     "role": "pooled(offset)",
+     "beta_used": 0.23448777466754897,
+     "beta_raw": null,
+     "se": null,
+     "shrinkage_weight": 0.0,
+     "risk_diff_pp": 1.77834133276888e-07
+    },
+    "noise_emissions": {
+     "n": 1246,
+     "role": "own(shrunk)",
+     "beta_used": 0.3685289542228162,
+     "beta_raw": 0.5746594683261176,
+     "se": 0.27486846486671757,
+     "shrinkage_weight": 0.39403978065795425,
+     "risk_diff_pp": 1.6885851692519487
+    },
+    "seatbelts_srs": {
+     "n": 161,
+     "role": "pooled(offset)",
+     "beta_used": 0.23448777466754897,
+     "beta_raw": null,
+     "se": null,
+     "shrinkage_weight": 0.0,
+     "risk_diff_pp": 0.5272293829466783
+    }
+   },
+   "n_rows": 25372
+  },
+  "D": 0.8529353118567022
+ },
+ "bootstrap": {
+  "reps_requested": 2000,
+  "reps_ok": 2000,
+  "replicate_failures": 0,
+  "failure_detail": [],
+  "seed": 20260816,
+  "rng": "default_rng([seed, rep]) per replicate",
+  "cluster": "vehicle_id",
+  "ci95_cohortB_pp": [
+   1.3468384729617866,
+   2.0266742753881184
+  ],
+  "ci95_cohortA_pp": [
+   0.8846276153596005,
+   2.5481678459061516
+  ],
+  "ci95_D_pp": [
+   0.08534211163232905,
+   1.6639714867553632
+  ]
+ }
+}
