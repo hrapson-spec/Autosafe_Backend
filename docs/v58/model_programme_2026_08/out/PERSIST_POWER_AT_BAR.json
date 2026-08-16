@@ -200,5 +200,158 @@
     "power_at_RR_bar_tau0": 1.0
    }
   }
+ },
+ "phase1_corrected": {
+  "supersedes": "the pre-freeze prior-side estimate recorded in PREREG_PERSIST \u00a76.1",
+  "deviation_record": "factory/DEVIATIONS.md \u00a76",
+  "basis": "episode-based state ladder (\u00a75.3), both-graded t/t-1 pairs, eval2024",
+  "outcome_observed_when_computed": false,
+  "cohort_B_total_pairs": 172304,
+  "per_system": {
+   "lamps_electrical": {
+    "n_AA": 640,
+    "n_CA": 2198,
+    "power_at_RR1.2_p0_0.05": 0.1574,
+    "mde_rr_p0_0.05": 1.665
+   },
+   "body_structure": {
+    "n_AA": 2187,
+    "n_CA": 6558,
+    "power_at_RR1.2_p0_0.05": 0.4129,
+    "mde_rr_p0_0.05": 1.3349
+   },
+   "wheels_tyres": {
+    "n_AA": 19262,
+    "n_CA": 41901,
+    "power_at_RR1.2_p0_0.05": 0.9987,
+    "mde_rr_p0_0.05": 1.11
+   },
+   "noise_emissions": {
+    "n_AA": 4319,
+    "n_CA": 7830,
+    "power_at_RR1.2_p0_0.05": 0.628,
+    "mde_rr_p0_0.05": 1.2482
+   },
+   "suspension": {
+    "n_AA": 11465,
+    "n_CA": 19948,
+    "power_at_RR1.2_p0_0.05": 0.9592,
+    "mde_rr_p0_0.05": 1.1494
+   },
+   "seatbelts_srs": {
+    "n_AA": 471,
+    "n_CA": 1288,
+    "power_at_RR1.2_p0_0.05": 0.1228,
+    "mde_rr_p0_0.05": 1.8162
+   },
+   "brakes": {
+    "n_AA": 16493,
+    "n_CA": 33635,
+    "power_at_RR1.2_p0_0.05": 0.9952,
+    "mde_rr_p0_0.05": 1.1204
+   },
+   "steering": {
+    "n_AA": 772,
+    "n_CA": 3134,
+    "power_at_RR1.2_p0_0.05": 0.1853,
+    "mde_rr_p0_0.05": 1.5871
+   },
+   "visibility": {
+    "n_AA": 9,
+    "n_CA": 194,
+    "power_at_RR1.2_p0_0.05": 0.0332,
+    "mde_rr_p0_0.05": 9.0
+   }
+  },
+  "n_systems_ge80pct_power_p0_0.05": 3,
+  "standardised_average_by_p0": {
+   "0.02": {
+    "se": 0.0007737,
+    "mde80_abs_pp": 0.2168,
+    "power_at_RR_bar": 0.9993
+   },
+   "0.05": {
+    "se": 0.0012017,
+    "mde80_abs_pp": 0.3367,
+    "power_at_RR_bar": 1.0
+   },
+   "0.1": {
+    "se": 0.0016471,
+    "mde80_abs_pp": 0.4614,
+    "power_at_RR_bar": 1.0
+   },
+   "0.15": {
+    "se": 0.001951,
+    "mde80_abs_pp": 0.5466,
+    "power_at_RR_bar": 1.0
+   }
+  }
+ },
+ "phase1_corrected_cohortA": {
+  "supersedes": "the pre-freeze estimate in PREREG_PERSIST \u00a76.2 (40,911; A\u2192A 22,431 / C\u2192A 24,093)",
+  "deviation_record": "factory/DEVIATIONS.md \u00a76a",
+  "outcome_observed_when_computed": false,
+  "cohort_A_total_pairs": 25372,
+  "per_system": {
+   "wheels_tyres": {
+    "n_AA": 2876,
+    "n_CA": 7527
+   },
+   "brakes": {
+    "n_AA": 1880,
+    "n_CA": 5889
+   },
+   "suspension": {
+    "n_AA": 1080,
+    "n_CA": 2941
+   },
+   "noise_emissions": {
+    "n_AA": 383,
+    "n_CA": 863
+   },
+   "body_structure": {
+    "n_AA": 195,
+    "n_CA": 731
+   },
+   "steering": {
+    "n_AA": 69,
+    "n_CA": 422
+   },
+   "lamps_electrical": {
+    "n_AA": 53,
+    "n_CA": 258
+   },
+   "seatbelts_srs": {
+    "n_AA": 47,
+    "n_CA": 114
+   },
+   "visibility": {
+    "n_AA": 2,
+    "n_CA": 42
+   }
+  },
+  "by_p0": {
+   "0.02": {
+    "mde80_abs_pp": 0.6063,
+    "power_at_RR_bar": 0.4556,
+    "power_to_resolve_half_effect": 0.1501
+   },
+   "0.05": {
+    "mde80_abs_pp": 0.9415,
+    "power_at_RR_bar": 0.8451,
+    "power_to_resolve_half_effect": 0.3184
+   },
+   "0.1": {
+    "mde80_abs_pp": 1.29,
+    "power_at_RR_bar": 0.9914,
+    "power_to_resolve_half_effect": 0.5839
+   },
+   "0.15": {
+    "mde80_abs_pp": 1.5274,
+    "power_at_RR_bar": 0.9998,
+    "power_to_resolve_half_effect": 0.7856
+   }
+  },
+  "note": "The half-effect column is DESIGN CHARACTERISATION ONLY. Per the owner's 2026-08-16 revision, \u00a710.3 fires on the bootstrap distribution of D = dA - 0.5*dB, never on prospective power. Low power here makes INCONCLUSIVE the likely \u00a710.3 verdict, not a dead gate."
  }
 }

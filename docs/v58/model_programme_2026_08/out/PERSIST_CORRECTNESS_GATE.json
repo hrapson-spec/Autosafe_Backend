@@ -1,0 +1,83 @@
+{
+ "artifact": "PERSIST correctness gate (PREREG_PERSIST \u00a77 / ADVSTRUCT \u00a77.1)",
+ "prereg_sha256_16": "424dfdd4af84ea56",
+ "all_pass": true,
+ "failed_checks": [],
+ "frames": {
+  "eval2024": {
+   "1_tgt_id_set_equality": {
+    "pass": true,
+    "detail": "labels 330,665 | packets 330,665 | intersection 330,665"
+   },
+   "2_row_level_label_equality": {
+    "pass": true,
+    "detail": "0 rows where sum(sect_NN>0) != banked n_sections_with_md (of 330,665)"
+   },
+   "2b_section_sum_reconciles_to_md_total": {
+    "pass": true,
+    "detail": "negative gaps 0 (must be 0) | gap rows 21, all catalogue misses 21 | M/D items invisible to the same-system outcome 24 of 228,518 (0.0105%)",
+    "same_system_outcome_coverage": {
+     "md_items_total": 228518,
+     "md_items_sectioned": 228494,
+     "md_items_unsectioned": 24,
+     "unsectioned_share": 0.00010502,
+     "meaning": "these M/D items carry no catalogue section, so they are invisible to the same-system outcome and appear only in any-failure outcomes"
+    }
+   },
+   "3_ordered_hash_equality": {
+    "pass": true,
+    "detail": "stable vs banked 1723887b40983f6c\u2026 (now 1723887b40983f6c\u2026)"
+   },
+   "4_antijoin_both_directions": {
+    "pass": true,
+    "detail": "labels-not-in-packets 0 | packets-not-in-labels 0"
+   },
+   "5_prevalence_exact_vs_banked": {
+    "pass": true,
+    "detail": "14/14 sect_NN positive_n match SEVERITY_RESULT seed101"
+   },
+   "6_state_coverage": {
+    "pass": true,
+    "detail": "312,159 of 330,665 targets have >=1 reconstructed episode (94.40%); the remainder have no prior NT and are a declared category, never folded into CLEAN"
+   }
+  },
+  "train_flat4y": {
+   "1_tgt_id_set_equality": {
+    "pass": true,
+    "detail": "labels 999,999 | packets 999,999 | intersection 999,999"
+   },
+   "2_row_level_label_equality": {
+    "pass": true,
+    "detail": "0 rows where sum(sect_NN>0) != banked n_sections_with_md (of 999,999)"
+   },
+   "2b_section_sum_reconciles_to_md_total": {
+    "pass": true,
+    "detail": "negative gaps 0 (must be 0) | gap rows 3, all catalogue misses 3 | M/D items invisible to the same-system outcome 8 of 725,120 (0.0011%)",
+    "same_system_outcome_coverage": {
+     "md_items_total": 725120,
+     "md_items_sectioned": 725112,
+     "md_items_unsectioned": 8,
+     "unsectioned_share": 1.103e-05,
+     "meaning": "these M/D items carry no catalogue section, so they are invisible to the same-system outcome and appear only in any-failure outcomes"
+    }
+   },
+   "3_ordered_hash_equality": {
+    "pass": true,
+    "detail": "first run \u2014 pinned 563d01e4aa18caa8\u2026 to LABEL_HASH_train_flat4y.txt (999,999 rows)"
+   },
+   "4_antijoin_both_directions": {
+    "pass": true,
+    "detail": "labels-not-in-packets 0 | packets-not-in-labels 0"
+   },
+   "5_prevalence_internal": {
+    "pass": true,
+    "detail": "no per-section publication exists for this frame; Y_B3 positives 99,837 / 999,999 = 0.099837 (internal consistency only)"
+   },
+   "6_state_coverage": {
+    "pass": true,
+    "detail": "923,605 of 999,999 targets have >=1 reconstructed episode (92.36%); the remainder have no prior NT and are a declared category, never folded into CLEAN"
+   }
+  }
+ },
+ "licenses": "Phase 2 outcome computation, IF AND ONLY IF all_pass is true"
+}

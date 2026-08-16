@@ -1,0 +1,179 @@
+{
+ "artifact": "PERSIST_DATA_AUDIT \u2014 Phase 1 episode + state construction",
+ "prereg": "prereg/PREREG_PERSIST_2026_08_16.md",
+ "prereg_sha256_16": "424dfdd4af84ea56",
+ "ontology_version": "ADVSTRUCT_ONTOLOGY_V1",
+ "graded_regime_from": "2018-05-20",
+ "frames": {
+  "eval2024": {
+   "frame": "eval2024",
+   "n_raw_prior_tests": 2847652,
+   "n_raw_NT": 2413023,
+   "n_raw_RT": 434620,
+   "n_episodes": 2404726,
+   "n_targets_with_episode": 312159,
+   "n_episodes_with_retest": 433187,
+   "pct_episodes_with_retest": 18.014,
+   "n_episodes_with_prs": 212,
+   "n_days_multi_NT": 8134,
+   "n_episodes_item_unobservable": 2,
+   "n_episodes_pre2018_ungraded": 942040,
+   "retest_interval_distribution": {
+    "0_same_day": 201573,
+    "1-10": 219749,
+    "11-30": 11831,
+    "31-90": 13,
+    "over_90": 21
+   },
+   "state_distribution": {
+    "C": 19451782,
+    "A": 1115678,
+    "F": 953705,
+    "M": 121351,
+    "NULL_unobservable": 18
+   },
+   "episode_depth_distribution": {
+    "1": 18399,
+    "2": 23556,
+    "3": 25041,
+    "4": 22864,
+    "5": 30976,
+    "6": 26348,
+    "7": 23646,
+    "8": 141329
+   },
+   "collapse_examples": [
+    {
+     "tgt_id": "27085",
+     "ep_rank": "1",
+     "ep_date": "2023-10-13",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2023-10-20"
+    },
+    {
+     "tgt_id": "27085",
+     "ep_rank": "3",
+     "ep_date": "2022-06-24",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2022-07-04"
+    },
+    {
+     "tgt_id": "44943",
+     "ep_rank": "3",
+     "ep_date": "2021-06-21",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2021-06-21"
+    },
+    {
+     "tgt_id": "64885",
+     "ep_rank": "1",
+     "ep_date": "2022-11-15",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2022-11-16"
+    },
+    {
+     "tgt_id": "71495",
+     "ep_rank": "7",
+     "ep_date": "2017-02-17",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2017-02-20"
+    }
+   ],
+   "collapse_invariant": {
+    "claim": "a FAIL followed by a passing retest yields ONE episode, state from the NT",
+    "n_fail_NT_with_retest": 432056,
+    "n_extra_episodes_they_would_have_created_if_RT_counted": 434620
+   }
+  },
+  "train_flat4y": {
+   "frame": "train_flat4y",
+   "n_raw_prior_tests": 7769039,
+   "n_raw_NT": 6533062,
+   "n_raw_RT": 1235957,
+   "n_episodes": 6508990,
+   "n_targets_with_episode": 923605,
+   "n_episodes_with_retest": 1231761,
+   "pct_episodes_with_retest": 18.924,
+   "n_episodes_with_prs": 755,
+   "n_days_multi_NT": 23579,
+   "n_episodes_item_unobservable": 2,
+   "n_episodes_pre2018_ungraded": 3906672,
+   "retest_interval_distribution": {
+    "0_same_day": 572118,
+    "1-10": 626371,
+    "11-30": 33181,
+    "31-90": 52,
+    "over_90": 39
+   },
+   "state_distribution": {
+    "C": 52749840,
+    "A": 2817654,
+    "F": 2801359,
+    "M": 212039,
+    "NULL_unobservable": 18
+   },
+   "episode_depth_distribution": {
+    "1": 82420,
+    "2": 84243,
+    "3": 83612,
+    "4": 82397,
+    "5": 72790,
+    "6": 65744,
+    "7": 60594,
+    "8": 391805
+   },
+   "collapse_examples": [
+    {
+     "tgt_id": "12809",
+     "ep_rank": "2",
+     "ep_date": "2020-01-16",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2020-01-16"
+    },
+    {
+     "tgt_id": "12809",
+     "ep_rank": "1",
+     "ep_date": "2021-01-18",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2021-01-18"
+    },
+    {
+     "tgt_id": "13057",
+     "ep_rank": "11",
+     "ep_date": "2010-10-06",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2010-10-06"
+    },
+    {
+     "tgt_id": "13057",
+     "ep_rank": "12",
+     "ep_date": "2009-10-07",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2009-10-07"
+    },
+    {
+     "tgt_id": "13057",
+     "ep_rank": "9",
+     "ep_date": "2013-04-02",
+     "nt_outcome": "FAIL",
+     "n_retests": "1",
+     "last_retest_date": "2013-04-02"
+    }
+   ],
+   "collapse_invariant": {
+    "claim": "a FAIL followed by a passing retest yields ONE episode, state from the NT",
+    "n_fail_NT_with_retest": 1228667,
+    "n_extra_episodes_they_would_have_created_if_RT_counted": 1235957
+   }
+  }
+ }
+}

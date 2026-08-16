@@ -159,3 +159,85 @@ the strata; no override sought); the bar was not retrospectively lowered; and
 `items_per_system` was not substituted for breadth as the headline. C2 — A3's own
 load-bearing gate — passed out-of-sample on frozen coefficients (+0.046024,
 CI [+0.024219, +0.068672]) and carries the verdict.
+
+## 6. PERSIST — cohort-count correction, pre-outcome (2026-08-16)
+
+**Deviation from a sha-frozen prereg.** `PREREG_PERSIST_2026_08_16.md`
+(sha `424dfdd4af84ea56…`) §6.1 states Cohort B on eval2024 as **312,789 pairs,
+A→A 165,436 / C→A 147,353**. The Phase-1 episode build gives **172,304 pairs,
+A→A 55,618 / C→A 116,686**.
+
+**⚠ NO PERSISTENCE-CONDITIONED OUTCOME HAD BEEN OBSERVED** when this was found.
+The Phase-1 builder reads no outcome; the correction is prior-side only.
+
+**What changed.** The frozen figure came from a pre-freeze prior-side probe that
+counted a system as "advised at t" whenever it carried ≥1 advisory item on the most
+recent prior *day*. The prereg's own §5.3 state ladder defines
+`A = ≥1 advisory AND no minor/major/dangerous in that system`; a system carrying both
+an advisory and a fail is state `F`. The probe therefore folded `F→A` (15,120) and
+`M→A` (1,037) into the A-at-t population, and used test-days rather than reconstructed
+NT episodes. **The frozen count contradicted the frozen definition.** Phase 1 implements
+§5.3; the count moves to match it.
+
+**Why it matters scientifically.** Including systems that also failed at t breaks the
+"same currently advised system and comparable observable current condition" premise the
+hypothesis rests on — those vehicles are not comparable to a clean single-advisory
+presentation. The stricter reading is the one the science requires.
+
+**Direction of bias.** The frozen figure **overstated** cohort size by 1.8× and badly
+misstated the A→A / C→A balance (frozen implied 53% A→A; actual is 32%). The frozen §9.1
+power table was therefore optimistic: standardised MDE₈₀ at p0=0.05 is **0.337 pp**, not
+the 0.230 pp stated. Per-system power falls from 4/9 to **3/9** systems at ≥80%.
+
+**No frozen decision changes.** The sole confirmatory estimand (population-standardised
+effect, Cohort B) retains **≥99.9% power at every p0 on the grid**; MDE₈₀ 0.217 / 0.337 /
+0.461 pp at p0 = 0.02 / 0.05 / 0.10. The §9.2 conclusion that **no per-system bar is
+admissible** is strengthened, not weakened. §10's gates, bands and the §10.3 concordance
+contrast are unaffected.
+
+**The hashed prereg is NOT edited.** §6.1's numbers stand as the frozen record of what was
+believed at freeze time; this entry is the correction of record. Corrected counts are
+written to `out/PERSIST_POWER_AT_BAR.json` under `phase1_corrected`, and
+`out/PERSIST_DATA_AUDIT.json` carries the episode-construction evidence.
+
+**Regime check, recorded while here.** 942,040 of 2,404,726 eval episodes are pre-2018
+ungraded, but they sit at deeper ranks: of the t/t-1 pairs, **99.8% are both-graded** and
+only 250 advised-at-t pairs are regime-mixed. The ungraded regime is not a material
+confound for the primary contrast, and MINOR is never asserted on a pre-2018 episode
+(gate G5, enforced).
+
+### 6a. PERSIST — cohort A count correction (same root cause, 2026-08-16)
+
+Same family as §6, found in the same pre-outcome pass. `PREREG_PERSIST` §6.2 states
+Cohort A on eval2024 as **40,911 pairs (A→A 22,431 / C→A 24,093)**; the episode-based
+build gives **25,372 (A→A 6,585 / C→A 18,787)**.
+
+**⚠ NO PERSISTENCE-CONDITIONED OUTCOME HAD BEEN OBSERVED.** Prior-side counts only.
+
+**What changed.** Three restrictions the pre-freeze probe did not apply: the §5.3 state
+ladder (so `s_t = 'A'` excludes systems that also failed at t), `s_t1 ∈ {A, C}` (so
+`F→A` and `M→A` are excluded from the contrast), and the both-graded regime restriction.
+
+**Direction of bias.** The frozen figure overstated Cohort A by 1.6× and badly overstated
+its A→A share (55% frozen vs 26% actual). Corrected power:
+
+| p0 | frozen MDE₈₀ / power | corrected MDE₈₀ / power |
+|---|---|---|
+| 0.02 | 0.410 pp / 77.9% | **0.606 pp / 45.6%** |
+| 0.05 | 0.638 pp / 99.2% | **0.941 pp / 84.5%** |
+| 0.10 | 0.875 pp / 100% | **1.290 pp / 99.1%** |
+
+Cohort A's power to resolve **half** the cohort B effect falls to 15% / 32% / 58% / 79%
+at p0 = 0.02 / 0.05 / 0.10 / 0.15.
+
+**No frozen decision changes, and the §10.3 design absorbs this by construction.** The
+owner's 2026-08-16 revision replaced §9.3's prospective-power firing rule with a direct
+vehicle-cluster bootstrap on `D = Δ_A − 0.5·Δ_B`. Under the *superseded* formulation
+Cohort A would now fail the ≥80%-power precondition at every realistic p0 and the
+discordance clause would be inert. Under the adopted formulation low power simply makes
+**INCONCLUSIVE** the likely §10.3 verdict — an honest answer rather than a dead gate.
+This is the failure mode that revision was written to prevent, and it materialised.
+
+The sole confirmatory estimand (Cohort B) is unaffected: ≥99.9% power at every p0.
+`visibility` has n_AA = 2 in Cohort A and will be dropped by the per-system fit guards,
+then carried by shrinkage toward the pooled mean — the intended D4 behaviour.

@@ -1,0 +1,269 @@
+{
+ "artifact": "PERSIST falsification legs \u2014 train_flat4y",
+ "prereg_sha256_16": "424dfdd4af84ea56",
+ "frame": "train_flat4y",
+ "n_rows": 412960,
+ "legs": {
+  "8A_specificity": {
+   "same_system": {
+    "standardised_risk_diff_pp": 1.4521855222230617,
+    "tau": 0.05684900881704448,
+    "tau2": 0.003231809803480401,
+    "pooled_log_odds": 0.11865684596683011,
+    "n_systems_in_denominator": 9,
+    "n_systems_own_estimate": 9,
+    "systems_own_estimate": [
+     "wheels_tyres",
+     "brakes",
+     "suspension",
+     "steering",
+     "body_structure",
+     "lamps_electrical",
+     "visibility",
+     "noise_emissions",
+     "seatbelts_srs"
+    ],
+    "per_system": {
+     "wheels_tyres": {
+      "n": 147839,
+      "role": "own(shrunk)",
+      "beta_used": 0.14251422298460553,
+      "beta_raw": 0.14529538669379413,
+      "se": 0.01940996833965934,
+      "shrinkage_weight": 0.8955962438898363,
+      "risk_diff_pp": 1.2510469776705027
+     },
+     "brakes": {
+      "n": 118519,
+      "role": "own(shrunk)",
+      "beta_used": 0.1904717319369604,
+      "beta_raw": 0.198647816338488,
+      "se": 0.01918175512224728,
+      "shrinkage_weight": 0.8977874082094582,
+      "risk_diff_pp": 2.0240566992463136
+     },
+     "suspension": {
+      "n": 71872,
+      "role": "own(shrunk)",
+      "beta_used": 0.09753862305678176,
+      "beta_raw": 0.09445954760665572,
+      "se": 0.021707228491691974,
+      "shrinkage_weight": 0.8727512714727774,
+      "risk_diff_pp": 1.3515880460846492
+     },
+     "steering": {
+      "n": 10300,
+      "role": "own(shrunk)",
+      "beta_used": 0.03380873877072445,
+      "beta_raw": -0.13104931087899638,
+      "se": 0.07924226792104387,
+      "shrinkage_weight": 0.3397918107741835,
+      "risk_diff_pp": 0.39273747786118174
+     },
+     "body_structure": {
+      "n": 21703,
+      "role": "own(shrunk)",
+      "beta_used": 0.15297282470294674,
+      "beta_raw": 0.17981441411211796,
+      "se": 0.05027809524737743,
+      "shrinkage_weight": 0.5611076400976981,
+      "risk_diff_pp": 1.55849787506932
+     },
+     "lamps_electrical": {
+      "n": 7501,
+      "role": "own(shrunk)",
+      "beta_used": 0.111368924180052,
+      "beta_raw": 0.09914800495084747,
+      "se": 0.07361612990602885,
+      "shrinkage_weight": 0.3735702075180927,
+      "risk_diff_pp": 1.8562322023435773
+     },
+     "visibility": {
+      "n": 541,
+      "role": "own(shrunk)",
+      "beta_used": 0.11878854455197792,
+      "beta_raw": 0.16592581621549038,
+      "se": 1.0755102734216588,
+      "shrinkage_weight": 0.0027861530398270344,
+      "risk_diff_pp": 0.6453292935981466
+     },
+     "noise_emissions": {
+      "n": 30351,
+      "role": "own(shrunk)",
+      "beta_used": 0.12622852561867612,
+      "beta_raw": 0.1320922484436737,
+      "se": 0.050028041106387165,
+      "shrinkage_weight": 0.5635618035928632,
+      "risk_diff_pp": 0.7758123838524982
+     },
+     "seatbelts_srs": {
+      "n": 4334,
+      "role": "own(shrunk)",
+      "beta_used": 0.09421947789874616,
+      "beta_raw": -0.12621657937875866,
+      "se": 0.17074067706996476,
+      "shrinkage_weight": 0.0997959171502404,
+      "risk_diff_pp": 0.466499578844905
+     }
+    },
+    "n_rows": 412960,
+    "label": "same-system",
+    "base_rate_new_advisory": 0.10892518479929995,
+    "relative_risk": 1.1333195371574338,
+    "n": 412960,
+    "n_positive": 48178,
+    "own_estimate_systems": [
+     "wheels_tyres",
+     "brakes",
+     "suspension",
+     "steering",
+     "body_structure",
+     "lamps_electrical",
+     "visibility",
+     "noise_emissions",
+     "seatbelts_srs"
+    ],
+    "ineligible": {}
+   },
+   "other_system": {
+    "standardised_risk_diff_pp": 0.503257016274257,
+    "tau": 0.0,
+    "tau2": 0.0,
+    "pooled_log_odds": 0.023865258868133177,
+    "n_systems_in_denominator": 9,
+    "n_systems_own_estimate": 9,
+    "systems_own_estimate": [
+     "wheels_tyres",
+     "brakes",
+     "suspension",
+     "steering",
+     "body_structure",
+     "lamps_electrical",
+     "visibility",
+     "noise_emissions",
+     "seatbelts_srs"
+    ],
+    "per_system": {
+     "wheels_tyres": {
+      "n": 147839,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.03368008504295074,
+      "se": 0.013006568521765908,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.47342824693808505
+     },
+     "brakes": {
+      "n": 118519,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.02684934346707622,
+      "se": 0.013929689078810219,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.4995885904326298
+     },
+     "suspension": {
+      "n": 71872,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.01334955855281563,
+      "se": 0.017568163272074607,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.5148739499907207
+     },
+     "steering": {
+      "n": 10300,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.0012387025800245754,
+      "se": 0.05277045985119098,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.564522838656328
+     },
+     "body_structure": {
+      "n": 21703,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.017908262516935818,
+      "se": 0.034196230049635463,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.5650933484665133
+     },
+     "lamps_electrical": {
+      "n": 7501,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": -0.027262134821731437,
+      "se": 0.06567183079098982,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.5155408132986704
+     },
+     "visibility": {
+      "n": 541,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.8788472938355656,
+      "se": 0.5038200282471978,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.452993272394799
+     },
+     "noise_emissions": {
+      "n": 30351,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": 0.020762177059832253,
+      "se": 0.02625601689091911,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.5608967068293005
+     },
+     "seatbelts_srs": {
+      "n": 4334,
+      "role": "own(shrunk)",
+      "beta_used": 0.023865258868133177,
+      "beta_raw": -0.05075364440831879,
+      "se": 0.07542077362022154,
+      "shrinkage_weight": 0.0,
+      "risk_diff_pp": 0.5545396927770532
+     }
+    },
+    "n_rows": 412960,
+    "label": "other-system",
+    "base_rate_new_advisory": 0.3402145748850005,
+    "relative_risk": 1.0147923414640412,
+    "n": 412960,
+    "n_positive": 144622,
+    "own_estimate_systems": [
+     "wheels_tyres",
+     "brakes",
+     "suspension",
+     "steering",
+     "body_structure",
+     "lamps_electrical",
+     "visibility",
+     "noise_emissions",
+     "seatbelts_srs"
+    ],
+    "ineligible": {}
+   },
+   "excess_risk_ratio": 9.012740645659198,
+   "prediction_RR_same_gt_RR_other": true,
+   "note": "judged on the RELATIVE scale; eligibility declared per outcome"
+  },
+  "8E_resolution_counts": {
+   "A->A": 119263,
+   "A->C": 228628,
+   "C->A": 293697,
+   "C->C": 5388914
+  },
+  "8G_placebo": {
+   "observed_pp": 1.4521855222230617,
+   "permuted_pp": 0.01926514549010631,
+   "share_destroyed": 0.9867336885024067,
+   "strata": "system x total current advisory count (capped at 6)",
+   "eligibility_invariant_under_permutation": true,
+   "destroys_effect": true
+  }
+ },
+ "estimator": "persist_estimator.py (frozen membership, IRLS)",
+ "supersedes": "the 2026-08-16 run on the pre-fix sklearn estimator"
+}

@@ -1,0 +1,55 @@
+{
+ "artifact": "PERSIST estimator validation \u2014 instrument proven before use",
+ "why": "feedback: prove the instrument first. Run on SYNTHETIC data with known truth, before the estimator touches either real surface. Zero contact with eval2024 or train_flat4y.",
+ "script": "scripts/analysis/persist_analyze.py (standardised_effect, dersimonian_laird)",
+ "date": "2026-08-16",
+ "tests": {
+  "T1_recovers_planted_effect": {
+   "design": "beta=0.5 in all 9 systems, confounder z drives both persistence and outcome",
+   "monte_carlo_seeds": 10,
+   "mean_error_pp": -0.1759,
+   "se_pp": 0.1954,
+   "t": -0.9,
+   "verdict": "no detectable bias"
+  },
+  "T2_true_null": {
+   "design": "beta=0 in all 9 systems",
+   "monte_carlo_seeds": 10,
+   "mean_error_pp": -0.0819,
+   "se_pp": 0.1918,
+   "t": -0.43,
+   "verdict": "no detectable bias \u2014 the estimator does not manufacture an effect"
+  },
+  "T3_heterogeneity_and_shrinkage": {
+   "design": "beta ramped 0.0 -> 1.2 across the 9 systems",
+   "planted_sd_beta": 0.3873,
+   "estimated_tau": 0.4383,
+   "sd_raw_betas": 0.4341,
+   "sd_shrunk_betas": 0.3998,
+   "verdict": "tau recovered; shrinkage strictly reduces dispersion as required"
+  },
+  "T4_confounding_control": {
+   "design": "true effect 0, confounder z drives BOTH persistence and outcome (conf=1.5)",
+   "unadjusted_pp": 14.8441,
+   "adjusted_pp": -0.5691,
+   "verdict": "adjustment removes a +14.8pp confounded signal to ~0"
+  }
+ },
+ "defects_found_and_fixed": [
+  {
+   "defect": "design() standardised zero-variance controls to a column of zeros, making the observed-information matrix singular; fit_system() then returned None and the system was SILENTLY DROPPED from the pooled estimate.",
+   "impact": "on real data a small system (visibility, n_AA=9) could vanish without trace",
+   "fix": "zero-variance columns are dropped outright; degenerate quantile splits skipped"
+  },
+  {
+   "defect": "np.linalg.inv raised on near-singular designs, dropping the system",
+   "fix": "np.linalg.pinv \u2014 a near-singular design degrades to a WIDE SE, which shrinkage then handles, rather than to a missing system"
+  },
+  {
+   "defect": "sklearn>=1.8 deprecated penalty=None",
+   "fix": "C=np.inf"
+  }
+ ],
+ "calibration_note": "per-replicate sd of the standardised effect is ~0.61 pp at n=22,500 synthetic rows. Scaled to cohort B (172,304 rows) that predicts ~0.22 pp, coherent with the independently-derived MDE80 of 0.337 pp at p0=0.05 in PERSIST_POWER_AT_BAR.json.",
+ "what_this_does_not_prove": "Synthetic data cannot validate the SUBSTANTIVE assumptions \u2014 that the control set blocks the real confounding paths, or that the state ladder captures the intended construct. It proves the estimator computes what it claims to compute."
+}
