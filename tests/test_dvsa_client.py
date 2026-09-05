@@ -22,6 +22,15 @@ import httpx  # noqa: E402
 from dvsa_client import DVSAClient, DVSAAPIError  # noqa: E402
 
 
+class _FakeResponse:
+    def __init__(self, status_code, json_data):
+        self.status_code = status_code
+        self._json_data = json_data
+
+    def json(self):
+        return self._json_data
+
+
 def _client():
     # Credentials are irrelevant to parsing; supplied so is_configured
     # doesn't matter either way for these pure-function tests.
@@ -194,6 +203,90 @@ class TestFetchRetryConfig(unittest.TestCase):
         self.assertEqual(sleep_mock.call_count, 2)
         sleep_mock.assert_any_call(2.5 * (2 ** 0))
         sleep_mock.assert_any_call(2.5 * (2 ** 1))
+
+
+class TestDegradedResponseNotCached(unittest.TestCase):
+    """A DVSA 200 response missing make/model must not be cached: the
+    validation guard is meant to reject the 'UNKNOWN' placeholder
+    _parse_response substitutes for missing essential fields, not the
+    always-true `history.registration` (which is just the input VRM
+    echoed back, never derived from the DVSA payload)."""
+
+    def _client_returning(self, payload):
+        client = _client()
+        client._get_access_token = AsyncMock(return_value='token')
+        client._client.get = AsyncMock(return_value=_FakeResponse(200, payload))
+        return client
+
+    def test_missing_make_model_is_not_cached(self):
+        client = self._client_returning({
+            'make': None,
+            'model': None,
+            'motTests': [],
+        })
+
+        history = asyncio.run(client.fetch_vehicle_history('AB12CDE'))
+
+        self.assertEqual(history.make, 'UNKNOWN')
+        self.assertNotIn('AB12CDE', client._cache)
+
+    def test_complete_response_is_cached(self):
+        client = self._client_returning({
+            'make': 'FORD',
+            'model': 'FIESTA',
+            'motTests': [],
+        })
+
+        history = asyncio.run(client.fetch_vehicle_history('AB12CDE'))
+
+        self.assertEqual(history.make, 'FORD')
+        self.assertIn('AB12CDE', client._cache)
+
+    def test_cached_garbage_is_not_served_on_next_lookup(self):
+        """Regression guard: without the fix, the first (degraded) call
+        would poison the cache and a second call would return stale
+        'UNKNOWN' data instead of retrying DVSA."""
+        client = self._client_returning({'make': None, 'model': None, 'motTests': []})
+        asyncio.run(client.fetch_vehicle_history('AB12CDE'))
+
+        # DVSA has since recovered and returns full data.
+        client._client.get = AsyncMock(return_value=_FakeResponse(200, {
+            'make': 'FORD', 'model': 'FIESTA', 'motTests': [],
+        }))
+        history = asyncio.run(client.fetch_vehicle_history('AB12CDE'))
+
+        self.assertEqual(history.make, 'FORD')
+
+
+class TestConcurrentTokenRefresh(unittest.TestCase):
+    """_get_access_token must serialize refresh: N concurrent callers
+    hitting an expired/invalid token at the same instant must trigger
+    exactly one OAuth POST, not one per caller."""
+
+    def test_concurrent_callers_trigger_a_single_token_request(self):
+        client = _client()
+        post_call_count = 0
+
+        async def slow_post(*args, **kwargs):
+            nonlocal post_call_count
+            post_call_count += 1
+            # Yield control so other concurrent callers get a chance to
+            # run before this "network request" completes -- without the
+            # lock, they would all observe is_valid() == False and each
+            # start their own POST here.
+            await asyncio.sleep(0.05)
+            return _FakeResponse(200, {"access_token": "tok-123", "expires_in": 3600})
+
+        client._client.post = AsyncMock(side_effect=slow_post)
+
+        async def run_test():
+            tokens = await asyncio.gather(*[client._get_access_token() for _ in range(10)])
+            return tokens
+
+        tokens = asyncio.run(run_test())
+
+        self.assertEqual(post_call_count, 1)
+        self.assertTrue(all(t == "tok-123" for t in tokens))
 
 
 if __name__ == '__main__':

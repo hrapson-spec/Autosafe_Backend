@@ -184,8 +184,11 @@ class DVSAClient:
             logger.warning(f"  TOKEN_URL: {'set' if self.token_url else 'MISSING'}")
             logger.warning(f"  API_KEY: {'set' if self.api_key else 'MISSING'}")
 
-        # OAuth token management
+        # OAuth token management. The lock serializes refresh so that N
+        # concurrent requests arriving right as the token expires trigger
+        # exactly one token POST instead of N simultaneous ones.
         self._token = OAuthToken()
+        self._token_lock = asyncio.Lock()
 
         # 24-hour cache (max 5000 entries to limit memory usage ~25MB)
         self._cache: TTLCache = TTLCache(maxsize=5000, ttl=self.CACHE_TTL_SECONDS)
@@ -217,42 +220,56 @@ class DVSAClient:
         }
 
     async def _get_access_token(self) -> str:
-        """Get valid OAuth access token, refreshing if needed."""
+        """Get valid OAuth access token, refreshing if needed.
+
+        Concurrent callers all see is_valid() == False in the same
+        instant when the token expires (or is invalidated after a 401 --
+        see the 401 branch in fetch_vehicle_history). Without
+        serialization, each one would independently POST to the token
+        endpoint. The lock ensures only the first caller through refreshes
+        the token; everyone else waits for it and then reuses the result
+        via the is_valid() re-check just inside the lock.
+        """
         if self._token.is_valid():
             return self._token.access_token
 
-        if not self.is_configured:
-            raise DVSAAPIError("DVSA OAuth credentials not configured")
+        async with self._token_lock:
+            # Re-check: another caller may have refreshed while we waited.
+            if self._token.is_valid():
+                return self._token.access_token
 
-        logger.info("Fetching new OAuth token from DVSA...")
+            if not self.is_configured:
+                raise DVSAAPIError("DVSA OAuth credentials not configured")
 
-        try:
-            response = await self._client.post(
-                self.token_url,
-                data={
-                    "grant_type": "client_credentials",
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                    "scope": self.scope,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
+            logger.info("Fetching new OAuth token from DVSA...")
 
-            if response.status_code != 200:
-                logger.error(f"OAuth token request failed: status={response.status_code}")
-                raise DVSAAPIError(f"OAuth authentication failed: {response.status_code}")
+            try:
+                response = await self._client.post(
+                    self.token_url,
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "scope": self.scope,
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
 
-            token_data = response.json()
-            self._token.set_token(
-                access_token=token_data["access_token"],
-                expires_in=token_data.get("expires_in", 3600)
-            )
+                if response.status_code != 200:
+                    logger.error(f"OAuth token request failed: status={response.status_code}")
+                    raise DVSAAPIError(f"OAuth authentication failed: {response.status_code}")
 
-            logger.info("OAuth token obtained successfully")
-            return self._token.access_token
+                token_data = response.json()
+                self._token.set_token(
+                    access_token=token_data["access_token"],
+                    expires_in=token_data.get("expires_in", 3600)
+                )
 
-        except httpx.RequestError as e:
-            raise DVSAAPIError("OAuth token request failed") from e
+                logger.info("OAuth token obtained successfully")
+                return self._token.access_token
+
+            except httpx.RequestError as e:
+                raise DVSAAPIError("OAuth token request failed") from e
 
     def normalize_vrm(self, registration: str) -> str:
         """
@@ -418,12 +435,18 @@ class DVSAClient:
                 # Parse response
                 history = self._parse_response(vrm, data)
 
-                # P1-5 fix: Validate response before caching
-                if history and history.registration:
+                # Validate response before caching. `history.registration` is
+                # always the input `vrm` (see _parse_response), so it can
+                # never be falsy -- checking it caught nothing. What actually
+                # signals a degraded DVSA payload is _parse_response falling
+                # back to the 'UNKNOWN' sentinel for a missing make/model;
+                # caching that would serve a garbage record under this VRM
+                # for the full TTL.
+                if history and history.make != 'UNKNOWN' and history.model != 'UNKNOWN':
                     self._cache[vrm] = history
                     logger.info(f"Cached MOT history for {vrm_hash} ({len(history.mot_tests)} tests)")
                 else:
-                    logger.warning(f"Invalid response for {vrm_hash}, not caching")
+                    logger.warning(f"Invalid/incomplete response for {vrm_hash}, not caching")
 
                 return history
 

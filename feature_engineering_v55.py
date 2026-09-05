@@ -159,6 +159,16 @@ def get_age_band(vehicle_age: int) -> str:
         return '15+'
 
 
+def _odometer_miles(value: Optional[int], unit: Optional[str]) -> Optional[int]:
+    """Convert a raw odometer reading to miles. `unit` defaults to miles
+    when absent (matches DVSA's own convention for older records)."""
+    if value is None:
+        return None
+    if (unit or 'mi').lower() == 'km':
+        return round(value * 0.621371)
+    return value
+
+
 def engineer_features(
     history: VehicleHistory,
     postcode: str,
@@ -239,18 +249,12 @@ def engineer_features(
 
     # Test mileage (fix: use round instead of int for precision)
     if latest_test and latest_test.odometer_value is not None:
-        mileage = latest_test.odometer_value
-        # Fix: Handle None unit, default to miles
-        unit = (latest_test.odometer_unit or 'mi').lower()
-        if unit == 'km':
-            mileage = round(mileage * 0.621371)  # Fix: round instead of truncate
+        mileage = _odometer_miles(latest_test.odometer_value, latest_test.odometer_unit)
 
         # Plausibility check against prior test
         is_anomaly = False
         if len(tests) >= 2 and tests[1].odometer_value is not None:
-            prev = tests[1].odometer_value
-            if unit == 'km':
-                prev = round(prev * 0.621371)
+            prev = _odometer_miles(tests[1].odometer_value, tests[1].odometer_unit)
             days = (tests[0].test_date - tests[1].test_date).days
             diff = mileage - prev
             if days > 0 and diff > 0:
@@ -547,8 +551,8 @@ def engineer_features(
             features['annualized_mileage_v2'] = 10000  # Default — raw data unreliable
             features['usage_band_hybrid'] = 'average'
         else:
-            val0 = tests[0].odometer_value if tests[0].odometer_value is not None else None
-            val1 = tests[1].odometer_value if tests[1].odometer_value is not None else None
+            val0 = _odometer_miles(tests[0].odometer_value, tests[0].odometer_unit)
+            val1 = _odometer_miles(tests[1].odometer_value, tests[1].odometer_unit)
 
             if val0 is not None and val1 is not None:
                 mileage_diff = val0 - val1

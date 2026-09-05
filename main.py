@@ -23,7 +23,7 @@ import secrets
 
 # Import database module for fallback
 import database as db
-from utils import get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
+from utils import escape_like, get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
@@ -294,20 +294,32 @@ def get_real_client_ip(request: Request) -> str:
     """
     Extract the real client IP address from the request.
 
-    When behind a trusted reverse proxy (Railway, Cloudflare, AWS ALB),
-    we take the FIRST IP from X-Forwarded-For, which is the original client.
-    Subsequent IPs are added by each proxy in the chain.
+    This deployment has exactly one trusted reverse proxy hop in front of
+    the app (Railway; no CDN/WAF is configured -- see CLAUDE.md). A
+    well-behaved reverse proxy APPENDS the IP it observed the connection
+    from to whatever X-Forwarded-For value it received, so the header
+    looks like "<client-supplied prefix, possibly forged>, <proxy-observed
+    IP>". The RIGHTMOST entry is therefore the one hop of the header a
+    client cannot forge; the leftmost entry(ies) can be set to anything by
+    the client. Reversing this (taking the leftmost entry) would let any
+    client evade this function's callers -- notably the rate limiter
+    protecting the DVSA-backed POST /api/v2/reports route -- simply by
+    sending a fresh fake leading value on every request. See
+    tests/test_client_ip.py for the pinned behavior this depends on.
 
-    An attacker can add fake IPs to the END of X-Forwarded-For, but cannot
-    control the FIRST entry when behind a properly configured reverse proxy.
+    This single-trusted-hop assumption breaks if a second untrusted proxy
+    is ever placed in front of Railway (e.g. a CDN not accounted for
+    here): the rightmost entry would then be that new hop's own address
+    for every client, collapsing the rate limiter's per-client buckets
+    into one. Revisit this function if the deployment topology changes.
 
     Falls back to direct client IP if no X-Forwarded-For header is present.
     """
     # Check for X-Forwarded-For header (set by reverse proxies)
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
-        # Take the first IP (leftmost) - this is the original client IP
-        # Format: "client, proxy1, proxy2, ..."
+        # Take the rightmost IP -- see docstring above.
+        # Format: "client (possibly forged), ..., proxy-observed IP"
         client_ip = forwarded_for.split(",")[-1].strip()
         # Basic validation - ensure it looks like an IP
         if client_ip and ("." in client_ip or ":" in client_ip):
@@ -657,11 +669,11 @@ async def get_models(request: Request, make: str = Query(..., description="Vehic
             query = """
                 SELECT model_id, SUM(Total_Tests) as test_count
                 FROM risks
-                WHERE model_id LIKE ?
+                WHERE model_id LIKE ? ESCAPE '\\'
                 GROUP BY model_id
                 HAVING SUM(Total_Tests) >= ?
             """
-            rows = conn.execute(query, (f"{make.upper()}%", MIN_TESTS_FOR_UI)).fetchall()
+            rows = conn.execute(query, (f"{escape_like(make.upper())}%", MIN_TESTS_FOR_UI)).fetchall()
 
             # Extract base models from found entries
             found_models = {}

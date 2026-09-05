@@ -69,6 +69,23 @@ def get_mileage_band(miles: Optional[Union[int, float]]) -> str:
     return '100k+'
 
 
+def escape_like(value: str) -> str:
+    """Escape SQL LIKE wildcard metacharacters (and the escape character
+    itself) in `value`, so it is safe to use as a LIKE operand paired with
+    an explicit ``ESCAPE '\\'`` clause.
+
+    A raw `%` or `_` in user-supplied text (e.g. a free-typed vehicle
+    make/model) is otherwise interpreted as a wildcard by the database,
+    silently broadening a "starts with this exact model" match into
+    "starts with anything containing this text" -- aggregating risk data
+    across unrelated vehicles into what looks like one model's answer.
+    Only escape the copy of the value bound to the LIKE clause; a
+    parallel `= value` (unescaped) comparison in the same query still
+    needs the original, un-escaped value.
+    """
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
 _LOG_HASH_KEY = (
     os.environ.get("VRM_LOG_HMAC_KEY")
     or os.environ.get("VRM_HMAC_KEY")

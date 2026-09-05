@@ -62,7 +62,7 @@ from report_contract import (
     ResultKind,
     RiskLookupResponse,
 )
-from utils import get_age_band, get_mileage_band
+from utils import escape_like, get_age_band, get_mileage_band
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +328,7 @@ _SQLITE_WEIGHTED_SELECT = """
              THEN SUM(Risk_Body_Chassis_Structure * Total_Tests) * 1.0
                   / NULLIF(SUM(Total_Tests), 0) END AS risk_body
     FROM risks
-    WHERE (model_id = ? OR model_id LIKE ? || ' %')
+    WHERE (model_id = ? OR model_id LIKE ? || ' %' ESCAPE '\\')
 """
 
 _SQLITE_STEP1_EXACT_SQL = _SQLITE_WEIGHTED_SELECT + " AND age_band = ? AND mileage_band = ?"
@@ -411,21 +411,23 @@ def _sqlite_ladder(
             and candidate['failure_risk'] is not None
         )
 
+    escaped_model_id = escape_like(model_id)
+
     skip_exact = mileage_band is None or mileage_band == 'Unknown'
     if not skip_exact:
         row = conn.execute(
-            _SQLITE_STEP1_EXACT_SQL, (model_id, model_id, age_band, mileage_band)
+            _SQLITE_STEP1_EXACT_SQL, (model_id, escaped_model_id, age_band, mileage_band)
         ).fetchone()
         if usable_aggregate(row):
             return _normalize_agg_row(row, 'exact_band')
 
     row = conn.execute(
-        _SQLITE_STEP2_AGE_ONLY_SQL, (model_id, model_id, age_band)
+        _SQLITE_STEP2_AGE_ONLY_SQL, (model_id, escaped_model_id, age_band)
     ).fetchone()
     if usable_aggregate(row):
         return _normalize_agg_row(row, 'age_band_only')
 
-    row = conn.execute(_SQLITE_STEP3_MODEL_AVERAGE_SQL, (model_id, model_id)).fetchone()
+    row = conn.execute(_SQLITE_STEP3_MODEL_AVERAGE_SQL, (model_id, escaped_model_id)).fetchone()
     if usable_aggregate(row):
         return _normalize_agg_row(row, 'model_average')
 

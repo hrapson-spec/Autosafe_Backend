@@ -158,8 +158,15 @@ class TestGetRiskV2BandedLadder(unittest.TestCase):
             self.assertEqual(result["match_scope"], "exact_band")
             self.assertEqual(len(conn.calls), 1)
             sql = conn.calls[0][1]
-            self.assertIn("age_band = $2", sql)
-            self.assertIn("mileage_band = $3", sql)
+            self.assertIn("age_band = $3", sql)
+            self.assertIn("mileage_band = $4", sql)
+            self.assertIn("ESCAPE '\\'", sql)
+            # $1 (exact match) carries the raw model_id; $2 (LIKE operand)
+            # carries the LIKE-escaped copy -- distinct parameters so a
+            # literal '%'/'_' in model_id can't widen the LIKE match.
+            params = conn.calls[0][2]
+            self.assertEqual(params[0], "FORD FIESTA")
+            self.assertEqual(params[1], database.escape_like("FORD FIESTA"))
 
         asyncio.run(run_test())
 
@@ -172,9 +179,9 @@ class TestGetRiskV2BandedLadder(unittest.TestCase):
                 result = await database.get_risk_v2_banded("FORD FIESTA", "3-5", "30k-60k")
             self.assertEqual(result["match_scope"], "age_band_only")
             self.assertEqual(len(conn.calls), 2)
-            self.assertIn("mileage_band = $3", conn.calls[0][1])
+            self.assertIn("mileage_band = $4", conn.calls[0][1])
             self.assertNotIn("mileage_band", conn.calls[1][1])
-            self.assertIn("age_band = $2", conn.calls[1][1])
+            self.assertIn("age_band = $3", conn.calls[1][1])
 
         asyncio.run(run_test())
 
@@ -238,7 +245,7 @@ class TestGetRiskV2BandedLadder(unittest.TestCase):
             self.assertEqual(len(conn.calls), 1)
             first_sql = conn.calls[0][1]
             self.assertNotIn("mileage_band", first_sql)
-            self.assertIn("age_band = $2", first_sql)
+            self.assertIn("age_band = $3", first_sql)
 
         asyncio.run(run_test())
 

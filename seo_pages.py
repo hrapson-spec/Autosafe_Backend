@@ -21,6 +21,7 @@ import re
 from datetime import date
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
+from utils import escape_like
 
 from cachetools import TTLCache
 from fastapi import FastAPI, Request
@@ -178,16 +179,16 @@ def _model_where_clause(make: str, model: str):
     Handles variants like C-CLASS matching both 'MERCEDES-BENZ C-CLASS' and 'MERCEDES-BENZ C'.
     """
     model_id = f"{make} {model}"
-    conditions = ["model_id = ?", "model_id LIKE ? || ' %'"]
-    params = [model_id, model_id]
+    conditions = ["model_id = ?", "model_id LIKE ? || ' %' ESCAPE '\\'"]
+    params = [model_id, escape_like(model_id)]
 
     # For X-CLASS style models, also match the single-letter form (e.g. C, E, S)
     if model.endswith("-CLASS"):
         alt = model.replace("-CLASS", "")
         alt_id = f"{make} {alt}"
         conditions.append("model_id = ?")
-        conditions.append("model_id LIKE ? || ' %'")
-        params.extend([alt_id, alt_id])
+        conditions.append("model_id LIKE ? || ' %' ESCAPE '\\'")
+        params.extend([alt_id, escape_like(alt_id)])
 
     return f"({' OR '.join(conditions)})", params
 

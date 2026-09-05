@@ -22,6 +22,8 @@ from pathlib import Path
 import sys
 import os
 
+import pytest
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dvsa_client import MOTTest, VehicleHistory  # noqa: E402
@@ -107,3 +109,33 @@ def test_v55_anomaly_substitutes_previous_reading():
     assert feats['mileage_anomaly_flag'] == 1
     assert feats['mileage_plausible_flag'] == 0
     assert feats['has_prev_mileage'] == 1
+
+
+def test_v55_annualized_mileage_v2_converts_km_odometers():
+    """annualized_mileage_v2/usage_band_hybrid must convert km odometer
+    readings to miles before differencing, the same way test_mileage
+    already does a few lines above (feature_engineering_v55.py:251) --
+    the trained model's annualized_mileage_v2 comes from a training
+    corpus (train_catboost_production_v55.py) whose own test_mileage
+    column is already-in-miles historical MOT data, so a raw km reading
+    fed through unconverted silently violates that unit contract rather
+    than reflecting a genuine usage difference.
+
+    Two tests exactly 365 days apart, both odometer_unit='km':
+    newest=20000km (=12427mi), previous=8000km (=4971mi).
+    Correct: annualized = 12427 - 4971 = 7456 mi/yr -> 'average' band.
+    Buggy (no conversion): raw diff 20000-8000=12000 mi/yr -> 'high' band.
+    Neither reading trips the 50,000mi/yr anomaly guard either way, so
+    this isolates the conversion bug from the anomaly-substitution path.
+    """
+    newest = datetime(2024, 1, 1)
+    previous = newest - timedelta(days=365)
+    history = _vehicle([
+        _mot(newest, 20000, odometer_unit='km'),
+        _mot(previous, 8000, odometer_unit='km'),
+    ])
+    feats = engineer_features(history, 'SW1A 1AA', datetime(2026, 6, 10))
+
+    assert feats['mileage_anomaly_flag'] == 0, "test setup must not trip the anomaly guard"
+    assert feats['annualized_mileage_v2'] == pytest.approx(7456, abs=1)
+    assert feats['usage_band_hybrid'] == 'average'

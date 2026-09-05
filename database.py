@@ -5,7 +5,7 @@ Uses DATABASE_URL environment variable from Railway.
 import os
 import re
 from typing import List, Dict, Optional
-from utils import safe_referrer
+from utils import escape_like, safe_referrer
 
 
 def _clamp_risk(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
@@ -172,11 +172,11 @@ async def get_models(make: str) -> List[str]:
         for pattern in search_patterns:
             rows = await conn.fetch("""
                 SELECT model_id, SUM(total_tests) as test_count
-                FROM mot_risk 
-                WHERE model_id LIKE $1
+                FROM mot_risk
+                WHERE model_id LIKE $1 ESCAPE '\\'
                 GROUP BY model_id
                 HAVING SUM(total_tests) >= $2
-            """, f"{pattern}%", MIN_TESTS_FOR_UI)
+            """, f"{escape_like(pattern)}%", MIN_TESTS_FOR_UI)
             
             for row in rows:
                 base_model = extract_base_model(row['model_id'], make)
@@ -200,12 +200,16 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
     if not pool:
         return None  # Fallback to mock data
     
+    escaped_model_id = escape_like(model_id)
+
     async with pool.acquire() as conn:
         # model_id is now "MAKE MODEL" (e.g., "FORD FIESTA")
         # We need to find all variants and aggregate their risk
 
         # P0-5 fix: Use exact match OR variant match (model_id || ' %')
-        # This prevents "FORD F" from matching "FORD FOCUS"
+        # This prevents "FORD F" from matching "FORD FOCUS". The LIKE side
+        # binds the escaped copy so a make/model containing a literal '%'
+        # or '_' can't widen the match beyond its own variants.
         rows = await conn.fetch(
             """SELECT
                 SUM(total_tests) as total_tests,
@@ -219,9 +223,9 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
                 SUM(risk_lamps_reflectors_and_electrical_equipment * total_tests) / NULLIF(SUM(total_tests), 0) as risk_lamps_reflectors_and_electrical_equipment,
                 SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) as risk_body_chassis_structure
                FROM mot_risk
-               WHERE (model_id = $1 OR model_id LIKE $1 || ' %')
-               AND age_band = $2 AND mileage_band = $3""",
-            model_id, age_band, mileage_band
+               WHERE (model_id = $1 OR model_id LIKE $2 || ' %' ESCAPE '\\')
+               AND age_band = $3 AND mileage_band = $4""",
+            model_id, escaped_model_id, age_band, mileage_band
         )
         
         if rows and rows[0]['total_tests'] is not None:
@@ -247,8 +251,8 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
         # No data for this specific band - try any band for this model
         # P0-5 fix: Use exact or variant match
         exists = await conn.fetchrow(
-            "SELECT 1 FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $1 || ' %') LIMIT 1",
-            model_id
+            "SELECT 1 FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $2 || ' %' ESCAPE '\\') LIMIT 1",
+            model_id, escaped_model_id
         )
 
         if not exists:
@@ -259,8 +263,8 @@ async def get_risk(model_id: str, age_band: str, mileage_band: str) -> Optional[
             """SELECT
                 SUM(total_tests) as total_tests,
                 SUM(failure_risk * total_tests) / NULLIF(SUM(total_tests), 0) as avg_risk
-               FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $1 || ' %')""",
-            model_id
+               FROM mot_risk WHERE (model_id = $1 OR model_id LIKE $2 || ' %' ESCAPE '\\')""",
+            model_id, escaped_model_id
         )
         
         return {
@@ -1103,7 +1107,8 @@ async def _fetch_mot_risk_aggregate(
         neither given        -> model_average predicate  (model only)
 
     Same base model match as legacy get_risk: (model_id = $1 OR model_id
-    LIKE $1 || ' %'). Returns the single aggregate row (a bare SUM with no
+    LIKE $2 || ' %' ESCAPE '\\', $2 the LIKE-escaped copy of model_id).
+    Returns the single aggregate row (a bare SUM with no
     GROUP BY always returns exactly one row, all-NULL if nothing matched),
     or None in the degenerate case of zero rows coming back at all.
     """
@@ -1126,14 +1131,21 @@ async def _fetch_mot_risk_aggregate(
         CASE WHEN COUNT(risk_body_chassis_structure) = COUNT(*)
              THEN SUM(risk_body_chassis_structure * total_tests) / NULLIF(SUM(total_tests), 0) END AS risk_body
        FROM mot_risk
-       WHERE (model_id = $1 OR model_id LIKE $1 || ' %')"""
+       WHERE (model_id = $1 OR model_id LIKE $2 || ' %' ESCAPE '\\')"""
+
+    escaped_model_id = escape_like(model_id)
 
     if mileage_band is not None:
-        rows = await conn.fetch(query + " AND age_band = $2 AND mileage_band = $3", model_id, age_band, mileage_band)
+        rows = await conn.fetch(
+            query + " AND age_band = $3 AND mileage_band = $4",
+            model_id, escaped_model_id, age_band, mileage_band,
+        )
     elif age_band is not None:
-        rows = await conn.fetch(query + " AND age_band = $2", model_id, age_band)
+        rows = await conn.fetch(
+            query + " AND age_band = $3", model_id, escaped_model_id, age_band,
+        )
     else:
-        rows = await conn.fetch(query, model_id)
+        rows = await conn.fetch(query, model_id, escaped_model_id)
 
     return rows[0] if rows else None
 
