@@ -477,5 +477,30 @@ class TestComponentHubDiscoverability(unittest.TestCase):
             self.assertIn(f">{h1}</a>", index, f"anchor for {slug} does not reuse hub H1 {h1!r}")
 
 
+class TestComponentPageSignals(unittest.TestCase):
+    """OA-006 E: component pages render no empty cost range and no contradictory canonical."""
+
+    def _component_page(self):
+        r = client.get("/mot-check/ford/fiesta/problems/brakes/")
+        self.assertEqual(r.status_code, 200)
+        return r.text
+
+    def test_no_empty_repair_cost_range_is_rendered(self):
+        html = self._component_page()
+        self.assertNotIn("&pound;&ndash;&pound;", html)
+        self.assertNotIn("\u00a3\u2013\u00a3", html)
+        self.assertNotIn("from &pound; to &pound;", html)
+        # The neutral FAQ answer already used elsewhere replaces the empty range.
+        self.assertIn("Repair costs vary significantly depending on the fault, vehicle and garage.", html)
+        # The typical figure and its caveat stay.
+        self.assertIn("Not model-specific and not a quote", html)
+
+    def test_noindex_pages_carry_a_self_referencing_canonical(self):
+        html = self._component_page()
+        self.assertIn('<meta name="robots" content="noindex, follow">', html)
+        canonical = re.search(r'<link rel="canonical"\s*href="([^"]+)"', html).group(1)
+        self.assertEqual(canonical, "https://www.autosafe.one/mot-check/ford/fiesta/problems/brakes/")
+
+
 if __name__ == "__main__":
     unittest.main()

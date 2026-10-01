@@ -7,7 +7,12 @@ endblock %}
 {% block og_description %}Recorded {{ component_name|lower }} defect rates for the {{ make_display }} {{ model_display }}, with aggregate sample context.{% endblock %}
 {% block twitter_title %}{{ make_display }} {{ model_display }} {{ component_name }} MOT Outcomes{% endblock %}
 {% block twitter_description %}Recorded {{ component_name|lower }} defect rates for the {{ make_display }} {{ model_display }}, with aggregate sample context.{% endblock %}
-{% block canonical_url %}https://www.autosafe.one/mot-check/{{ make_slug }}/{{ model_slug }}/{% endblock %}
+{# Self-referencing canonical: these pages stay noindex,follow. A canonical that
+   pointed at the parent model page combined with noindex sent contradictory
+   signals ("this is a copy of the parent" + "do not index this"), which can
+   leak the noindex onto the parent during canonical consolidation. The
+   indexability decision (noindex) is unchanged. OA-006 E. #}
+{% block canonical_url %}{{ canonical_url }}{% endblock %}
 {% block robots_meta %}
 <meta name="robots" content="noindex, follow">{% endblock %}
 
@@ -30,7 +35,7 @@ endblock %}
       "name": "What can {{ component_name|lower }} repairs cost in the UK?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "{% if cost_data %}Our generic UK guide for {{ component_name|lower }} repairs ranges from &pound;{{ cost_data.range_low }} to &pound;{{ cost_data.range_high }}. It is not model-specific and is not a quote.{% else %}Repair costs vary significantly depending on the fault, vehicle and garage.{% endif %}"
+        "text": "{% if cost_data and cost_data.range_low and cost_data.range_high %}Our generic UK guide for {{ component_name|lower }} repairs ranges from &pound;{{ cost_data.range_low }} to &pound;{{ cost_data.range_high }}. It is not model-specific and is not a quote.{% else %}Repair costs vary significantly depending on the fault, vehicle and garage.{% endif %}"
       }
     }
   ]
@@ -80,8 +85,12 @@ endblock %}
   <div class="cost-box" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
     <div class="label">Generic UK Repair-Cost Guide</div>
     <div class="big-number" style="font-size: 2.5rem; color: #e5c07b;">&pound;{{ cost_data.typical }}</div>
+    {% if cost_data.range_low and cost_data.range_high %}
     <div class="label">Usually &pound;{{ cost_data.range_low }}&ndash;&pound;{{ cost_data.range_high }}; not model-specific and not a quote
     </div>
+    {% else %}
+    <div class="label">Not model-specific and not a quote</div>
+    {% endif %}
   </div>
   {% endif %}
 </div>
