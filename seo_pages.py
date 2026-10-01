@@ -19,6 +19,7 @@ import logging
 import sqlite3
 import re
 from datetime import date
+from page_revisions import page_lastmod
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
 
@@ -65,7 +66,7 @@ jinja_env.globals.update(
 
 # --- Dedicated SEO cache (separate from API cache in main.py) ---
 _seo_cache: TTLCache = TTLCache(maxsize=2000, ttl=3600)
-_sitemap_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_sitemap_cache: TTLCache = TTLCache(maxsize=8, ttl=3600)
 
 # --- Slug lookup dicts (populated at startup) ---
 # slug -> {"make": "FORD", "display": "Ford"}
@@ -174,10 +175,6 @@ COMPONENT_SLUGS = {
 }
 
 DATASET_REFERENCE_FAIL_RATE = POPULATION_DEFAULT_FAILURE_RISK
-# Source-controlled page-copy revision for non-dataset sitemap entries. Unlike
-# ``date.today()``, this does not claim every URL changed whenever a worker
-# restarts. Update deliberately when those public pages materially change.
-SITE_CONTENT_REVISION = "2026-07-11"
 
 
 
@@ -1231,47 +1228,74 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         )
 
 
-    @app.get("/sitemap.xml", response_class=Response)
-    def sitemap_index():
-        """Sitemap index pointing to segmented sub-sitemaps."""
-        cache_key = "sitemap:index"
-        if cache_key in _sitemap_cache:
-            return Response(
-                content=_sitemap_cache[cache_key],
-                media_type="application/xml",
-                headers={"Cache-Control": "public, max-age=3600"},
-            )
+    # --- Sitemaps -------------------------------------------------------------
+    # <lastmod> rule (OA-006 F): a page last changed when either the checked-in
+    # dataset artifact or one of the source files that render it last changed.
+    # Source revision dates come from page_revisions.json (hash-verified by
+    # tests/test_seo.py); the dataset date is DATASET_ARTIFACT_REVISION. No
+    # runtime clock is consulted, so a worker restart never claims freshness.
 
+    BASE_TEMPLATE = "templates/seo_base.html"
+
+    def _template_lastmod(template_name: str) -> str:
+        """lastmod for a dataset-rendering page built from seo_base + one template."""
+        return page_lastmod(BASE_TEMPLATE, f"templates/{template_name}",
+                            dataset_revision=DATASET_ARTIFACT_REVISION)
+
+    def _content_entries() -> list[tuple[str, str, str, str]]:
+        """(loc, lastmod, priority, changefreq) for homepage, pillar, guides, legal, hubs."""
         base = "https://www.autosafe.one"
-        sitemaps = [
-            (f"{base}/sitemap-content.xml", SITE_CONTENT_REVISION),
-            (f"{base}/sitemap-makes.xml", DATASET_ARTIFACT_REVISION),
-            (f"{base}/sitemap-models.xml", DATASET_ARTIFACT_REVISION),
-            (f"{base}/sitemap-comparisons.xml", DATASET_ARTIFACT_REVISION),
+        entries = [
+            (f"{base}/", page_lastmod("index.html"), "1.0", "weekly"),
+            (f"{base}/mot-check/", _template_lastmod("seo_index.html"), "0.9", "weekly"),
+            (f"{base}/will-my-car-pass-mot/", _template_lastmod("seo_pillar_k7.html"), "0.95", "weekly"),
         ]
+        for slug in (
+            "mot-checklist", "common-mot-failures", "when-is-mot-due",
+            "mot-failure-rates-by-car", "mot-rules-2026", "mot-defect-categories",
+            "mot-cost", "mot-history-check", "first-mot-guide",
+        ):
+            entries.append((f"{base}/guides/{slug}", page_lastmod(f"static/guides/{slug}.html"), "0.8", "monthly"))
+        entries.append((f"{base}/privacy", page_lastmod("static/privacy.html"), "0.3", "yearly"))
+        entries.append((f"{base}/terms", page_lastmod("static/terms.html"), "0.3", "yearly"))
+        # Component hubs (top-level aggregation — indexable)
+        for comp_slug in COMPONENT_SLUGS:
+            entries.append((f"{base}/mot-check/problems/{comp_slug}/",
+                            _template_lastmod("seo_component_hub.html"), "0.7", "monthly"))
+        return entries
 
+    def _make_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_make.html")
+        return [(f"{base}/mot-check/{make_slug}/", lastmod, "0.8", "monthly")
+                for make_slug in sorted(_make_by_slug.keys())]
+
+    def _model_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_model.html")
+        return [(f"{base}/mot-check/{make_slug}/{model_slug}/", lastmod, "0.7", "monthly")
+                for (make_slug, model_slug) in sorted(_model_by_slug.keys())]
+
+    def _comparison_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_compare.html")
         entries = []
-        for loc, lastmod in sitemaps:
-            entries.append(
-                f"  <sitemap>\n"
-                f"    <loc>{loc}</loc>\n"
-                f"    <lastmod>{lastmod}</lastmod>\n"
-                f"  </sitemap>"
-            )
+        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
+            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
+            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            entries.append((f"{base}/mot-check/compare/{s1}-vs-{s2}/", lastmod, "0.6", "monthly"))
+        return entries
 
-        xml = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-            + "\n".join(entries)
-            + "\n</sitemapindex>\n"
-        )
+    SUB_SITEMAPS = {
+        "sitemap-content.xml": _content_entries,
+        "sitemap-makes.xml": _make_entries,
+        "sitemap-models.xml": _model_entries,
+        "sitemap-comparisons.xml": _comparison_entries,
+    }
 
-        _sitemap_cache[cache_key] = xml
-        return Response(
-            content=xml,
-            media_type="application/xml",
-            headers={"Cache-Control": "public, max-age=3600"},
-        )
+    def _xml_response(xml: str) -> Response:
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
 
     def _build_urlset(urls: list[str]) -> str:
         """Build a <urlset> XML string from a list of <url> entries."""
@@ -1292,100 +1316,59 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             f"  </url>"
         )
 
-    @app.get("/sitemap-content.xml", response_class=Response)
-    def sitemap_content():
-        """Sub-sitemap: homepage, pillar, guides, insights, legal pages."""
-        cache_key = "sitemap:content"
+    def _sub_sitemap(name: str) -> Response:
+        cache_key = f"sitemap:{name}"
+        if cache_key not in _sitemap_cache:
+            urls = [_url_entry(*entry) for entry in SUB_SITEMAPS[name]()]
+            _sitemap_cache[cache_key] = _build_urlset(urls)
+        return _xml_response(_sitemap_cache[cache_key])
+
+    @app.get("/sitemap.xml", response_class=Response)
+    def sitemap_index():
+        """Sitemap index; each sub-sitemap's lastmod is the latest of its entries."""
+        cache_key = "sitemap:index"
         if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
+            return _xml_response(_sitemap_cache[cache_key])
 
         base = "https://www.autosafe.one"
-        urls = []
+        entries = []
+        for name, build in SUB_SITEMAPS.items():
+            lastmod = max(entry[1] for entry in build())
+            entries.append(
+                f"  <sitemap>\n"
+                f"    <loc>{base}/{name}</loc>\n"
+                f"    <lastmod>{lastmod}</lastmod>\n"
+                f"  </sitemap>"
+            )
 
-        static_pages = [
-            ("/", "1.0", "weekly"),
-            ("/mot-check/", "0.9", "weekly"),
-            ("/will-my-car-pass-mot/", "0.95", "weekly"),
-            ("/guides/mot-checklist", "0.8", "monthly"),
-            ("/guides/common-mot-failures", "0.8", "monthly"),
-            ("/guides/when-is-mot-due", "0.8", "monthly"),
-            ("/guides/mot-failure-rates-by-car", "0.8", "monthly"),
-            ("/guides/mot-rules-2026", "0.8", "monthly"),
-            ("/guides/mot-defect-categories", "0.8", "monthly"),
-            ("/guides/mot-cost", "0.8", "monthly"),
-            ("/guides/mot-history-check", "0.8", "monthly"),
-            ("/guides/first-mot-guide", "0.8", "monthly"),
-            ("/privacy", "0.3", "yearly"),
-            ("/terms", "0.3", "yearly"),
-        ]
-        for path, priority, freq in static_pages:
-            urls.append(_url_entry(f"{base}{path}", SITE_CONTENT_REVISION, priority, freq))
-
-        # Component hubs (top-level aggregation — indexable)
-        for comp_slug in COMPONENT_SLUGS:
-            urls.append(_url_entry(f"{base}/mot-check/problems/{comp_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
-
-        xml = _build_urlset(urls)
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "\n".join(entries)
+            + "\n</sitemapindex>\n"
+        )
         _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _xml_response(xml)
+
+    @app.get("/sitemap-content.xml", response_class=Response)
+    def sitemap_content():
+        """Sub-sitemap: homepage, pillar, guides, legal pages, component hubs."""
+        return _sub_sitemap("sitemap-content.xml")
 
     @app.get("/sitemap-makes.xml", response_class=Response)
     def sitemap_makes():
         """Sub-sitemap: all make hub pages."""
-        cache_key = "sitemap:makes"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for make_slug in sorted(_make_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/", DATASET_ARTIFACT_REVISION, "0.8", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-makes.xml")
 
     @app.get("/sitemap-models.xml", response_class=Response)
     def sitemap_models():
         """Sub-sitemap: all model detail pages (the core money pages)."""
-        cache_key = "sitemap:models"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for (make_slug, model_slug) in sorted(_model_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/{model_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-models.xml")
 
     @app.get("/sitemap-comparisons.xml", response_class=Response)
     def sitemap_comparisons():
         """Sub-sitemap: comparison pages."""
-        cache_key = "sitemap:comparisons"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
-            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
-            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
-            urls.append(_url_entry(f"{base}/mot-check/compare/{s1}-vs-{s2}/", DATASET_ARTIFACT_REVISION, "0.6", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-comparisons.xml")
 
     @app.get("/sitemap-local.xml", response_class=Response)
     def sitemap_local():

@@ -20,6 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi.testclient import TestClient
 from main import app
 from report_contract import DATASET_ARTIFACT_REVISION
+import page_revisions
 import seo_pages
 from seo_pages import (
     _align_component_rates,
@@ -293,10 +294,11 @@ class TestSitemap(unittest.TestCase):
         self.assertEqual(r.status_code, 301)
         self.assertEqual(r.headers["location"], "/sitemap.xml")
 
-    def test_dataset_driven_sitemaps_use_the_artifact_revision(self):
+    def test_dataset_driven_sitemaps_are_never_older_than_the_artifact_revision(self):
         for path in ("/sitemap-makes.xml", "/sitemap-models.xml", "/sitemap-comparisons.xml"):
             r = client.get(path)
-            self.assertIn(f"<lastmod>{DATASET_ARTIFACT_REVISION}</lastmod>", r.text)
+            for lastmod in re.findall(r"<lastmod>(.*?)</lastmod>", r.text):
+                self.assertGreaterEqual(lastmod, DATASET_ARTIFACT_REVISION, path)
 
 
 class TestNoindexDirectives(unittest.TestCase):
@@ -500,6 +502,102 @@ class TestComponentPageSignals(unittest.TestCase):
         self.assertIn('<meta name="robots" content="noindex, follow">', html)
         canonical = re.search(r'<link rel="canonical"\s*href="([^"]+)"', html).group(1)
         self.assertEqual(canonical, "https://www.autosafe.one/mot-check/ford/fiesta/problems/brakes/")
+
+
+def _sitemap_entries() -> list[tuple[str, str]]:
+    """(path, lastmod) for every URL in every sub-sitemap listed by /sitemap.xml."""
+    index = client.get("/sitemap.xml").text
+    entries = []
+    for loc in re.findall(r"<loc>(.*?)</loc>", index):
+        xml = client.get(loc.replace("https://www.autosafe.one", "")).text
+        for url, lastmod in re.findall(r"<loc>(.*?)</loc>\s*<lastmod>(.*?)</lastmod>", xml):
+            entries.append((url.replace("https://www.autosafe.one", ""), lastmod))
+    return entries
+
+
+class TestSitemapInventoryInvariant(unittest.TestCase):
+    """OA-006 invariant: the sitemap URL set is unchanged (442 URLs, no additions or removals)."""
+
+    def test_sitemap_lists_exactly_the_known_url_inventory(self):
+        paths = [p for p, _ in _sitemap_entries()]
+        self.assertEqual(len(paths), 442)
+        self.assertEqual(len(set(paths)), 442)
+        families = {
+            "content": [p for p in paths if not p.startswith("/mot-check/") or p == "/mot-check/"],
+            "hubs": [p for p in paths if p.startswith("/mot-check/problems/")],
+            "comparisons": [p for p in paths if p.startswith("/mot-check/compare/")],
+            "makes": [p for p in paths if re.fullmatch(r"/mot-check/[^/]+/", p) and p != "/mot-check/"
+                      and not p.startswith("/mot-check/problems/")],
+            "models": [p for p in paths if re.fullmatch(r"/mot-check/[^/]+/[^/]+/", p)
+                       and not p.startswith(("/mot-check/problems/", "/mot-check/compare/"))],
+        }
+        self.assertEqual({k: len(v) for k, v in families.items()},
+                         {"content": 14, "hubs": 7, "comparisons": 20, "makes": 30, "models": 371})
+        self.assertEqual(len(seo_pages._make_by_slug), 30)
+        self.assertEqual(len(seo_pages._model_by_slug), 371)
+        self.assertFalse([p for p in paths if p.endswith("-years/") or "/problems/" in p[len("/mot-check/problems/"):]])
+
+
+class TestSitemapLastmodRule(unittest.TestCase):
+    """OA-006 F: lastmod is derived from recorded source/dataset revisions, never from the clock."""
+
+    def test_tracked_sources_match_the_revision_manifest(self):
+        stale = page_revisions.stale_sources()
+        self.assertEqual(
+            stale, [],
+            "page_revisions.json is stale; run `python scripts/update_page_revisions.py` "
+            "so the sitemap lastmod reflects the change: " + "; ".join(f"{p} ({r})" for p, r in stale),
+        )
+
+    def test_manifest_dates_are_valid_and_not_in_the_future(self):
+        for relpath, entry in page_revisions.load_manifest()["files"].items():
+            revised = date.fromisoformat(entry["revised"])
+            self.assertLessEqual(revised, date.today(), relpath)
+            self.assertGreaterEqual(revised, date(2026, 1, 1), relpath)
+            self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
+
+    def test_every_lastmod_is_a_recorded_revision_date(self):
+        allowed = {e["revised"] for e in page_revisions.load_manifest()["files"].values()} | {DATASET_ARTIFACT_REVISION}
+        for path, lastmod in _sitemap_entries():
+            self.assertIn(lastmod, allowed, f"{path} lastmod {lastmod} is not a recorded revision")
+        index = client.get("/sitemap.xml").text
+        for lastmod in re.findall(r"<lastmod>(.*?)</lastmod>", index):
+            self.assertIn(lastmod, allowed)
+
+    def test_family_lastmods_follow_the_rule(self):
+        by_path = dict(_sitemap_entries())
+        base = "templates/seo_base.html"
+
+        def expect(*sources, dataset=True):
+            return page_revisions.page_lastmod(
+                *sources, dataset_revision=DATASET_ARTIFACT_REVISION if dataset else None
+            )
+
+        self.assertEqual(by_path["/mot-check/ford/fiesta/"], expect(base, "templates/seo_model.html"))
+        self.assertEqual(by_path["/mot-check/ford/"], expect(base, "templates/seo_make.html"))
+        self.assertEqual(by_path["/mot-check/compare/ford-fiesta-vs-vauxhall-corsa/"],
+                         expect(base, "templates/seo_compare.html"))
+        self.assertEqual(by_path["/mot-check/problems/brakes/"], expect(base, "templates/seo_component_hub.html"))
+        self.assertEqual(by_path["/mot-check/"], expect(base, "templates/seo_index.html"))
+        self.assertEqual(by_path["/will-my-car-pass-mot/"], expect(base, "templates/seo_pillar_k7.html"))
+        self.assertEqual(by_path["/guides/mot-cost"], expect("static/guides/mot-cost.html", dataset=False))
+        self.assertEqual(by_path["/privacy"], expect("static/privacy.html", dataset=False))
+        self.assertEqual(by_path["/"], expect("index.html", dataset=False))
+
+    def test_sitemap_index_lastmod_is_the_latest_entry_of_each_sub_sitemap(self):
+        index = client.get("/sitemap.xml").text
+        for loc, lastmod in re.findall(r"<loc>(.*?)</loc>\s*<lastmod>(.*?)</lastmod>", index):
+            xml = client.get(loc.replace("https://www.autosafe.one", "")).text
+            self.assertEqual(lastmod, max(re.findall(r"<lastmod>(.*?)</lastmod>", xml)), loc)
+
+    def test_page_lastmod_takes_the_latest_source(self):
+        rev = page_revisions.page_lastmod("templates/seo_base.html", "templates/seo_model.html",
+                                          dataset_revision="2000-01-01")
+        self.assertEqual(rev, max(page_revisions.source_revision("templates/seo_base.html"),
+                                  page_revisions.source_revision("templates/seo_model.html")))
+        self.assertEqual(page_revisions.page_lastmod("index.html", dataset_revision="2999-12-31"), "2999-12-31")
+        with self.assertRaises(KeyError):
+            page_revisions.source_revision("templates/not-tracked.html")
 
 
 if __name__ == "__main__":
