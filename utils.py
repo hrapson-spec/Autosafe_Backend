@@ -116,8 +116,8 @@ def mask_postcode(postcode) -> str:
 
 
 _SHARE_PATH_PATTERNS = (
-    re.compile(r"^/api/v2/reports/[^/]+$"),
-    re.compile(r"^/app/report/[^/]+$"),
+    re.compile(r"^/api/v2/reports/[^/]+/?$"),
+    re.compile(r"^/app/report/[^/]+/?$"),
 )
 
 
@@ -131,7 +131,7 @@ def safe_log_path(path: str) -> str:
         return "[invalid-path]"
     for pattern in _SHARE_PATH_PATTERNS:
         if pattern.fullmatch(path):
-            prefix = path.rsplit("/", 1)[0]
+            prefix = path.rstrip("/").rsplit("/", 1)[0]
             return prefix + "/{token}"
     return path
 

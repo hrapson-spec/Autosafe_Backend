@@ -30,6 +30,7 @@ import { ReportApiError } from '../services/errorMessages';
 import { reportRateDisplay } from './ReportCopy';
 import { trackReportView } from '../utils/analytics';
 import ReportUnavailable, { type ReportUnavailableReason } from './ReportUnavailable';
+import { suppressShellMetadata } from '../utils/shellMetadata';
 
 const ReportDashboard = lazy(() => import('./ReportDashboard'));
 
@@ -55,6 +56,15 @@ function reasonForError(err: unknown): ReportUnavailableReason {
   return 'error';
 }
 
+/** Head for every state of the screen (loading / ready / unavailable): a
+ * report-specific title and an explicit noindex,nofollow directive. */
+const ReportHead: React.FC<{ title: string }> = ({ title }) => (
+  <Helmet>
+    <title>{title}</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </Helmet>
+);
+
 /** report_viewed fires once per successfully-obtained report, from
  * whichever path produced it (fetched or inline). */
 function fireReportViewed(report: ReportV2): void {
@@ -73,6 +83,11 @@ const ReportScreen: React.FC = () => {
   const [unavailableReason, setUnavailableReason] = useState<ReportUnavailableReason | null>(null);
   const [isLoading, setIsLoading] = useState(!inlineReport);
   const viewedRef = useRef<string | null>(null);
+
+  // Bearer route: while mounted, hide the homepage canonical / description /
+  // social tags / JSON-LD inherited from the shared HTML shell (restored on
+  // unmount). Runs in every state because it sits above the early returns.
+  useEffect(() => suppressShellMetadata(), []);
 
   useEffect(() => {
     if (inlineReport) {
@@ -131,9 +146,7 @@ const ReportScreen: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F0F0F0]">
-        <Helmet>
-          <title>Checking your report… | AutoSafe</title>
-        </Helmet>
+        <ReportHead title="Checking your report… | AutoSafe" />
         <div role="status" className="flex flex-col items-center gap-4">
           <div className="animate-spin h-8 w-8 border-2 border-slate-300 border-t-slate-900 rounded-full" aria-hidden="true" />
           <span className="text-slate-500 text-sm">Loading your report&hellip;</span>
@@ -145,9 +158,7 @@ const ReportScreen: React.FC = () => {
   if (report) {
     return (
       <>
-        <Helmet>
-          <title>Your Vehicle Report | AutoSafe</title>
-        </Helmet>
+        <ReportHead title="Your Vehicle Report | AutoSafe" />
         <Suspense
           fallback={
             <div className="flex justify-center py-20">
@@ -163,9 +174,7 @@ const ReportScreen: React.FC = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Report Unavailable | AutoSafe</title>
-      </Helmet>
+      <ReportHead title="Report Unavailable | AutoSafe" />
       <ReportUnavailable reason={unavailableReason ?? 'error'} />
     </>
   );
