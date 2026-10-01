@@ -127,10 +127,16 @@ async def lifespan(app: FastAPI):
         logger.error("DVSA OAuth credentials NOT configured - all V55 predictions will fall back to population averages!")
         logger.error("Set DVSA_CLIENT_ID, DVSA_CLIENT_SECRET, DVSA_TOKEN_URL, and DVSA_API_KEY to enable real predictions")
 
+    # First-party acquisition collector (OA-005): background retention only
+    # when ACQUISITION_INGEST_ENABLED is set; never blocks startup or /health.
+    import acquisition_routes
+    acquisition_routes.start_background_retention()
+
     yield  # Application runs here
 
     # Shutdown
     logger.info("Shutting down...")
+    await acquisition_routes.stop_background_retention()
     await close_dvsa_client()
     await close_email_client()
     await db.close_pool()
@@ -333,6 +339,11 @@ from report_routes import register_report_routes, rate_limit_exceeded_dispatcher
 # original _rate_limit_exceeded_handler (byte-identical legacy shape) for
 # every other route -- see report_routes.rate_limit_exceeded_dispatcher.
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_dispatcher)
+
+# First-party, cookieless acquisition collector (OA-005, DECISIONS.md D-005).
+# Server-side ingest is OFF unless ACQUISITION_INGEST_ENABLED is set.
+from acquisition_routes import register_acquisition_routes
+register_acquisition_routes(app, limiter)
 
 
 # Dynamic year validation - current year + 1 (P2-1 fix)
