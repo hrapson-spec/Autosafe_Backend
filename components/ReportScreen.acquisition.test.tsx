@@ -165,12 +165,29 @@ describe('result_rendered: supported and reference states from the committed fin
     expectAllSchemaValid();
   });
 
-  it('fully degraded (unavailable scope) mounts as result_unavailable/unavailable, not result_rendered', async () => {
-    render(ui('unsaved', { inlineReport: fixtureUnavailableDegraded, operationId: OP1 }));
+  it('fully degraded (unavailable scope, real vehicle data) mounts as result_unavailable/unavailable, not result_rendered', async () => {
+    render(ui('unsaved', { inlineReport: { ...fixtureUnavailableDegraded, vehicle_data_source: 'dvsa' }, operationId: OP1 }));
     await screen.findByTestId('comparison-result');
     await waitFor(() => expect(byName('result_unavailable')).toHaveLength(1));
     expect(byName('result_unavailable')[0]).toMatchObject({ reason: 'unavailable', entry_mode: 'fresh_check', operation_id: OP1 });
     expect(byName('result_rendered')).toHaveLength(0);
+    expectAllSchemaValid();
+  });
+
+  it.each([
+    ['exact_band', fixtureExactHigh],
+    ['model_average', fixtureModelAverageLow],
+    ['population_default', fixturePopulationDefault],
+    ['unavailable', fixtureUnavailableDegraded],
+    ['model_prediction', fixtureVehiclePrediction],
+  ])('D-004: a demo report (%s) is result_rendered with outcome_group demo, never supported, never result_unavailable', async (scope, fixture) => {
+    vi.mocked(getReport).mockResolvedValue({ ...fixture, vehicle_data_source: 'demo' });
+    render(ui('tok-demo', { operationId: OP1 }));
+    await waitFor(() => expect(byName('result_rendered')).toHaveLength(1));
+    const e = byName('result_rendered')[0] as unknown as Record<string, unknown>;
+    expect(e).toMatchObject({ render_delivered: true, supported_result: false, outcome_group: 'demo', match_scope: scope });
+    expect('sample_nonzero' in e).toBe(scope !== 'model_prediction');
+    expect(byName('result_unavailable')).toHaveLength(0);
     expectAllSchemaValid();
   });
 });

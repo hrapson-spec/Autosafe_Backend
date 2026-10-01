@@ -19,7 +19,8 @@
  *    vehicle_prediction/model_prediction, or a validated comparison with
  *    exact_band / age_band_only / model_average, finite rate in [0, 1],
  *    nonzero sample (comparison only) and visible scope. population_default
- *    and unavailable are never supported.
+ *    and unavailable are never supported, and neither is any report whose
+ *    vehicle_data_source is 'demo' (DECISIONS.md D-004: outcome_group 'demo').
  *  - rate_valid / sample_nonzero / scope_visible: the individual checks.
  *    sample_nonzero is OMITTED (key absent) for model_prediction: a
  *    prediction carries no cohort counts.
@@ -35,6 +36,7 @@ export type OutcomeGroup =
   | 'exact_comparison'
   | 'broader_supported_comparison'
   | 'dataset_reference'
+  | 'demo'
   | 'unavailable'
   | 'error';
 
@@ -120,31 +122,27 @@ function sampleIsNonzero(report: ReportV2): boolean {
 }
 
 /**
- * scope_visible v1: "scope disclosure text is available for this state".
+ * scope_visible v1 (DECISIONS.md D-003, metric `oa-metric-v1-draft`).
  *
- * HONEST STATUS: this is DATA-DERIVED. It calls the UI's own copy function
- * (buildScopeDisclosure) and checks the text is non-empty; it does NOT
- * observe the DOM. Because that function yields text for every recognised
- * scope, v1 is true for every contract-valid report: it is currently
- * non-discriminating. The decision whether it should mean more is a product
- * decision for Henri, pending before any collection; the classifier logic is
- * deliberately unchanged here.
+ * Decided rule: the visible-scope requirement is met by the scope CLASS shown
+ * without interaction on the result card (ReportResult): "Your car's
+ * predicted chance..." for a prediction; "This result isn't a prediction for
+ * <REG> ... <make model> comparison" for a comparison; "Dataset-wide
+ * reference comparison" for a reference. The finer exact_band /
+ * age_band_only / model_average distinction (only in the collapsed "How this
+ * result was calculated" <details>, via buildScopeDisclosure) is NOT part of
+ * the visibility test; it is reported through match_scope and outcome_group.
  *
- * What the UI renders (components/ReportDashboard.tsx, ReportResult.tsx,
- * ReportCopy.tsx), for reference:
- *  - Always inline: ReportResult's visible card states prediction vs
- *    "<make> <model> comparison" vs "dataset-wide reference comparison".
- *  - Always in the DOM but collapsed by default: ReportDashboard renders
- *    `buildScopeDisclosure(report)` inside the "How this result was
- *    calculated" <details>. That is the only place the exact_band /
- *    age_band_only / model_average distinction appears.
- * A test (ReportScreen.acquisition.test.tsx) shows the disclosure text is
- * mounted for every scope, but the flag itself does not read it from there.
+ * Implementation status: scope_visible stays a DATA-DERIVED invariant. It
+ * calls the UI's own copy function (buildScopeDisclosure) and checks the
+ * text is non-empty; it does NOT observe the DOM. It is true for every
+ * contract-valid report, i.e. documented as non-discriminating. A
+ * DOM-observed disclosure check would be a future metric version.
  *
  * Rule: buildScopeDisclosure produces non-empty text for this scope (it
  * throws on an unrecognised scope, treated as not available), and, for the
- * vehicle-matched cohort scopes whose text interpolates the vehicle, make
- * and model are present.
+ * vehicle-matched cohort scopes whose card label names the vehicle, make and
+ * model are present.
  */
 function scopeLabelPresent(report: ReportV2, scope: MatchScope): boolean {
   try {
@@ -243,6 +241,12 @@ export function classifyResult(report: ReportV2 | null | undefined): ResultClass
       outcome_group = 'unavailable';
       break;
   }
+
+  // DECISIONS.md D-004: a report whose vehicle_data_source is 'demo' is
+  // synthetic, never a supported vehicle result. It is a delivered render
+  // (render_delivered true) grouped as 'demo', for every contract-valid
+  // scope. Contract-invalid demo reports stay 'error' (handled above).
+  if (report.vehicle_data_source === 'demo') outcome_group = 'demo';
 
   const supportedGroup =
     outcome_group === 'prediction' ||

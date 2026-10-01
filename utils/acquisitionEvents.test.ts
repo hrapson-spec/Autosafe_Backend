@@ -35,6 +35,8 @@ export const SAMPLE_INPUTS: AcquisitionEventInput[] = [
   { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'saved', render_delivered: true, supported_result: true, outcome_group: 'exact_comparison', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'exact_band' },
   { event: 'result_rendered', entry_mode: 'restored_link', persistence_mode: 'saved', render_delivered: true, supported_result: true, outcome_group: 'broader_supported_comparison', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'model_average' },
   { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'inline_unsaved', render_delivered: true, supported_result: false, outcome_group: 'dataset_reference', rate_valid: true, sample_nonzero: false, scope_visible: true, result_kind: 'comparison', match_scope: 'population_default' },
+  { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'saved', render_delivered: true, supported_result: false, outcome_group: 'demo', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'unavailable' },
+  { event: 'result_rendered', entry_mode: 'restored_link', persistence_mode: 'saved', render_delivered: true, supported_result: false, outcome_group: 'demo', rate_valid: true, scope_visible: true, result_kind: 'vehicle_prediction', match_scope: 'model_prediction' },
   { event: 'result_unavailable', entry_mode: 'restored_link', reason: 'not_found' },
   { event: 'result_unavailable', operation_id: OP, entry_mode: 'fresh_check', reason: 'unavailable' },
   { event: 'check_failed', operation_id: OP, entry_mode: 'fresh_check', error_category: 'rate_limited', stage: 'create_report' },
@@ -225,6 +227,18 @@ describe('event schema (docs/acquisition/event_schema_v1.json) agrees with the t
     expect(ok({ ...EXACT, render_delivered: false })).toBe(false);
     expect(ok({ ...EXACT, outcome_group: 'unavailable' })).toBe(false);
     expect(ok({ ...EXACT, outcome_group: 'error' })).toBe(false);
+    // demo (D-004): never supported; model_prediction demo omits sample_nonzero; comparison demo carries it
+    const DEMO_CMP = SAMPLE_INPUTS[8] as unknown as Record<string, unknown>;
+    const DEMO_PRED = SAMPLE_INPUTS[9] as unknown as Record<string, unknown>;
+    expect(ok(DEMO_CMP)).toBe(true);
+    expect(ok(DEMO_PRED)).toBe(true);
+    expect(ok({ ...DEMO_CMP, supported_result: true })).toBe(false);
+    expect(ok({ ...DEMO_PRED, supported_result: true })).toBe(false);
+    expect(ok({ ...DEMO_PRED, sample_nonzero: true })).toBe(false);
+    const { sample_nonzero: _d, ...demoNoSample } = DEMO_CMP;
+    expect(ok(demoNoSample)).toBe(false);
+    // unavailable scope is only allowed with the demo group
+    expect(ok({ ...DEMO_CMP, outcome_group: 'dataset_reference' })).toBe(false);
     // there is no broad_fallback result kind
     expect(ok({ ...EXACT, result_kind: 'broad_fallback' })).toBe(false);
   });

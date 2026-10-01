@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:autosafe:acquisition:event:v1",
   "title": "AutoSafe acquisition event v1 (PROPOSED - collection OFF; awaits OA-005)",
-  "description": "Proposed safe-field event schema. scope_visible v1 means: scope disclosure text is available for this state (data-derived from the same copy function the UI uses; it does not observe the DOM). The visible card states prediction vs <make model> comparison vs dataset-wide reference; the exact_band/age_band_only/model_average distinction is inside a collapsed details element. v1 is therefore currently non-discriminating (true for every contract-valid report), pending a product decision before collection. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win. No collector, storage, session persistence or retention is approved. Events are client-reported acknowledgements and prove neither accuracy nor model qualification. Never carries risk figures, sample counts, report identity, registration, postcode, make/model, URLs, referrers, error text or free text.",
+  "description": "Proposed safe-field event schema. scope_visible v1 (DECISIONS.md D-003): the visibility requirement is met by the scope class shown without interaction on the result card (prediction / <make model> comparison, not a prediction for the registration / dataset-wide reference comparison); the exact_band/age_band_only/model_average detail is reported through match_scope and outcome_group and is not part of the visibility test. scope_visible stays a data-derived (scope disclosure text available) non-discriminating invariant; a DOM-observed check would be a future metric version. outcome_group demo (DECISIONS.md D-004): a report with vehicle_data_source demo is a delivered render but never a supported vehicle result. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win.",
   "oneOf": [
     {
       "type": "object",
@@ -237,7 +237,8 @@
             "prediction",
             "exact_comparison",
             "broader_supported_comparison",
-            "dataset_reference"
+            "dataset_reference",
+            "demo"
           ]
         },
         "rate_valid": {
@@ -248,7 +249,7 @@
         },
         "scope_visible": {
           "type": "boolean",
-          "description": "v1: scope disclosure text available for this state (data-derived, non-discriminating, pending product decision)"
+          "description": "v1 (D-003): data-derived, non-discriminating invariant: scope disclosure text available for this state; scope class is shown without interaction on the result card"
         },
         "result_kind": {
           "enum": [
@@ -262,6 +263,7 @@
             "age_band_only",
             "model_average",
             "population_default",
+            "unavailable",
             "model_prediction"
           ]
         }
@@ -419,7 +421,10 @@
           "then": {
             "properties": {
               "outcome_group": {
-                "const": "prediction"
+                "enum": [
+                  "prediction",
+                  "demo"
+                ]
               }
             },
             "not": {
@@ -446,6 +451,67 @@
                 "const": "model_prediction"
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "demo"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "supported_result": {
+                "const": false
+              }
+            },
+            "if": {
+              "properties": {
+                "result_kind": {
+                  "const": "comparison"
+                }
+              },
+              "required": [
+                "result_kind"
+              ]
+            },
+            "then": {
+              "required": [
+                "sample_nonzero"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "result_kind": {
+                "const": "comparison"
+              },
+              "match_scope": {
+                "enum": [
+                  "exact_band",
+                  "age_band_only",
+                  "model_average",
+                  "population_default",
+                  "unavailable"
+                ]
+              }
+            },
+            "required": [
+              "result_kind",
+              "match_scope"
+            ]
+          },
+          "then": {
+            "required": [
+              "sample_nonzero"
+            ]
           }
         },
         {

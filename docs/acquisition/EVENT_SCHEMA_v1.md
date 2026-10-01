@@ -59,7 +59,7 @@ restored/shared links.
 | `check_started` | `App.tsx`: accepted submission, before the API call; once per logical operation (a retry of the same unresolved operation keeps its id and does not re-announce) | `operation_id`, `entry_mode=fresh_check` |
 | `report_created` | `App.tsx`: validated `createReport` success, before navigation | `operation_id`, `entry_mode`, `result_kind`, `match_scope`, `persistence_mode` |
 | `result_rendered` | `ReportScreen`, from `ReportDashboard`'s post-commit effect (deferred one macrotask and cancelled on unmount), only when the final non-loading view is mounted, the runtime boundary is clear, and `classifyResult` reports a delivered state other than unavailable | `entry_mode`, `persistence_mode`, `render_delivered` (always true here), `supported_result`, `outcome_group`, `rate_valid`, `sample_nonzero` (omitted for `model_prediction`), `scope_visible`, `result_kind`, `match_scope`, `operation_id` (when a deliberate check) |
-| `result_unavailable` | `ReportUnavailable` committed from `ReportScreen`'s own unavailable branch, or a fully degraded report (`match_scope=unavailable`) committed in the dashboard | `entry_mode`, `reason` in `not_found, expired, unavailable, error`, `operation_id` (when a deliberate check) |
+| `result_unavailable` | `ReportUnavailable` committed from `ReportScreen`'s own unavailable branch, or a fully degraded report (`match_scope=unavailable`, real vehicle data) committed in the dashboard; the same scope on a demo report is `result_rendered` with `outcome_group=demo` | `entry_mode`, `reason` in `not_found, expired, unavailable, error`, `operation_id` (when a deliberate check) |
 | `check_failed` | `App.tsx`: `createReport` failed | `operation_id`, `entry_mode`, `error_category` (fixed enum), `stage=create_report` |
 | `render_failed` | `ResultErrorBoundary` (rejected chunk -> `lazy_load`, render throw -> `render`), or the final view mounted with a report that fails the contract/numeric checks (`contract_invalid`) | `entry_mode`, `stage`, `operation_id` (when a deliberate check) |
 
@@ -80,7 +80,8 @@ fallback emits `render_failed` only, never `result_unavailable` or `result_rende
 | Valid `comparison` / `exact_band` | true | true | `exact_comparison` |
 | Valid `comparison` / `age_band_only` or `model_average` | true | true | `broader_supported_comparison` |
 | `population_default` reference | true | false | `dataset_reference` |
-| `unavailable` scope | true | false | `unavailable` |
+| `unavailable` scope (real vehicle data) | true | false | `unavailable` |
+| Any contract-valid report with `vehicle_data_source = demo`, every scope including a demo prediction and a demo `unavailable` scope (DECISIONS.md D-004) | true | false | `demo` |
 | Contract-invalid combination, non-finite or out-of-range rate, invalid matched sample | false | false | `error` |
 | Loading, rejected chunk, error boundary | not emitted | not emitted | (`render_failed` where applicable) |
 
@@ -91,13 +92,23 @@ if `vehicle_prediction`; a prediction carries no cohort counts; matched scopes c
 counts. `sample_nonzero` is omitted for `model_prediction`. There is no `broad_fallback`
 result kind: broader comparison is an analytical grouping only.
 
-`scope_visible` v1 means: **scope disclosure text is available for this state.** It is
-data-derived (the UI's own `buildScopeDisclosure` yields non-empty text) and does not
-observe the DOM. The visible card states prediction vs `<make> <model> comparison` vs
-dataset-wide reference; the exact / age-band / model-average distinction is inside a
-collapsed `<details>`. Because every recognised scope has text, v1 is currently
-**non-discriminating** (true for every contract-valid report). What it should mean is a
-product decision, pending before collection.
+`scope_visible` v1 (DECISIONS.md **D-003**, metric `oa-metric-v1-draft`): the visibility
+requirement is met by the **scope class shown without interaction on the result card**:
+"Your car's predicted chance..." for a prediction; "This result isn't a prediction for
+`<REG>` ... `<make model>` comparison" for a comparison; "Dataset-wide reference
+comparison" for a reference. The exact / age-band / model-average detail (inside a
+collapsed `<details>`) is **not part of the visibility test**; it is reported through
+`match_scope` and `outcome_group`. `scope_visible` therefore remains a **data-derived,
+non-discriminating invariant**: true when the UI's own `buildScopeDisclosure` yields
+non-empty text for the state (true for every contract-valid report); it does not observe
+the DOM. A DOM-observed disclosure check would be a future metric version.
+
+`outcome_group = demo` (DECISIONS.md **D-004**): a report with `vehicle_data_source = demo`
+is synthetic and never a supported vehicle result. It is a delivered render
+(`render_delivered=true`, `supported_result=false`), emitted as `result_rendered` for every
+contract-valid scope, so `result_rendered` may carry `match_scope=unavailable` only with
+this group. A contract-invalid demo report is still `error`. The metric version is
+unchanged (`oa-metric-v1-draft`).
 
 ## Deduplication and ordering
 
@@ -123,6 +134,3 @@ It is memory only (session storage is unapproved) and does **not** survive a rel
   count can be repeated, and `entry_mode` can be wrong: it may claim `fresh_check` for what
   is really a reload. Counting a session once, and treating `entry_mode` as unreliable
   after reload, is the collector's job under the OA-005 design.
-- **Demo data.** Reports with `vehicle_data_source = demo` classify as supported (the
-  classifier does not look at it). Exclusion relies on the collector's `internal_test` /
-  source rules; the decision is pending.

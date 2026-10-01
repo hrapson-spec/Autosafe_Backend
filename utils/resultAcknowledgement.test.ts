@@ -78,8 +78,8 @@ describe('classifyResult: MEASUREMENT.md table rows', () => {
     expect(c.sample_nonzero).toBe(false);
   });
 
-  it('row 5: unavailable scope => unavailable group, NOT supported', () => {
-    const c = classifyResult(fixtureUnavailableDegraded);
+  it('row 5: unavailable scope (real vehicle data) => unavailable group, NOT supported', () => {
+    const c = classifyResult({ ...fixtureUnavailableDegraded, vehicle_data_source: 'dvsa' });
     expect(c.outcome_group).toBe('unavailable');
     expect(c.render_delivered).toBe(true);
     expect(c.supported_result).toBe(false);
@@ -266,6 +266,52 @@ describe('classifyResult: no numeric leakage', () => {
       for (const value of Object.values(classifyResult(fixture))) {
         expect(typeof value === 'boolean' || typeof value === 'string' || value === null).toBe(true);
       }
+    }
+  });
+});
+
+describe('classifyResult: demo data (DECISIONS.md D-004)', () => {
+  const asDemo = (r: ReportV2): ReportV2 => ({ ...r, vehicle_data_source: 'demo' });
+  const asReal = (r: ReportV2): ReportV2 => ({ ...r, vehicle_data_source: 'dvsa' });
+
+  it.each([
+    ['exact_band', fixtureExactHigh],
+    ['age_band_only', fixtureLegacyEstimated2_0],
+    ['model_average', fixtureModelAverageLow],
+    ['population_default', fixturePopulationDefault],
+    ['unavailable', fixtureUnavailableDegraded],
+    ['model_prediction (demo prediction)', fixtureVehiclePrediction],
+  ])('demo x %s => delivered, never supported, group demo', (_n, fixture) => {
+    const demo = classifyResult(asDemo(fixture));
+    expect(demo.render_delivered).toBe(true);
+    expect(demo.supported_result).toBe(false);
+    expect(demo.outcome_group).toBe('demo');
+    expect(demo.rate_valid).toBe(true);
+    // Typed scope/kind are still reported alongside the group.
+    expect(demo.match_scope).toBe(fixture.evidence.match_scope);
+    expect(demo.result_kind).toBe(fixture.result_kind);
+    // sample_nonzero stays omitted for predictions and present for comparisons.
+    expect('sample_nonzero' in demo).toBe(fixture.result_kind === 'comparison');
+  });
+
+  it('the same states from real data keep their normal groups (demo is the only difference)', () => {
+    expect(classifyResult(asReal(fixtureExactHigh)).outcome_group).toBe('exact_comparison');
+    expect(classifyResult(asReal(fixtureExactHigh)).supported_result).toBe(true);
+    expect(classifyResult(asReal(fixtureVehiclePrediction)).outcome_group).toBe('prediction');
+    expect(classifyResult(asReal(fixtureUnavailableDegraded)).outcome_group).toBe('unavailable');
+  });
+
+  it('a demo report that is also contract-invalid stays error / not delivered', () => {
+    const c = classifyResult(asDemo(withRisk(fixtureExactHigh, Number.NaN)));
+    expect(c.outcome_group).toBe('error');
+    expect(c.render_delivered).toBe(false);
+    expect(c.supported_result).toBe(false);
+    expect(classifyResult(asDemo(withKindScope(fixtureVehiclePrediction, 'comparison', 'model_prediction'))).outcome_group).toBe('error');
+  });
+
+  it('demo is never supported across the whole kind x scope matrix, even with valid samples', () => {
+    for (const fixture of [fixtureExactHigh, fixtureVehiclePrediction, fixturePopulationDefault, fixtureModelAverageLow]) {
+      expect(classifyResult(asDemo(withRisk(fixture, 0.5))).supported_result).toBe(false);
     }
   });
 });

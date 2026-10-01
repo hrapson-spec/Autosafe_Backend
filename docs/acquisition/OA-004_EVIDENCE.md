@@ -40,7 +40,8 @@ copy, lockfile, backend.
 | Valid comparison / exact_band | true / true / exact_comparison | "row 2"; "exact comparison from a fresh check" |
 | Valid comparison / age_band_only, model_average | true / true / broader_supported_comparison | "row 3" (x2); "age_band_only / model_average is a broader supported comparison" |
 | population_default | true / false / dataset_reference | "row 4"; "population_default renders as dataset_reference and is not supported" |
-| unavailable scope (fully degraded) | true / false / unavailable; emitted as `result_unavailable` (reason `unavailable`) | "row 5"; "fully degraded (unavailable scope) mounts as result_unavailable/unavailable, not result_rendered" |
+| unavailable scope, real vehicle data (fully degraded) | true / false / unavailable; emitted as `result_unavailable` (reason `unavailable`) | "row 5"; "fully degraded (unavailable scope, real vehicle data) mounts as result_unavailable/unavailable, not result_rendered" |
+| demo report (any contract-valid scope, D-004) | true / false / demo; emitted as `result_rendered` | `resultAcknowledgement.test.ts` "demo data"; `ReportScreen.acquisition.test.tsx` "D-004: a demo report (...)" |
 | ReportUnavailable mounted after failed retrieval | `result_unavailable`, reason not_found / expired / error | "failed retrieval: result_unavailable with a fixed reason" (5 codes + non-ReportApiError); "an unsaved route without an inline payload is unavailable" |
 | Loading (spinner / API 200 alone) | nothing emitted | "loading never emits"; `ReportScreen.lazyDelay.test.tsx` |
 | Rejected lazy chunk | false / false / error; unavailable error view shown; `render_failed` `lazy_load`; no result events | `ReportScreen.lazyReject.test.tsx`; `ResultErrorBoundary.test.tsx` "chunk load failure" |
@@ -57,7 +58,7 @@ copy, lockfile, backend.
 | Safe-field privacy | every event type serialised; no forbidden key; no token/VRM/make/model/URL value; only number is `schema_version` | `acquisitionEvents.test.ts` "safe fields only" (3) |
 | No transport | source of the three new modules has no fetch / sendBeacon / XHR / WebSocket / EventSource / Image / navigator | `acquisitionEvents.test.ts` "contains no network transport" (x3); built bundle has no `__setAcquisitionSinkForTests` or `api/acquisition` string (grep, below) |
 | Schema shape | emitted events validate; forbidden fields, bad enums, combination rules rejected; TS and JSON enums agree | `acquisitionEvents.test.ts` "event schema ..." (6) using a small hand checker (`acquisitionSchemaCheck.testutil.ts`; no new dependency) |
-| Disclosure text mounted | the disclosure text that `scope_visible` v1 assumes exists is mounted (collapsed) for every scope; the flag itself is data-derived | "scope_visible tracks what the real dashboard renders" (6 scopes) |
+| Disclosure text mounted | the disclosure text that `scope_visible` v1 assumes exists is mounted (collapsed) for every scope; the flag itself is data-derived (D-003) | "scope_visible tracks what the real dashboard renders" (6 scopes) |
 
 Mutation spot checks (temporary, reverted, files restored byte-identical): disabling the
 dedup marker failed 4 tests; counting `dataset_reference` as a supported group initially
@@ -71,7 +72,7 @@ during render failed at least 10 existing and new tests.
 |---|---|---|---|
 | `npm run typecheck` | 0 | clean | 0 |
 | `npm run lint` | 0 | clean | 0 |
-| `npm test` | 1 | 22 files (21 pass, 1 fail); 395 tests: 386 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
+| `npm test` | 1 | 22 files (21 pass, 1 fail); 409 tests: 400 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
 | `npm run build` | 0 | built; `git status` shows `static/` outputs ignored | 0 |
 | `.venv/bin/python -m pytest tests/ -q` | 0 | 529 passed, 1 skipped | 529 passed, 1 skipped |
 | `.venv/bin/python scripts/claim_sweep.py` | 0 | "clean" | 0 |
@@ -81,35 +82,39 @@ during render failed at least 10 existing and new tests.
 
 The 9 `npm test` failures are the same 9 as baseline (identical failing test names,
 `components/ReportDashboard.test.tsx`, `localStorage.clear` not a function under Node 26)
-and are unrelated to this change. New tests: +114 (all pass). Bundle grep after build:
+and are unrelated to this change. New tests: +128 (all pass). Bundle grep after build:
 `__setAcquisitionSinkForTests` 0 files, `__resetAcquisitionStateForTests` 0, `api/acquisition`
 0, `sendBeacon` 0; the event names and `oa-metric-v1-draft` are present (the typed emitters
 are bundled; they reach a no-op sink).
 
 ## Decisions and ambiguities (for review)
 
-1. **scope_visible v1 is data-derived and non-discriminating (see Review findings, item 3).**
-   The flag means "scope disclosure text available for this state" and is true for every
-   contract-valid report; it does not observe the DOM. The text that distinguishes
-   exact_band / age_band_only / model_average (`buildScopeDisclosure`) is rendered only inside
-   the "How this result was calculated" `<details>`, collapsed by default; the visible card
-   states only prediction vs "<make> <model> comparison" vs "dataset-wide reference
-   comparison". Whether the flag should mean more (for instance visibility without
-   interaction, which would stop age_band_only and model_average qualifying) materially
-   affects the primary numerator and needs a product ruling before collection; the change is
-   confined to `scopeLabelPresent` in `utils/resultAcknowledgement.ts`.
+1. **scope_visible v1 (decided: DECISIONS.md D-003).** The visibility requirement is met by
+   the scope class shown without interaction on the result card (prediction / "<make model>
+   comparison, not a prediction for <REG>" / "Dataset-wide reference comparison"). The
+   exact / age-band / model-average detail (collapsed `<details>`, via `buildScopeDisclosure`)
+   is not part of the visibility test; it is reported through `match_scope` and
+   `outcome_group`. `scope_visible` remains a data-derived, non-discriminating invariant
+   (true for every contract-valid report; it does not observe the DOM). A DOM-observed
+   check would be a future metric version. `metric_version` stays `oa-metric-v1-draft`.
 2. **Numeric or contract invalidity means not delivered.** A mounted view with an invalid
    rate or sample is reported as `render_failed` `contract_invalid`, never as
    `result_rendered` with `rate_valid=false`. Consequence: on an emitted `result_rendered`,
    `rate_valid` is always true and `sample_nonzero` is informative only for reference scopes.
    The alternative (emit `result_rendered` with false flags) is a one-function change.
-3. **Fully degraded report (scope `unavailable`)** is emitted as `result_unavailable`
-   (reason `unavailable`), per the MEASUREMENT.md events table, not as `result_rendered`.
+3. **Fully degraded report (scope `unavailable`, real vehicle data)** is emitted as
+   `result_unavailable` (reason `unavailable`), per the MEASUREMENT.md events table. A demo
+   report with the same scope is `result_rendered` with `outcome_group=demo` (D-004 applies to
+   every scope). Note: the repository's degraded fixture (`fixtureUnavailableDegraded`) is a
+   demo report, so it now classifies as `demo`, not `unavailable`; if operations want
+   unavailable to take precedence over demo for the degraded fallback, that is a one-line
+   ordering change.
 4. **`check_started` once per logical operation.** A retry of the same unresolved operation
    keeps the operation id and does not re-announce (no attempt index: not approved).
-5. **Demo data** (`vehicle_data_source = demo`) is not distinguished by the classifier, so a
-   demo report classifies as supported; the spec does not mention it. Exclusion relies on the
-   collector's `internal_test` / source rules; decision pending.
+5. **Demo data (decided: DECISIONS.md D-004).** A report with `vehicle_data_source = demo`
+   gets `render_delivered=true`, `supported_result=false`, `outcome_group='demo'` (new enum
+   member) for every contract-valid scope, including a demo prediction (the contract does not
+   forbid one; covered by tests). Contract-invalid demo reports remain `error`.
 6. **Reload.** Browsers keep `history.state` across a reload or tab restore, so a restored
    fresh-check report route still carries its operation id: with the in-memory marker gone it
    may emit a second `result_rendered` for that operation, and `entry_mode` can be wrong
@@ -149,9 +154,22 @@ are bundled; they reach a no-op sink).
    description (and the property description), and the code comment. The earlier wording in
    this file that the rule "tracks the DOM" is withdrawn; the DOM test only shows the
    disclosure text is mounted.
-4. **Documented only.** Demo-data reports classify as supported (exclusion relies on the
-   collector's `internal_test` / source rules; decision pending). Reload / tab restore keeps
-   `history.state`, so `entry_mode` can be wrong (claims `fresh_check`), not only the count.
+4. **Documented only.** Reload / tab restore keeps `history.state`, so `entry_mode` can be
+   wrong (claims `fresh_check`), not only the count. (The demo-data half of this item is
+   superseded by D-004, below.)
+
+## Metric decisions implemented (DECISIONS.md D-003, D-004)
+
+- **D-004:** `OutcomeGroup` gains `demo`; `classifyResult` returns delivered / not supported /
+  `demo` for any contract-valid demo report; `result_rendered` carries it (schema enum, the
+  `unavailable` match scope is allowed only with it, demo never supported, sample_nonzero rules
+  preserved); mapping table in `EVENT_SCHEMA_v1.md` updated. Tests: `resultAcknowledgement.test.ts`
+  "demo data" (demo x exact / age / model-average / population_default / unavailable / prediction,
+  never supported, invalid stays error, real-data twins keep their groups),
+  `ReportScreen.acquisition.test.tsx` (each demo scope emits `result_rendered` demo, never
+  `result_unavailable`), `acquisitionEvents.test.ts` (schema rules for demo events).
+- **D-003:** documentation only (code comment, `EVENT_SCHEMA_v1.md`, schema description and
+  property description, this file). `metric_version` unchanged.
 
 ## Not executed
 
