@@ -57,7 +57,7 @@ copy, lockfile, backend.
 | Safe-field privacy | every event type serialised; no forbidden key; no token/VRM/make/model/URL value; only number is `schema_version` | `acquisitionEvents.test.ts` "safe fields only" (3) |
 | No transport | source of the three new modules has no fetch / sendBeacon / XHR / WebSocket / EventSource / Image / navigator | `acquisitionEvents.test.ts` "contains no network transport" (x3); built bundle has no `__setAcquisitionSinkForTests` or `api/acquisition` string (grep, below) |
 | Schema shape | emitted events validate; forbidden fields, bad enums, combination rules rejected; TS and JSON enums agree | `acquisitionEvents.test.ts` "event schema ..." (6) using a small hand checker (`acquisitionSchemaCheck.testutil.ts`; no new dependency) |
-| scope_visible tracks the DOM | the disclosure text the rule relies on is mounted for every scope | "scope_visible tracks what the real dashboard renders" (6 scopes) |
+| Disclosure text mounted | the disclosure text that `scope_visible` v1 assumes exists is mounted (collapsed) for every scope; the flag itself is data-derived | "scope_visible tracks what the real dashboard renders" (6 scopes) |
 
 Mutation spot checks (temporary, reverted, files restored byte-identical): disabling the
 dedup marker failed 4 tests; counting `dataset_reference` as a supported group initially
@@ -71,31 +71,33 @@ during render failed at least 10 existing and new tests.
 |---|---|---|---|
 | `npm run typecheck` | 0 | clean | 0 |
 | `npm run lint` | 0 | clean | 0 |
-| `npm test` | 1 | 21 files (20 pass, 1 fail); 392 tests: 383 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
+| `npm test` | 1 | 22 files (21 pass, 1 fail); 395 tests: 386 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
 | `npm run build` | 0 | built; `git status` shows `static/` outputs ignored | 0 |
 | `.venv/bin/python -m pytest tests/ -q` | 0 | 529 passed, 1 skipped | 529 passed, 1 skipped |
 | `.venv/bin/python scripts/claim_sweep.py` | 0 | "clean" | 0 |
 | `.venv/bin/python scripts/check_openapi_drift.py` | 0 | no drift | 0 |
-| `npm run test:e2e -- e2e/token-screens.spec.ts e2e/report-and-reset.spec.ts e2e/form-lifecycle.spec.ts` | 0 | 15 passed (chromium-1243, own preview build on 4173, port was free beforehand) | not baselined |
+| `npm run test:e2e -- e2e/token-screens.spec.ts e2e/report-and-reset.spec.ts e2e/form-lifecycle.spec.ts` (first pass) | 0 | 15 passed (chromium-1243, own preview build on 4173, port was free beforehand) | not baselined |
+| `playwright test` (FULL suite, after review fixes; temporary config on port 4199, `reuseExistingServer: false`, own build) | 0 | 29 passed | not baselined |
 
 The 9 `npm test` failures are the same 9 as baseline (identical failing test names,
 `components/ReportDashboard.test.tsx`, `localStorage.clear` not a function under Node 26)
-and are unrelated to this change. New tests: +111 (all pass). Bundle grep after build:
+and are unrelated to this change. New tests: +114 (all pass). Bundle grep after build:
 `__setAcquisitionSinkForTests` 0 files, `__resetAcquisitionStateForTests` 0, `api/acquisition`
 0, `sendBeacon` 0; the event names and `oa-metric-v1-draft` are present (the typed emitters
 are bundled; they reach a no-op sink).
 
 ## Decisions and ambiguities (for review)
 
-1. **scope_visible counts the collapsed disclosure.** The scope text that distinguishes
-   exact_band / age_band_only / model_average (`buildScopeDisclosure`) is rendered only
-   inside the "How this result was calculated" `<details>`, collapsed by default. Inline,
-   the result states only "isn't a prediction" and "<make> <model> comparison" vs
-   "dataset-wide reference comparison". The rule counts DOM presence including the
-   collapsed disclosure. If product wants it visible without interaction, age_band_only
-   and model_average would stop qualifying; the change is confined to
-   `scopeLabelPresent` in `utils/resultAcknowledgement.ts`. This materially affects the
-   primary numerator, so it needs a ruling.
+1. **scope_visible v1 is data-derived and non-discriminating (see Review findings, item 3).**
+   The flag means "scope disclosure text available for this state" and is true for every
+   contract-valid report; it does not observe the DOM. The text that distinguishes
+   exact_band / age_band_only / model_average (`buildScopeDisclosure`) is rendered only inside
+   the "How this result was calculated" `<details>`, collapsed by default; the visible card
+   states only prediction vs "<make> <model> comparison" vs "dataset-wide reference
+   comparison". Whether the flag should mean more (for instance visibility without
+   interaction, which would stop age_band_only and model_average qualifying) materially
+   affects the primary numerator and needs a product ruling before collection; the change is
+   confined to `scopeLabelPresent` in `utils/resultAcknowledgement.ts`.
 2. **Numeric or contract invalidity means not delivered.** A mounted view with an invalid
    rate or sample is reported as `render_failed` `contract_invalid`, never as
    `result_rendered` with `rate_valid=false`. Consequence: on an emitted `result_rendered`,
@@ -105,22 +107,55 @@ are bundled; they reach a no-op sink).
    (reason `unavailable`), per the MEASUREMENT.md events table, not as `result_rendered`.
 4. **`check_started` once per logical operation.** A retry of the same unresolved operation
    keeps the operation id and does not re-announce (no attempt index: not approved).
-5. **Demo data** (`vehicle_data_source = demo`) is not distinguished by the classifier; the
-   spec does not mention it. Synthetic/demo exclusion belongs to the `internal_test`
-   source group at the collector.
-6. **Reload.** Browsers keep `history.state` across a reload, so a reloaded fresh-check
-   report route still carries its operation id and, with the in-memory marker gone, may
-   emit a second `result_rendered` for that operation. Documented; the collector's
-   per-session aggregation must count once. Not exercised in a real browser.
+5. **Demo data** (`vehicle_data_source = demo`) is not distinguished by the classifier, so a
+   demo report classifies as supported; the spec does not mention it. Exclusion relies on the
+   collector's `internal_test` / source rules; decision pending.
+6. **Reload.** Browsers keep `history.state` across a reload or tab restore, so a restored
+   fresh-check report route still carries its operation id: with the in-memory marker gone it
+   may emit a second `result_rendered` for that operation, and `entry_mode` can be wrong
+   (it may claim `fresh_check`). Documented; the collector must count once and treat
+   `entry_mode` as unreliable after reload. Not exercised in a real browser.
 7. A rejected lazy chunk stays rejected for that `lazy()` instance until a reload; the
    fallback view offers the existing "Check a vehicle" button.
 8. `landing_observed` is typed and in the schema but **not emitted** anywhere (it needs
    the OA-005 session/landing design). `session_id`, `release_sha`, `received_at` are
    collector-side and omitted from the client event types.
 
+## Review findings (coordinator follow-up, 2026-10-01)
+
+1. **MEDIUM, fixed: result_rendered for a torn-down result.** Reproduced by mutation: with
+   the acknowledgement called directly from the dashboard effect, a descendant whose passive
+   effect throws gives events `result_rendered, render_failed` with the result gone from the
+   DOM. Fix: `ReportDashboard` schedules `onRendered` with `setTimeout(0)` and clears it in
+   the effect cleanup (the boundary's re-render unmounts the view before the timer fires), and
+   `ReportScreen` also latches a render failure (`renderFailedRef`) and skips the
+   acknowledgement. Tests: `ReportScreen.effectThrow.test.tsx` (real dashboard, throwing
+   descendant effect, with and without StrictMode: events are exactly `[render_failed]`; it
+   fails under the immediate-call mutation); `ReportScreen.acquisition.test.tsx`
+   "onRendered fires once, after the commit, and is cancelled if the view unmounts first"
+   (fake timers, includes StrictMode, exactly once). Residual: a render error AFTER the timer
+   has fired can still yield both `result_rendered` and `render_failed` for one operation;
+   aggregation must let `render_failed` win.
+2. **LOW, fixed: restored-link dedup per mount.** The per-mount id and the failure latch are
+   reset when the route token changes (nothing stored or derived from the token). Test:
+   "restored link navigated within the same mount (A -> B)" gives two `result_rendered`
+   (fails with the reset removed).
+3. **LOW, documentation made honest (logic unchanged).** `scope_visible` v1 = "scope
+   disclosure text available for this state": data-derived, does not observe the DOM, true for
+   every contract-valid report, i.e. currently non-discriminating; the visible card states
+   prediction vs `<make model> comparison` vs dataset-wide reference, and the
+   exact/age/model distinction is inside a collapsed `<details>`. Product decision pending
+   before collection. Updated in `EVENT_SCHEMA_v1.md`, the `event_schema_v1.json`
+   description (and the property description), and the code comment. The earlier wording in
+   this file that the rule "tracks the DOM" is withdrawn; the DOM test only shows the
+   disclosure text is mounted.
+4. **Documented only.** Demo-data reports classify as supported (exclusion relies on the
+   collector's `internal_test` / source rules; decision pending). Reload / tab restore keeps
+   `history.state`, so `entry_mode` can be wrong (claims `fresh_check`), not only the count.
+
 ## Not executed
 
-- Full Playwright suite (only the three specs above); Node 20 / CI run.
+- Node 20 / CI run. (The full Playwright suite was run after the review fixes: 29 passed.)
 - A Playwright lifecycle test reading the sink: skipped, because a browser-side test hook
   would require exposing the sink outside the module (contrary to "not exposed on window
   in production builds"); the same lifecycle is covered in vitest with an injected sink.

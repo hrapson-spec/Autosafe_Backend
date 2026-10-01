@@ -101,6 +101,9 @@ const ReportScreen: React.FC = () => {
   const entryMode: EntryMode = operationId ? 'fresh_check' : 'restored_link';
   const persistenceMode: PersistenceMode = inlineReport ? 'inline_unsaved' : 'saved';
   const mountIdRef = useRef<string | null>(null);
+  // Set when a render failure is recorded for the current route entry; the
+  // acknowledgement checks it so a torn-down result is never reported.
+  const renderFailedRef = useRef(false);
   // Dedup key: the operation id, or a per-mount id for restored links.
   // In-memory only; it does not survive a reload.
   const completionKey = (): string => operationId ?? (mountIdRef.current ??= randomId());
@@ -111,6 +114,7 @@ const ReportScreen: React.FC = () => {
 
   const handleRendered = () => {
     if (!report) return;
+    if (renderFailedRef.current) return;
     const c = classifyResult(report);
     if (!c.render_delivered || c.outcome_group === 'error' || c.result_kind === null || c.match_scope === null) {
       // The final view mounted but the report fails the contract/numeric
@@ -147,9 +151,18 @@ const ReportScreen: React.FC = () => {
   };
 
   function handleRenderFailed(stage: RenderFailedStage): void {
+    renderFailedRef.current = true;
     if (!claimCompletion('render_failed', completionKey())) return;
     emitAcquisitionEvent({ event: 'render_failed', ...entryFields(), stage });
   }
+
+  // A new route entry within the same mount (restored report A -> B) is a new
+  // observation: reset the per-mount dedup id and failure latch. Nothing is
+  // stored or derived from the token itself, only the fact that it changed.
+  useEffect(() => {
+    mountIdRef.current = null;
+    renderFailedRef.current = false;
+  }, [token]);
 
   useEffect(() => {
     if (inlineReport) {

@@ -120,30 +120,31 @@ function sampleIsNonzero(report: ReportV2): boolean {
 }
 
 /**
- * Whether the scope/limitation label the UI shows for this state is actually
- * present.
+ * scope_visible v1: "scope disclosure text is available for this state".
+ *
+ * HONEST STATUS: this is DATA-DERIVED. It calls the UI's own copy function
+ * (buildScopeDisclosure) and checks the text is non-empty; it does NOT
+ * observe the DOM. Because that function yields text for every recognised
+ * scope, v1 is true for every contract-valid report: it is currently
+ * non-discriminating. The decision whether it should mean more is a product
+ * decision for Henri, pending before any collection; the classifier logic is
+ * deliberately unchanged here.
  *
  * What the UI renders (components/ReportDashboard.tsx, ReportResult.tsx,
- * ReportCopy.tsx):
- *  - Always inline: ReportResult's heading/summary states the kind of result.
- *    A vehicle_prediction says "predicted chance"; a comparison says it
- *    "isn't a prediction" and names either "<make> <model> comparison" (a
- *    vehicle-matched scope) or "dataset-wide reference comparison".
- *  - Always in the DOM: ReportDashboard renders
- *    `buildScopeDisclosure(report)` in the "How this result was calculated"
- *    disclosure for every report. That text is the only place that
- *    distinguishes exact_band / age_band_only / model_average, and it is
- *    inside a <details> that is collapsed by default.
+ * ReportCopy.tsx), for reference:
+ *  - Always inline: ReportResult's visible card states prediction vs
+ *    "<make> <model> comparison" vs "dataset-wide reference comparison".
+ *  - Always in the DOM but collapsed by default: ReportDashboard renders
+ *    `buildScopeDisclosure(report)` inside the "How this result was
+ *    calculated" <details>. That is the only place the exact_band /
+ *    age_band_only / model_average distinction appears.
+ * A test (ReportScreen.acquisition.test.tsx) shows the disclosure text is
+ * mounted for every scope, but the flag itself does not read it from there.
  *
- * Rule: the scope label is "visible" when buildScopeDisclosure produces
- * non-empty text for this scope (it throws on an unrecognised scope, which
- * is treated as not visible), and, for the vehicle-matched cohort scopes
- * whose label and text interpolate the vehicle, make and model are present.
- * Because the UI's own copy function is the evidence, the flag tracks what
- * is rendered rather than restating the scope. NOTE: this counts the
- * collapsed disclosure as present. If product wants the scope visible
- * without interaction, change this one function (the default-collapsed
- * disclosure would then not qualify for age_band_only / model_average).
+ * Rule: buildScopeDisclosure produces non-empty text for this scope (it
+ * throws on an unrecognised scope, treated as not available), and, for the
+ * vehicle-matched cohort scopes whose text interpolates the vehicle, make
+ * and model are present.
  */
 function scopeLabelPresent(report: ReportV2, scope: MatchScope): boolean {
   try {

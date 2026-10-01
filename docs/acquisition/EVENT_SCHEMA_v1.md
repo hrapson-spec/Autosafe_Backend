@@ -58,7 +58,7 @@ restored/shared links.
 | `landing_observed` | **Defined, not emitted in this branch** (needs the approved session design) | `landing_path`, `source_group`, `observation_state` |
 | `check_started` | `App.tsx`: accepted submission, before the API call; once per logical operation (a retry of the same unresolved operation keeps its id and does not re-announce) | `operation_id`, `entry_mode=fresh_check` |
 | `report_created` | `App.tsx`: validated `createReport` success, before navigation | `operation_id`, `entry_mode`, `result_kind`, `match_scope`, `persistence_mode` |
-| `result_rendered` | `ReportScreen`, from `ReportDashboard`'s post-commit effect, only when the final non-loading view is mounted, the runtime boundary is clear, and `classifyResult` reports a delivered state other than unavailable | `entry_mode`, `persistence_mode`, `render_delivered` (always true here), `supported_result`, `outcome_group`, `rate_valid`, `sample_nonzero` (omitted for `model_prediction`), `scope_visible`, `result_kind`, `match_scope`, `operation_id` (when a deliberate check) |
+| `result_rendered` | `ReportScreen`, from `ReportDashboard`'s post-commit effect (deferred one macrotask and cancelled on unmount), only when the final non-loading view is mounted, the runtime boundary is clear, and `classifyResult` reports a delivered state other than unavailable | `entry_mode`, `persistence_mode`, `render_delivered` (always true here), `supported_result`, `outcome_group`, `rate_valid`, `sample_nonzero` (omitted for `model_prediction`), `scope_visible`, `result_kind`, `match_scope`, `operation_id` (when a deliberate check) |
 | `result_unavailable` | `ReportUnavailable` committed from `ReportScreen`'s own unavailable branch, or a fully degraded report (`match_scope=unavailable`) committed in the dashboard | `entry_mode`, `reason` in `not_found, expired, unavailable, error`, `operation_id` (when a deliberate check) |
 | `check_failed` | `App.tsx`: `createReport` failed | `operation_id`, `entry_mode`, `error_category` (fixed enum), `stage=create_report` |
 | `render_failed` | `ResultErrorBoundary` (rejected chunk -> `lazy_load`, render throw -> `render`), or the final view mounted with a report that fails the contract/numeric checks (`contract_invalid`) | `entry_mode`, `stage`, `operation_id` (when a deliberate check) |
@@ -91,16 +91,38 @@ if `vehicle_prediction`; a prediction carries no cohort counts; matched scopes c
 counts. `sample_nonzero` is omitted for `model_prediction`. There is no `broad_fallback`
 result kind: broader comparison is an analytical grouping only.
 
-`scope_visible` is derived from the UI's own copy function: `buildScopeDisclosure`
-must produce text for the scope. Note that text lives in the "How this result was
-calculated" disclosure, which is collapsed by default; see the evidence note.
+`scope_visible` v1 means: **scope disclosure text is available for this state.** It is
+data-derived (the UI's own `buildScopeDisclosure` yields non-empty text) and does not
+observe the DOM. The visible card states prediction vs `<make> <model> comparison` vs
+dataset-wide reference; the exact / age-band / model-average distinction is inside a
+collapsed `<details>`. Because every recognised scope has text, v1 is currently
+**non-discriminating** (true for every contract-valid report). What it should mean is a
+product decision, pending before collection.
 
-## Deduplication
+## Deduplication and ordering
+
+The acknowledgement is deferred one macrotask after the commit (`setTimeout(0)` in
+`ReportDashboard`'s effect) and cancelled by the effect cleanup, plus a render-failure
+latch in `ReportScreen`. If a descendant's passive effect throws, React still runs the
+dashboard's effect in the same flush, but the error boundary then unmounts the view and
+the cleanup cancels the timer, so a torn-down result is not acknowledged. If a render
+error happens **after** `result_rendered` has been emitted, both `result_rendered` and
+`render_failed` can exist for the same operation; **aggregation must let `render_failed`
+win for that operation.**
 
 An in-memory completion marker keyed by `operation_id` (or a per-mount random id for
-restored links) lets StrictMode effect replays and remounts emit each of
+restored links, reset when the route token changes within the same mount, with nothing
+stored or derived from the token) lets StrictMode effect replays and remounts emit each of
 `result_rendered`, `result_unavailable` and `render_failed` at most once per operation.
 It is memory only (session storage is unapproved) and does **not** survive a reload.
-Browsers retain `history.state` across a reload, so a reloaded fresh-check report route
-can emit again with the same `operation_id`; counting a session once is the collector's
-job under the OA-005 design.
+
+## Known limits (documented, not fixed in code)
+
+- **Reload / tab restore.** Browsers retain `history.state` across a reload or tab
+  restore, so a restored fresh-check report route still carries its operation id. The
+  count can be repeated, and `entry_mode` can be wrong: it may claim `fresh_check` for what
+  is really a reload. Counting a session once, and treating `entry_mode` as unreliable
+  after reload, is the collector's job under the OA-005 design.
+- **Demo data.** Reports with `vehicle_data_source = demo` classify as supported (the
+  classifier does not look at it). Exclusion relies on the collector's `internal_test` /
+  source rules; the decision is pending.

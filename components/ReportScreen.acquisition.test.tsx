@@ -7,7 +7,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import type { ReportV2 } from '../types';
 import ReportScreen from './ReportScreen';
@@ -395,15 +395,75 @@ describe('scope_visible tracks what the real dashboard renders', () => {
     expect(details!.textContent).toContain(disclosure);
   });
 
-  it('onRendered fires once from the committed view', () => {
-    const onRendered = vi.fn();
+  it('onRendered fires once, after the commit, and is cancelled if the view unmounts first', async () => {
+    vi.useFakeTimers();
+    try {
+      const onRendered = vi.fn();
+      const mount = () =>
+        render(
+          <HelmetProvider>
+            <MemoryRouter>
+              <ReportDashboard report={fixtureExactHigh} onReset={() => undefined} onRendered={onRendered} />
+            </MemoryRouter>
+          </HelmetProvider>
+        );
+      const first = mount();
+      expect(onRendered).not.toHaveBeenCalled(); // deferred past the commit
+      vi.advanceTimersByTime(5);
+      expect(onRendered).toHaveBeenCalledTimes(1);
+      first.unmount();
+
+      onRendered.mockClear();
+      const second = mount();
+      second.unmount(); // torn down before the timer fires
+      vi.advanceTimersByTime(50);
+      expect(onRendered).not.toHaveBeenCalled();
+
+      // StrictMode replays the effect (mount, cleanup, mount): still exactly once.
+      onRendered.mockClear();
+      render(
+        <React.StrictMode>
+          <HelmetProvider>
+            <MemoryRouter>
+              <ReportDashboard report={fixtureExactHigh} onReset={() => undefined} onRendered={onRendered} />
+            </MemoryRouter>
+          </HelmetProvider>
+        </React.StrictMode>
+      );
+      vi.advanceTimersByTime(50);
+      expect(onRendered).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('restored link navigated within the same mount (A -> B)', () => {
+  it('is a new observation per route entry: two result_rendered, none stored from the token', async () => {
+    vi.mocked(getReport).mockImplementation(async (t: string) =>
+      t === 'tok-A' ? fixtureExactHigh : fixtureModelAverageLow
+    );
+    function Nav() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => navigate('/app/report/tok-B')}>go-b</button>;
+    }
     render(
       <HelmetProvider>
-        <MemoryRouter>
-          <ReportDashboard report={fixtureExactHigh} onReset={() => undefined} onRendered={onRendered} />
+        <MemoryRouter initialEntries={['/app/report/tok-A']}>
+          <Nav />
+          <Routes>
+            <Route path="/app/report/:token" element={<ReportScreen />} />
+          </Routes>
         </MemoryRouter>
       </HelmetProvider>
     );
-    expect(onRendered).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(byName('result_rendered')).toHaveLength(1));
+    expect(byName('result_rendered')[0]).toMatchObject({ match_scope: 'exact_band', entry_mode: 'restored_link' });
+    screen.getByRole('button', { name: 'go-b' }).click();
+    await waitFor(() => expect(byName('result_rendered')).toHaveLength(2));
+    expect(byName('result_rendered')[1]).toMatchObject({ match_scope: 'model_average', entry_mode: 'restored_link' });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(byName('result_rendered')).toHaveLength(2);
+    expect(JSON.stringify(events)).not.toContain('tok-');
   });
 });

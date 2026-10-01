@@ -26,8 +26,10 @@ interface ReportDashboardProps {
   postcode?: string;
   onReset: () => void;
   /**
-   * Called from a post-commit effect once this final, non-loading view (the
-   * header plus ReportResult and the scope disclosure) is mounted. Never
+   * Called once this final, non-loading view (the header plus ReportResult
+   * and the scope disclosure) is mounted: scheduled from a post-commit effect
+   * with setTimeout(0) and cancelled if the view unmounts first (e.g. an
+   * error boundary replacing it after a descendant effect throws). Never
    * called while the lazy chunk is loading, and never if rendering throws.
    * Receives no data.
    */
@@ -53,8 +55,17 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
   useEffect(() => {
     onRenderedRef.current = onRendered;
   });
+  // The acknowledgement is deferred one macrotask and cancelled by the
+  // effect cleanup. If a descendant's passive effect throws, React still runs
+  // this effect in the same flush, but then re-renders the error boundary,
+  // which unmounts this view and runs the cleanup before the timer fires: a
+  // torn-down result is never acknowledged. (An error AFTER the timer fires
+  // can still yield both events; see EVENT_SCHEMA_v1.md.)
   useEffect(() => {
-    onRenderedRef.current?.();
+    const timer = setTimeout(() => {
+      onRenderedRef.current?.();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [report]);
 
   const reminderBlockRef = useRef<HTMLDivElement>(null!);

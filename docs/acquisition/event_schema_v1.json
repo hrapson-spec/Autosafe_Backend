@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:autosafe:acquisition:event:v1",
   "title": "AutoSafe acquisition event v1 (PROPOSED - collection OFF; awaits OA-005)",
-  "description": "Proposed safe-field event schema. No collector, storage, session persistence or retention is approved. Events are client-reported acknowledgements and prove neither accuracy nor model qualification. Never carries risk figures, sample counts, report identity, registration, postcode, make/model, URLs, referrers, error text or free text.",
+  "description": "Proposed safe-field event schema. scope_visible v1 means: scope disclosure text is available for this state (data-derived from the same copy function the UI uses; it does not observe the DOM). The visible card states prediction vs <make model> comparison vs dataset-wide reference; the exact_band/age_band_only/model_average distinction is inside a collapsed details element. v1 is therefore currently non-discriminating (true for every contract-valid report), pending a product decision before collection. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win. No collector, storage, session persistence or retention is approved. Events are client-reported acknowledgements and prove neither accuracy nor model qualification. Never carries risk figures, sample counts, report identity, registration, postcode, make/model, URLs, referrers, error text or free text.",
   "oneOf": [
     {
       "type": "object",
@@ -247,7 +247,8 @@
           "type": "boolean"
         },
         "scope_visible": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "v1: scope disclosure text available for this state (data-derived, non-discriminating, pending product decision)"
         },
         "result_kind": {
           "enum": [
