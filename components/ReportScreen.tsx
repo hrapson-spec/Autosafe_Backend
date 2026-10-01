@@ -30,8 +30,25 @@ import { ReportApiError } from '../services/errorMessages';
 import { reportRateDisplay } from './ReportCopy';
 import { trackReportView } from '../utils/analytics';
 import ReportUnavailable, { type ReportUnavailableReason } from './ReportUnavailable';
+import ResultErrorBoundary, { ResultChunkLoadError } from './ResultErrorBoundary';
+import { classifyResult } from '../utils/resultAcknowledgement';
+import {
+  claimCompletion,
+  emitAcquisitionEvent,
+  randomId,
+  readOperationId,
+  type EntryMode,
+  type PersistenceMode,
+  type RenderFailedStage,
+} from '../utils/acquisitionEvents';
 
-const ReportDashboard = lazy(() => import('./ReportDashboard'));
+// A rejected chunk is re-thrown as a typed error so ResultErrorBoundary can
+// tell a load failure from a render throw without reading any message.
+const ReportDashboard = lazy(() =>
+  import('./ReportDashboard').catch(() => {
+    throw new ResultChunkLoadError();
+  })
+);
 
 // Kept in sync by comment with App.tsx's handleCarCheck, which is the only
 // place this literal is produced.
@@ -40,6 +57,8 @@ const UNSAVED_TOKEN = 'unsaved';
 interface ReportScreenLocationState {
   postcode?: string;
   inlineReport?: ReportV2;
+  /** Random per-check id minted in App.tsx; absent on restored/shared links. */
+  operationId?: unknown;
 }
 
 function reasonForError(err: unknown): ReportUnavailableReason {
@@ -73,6 +92,64 @@ const ReportScreen: React.FC = () => {
   const [unavailableReason, setUnavailableReason] = useState<ReportUnavailableReason | null>(null);
   const [isLoading, setIsLoading] = useState(!inlineReport);
   const viewedRef = useRef<string | null>(null);
+
+  // --- Acquisition measurement (OA-004; no data leaves the browser) --------
+  // A report reached with a navigation-state operation id is the result of a
+  // deliberate check in this tab; anything else is a restored/shared link and
+  // never claims an original check_started.
+  const operationId = readOperationId(state.operationId);
+  const entryMode: EntryMode = operationId ? 'fresh_check' : 'restored_link';
+  const persistenceMode: PersistenceMode = inlineReport ? 'inline_unsaved' : 'saved';
+  const mountIdRef = useRef<string | null>(null);
+  // Dedup key: the operation id, or a per-mount id for restored links.
+  // In-memory only; it does not survive a reload.
+  const completionKey = (): string => operationId ?? (mountIdRef.current ??= randomId());
+  const entryFields = () => ({
+    entry_mode: entryMode,
+    ...(operationId ? { operation_id: operationId } : {}),
+  });
+
+  const handleRendered = () => {
+    if (!report) return;
+    const c = classifyResult(report);
+    if (!c.render_delivered || c.outcome_group === 'error' || c.result_kind === null || c.match_scope === null) {
+      // The final view mounted but the report fails the contract/numeric
+      // checks: never a delivered result.
+      handleRenderFailed('contract_invalid');
+      return;
+    }
+    if (c.outcome_group === 'unavailable') {
+      // Fully degraded display: reported as unavailable, not as a result.
+      if (claimCompletion('result_unavailable', completionKey())) {
+        emitAcquisitionEvent({ event: 'result_unavailable', ...entryFields(), reason: 'unavailable' });
+      }
+      return;
+    }
+    if (!claimCompletion('result_rendered', completionKey())) return;
+    emitAcquisitionEvent({
+      event: 'result_rendered',
+      ...entryFields(),
+      persistence_mode: persistenceMode,
+      render_delivered: true,
+      supported_result: c.supported_result,
+      outcome_group: c.outcome_group,
+      rate_valid: c.rate_valid,
+      ...(c.sample_nonzero === undefined ? {} : { sample_nonzero: c.sample_nonzero }),
+      scope_visible: c.scope_visible,
+      result_kind: c.result_kind,
+      match_scope: c.match_scope,
+    });
+  };
+
+  const handleUnavailableShown = (reason: ReportUnavailableReason) => {
+    if (!claimCompletion('result_unavailable', completionKey())) return;
+    emitAcquisitionEvent({ event: 'result_unavailable', ...entryFields(), reason });
+  };
+
+  function handleRenderFailed(stage: RenderFailedStage): void {
+    if (!claimCompletion('render_failed', completionKey())) return;
+    emitAcquisitionEvent({ event: 'render_failed', ...entryFields(), stage });
+  }
 
   useEffect(() => {
     if (inlineReport) {
@@ -148,6 +225,7 @@ const ReportScreen: React.FC = () => {
         <Helmet>
           <title>Your Vehicle Report | AutoSafe</title>
         </Helmet>
+        <ResultErrorBoundary onRenderFailed={handleRenderFailed}>
         <Suspense
           fallback={
             <div className="flex justify-center py-20">
@@ -155,8 +233,9 @@ const ReportScreen: React.FC = () => {
             </div>
           }
         >
-          <ReportDashboard report={report} postcode={state.postcode} onReset={handleReset} />
+          <ReportDashboard report={report} postcode={state.postcode} onReset={handleReset} onRendered={handleRendered} />
         </Suspense>
+        </ResultErrorBoundary>
       </>
     );
   }
@@ -166,7 +245,7 @@ const ReportScreen: React.FC = () => {
       <Helmet>
         <title>Report Unavailable | AutoSafe</title>
       </Helmet>
-      <ReportUnavailable reason={unavailableReason ?? 'error'} />
+      <ReportUnavailable reason={unavailableReason ?? 'error'} onShown={handleUnavailableShown} />
     </>
   );
 };

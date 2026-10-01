@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ReportEmailSubmission, ReportV2 } from '../types';
 import { submitReportEmail } from '../services/autosafeApi';
 import { trackConversion, trackFunnel } from '../utils/analytics';
@@ -25,6 +25,13 @@ interface ReportDashboardProps {
   report: ReportV2;
   postcode?: string;
   onReset: () => void;
+  /**
+   * Called from a post-commit effect once this final, non-loading view (the
+   * header plus ReportResult and the scope disclosure) is mounted. Never
+   * called while the lazy chunk is loading, and never if rendering throws.
+   * Receives no data.
+   */
+  onRendered?: () => void;
 }
 
 function daysUntil(dateIso: string | null, now: number = Date.now()): number | undefined {
@@ -33,12 +40,22 @@ function daysUntil(dateIso: string | null, now: number = Date.now()): number | u
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onReset }) => {
+const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onReset, onRendered }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [emailReportEmail, setEmailReportEmail] = useState('');
   const [emailReportState, setEmailReportState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Committed-render acknowledgement (OA-004). Children's effects run before
+  // this one, so ReportResult is already mounted when it fires.
+  const onRenderedRef = useRef(onRendered);
+  useEffect(() => {
+    onRenderedRef.current = onRendered;
+  });
+  useEffect(() => {
+    onRenderedRef.current?.();
+  }, [report]);
 
   const reminderBlockRef = useRef<HTMLDivElement>(null!);
   const { showStickyCta } = useStickyCtaVisibility({
