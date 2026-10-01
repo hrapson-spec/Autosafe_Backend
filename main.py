@@ -2425,11 +2425,17 @@ async def redirect_old_guide(slug: str):
 
 
 # Mount static files (only if the folder exists)
+from public_http import HashedAssetFiles, HeadMethodMiddleware
+
 if os.path.isdir("static"):
-    # Mount assets at root /assets for React build compatibility
+    # Mount assets at root /assets for React build compatibility. Content-hashed
+    # Vite filenames are served as immutable for a year (OA-006 H).
     if os.path.isdir("static/assets"):
-        app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+        app.mount("/assets", HashedAssetFiles(directory="static/assets"), name="assets")
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# HEAD on public GET pages used to answer 405; route it as GET without a body.
+app.add_middleware(HeadMethodMiddleware)
 
 # Register SEO pages (must be before SPA catch-all)
 from seo_pages import register_seo_routes

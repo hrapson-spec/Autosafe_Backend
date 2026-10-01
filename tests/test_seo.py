@@ -682,5 +682,64 @@ class TestStartupModelTotals(unittest.TestCase):
             self.assertIn(f"/mot-check/{make_slug}/{model_slug}/", r.text)
 
 
+class TestPublicHttpBehaviour(unittest.TestCase):
+    """OA-006 H: HEAD support, immutable caching for hashed assets, en-GB language tag."""
+
+    PUBLIC_GET_PATHS = ("/", "/mot-check/", "/mot-check/ford/fiesta/", "/will-my-car-pass-mot/",
+                        "/guides/mot-checklist", "/privacy", "/sitemap.xml", "/robots.txt",
+                        "/mot-check/problems/brakes/")
+
+    def test_head_matches_get_headers_with_an_empty_body(self):
+        for path in self.PUBLIC_GET_PATHS:
+            get = client.get(path, follow_redirects=False)
+            head = client.head(path, follow_redirects=False)
+            self.assertEqual(head.status_code, get.status_code, path)
+            self.assertEqual(head.content, b"", path)
+            self.assertEqual(head.headers.get("content-type"), get.headers.get("content-type"), path)
+            self.assertEqual(head.headers.get("content-length"), get.headers.get("content-length"), path)
+
+    def test_head_on_unknown_and_post_only_routes_is_not_widened(self):
+        # HEAD answers exactly as GET would; POST-only endpoints acquire no
+        # successful HEAD (GET on them already falls through to the 404 catch-all).
+        self.assertEqual(client.head("/mot-check/no-such-make/", follow_redirects=False).status_code, 404)
+        for path in ("/api/v2/reports", "/api/submit-lead"):
+            get = client.get(path, follow_redirects=False)
+            head = client.head(path, follow_redirects=False)
+            self.assertEqual(head.status_code, get.status_code, path)
+            self.assertNotEqual(head.status_code, 200, path)
+            self.assertEqual(head.content, b"", path)
+
+    def test_head_follows_the_same_redirects_as_get(self):
+        r = client.head("/static/terms.html", follow_redirects=False)
+        self.assertEqual(r.status_code, 301)
+        self.assertEqual(r.headers["location"], "/terms")
+
+    def test_hashed_vite_assets_are_immutable_for_a_year(self):
+        from public_http import IMMUTABLE_CACHE_CONTROL, is_hashed_asset_name
+        index_html = client.get("/").text
+        asset_paths = re.findall(r'(?:src|href)="(/assets/[^"]+)"', index_html)
+        self.assertTrue(asset_paths, "built SPA shell references no /assets/ files")
+        for path in asset_paths:
+            r = client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertEqual(r.headers.get("cache-control"), IMMUTABLE_CACHE_CONTROL, path)
+        # Only content-hashed names qualify.
+        self.assertTrue(is_hashed_asset_name("index-DskXiKVN.js"))
+        self.assertTrue(is_hashed_asset_name("ReportDashboard-4xKHfdOZ.js"))
+        self.assertFalse(is_hashed_asset_name("umami.js"))
+        self.assertFalse(is_hashed_asset_name("logo_clean.png"))
+        self.assertFalse(is_hashed_asset_name("apple-touch-icon.png"))
+        self.assertIsNone(client.get("/static/logo_clean.png").headers.get("cache-control"))
+        self.assertIsNone(client.get("/static/umami.js").headers.get("cache-control"))
+
+    def test_public_html_declares_british_english(self):
+        for path in ("/", "/mot-check/", "/mot-check/ford/fiesta/", "/mot-check/ford/fiesta/problems/brakes/",
+                     "/will-my-car-pass-mot/", "/guides/mot-checklist", "/privacy", "/terms",
+                     "/mot-check/compare/ford-fiesta-vs-vauxhall-corsa/", "/mot-check/no-such-make/"):
+            r = client.get(path)
+            self.assertIn('<html lang="en-GB">', r.text, path)
+            self.assertNotIn('<html lang="en">', r.text, path)
+
+
 if __name__ == "__main__":
     unittest.main()

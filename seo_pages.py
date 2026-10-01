@@ -564,7 +564,7 @@ def _not_found_html(message: str) -> HTMLResponse:
     html = template.render(content=f'<h1>Not Found</h1><p>{message}</p>')
     # For 404, render inline since we can't easily use block overrides
     html = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

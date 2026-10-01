@@ -2,11 +2,11 @@
   "_rule": "revised = date the file's content last changed (set by this script when the sha256 differs); sitemap lastmod = max(dataset artifact revision where applicable, revised dates of the page's sources). No runtime clock is used.",
   "files": {
     "index.html": {
-      "sha256": "f7657bf5e90f38450bc38c2013e0facf753431bfcd5be4f396f946634c59f3dd",
+      "sha256": "7b9ec3c969296ff3e1cfb8aadbfc36ccadd7685f1fed9df3bc6c8bf99ee103f2",
       "revised": "2026-10-01"
     },
     "templates/seo_base.html": {
-      "sha256": "ff4e2a2461462a426e880f102a80216d0c48c78063ad53a9f7d643dbe58c5496",
+      "sha256": "6c89210ee298dafca13fab8f7cd4857b70c29214b8e31575d2cabd396a37fdc1",
       "revised": "2026-10-01"
     },
     "templates/seo_index.html": {
@@ -42,47 +42,47 @@
       "revised": "2026-10-01"
     },
     "static/terms.html": {
-      "sha256": "affc80369a3651dfd74f6070627b75bed10b7b1089f280d9b9b0a4ac9aead534",
+      "sha256": "6c0d4ff118efcb94c803df26ba99df4dcf9aff0a47c5021936e839f8f35a9bd9",
       "revised": "2026-10-01"
     },
     "static/privacy.html": {
-      "sha256": "000aafa2e02521436875f8a53e4b9bf32a3075c9d697c354990ec9fc4e9f0f54",
+      "sha256": "c57b9a120fd08c73ac2ef7ecfbe1eb950daad03e650d81a32faeedb30469b148",
       "revised": "2026-10-01"
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "ecb1254514a76a57d07d0a7348177a79e33432d5e2e2862d4d752e5fdf509c00",
+      "sha256": "4c80841d42bc701e72d056d0a07ece783f494e8ec32906c97708d177e63e4e0c",
       "revised": "2026-10-01"
     },
     "static/guides/common-mot-failures.html": {
-      "sha256": "460c7b5aedf665828f0181d5db314cf96a67afae511e0433714038900623ae44",
+      "sha256": "eee1e593c9852a824f58a4df584112f9fcc2229de0703aea9d206380c011d3bf",
       "revised": "2026-10-01"
     },
     "static/guides/when-is-mot-due.html": {
-      "sha256": "10b748a84b61665dc2f1573a10205d455f1a83512dcd8144b8de6cb401a9d951",
+      "sha256": "b3cd58e6cbec07edf09e11a3c982f00cb8c6455ba7d32c392c60064c1b50bd6d",
       "revised": "2026-10-01"
     },
     "static/guides/mot-failure-rates-by-car.html": {
-      "sha256": "1d4dbc43ad6fc5f1a26d11b4891fcf31a35b7af25175b36a77d1f728654be768",
+      "sha256": "4f55b1082681844d97e838c9402382dc41164a9dbff835389912ba44730b33da",
       "revised": "2026-10-01"
     },
     "static/guides/mot-rules-2026.html": {
-      "sha256": "6746c7f0d9bc07be2f069ba80e6054bbafa06cdd388c87c140e39ba797b0e204",
+      "sha256": "9599f2531a7cbde86e82501b0a355602156ccc76f073974132d7bf2b6980ffa4",
       "revised": "2026-10-01"
     },
     "static/guides/mot-defect-categories.html": {
-      "sha256": "38f9a6df770d80216284031754da227fc04cbddd920be0143f2b5a6c30ffe7a5",
+      "sha256": "6af32307026456d913a0db3ea9b0d694dfad3b30d68f9762c8d4f84b024dc43c",
       "revised": "2026-10-01"
     },
     "static/guides/mot-cost.html": {
-      "sha256": "5f896bc6aa539f0d36dd8f310a1767278ef54543c6fd5e80dcdae912b00de506",
+      "sha256": "482c3e796c35c9138c58041f0cd9656e6b5c3d05e470c8d4b58ee6c43002fb77",
       "revised": "2026-10-01"
     },
     "static/guides/mot-history-check.html": {
-      "sha256": "9cc2b43e7eb733b7a6a177e7de64544db6b7f9d97aeb0714ae42664badfcf23f",
+      "sha256": "1901d2997b97f3dceb98a6e9b7d8aaa853a72cfe2351db7d9ff2614eb066b3ff",
       "revised": "2026-10-01"
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "57b893ba11f33ff021632830856e17fc66aa48f13c76c57b35d31db362270d9e",
+      "sha256": "90e21f44dfa9c2ed18aed0cf0473c31c828535d5cfdee1c664ecc662fad16ffe",
       "revised": "2026-10-01"
     }
   }
