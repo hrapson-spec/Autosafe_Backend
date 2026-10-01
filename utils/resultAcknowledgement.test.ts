@@ -78,7 +78,16 @@ describe('classifyResult: MEASUREMENT.md table rows', () => {
     expect(c.sample_nonzero).toBe(false);
   });
 
-  it('row 5: unavailable scope (real vehicle data) => unavailable group, NOT supported', () => {
+  it('row 5: unavailable scope (the degraded demo fixture) => unavailable group, NOT supported', () => {
+    const c = classifyResult(fixtureUnavailableDegraded);
+    expect(fixtureUnavailableDegraded.vehicle_data_source).toBe('demo');
+    expect(c.outcome_group).toBe('unavailable');
+    expect(c.render_delivered).toBe(true);
+    expect(c.supported_result).toBe(false);
+    expect(c.match_scope).toBe('unavailable');
+  });
+
+  it('row 5b: unavailable scope (real vehicle data twin) => unavailable group, NOT supported', () => {
     const c = classifyResult({ ...fixtureUnavailableDegraded, vehicle_data_source: 'dvsa' });
     expect(c.outcome_group).toBe('unavailable');
     expect(c.render_delivered).toBe(true);
@@ -279,7 +288,6 @@ describe('classifyResult: demo data (DECISIONS.md D-004)', () => {
     ['age_band_only', fixtureLegacyEstimated2_0],
     ['model_average', fixtureModelAverageLow],
     ['population_default', fixturePopulationDefault],
-    ['unavailable', fixtureUnavailableDegraded],
     ['model_prediction (demo prediction)', fixtureVehiclePrediction],
   ])('demo x %s => delivered, never supported, group demo', (_n, fixture) => {
     const demo = classifyResult(asDemo(fixture));
@@ -292,6 +300,15 @@ describe('classifyResult: demo data (DECISIONS.md D-004)', () => {
     expect(demo.result_kind).toBe(fixture.result_kind);
     // sample_nonzero stays omitted for predictions and present for comparisons.
     expect('sample_nonzero' in demo).toBe(fixture.result_kind === 'comparison');
+  });
+
+  it('demo x unavailable => unavailable (D-004 precedence): never demo, never supported, same as the real-data twin', () => {
+    const demo = classifyResult(asDemo(fixtureUnavailableDegraded));
+    const real = classifyResult(asReal(fixtureUnavailableDegraded));
+    expect(demo).toEqual(real);
+    expect(demo.outcome_group).toBe('unavailable');
+    expect(demo.render_delivered).toBe(true);
+    expect(demo.supported_result).toBe(false);
   });
 
   it('the same states from real data keep their normal groups (demo is the only difference)', () => {

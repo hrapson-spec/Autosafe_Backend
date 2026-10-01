@@ -165,8 +165,11 @@ describe('result_rendered: supported and reference states from the committed fin
     expectAllSchemaValid();
   });
 
-  it('fully degraded (unavailable scope, real vehicle data) mounts as result_unavailable/unavailable, not result_rendered', async () => {
-    render(ui('unsaved', { inlineReport: { ...fixtureUnavailableDegraded, vehicle_data_source: 'dvsa' }, operationId: OP1 }));
+  it.each([
+    ['demo (the degraded fixture; D-004 precedence)', fixtureUnavailableDegraded],
+    ['real vehicle data', { ...fixtureUnavailableDegraded, vehicle_data_source: 'dvsa' as const }],
+  ])('fully degraded (unavailable scope, %s) mounts as result_unavailable/unavailable, not result_rendered', async (_n, degraded) => {
+    render(ui('unsaved', { inlineReport: degraded, operationId: OP1 }));
     await screen.findByTestId('comparison-result');
     await waitFor(() => expect(byName('result_unavailable')).toHaveLength(1));
     expect(byName('result_unavailable')[0]).toMatchObject({ reason: 'unavailable', entry_mode: 'fresh_check', operation_id: OP1 });
@@ -178,7 +181,6 @@ describe('result_rendered: supported and reference states from the committed fin
     ['exact_band', fixtureExactHigh],
     ['model_average', fixtureModelAverageLow],
     ['population_default', fixturePopulationDefault],
-    ['unavailable', fixtureUnavailableDegraded],
     ['model_prediction', fixtureVehiclePrediction],
   ])('D-004: a demo report (%s) is result_rendered with outcome_group demo, never supported, never result_unavailable', async (scope, fixture) => {
     vi.mocked(getReport).mockResolvedValue({ ...fixture, vehicle_data_source: 'demo' });

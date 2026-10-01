@@ -35,7 +35,7 @@ export const SAMPLE_INPUTS: AcquisitionEventInput[] = [
   { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'saved', render_delivered: true, supported_result: true, outcome_group: 'exact_comparison', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'exact_band' },
   { event: 'result_rendered', entry_mode: 'restored_link', persistence_mode: 'saved', render_delivered: true, supported_result: true, outcome_group: 'broader_supported_comparison', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'model_average' },
   { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'inline_unsaved', render_delivered: true, supported_result: false, outcome_group: 'dataset_reference', rate_valid: true, sample_nonzero: false, scope_visible: true, result_kind: 'comparison', match_scope: 'population_default' },
-  { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'saved', render_delivered: true, supported_result: false, outcome_group: 'demo', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'unavailable' },
+  { event: 'result_rendered', operation_id: OP, entry_mode: 'fresh_check', persistence_mode: 'saved', render_delivered: true, supported_result: false, outcome_group: 'demo', rate_valid: true, sample_nonzero: true, scope_visible: true, result_kind: 'comparison', match_scope: 'exact_band' },
   { event: 'result_rendered', entry_mode: 'restored_link', persistence_mode: 'saved', render_delivered: true, supported_result: false, outcome_group: 'demo', rate_valid: true, scope_visible: true, result_kind: 'vehicle_prediction', match_scope: 'model_prediction' },
   { event: 'result_unavailable', entry_mode: 'restored_link', reason: 'not_found' },
   { event: 'result_unavailable', operation_id: OP, entry_mode: 'fresh_check', reason: 'unavailable' },
@@ -237,8 +237,11 @@ describe('event schema (docs/acquisition/event_schema_v1.json) agrees with the t
     expect(ok({ ...DEMO_PRED, sample_nonzero: true })).toBe(false);
     const { sample_nonzero: _d, ...demoNoSample } = DEMO_CMP;
     expect(ok(demoNoSample)).toBe(false);
-    // unavailable scope is only allowed with the demo group
+    // demo cannot ride on a non-demo scope pairing it breaks (dataset_reference needs population_default)
     expect(ok({ ...DEMO_CMP, outcome_group: 'dataset_reference' })).toBe(false);
+    // the unavailable scope is never a result_rendered (D-004 precedence: it is result_unavailable)
+    expect(ok({ ...DEMO_CMP, match_scope: 'unavailable' })).toBe(false);
+    expect(ok({ ...EXACT, match_scope: 'unavailable' })).toBe(false);
     // there is no broad_fallback result kind
     expect(ok({ ...EXACT, result_kind: 'broad_fallback' })).toBe(false);
   });

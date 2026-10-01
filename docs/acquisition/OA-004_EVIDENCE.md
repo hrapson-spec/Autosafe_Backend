@@ -40,8 +40,9 @@ copy, lockfile, backend.
 | Valid comparison / exact_band | true / true / exact_comparison | "row 2"; "exact comparison from a fresh check" |
 | Valid comparison / age_band_only, model_average | true / true / broader_supported_comparison | "row 3" (x2); "age_band_only / model_average is a broader supported comparison" |
 | population_default | true / false / dataset_reference | "row 4"; "population_default renders as dataset_reference and is not supported" |
-| unavailable scope, real vehicle data (fully degraded) | true / false / unavailable; emitted as `result_unavailable` (reason `unavailable`) | "row 5"; "fully degraded (unavailable scope, real vehicle data) mounts as result_unavailable/unavailable, not result_rendered" |
-| demo report (any contract-valid scope, D-004) | true / false / demo; emitted as `result_rendered` | `resultAcknowledgement.test.ts` "demo data"; `ReportScreen.acquisition.test.tsx` "D-004: a demo report (...)" |
+| unavailable scope, any data source (fully degraded) | true / false / unavailable; emitted as `result_unavailable` (reason `unavailable`) | "row 5"; "fully degraded (unavailable scope, demo / real vehicle data) mounts as result_unavailable/unavailable, not result_rendered" |
+| demo report (any other contract-valid scope, D-004) | true / false / demo; emitted as `result_rendered` | `resultAcknowledgement.test.ts` "demo data"; `ReportScreen.acquisition.test.tsx` "D-004: a demo report (...)" |
+| demo report with the unavailable scope (D-004 precedence) | true / false / unavailable; emitted as `result_unavailable` | `resultAcknowledgement.test.ts` "demo x unavailable => unavailable"; `ReportScreen.acquisition.test.tsx` "fully degraded (unavailable scope, demo ...)" |
 | ReportUnavailable mounted after failed retrieval | `result_unavailable`, reason not_found / expired / error | "failed retrieval: result_unavailable with a fixed reason" (5 codes + non-ReportApiError); "an unsaved route without an inline payload is unavailable" |
 | Loading (spinner / API 200 alone) | nothing emitted | "loading never emits"; `ReportScreen.lazyDelay.test.tsx` |
 | Rejected lazy chunk | false / false / error; unavailable error view shown; `render_failed` `lazy_load`; no result events | `ReportScreen.lazyReject.test.tsx`; `ResultErrorBoundary.test.tsx` "chunk load failure" |
@@ -72,7 +73,7 @@ during render failed at least 10 existing and new tests.
 |---|---|---|---|
 | `npm run typecheck` | 0 | clean | 0 |
 | `npm run lint` | 0 | clean | 0 |
-| `npm test` | 1 | 22 files (21 pass, 1 fail); 409 tests: 400 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
+| `npm test` | 1 | 22 files (21 pass, 1 fail); 410 tests: 401 passed, 9 failed | 15 files; 281 tests: 272 passed, 9 failed (exit 1) |
 | `npm run build` | 0 | built; `git status` shows `static/` outputs ignored | 0 |
 | `.venv/bin/python -m pytest tests/ -q` | 0 | 529 passed, 1 skipped | 529 passed, 1 skipped |
 | `.venv/bin/python scripts/claim_sweep.py` | 0 | "clean" | 0 |
@@ -82,7 +83,7 @@ during render failed at least 10 existing and new tests.
 
 The 9 `npm test` failures are the same 9 as baseline (identical failing test names,
 `components/ReportDashboard.test.tsx`, `localStorage.clear` not a function under Node 26)
-and are unrelated to this change. New tests: +128 (all pass). Bundle grep after build:
+and are unrelated to this change. New tests: +129 (all pass). Bundle grep after build:
 `__setAcquisitionSinkForTests` 0 files, `__resetAcquisitionStateForTests` 0, `api/acquisition`
 0, `sendBeacon` 0; the event names and `oa-metric-v1-draft` are present (the typed emitters
 are bundled; they reach a no-op sink).
@@ -102,18 +103,18 @@ are bundled; they reach a no-op sink).
    `result_rendered` with `rate_valid=false`. Consequence: on an emitted `result_rendered`,
    `rate_valid` is always true and `sample_nonzero` is informative only for reference scopes.
    The alternative (emit `result_rendered` with false flags) is a one-function change.
-3. **Fully degraded report (scope `unavailable`, real vehicle data)** is emitted as
-   `result_unavailable` (reason `unavailable`), per the MEASUREMENT.md events table. A demo
-   report with the same scope is `result_rendered` with `outcome_group=demo` (D-004 applies to
-   every scope). Note: the repository's degraded fixture (`fixtureUnavailableDegraded`) is a
-   demo report, so it now classifies as `demo`, not `unavailable`; if operations want
-   unavailable to take precedence over demo for the degraded fallback, that is a one-line
-   ordering change.
+3. **Fully degraded report (scope `unavailable`), any data source** is emitted as
+   `result_unavailable` (reason `unavailable`), per the MEASUREMENT.md events table. Lead
+   ruling (DECISIONS.md D-004 "Precedence"): the unavailable scope takes precedence over
+   demo, so the repository's degraded fixture (`fixtureUnavailableDegraded`, a demo report)
+   classifies as `unavailable`, as it did before D-004. Demo applies only to otherwise
+   renderable scopes.
 4. **`check_started` once per logical operation.** A retry of the same unresolved operation
    keeps the operation id and does not re-announce (no attempt index: not approved).
 5. **Demo data (decided: DECISIONS.md D-004).** A report with `vehicle_data_source = demo`
    gets `render_delivered=true`, `supported_result=false`, `outcome_group='demo'` (new enum
-   member) for every contract-valid scope, including a demo prediction (the contract does not
+   member) for every otherwise-renderable contract-valid scope (not the `unavailable` scope,
+   which takes precedence), including a demo prediction (the contract does not
    forbid one; covered by tests). Contract-invalid demo reports remain `error`.
 6. **Reload.** Browsers keep `history.state` across a reload or tab restore, so a restored
    fresh-check report route still carries its operation id: with the in-memory marker gone it
@@ -161,13 +162,14 @@ are bundled; they reach a no-op sink).
 ## Metric decisions implemented (DECISIONS.md D-003, D-004)
 
 - **D-004:** `OutcomeGroup` gains `demo`; `classifyResult` returns delivered / not supported /
-  `demo` for any contract-valid demo report; `result_rendered` carries it (schema enum, the
-  `unavailable` match scope is allowed only with it, demo never supported, sample_nonzero rules
-  preserved); mapping table in `EVENT_SCHEMA_v1.md` updated. Tests: `resultAcknowledgement.test.ts`
-  "demo data" (demo x exact / age / model-average / population_default / unavailable / prediction,
+  `demo` for a contract-valid demo report on any scope except `unavailable` (which takes
+  precedence, per the lead ruling); `result_rendered` carries it (schema enum; the `unavailable`
+  match scope is removed from `result_rendered` as unreachable; demo never supported,
+  sample_nonzero rules preserved); mapping table in `EVENT_SCHEMA_v1.md` updated. Tests: `resultAcknowledgement.test.ts`
+  "demo data" (demo x exact / age / model-average / population_default / prediction, plus demo x unavailable => unavailable,
   never supported, invalid stays error, real-data twins keep their groups),
-  `ReportScreen.acquisition.test.tsx` (each demo scope emits `result_rendered` demo, never
-  `result_unavailable`), `acquisitionEvents.test.ts` (schema rules for demo events).
+  `ReportScreen.acquisition.test.tsx` (each non-unavailable demo scope emits `result_rendered` demo, never
+  `result_unavailable`; demo + unavailable emits `result_unavailable`), `acquisitionEvents.test.ts` (schema rules for demo events).
 - **D-003:** documentation only (code comment, `EVENT_SCHEMA_v1.md`, schema description and
   property description, this file). `metric_version` unchanged.
 

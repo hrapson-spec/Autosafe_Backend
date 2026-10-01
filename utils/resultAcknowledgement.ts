@@ -20,7 +20,8 @@
  *    exact_band / age_band_only / model_average, finite rate in [0, 1],
  *    nonzero sample (comparison only) and visible scope. population_default
  *    and unavailable are never supported, and neither is any report whose
- *    vehicle_data_source is 'demo' (DECISIONS.md D-004: outcome_group 'demo').
+ *    vehicle_data_source is 'demo' (DECISIONS.md D-004: outcome_group 'demo',
+ *    except that the unavailable scope keeps outcome_group 'unavailable').
  *  - rate_valid / sample_nonzero / scope_visible: the individual checks.
  *    sample_nonzero is OMITTED (key absent) for model_prediction: a
  *    prediction carries no cohort counts.
@@ -244,9 +245,12 @@ export function classifyResult(report: ReportV2 | null | undefined): ResultClass
 
   // DECISIONS.md D-004: a report whose vehicle_data_source is 'demo' is
   // synthetic, never a supported vehicle result. It is a delivered render
-  // (render_delivered true) grouped as 'demo', for every contract-valid
-  // scope. Contract-invalid demo reports stay 'error' (handled above).
-  if (report.vehicle_data_source === 'demo') outcome_group = 'demo';
+  // (render_delivered true) grouped as 'demo' for every OTHERWISE-RENDERABLE
+  // scope. Precedence (D-004 'Precedence'): the unavailable scope / fully
+  // degraded display wins over demo, regardless of data source, so it still
+  // reports as 'unavailable'. Contract-invalid demo reports stay 'error'
+  // (handled above).
+  if (report.vehicle_data_source === 'demo' && outcome_group !== 'unavailable') outcome_group = 'demo';
 
   const supportedGroup =
     outcome_group === 'prediction' ||

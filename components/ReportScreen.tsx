@@ -122,7 +122,7 @@ const ReportScreen: React.FC = () => {
       handleRenderFailed('contract_invalid');
       return;
     }
-    if (c.outcome_group === 'unavailable') {
+    if (c.outcome_group === 'unavailable' || c.match_scope === 'unavailable') {
       // Fully degraded display: reported as unavailable, not as a result.
       if (claimCompletion('result_unavailable', completionKey())) {
         emitAcquisitionEvent({ event: 'result_unavailable', ...entryFields(), reason: 'unavailable' });

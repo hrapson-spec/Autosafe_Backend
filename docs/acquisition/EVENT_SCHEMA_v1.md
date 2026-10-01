@@ -59,7 +59,7 @@ restored/shared links.
 | `check_started` | `App.tsx`: accepted submission, before the API call; once per logical operation (a retry of the same unresolved operation keeps its id and does not re-announce) | `operation_id`, `entry_mode=fresh_check` |
 | `report_created` | `App.tsx`: validated `createReport` success, before navigation | `operation_id`, `entry_mode`, `result_kind`, `match_scope`, `persistence_mode` |
 | `result_rendered` | `ReportScreen`, from `ReportDashboard`'s post-commit effect (deferred one macrotask and cancelled on unmount), only when the final non-loading view is mounted, the runtime boundary is clear, and `classifyResult` reports a delivered state other than unavailable | `entry_mode`, `persistence_mode`, `render_delivered` (always true here), `supported_result`, `outcome_group`, `rate_valid`, `sample_nonzero` (omitted for `model_prediction`), `scope_visible`, `result_kind`, `match_scope`, `operation_id` (when a deliberate check) |
-| `result_unavailable` | `ReportUnavailable` committed from `ReportScreen`'s own unavailable branch, or a fully degraded report (`match_scope=unavailable`, real vehicle data) committed in the dashboard; the same scope on a demo report is `result_rendered` with `outcome_group=demo` | `entry_mode`, `reason` in `not_found, expired, unavailable, error`, `operation_id` (when a deliberate check) |
+| `result_unavailable` | `ReportUnavailable` committed from `ReportScreen`'s own unavailable branch, or a fully degraded report (`match_scope=unavailable`, real vehicle data) committed in the dashboard; this holds regardless of data source (a demo report with this scope is also `result_unavailable`, reason `unavailable`) | `entry_mode`, `reason` in `not_found, expired, unavailable, error`, `operation_id` (when a deliberate check) |
 | `check_failed` | `App.tsx`: `createReport` failed | `operation_id`, `entry_mode`, `error_category` (fixed enum), `stage=create_report` |
 | `render_failed` | `ResultErrorBoundary` (rejected chunk -> `lazy_load`, render throw -> `render`), or the final view mounted with a report that fails the contract/numeric checks (`contract_invalid`) | `entry_mode`, `stage`, `operation_id` (when a deliberate check) |
 
@@ -80,8 +80,8 @@ fallback emits `render_failed` only, never `result_unavailable` or `result_rende
 | Valid `comparison` / `exact_band` | true | true | `exact_comparison` |
 | Valid `comparison` / `age_band_only` or `model_average` | true | true | `broader_supported_comparison` |
 | `population_default` reference | true | false | `dataset_reference` |
-| `unavailable` scope (real vehicle data) | true | false | `unavailable` |
-| Any contract-valid report with `vehicle_data_source = demo`, every scope including a demo prediction and a demo `unavailable` scope (DECISIONS.md D-004) | true | false | `demo` |
+| `unavailable` scope, **any** data source (precedence over demo, DECISIONS.md D-004) | true | false | `unavailable` |
+| Contract-valid report with `vehicle_data_source = demo` on any other scope (exact, age-band, model-average, `population_default`, demo prediction) (DECISIONS.md D-004) | true | false | `demo` |
 | Contract-invalid combination, non-finite or out-of-range rate, invalid matched sample | false | false | `error` |
 | Loading, rejected chunk, error boundary | not emitted | not emitted | (`render_failed` where applicable) |
 
@@ -106,8 +106,10 @@ the DOM. A DOM-observed disclosure check would be a future metric version.
 `outcome_group = demo` (DECISIONS.md **D-004**): a report with `vehicle_data_source = demo`
 is synthetic and never a supported vehicle result. It is a delivered render
 (`render_delivered=true`, `supported_result=false`), emitted as `result_rendered` for every
-contract-valid scope, so `result_rendered` may carry `match_scope=unavailable` only with
-this group. A contract-invalid demo report is still `error`. The metric version is
+otherwise-renderable contract-valid scope. **Precedence:** the `unavailable` scope / fully
+degraded display wins over demo regardless of data source, so it is `result_unavailable`
+(reason `unavailable`); `result_rendered` therefore never carries `match_scope=unavailable`.
+A contract-invalid demo report is still `error`. The metric version is
 unchanged (`oa-metric-v1-draft`).
 
 ## Deduplication and ordering

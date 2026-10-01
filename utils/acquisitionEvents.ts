@@ -113,7 +113,8 @@ export interface ResultRenderedEvent extends CommonFields {
   sample_nonzero?: boolean;
   scope_visible: boolean;
   result_kind: ResultKind;
-  match_scope: MatchScope;
+  /** Never `unavailable`: that scope is reported as result_unavailable (D-004 precedence). */
+  match_scope: Exclude<MatchScope, 'unavailable'>;
 }
 
 export interface ResultUnavailableEvent extends CommonFields {
