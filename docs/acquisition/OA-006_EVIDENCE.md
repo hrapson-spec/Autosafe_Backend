@@ -1,7 +1,8 @@
 # OA-006 — Public-template technical triage: evidence record
 
 Branch `oa/006-technical-batch`, based on upstream main `7325720` (production as of 2026-10-01).
-Worker W5, 2026-10-01; revised the same day after lead rulings on items E and F (see those sections). Input: `inputs/SEO_ASSESSMENT_2026-10-01.md` (external assessment; every
+Worker W5, 2026-10-01; revised the same day after lead rulings on items E and F, and again after the
+independent review (see "Review findings" at the end). Input: `inputs/SEO_ASSESSMENT_2026-10-01.md` (external assessment; every
 claim below was reproduced locally before any change). Nothing here was pushed, merged or deployed.
 
 Labels: **MEASURED** = observed by running code in this worktree; **PROD** = read-only GET against
@@ -30,7 +31,7 @@ www.autosafe.one (normal UA, ≤ 2 req/s); **DERIVED** = computed from measured 
 | Component pages rendering “£–£” | 60/60 | 0/60 |
 | Component pages noindex + non-self canonical | 60/60 | 0/60 |
 | `<html lang>` on crawled pages | `en` ×1,793 | `en-GB` ×1,793 |
-| Sitemap lastmod histogram | 2026-01-29 ×428, 2026-07-11 ×14 | 2026-07-11 ×439, 2026-07-17 ×3 (last significant content change per source; see F) |
+| Sitemap lastmod histogram | 2026-01-29 ×428, 2026-07-11 ×14 | 2026-07-11 ×439, 2026-07-17 ×2, 2026-07-18 ×1 (last significant content change per source; see F) |
 | `/will-my-car-pass-mot/` cold / warm | 9.36 s / 2.4 ms | 0.084 s / 2.1 ms |
 | App lifespan (startup) in TestClient | 31.0 s | 0.69 s |
 | HEAD on 8 public GET paths | 405 ×8 | 200 ×8 |
@@ -113,20 +114,33 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   author chooses `--significant "reason"` (moves the date; default today, `--date` to override) or
   `--non-significant "reason"` (hash only). No clock is read at runtime. Sitemap-index lastmod = latest
   entry of each sub-sitemap.
+- Sources per page (after review): homepage `/` = `index.html` + `App.tsx` + `components/**` (non-test
+  modules; over-inclusive by design — report-screen components are tracked too, so a copy change there
+  moves the homepage date); every server-rendered page = `seo_pages.py` (Python-built copy: comparison
+  titles, 404 text, related-model selection) + `seo_base.html` + its template; guides/legal = their
+  HTML file. New component files are auto-tracked (glob) and fail the manifest test until reviewed.
 - Seeded history (one-off, from inspected diffs): all nine SEO templates 2026-07-11 (RC1 rewrite);
   `seo_base.html` 2026-02-06 (creation; it contributes only header/nav/CTA/footer/related-links
   boilerplate, and every later edit was boilerplate, consent, styling or analytics); the nine guides
   2026-07-11 (body/FAQ copy rewritten in f34319e, verified per file); `terms.html` and
-  `privacy.html` 2026-07-17; `index.html` 2026-07-17 (homepage paragraph). Branch changes recorded as
+  `privacy.html` 2026-07-17; `index.html` 2026-07-17 (homepage paragraph); `App.tsx` and
+  `HeroForm.tsx` 2026-07-18 (f30bc38/b951b7f homepage headline + social-proof copy); report/legal
+  components 2026-07-11..17 per their copy commits; markup-only components (Icons, Logo, ui/*,
+  StickyCta, guide modules) at creation, with later markup edits recorded non-significant;
+  `seo_pages.py` 2026-07-11 (RC1 retired pages / reworded Python-built text), with this branch's
+  B/D/F/G edits and the G refactor recorded non-significant (rendered output byte-identical).
+  Branch changes recorded as
   non-significant: C footer links, D hub navigation links (lead ruling), B plain-text age cells,
   H `lang=en-GB`. `seo_component.html` is recorded as significant 2026-10-01 (E range removal) but
   those pages are noindex and not in the sitemap, so no lastmod moves.
-- Resulting distribution (MEASURED, crawl): **2026-07-11 ×439** (371 models, 30 makes, 20
-  comparisons, 7 hubs, `/mot-check/`, pillar, 9 guides) and **2026-07-17 ×3** (`/`, `/privacy`,
-  `/terms`). Sitemap index: content 2026-07-17, makes/models/comparisons 2026-07-11. Compared with
-  production (2026-01-29 ×428 / 2026-07-11 ×14) this moves the dataset-page family to the date their
-  content was actually rewritten and the legal/home pages forward by six days.
-- Limits: the homepage tracks only the Vite shell `index.html`, not SPA component changes. The dataset
+- Resulting distribution (MEASURED, crawl, after review): **2026-07-11 ×439** (371 models, 30
+  makes, 20 comparisons, 7 hubs, `/mot-check/`, pillar, 9 guides), **2026-07-17 ×2** (`/privacy`,
+  `/terms`) and **2026-07-18 ×1** (`/`, from the App.tsx/HeroForm homepage copy commits). Sitemap
+  index: content 2026-07-18, makes/models/comparisons 2026-07-11. Compared with production
+  (2026-01-29 ×428 / 2026-07-11 ×14) this moves the dataset-page family to the date their content
+  was actually rewritten and the legal/home pages forward by six to seven days.
+- Limits: the homepage date is driven by any tracked SPA module, including report-screen components
+  that do not render on `/` (accepted over-inclusion). The dataset
   date stays `DATASET_ARTIFACT_REVISION` (owned by report_contract.py). Significance is an author
   judgement recorded with a reason; the test enforces that a judgement is recorded, not what it is.
   Sitemap cache maxsize 1 → 8 so the five sitemap documents no longer evict each other.
@@ -166,20 +180,26 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   not — checked in the installed versions). `public_http.HeadMethodMiddleware` (pure ASGI, outermost)
   routes HEAD as GET and drops the body while keeping headers (GET Content-Length is legitimate on
   HEAD). HEAD now mirrors GET exactly: 200 on pages, 301 on legacy paths, 404 via catch-all.
-  POST-only routes: GET already fell through to the 404 catch-all, so HEAD → 404 as well (was 405);
-  never 200. OpenAPI untouched (no route methods changed). Trade-off: `FileResponse` reads the file
-  for HEAD because it sees GET; files are small.
+  **Review fix (27a632d):** the rewrite applies only to an explicit allowlist of read-only public
+  documents (`/`, `/app*`, `/mot-check/*`, pillar, `/guides/*`, `/privacy`, `/terms`, sitemaps,
+  robots.txt, indexnow key, `/static/*`, `/assets/*`, retired-page redirects, `/health`, `/ready`).
+  Everything else — all of `/api/*` — passes through untouched and still answers HEAD with 405, because
+  some API GET handlers have side effects (see "Review findings"). OpenAPI untouched (no route methods
+  changed). Trade-off: `FileResponse` reads the file for HEAD because it sees GET; files are small.
 - Cache-Control: `HashedAssetFiles` adds the immutable header only to names matching Vite's
   `<name>-<8-char hash>.<ext>`; `/static/logo_clean.png`, `/static/umami.js` unchanged (tested).
+  **Assumption stated:** `/assets` (= `static/assets/`) contains only Vite build output, so any name
+  matching the hash pattern is content-addressed. If a non-Vite file were ever placed there with a
+  matching name, it would be cached for a year.
 - lang: `en-GB` on `seo_base.html`, the inline 404 page, Vite `index.html`, legal pages and the
   9 guides (static HTML is also public and served directly, so it was included; `page_revisions.json`
   refreshed accordingly).
 
-## Gate results (MEASURED, branch head after the F revision)
+## Gate results (MEASURED, branch head after the review fixes)
 
 | Gate | Baseline (7325720) | After |
 |---|---|---|
-| `pytest tests/ -q` | 529 passed, 1 skipped | 555 passed, 1 skipped (+26 new, 1 rewritten) |
+| `pytest tests/ -q` | 529 passed, 1 skipped | 558 passed, 1 skipped (+29 new, 1 rewritten) |
 | `check_internal_links.py` (AUTOSAFE_DB_PATH=/tmp/autosafe.db) | — | exit 0, 40 static links valid |
 | `scripts/claim_sweep.py` | clean | clean |
 | `scripts/check_openapi_drift.py` | matches | matches |
@@ -210,7 +230,33 @@ submissions (Henri); FAQ markup removal; robots.txt; bearer report routes, analy
 5. `check_internal_links.py` still carries the legacy age-band slugs and is permissive about age-band
    pages; the new TestClient tests cover what it cannot. Noted; no action in this batch.
 
+## Review findings (independent Sonnet reviewer, 2026-10-01) and responses
+1. **MUST FIX — HEAD rewrite reached `/api/*` (fixed, 27a632d).** The reviewer reproduced HEAD
+   `/api/garage/outcome/{id}?result=won` recording an outcome, and HEAD on `/api/risk*`, `/api/vehicle`
+   triggering lookups. HEAD→GET is now allowlisted to public documents only; `/api/*` keeps 405. Tests:
+   HEAD on the outcome URL is 405 and the assignment lookup is never awaited (mock; GET control reaches
+   it); 405 on seven other API paths; allowlist predicate positive/negative cases.
+2. **F coverage (fixed).** `App.tsx` + `components/**` now feed the homepage date; `seo_pages.py` feeds
+   every server-rendered page. Seeded with the same per-diff judgement (copy = significant; refactor,
+   perf, markup = not; the G refactor is non-significant because output is byte-identical). Homepage
+   lastmod moves 2026-07-17 → 2026-07-18; everything else unchanged.
+3. **seo_pages.py (fixed).** Unused `_sqlite_like_prefix` removed. Rows with NULL `model_id` are
+   skipped (the SQL predicates never matched them). A model whose `Total_Failures` are all NULL now
+   yields `SUM = None` like SQL and is excluded from `_model_fail_rates` and `_model_totals` (listed,
+   not ranked), instead of a fabricated 0.0 rate; mixed NULL/non-NULL sums ignore the NULLs. Tests on
+   the fixture table, including an `initialize_seo_data` run against the fixture.
+4. Notes recorded: `/assets` Vite-only assumption (item H above); **merge note** below.
+5. **Pre-existing defect, recorded only (no fix here):** `GET /api/garage/outcome/{id}?result=...`
+   is a state-changing GET. Any client that issues GETs — link scanners, mail-client prefetchers,
+   browser prefetch — can record a lead outcome from the emailed link. Needs a later ticket (e.g. a
+   confirmation step or POST). Unrelated to OA-006 changes; HEAD no longer reaches it.
+
+**Merge note:** `page_revisions.json` hashes `App.tsx`, `components/**`, `seo_pages.py`, templates,
+`index.html` and the static HTML. Whoever merges this after OA-003 (#41) / OA-004 / OA-005 must run
+`python scripts/update_page_revisions.py --non-significant "<merge reason>"` (or `--significant` if copy
+changed) so `tests/test_seo.py::TestSitemapLastmodRule` passes on the merged tree.
+
 ## Assurance status
-All verification is by the same worker on the same implementation path (self-review, two
-independent measurement scripts, byte-identical old-vs-new renders, exact state snapshots). No
-independent reviewer has examined this branch yet.
+Verification by the worker (two measurement scripts, byte-identical old-vs-new renders, exact state
+snapshots) plus one independent review (Sonnet reviewer, reproduction-verified) whose findings are
+listed above and addressed in 27a632d and the following commit. The review did not re-verify the fixes.

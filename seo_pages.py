@@ -19,7 +19,7 @@ import logging
 import sqlite3
 import re
 from datetime import date
-from page_revisions import page_lastmod
+from page_revisions import homepage_sources, page_lastmod
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
 
@@ -204,17 +204,6 @@ def _model_where_clause(make: str, model: str):
     return f"({' OR '.join(conditions)})", params
 
 
-def _sqlite_like_prefix(model_id: str, prefix: str) -> bool:
-    """Python equivalent of SQLite ``model_id LIKE prefix || ' %'`` for a wildcard-free prefix.
-
-    SQLite's default LIKE folds ASCII case only; ``bytes.upper()`` does the same.
-    Callers must not pass prefixes containing ``%`` or ``_`` (see
-    ``_model_totals_from_groups``), which fall back to SQL.
-    """
-    needle = (prefix + " ").encode("utf-8").upper()
-    return model_id.encode("utf-8").upper().startswith(needle)
-
-
 def _model_keys(make: str, model: str) -> list[str]:
     """The model_id values and prefixes matched by ``_model_where_clause``."""
     keys = [f"{make} {model}"]
@@ -223,8 +212,12 @@ def _model_keys(make: str, model: str) -> list[str]:
     return keys
 
 
-def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[str, str], tuple[int, int]]:
-    """Return {(make, model): (total_tests, total_failures)} for every known model.
+def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[str, str], tuple[int | None, int | None]]:
+    """Return {(make, model): (SUM(Total_Tests), SUM(Total_Failures))} for every known model.
+
+    Either value is None when SQL would report NULL (no matching rows, or
+    every matched value NULL); callers apply the same None checks the
+    per-model queries did.
 
     One ``GROUP BY model_id`` scan replaces one full-table scan per model (the
     LIKE predicate in ``_model_where_clause`` cannot use the model_id index, so
@@ -236,16 +229,24 @@ def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[s
         """SELECT model_id, SUM(Total_Tests) AS t, SUM(Total_Failures) AS f
            FROM risks WHERE age_band != 'Unknown' GROUP BY model_id"""
     )
-    sums: dict[str, tuple[int, int]] = {}
+    # Per model_id: (SUM(Total_Tests), SUM(Total_Failures)); a SUM is None only
+    # when every value in the group is NULL, exactly as SQLite reports it.
+    sums: dict[str, tuple[int | None, int | None]] = {}
     by_upper: dict[bytes, list[str]] = {}
     for model_id, t, f in grouped:
-        sums[model_id] = (t or 0, f or 0)
+        if model_id is None:
+            continue  # NULL never satisfies model_id = ? or model_id LIKE ?
+        sums[model_id] = (t, f)
         by_upper.setdefault(model_id.encode("utf-8").upper(), []).append(model_id)
     upper_keys = sorted(by_upper)
 
     from bisect import bisect_left
 
-    totals: dict[tuple[str, str], tuple[int, int]] = {}
+    def _sql_sum(values):
+        present = [v for v in values if v is not None]
+        return sum(present) if present else None
+
+    totals: dict[tuple[str, str], tuple[int | None, int | None]] = {}
     for make, models in known.items():
         for model in models:
             keys = _model_keys(make, model)
@@ -255,7 +256,7 @@ def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[s
                     f"SELECT SUM(Total_Tests), SUM(Total_Failures) FROM risks WHERE {where} AND age_band != 'Unknown'",
                     params,
                 ).fetchone()
-                totals[(make, model)] = (row[0] or 0, row[1] or 0) if row else (0, 0)
+                totals[(make, model)] = (row[0], row[1]) if row else (None, None)
                 continue
             matched: set[str] = set()
             for key in keys:
@@ -266,9 +267,10 @@ def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[s
                 while i < len(upper_keys) and upper_keys[i].startswith(needle):
                     matched.update(by_upper[upper_keys[i]])
                     i += 1
-            t = sum(sums[m][0] for m in matched)
-            f = sum(sums[m][1] for m in matched)
-            totals[(make, model)] = (t, f)
+            totals[(make, model)] = (
+                _sql_sum(sums[m][0] for m in matched),
+                _sql_sum(sums[m][1] for m in matched),
+            )
     return totals
 
 
@@ -309,15 +311,20 @@ def initialize_seo_data(get_sqlite_connection):
             logger.error("SEO model aggregation failed: type=%s", type(e).__name__)
             return
 
-        valid_models = {key for key, (t, _f) in totals.items() if t >= 100}
-        age_band_candidates = {key for key, (t, _f) in totals.items() if t >= 10000}
+        valid_models = {key for key, (t, _f) in totals.items() if t is not None and t >= 100}
+        age_band_candidates = {key for key, (t, _f) in totals.items() if t is not None and t >= 10000}
 
         # Fail rates use the identical SQLite arithmetic as the per-model
         # queries they replace: CAST(SUM(F) AS REAL) / SUM(T), and ROUND(.., 4)
-        # for the value _query_model_overall reports on pages.
+        # for the value _query_model_overall reports on pages. A model whose
+        # failures are all NULL has no rate (SQL returned NULL), exactly as
+        # before: it is listed but excluded from rate-driven linking and the
+        # pillar ranking.
         rates: dict[tuple[str, str], tuple[float, float]] = {}
         for key in valid_models:
             t, f = totals[key]
+            if f is None:
+                continue
             raw, rounded = conn.execute(
                 "SELECT CAST(? AS REAL) / ?, ROUND(CAST(? AS REAL) / ?, 4)", (f, t, f, t)
             ).fetchone()
@@ -347,14 +354,15 @@ def initialize_seo_data(get_sqlite_connection):
         if (make, model) in age_band_candidates:
             _age_band_eligible.add((make_slug, model_slug))
 
-        raw_rate, rounded_rate = rates[(make, model)]
-        _model_fail_rates[(make_slug, model_slug)] = raw_rate
-        total_tests, total_failures = totals[(make, model)]
-        _model_totals[(make_slug, model_slug)] = {
-            "total_tests": int(total_tests),
-            "total_failures": int(total_failures),
-            "fail_rate": rounded_rate,
-        }
+        if (make, model) in rates:
+            raw_rate, rounded_rate = rates[(make, model)]
+            _model_fail_rates[(make_slug, model_slug)] = raw_rate
+            total_tests, total_failures = totals[(make, model)]
+            _model_totals[(make_slug, model_slug)] = {
+                "total_tests": int(total_tests),
+                "total_failures": int(total_failures),
+                "fail_rate": rounded_rate,
+            }
 
     for make in makes_with_models:
         slug = _slugify(make)
@@ -1288,18 +1296,20 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # not move lastmod); the dataset date is DATASET_ARTIFACT_REVISION. No
     # runtime clock is consulted, so a worker restart never claims freshness.
 
-    BASE_TEMPLATE = "templates/seo_base.html"
+    # Every template page is rendered by this module (Python-built copy such as
+    # comparison titles, 404 text and link selection) plus seo_base + its template.
+    TEMPLATE_PAGE_SOURCES = ("seo_pages.py", "templates/seo_base.html")
 
     def _template_lastmod(template_name: str) -> str:
-        """lastmod for a dataset-rendering page built from seo_base + one template."""
-        return page_lastmod(BASE_TEMPLATE, f"templates/{template_name}",
+        """lastmod for a dataset-rendering page built from seo_pages + seo_base + one template."""
+        return page_lastmod(*TEMPLATE_PAGE_SOURCES, f"templates/{template_name}",
                             dataset_revision=DATASET_ARTIFACT_REVISION)
 
     def _content_entries() -> list[tuple[str, str, str, str]]:
         """(loc, lastmod, priority, changefreq) for homepage, pillar, guides, legal, hubs."""
         base = "https://www.autosafe.one"
         entries = [
-            (f"{base}/", page_lastmod("index.html"), "1.0", "weekly"),
+            (f"{base}/", page_lastmod(*homepage_sources()), "1.0", "weekly"),
             (f"{base}/mot-check/", _template_lastmod("seo_index.html"), "0.9", "weekly"),
             (f"{base}/will-my-car-pass-mot/", _template_lastmod("seo_pillar_k7.html"), "0.95", "weekly"),
         ]

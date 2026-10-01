@@ -630,22 +630,26 @@ class TestSitemapLastmodRule(unittest.TestCase):
     def test_family_lastmods_follow_the_rule(self):
         by_path = dict(_sitemap_entries())
         base = "templates/seo_base.html"
+        code = "seo_pages.py"
 
         def expect(*sources, dataset=True):
             return page_revisions.page_lastmod(
                 *sources, dataset_revision=DATASET_ARTIFACT_REVISION if dataset else None
             )
 
-        self.assertEqual(by_path["/mot-check/ford/fiesta/"], expect(base, "templates/seo_model.html"))
-        self.assertEqual(by_path["/mot-check/ford/"], expect(base, "templates/seo_make.html"))
+        self.assertEqual(by_path["/mot-check/ford/fiesta/"], expect(code, base, "templates/seo_model.html"))
+        self.assertEqual(by_path["/mot-check/ford/"], expect(code, base, "templates/seo_make.html"))
         self.assertEqual(by_path["/mot-check/compare/ford-fiesta-vs-vauxhall-corsa/"],
-                         expect(base, "templates/seo_compare.html"))
-        self.assertEqual(by_path["/mot-check/problems/brakes/"], expect(base, "templates/seo_component_hub.html"))
-        self.assertEqual(by_path["/mot-check/"], expect(base, "templates/seo_index.html"))
-        self.assertEqual(by_path["/will-my-car-pass-mot/"], expect(base, "templates/seo_pillar_k7.html"))
+                         expect(code, base, "templates/seo_compare.html"))
+        self.assertEqual(by_path["/mot-check/problems/brakes/"], expect(code, base, "templates/seo_component_hub.html"))
+        self.assertEqual(by_path["/mot-check/"], expect(code, base, "templates/seo_index.html"))
+        self.assertEqual(by_path["/will-my-car-pass-mot/"], expect(code, base, "templates/seo_pillar_k7.html"))
         self.assertEqual(by_path["/guides/mot-cost"], expect("static/guides/mot-cost.html", dataset=False))
         self.assertEqual(by_path["/privacy"], expect("static/privacy.html", dataset=False))
-        self.assertEqual(by_path["/"], expect("index.html", dataset=False))
+        self.assertEqual(by_path["/"], expect(*page_revisions.homepage_sources(), dataset=False))
+        self.assertIn("App.tsx", page_revisions.homepage_sources())
+        self.assertIn("components/HeroForm.tsx", page_revisions.homepage_sources())
+        self.assertFalse([p for p in page_revisions.TRACKED_SOURCES if ".test." in p])
 
     def test_sitemap_index_lastmod_is_the_latest_entry_of_each_sub_sitemap(self):
         index = client.get("/sitemap.xml").text
@@ -689,27 +693,59 @@ class TestStartupModelTotals(unittest.TestCase):
             ("MERCEDES-BENZ C 220", "3-5", "0-30k", 50, 10) + comps,
             ("MERCEDES-BENZ CLA", "3-5", "0-30k", 800, 1) + comps,       # must not match C-CLASS
             ("AUDI A3", "3-5", "0-30k", 40, 10) + comps,                 # below the 100-test floor
+            (None, "3-5", "0-30k", 5000, 2500) + comps,                  # NULL model_id: never matched
+            ("VOLVO XC60", "3-5", "0-30k", 150, None) + comps,           # failures all NULL -> no rate
+            ("SKODA OCTAVIA", "3-5", "0-30k", 100, None) + comps,        # mixed NULL/non-NULL failures
+            ("SKODA OCTAVIA", "6-10", "0-30k", 100, 20) + comps,
         ]
         conn.executemany("INSERT INTO risks VALUES (" + ",".join("?" * 12) + ")", rows)
         return conn
 
     def test_grouped_totals_equal_per_model_sql(self):
         conn = self._conn()
-        known = {"FORD": ["FIESTA", "FOCUS", "KA"], "MERCEDES-BENZ": ["C-CLASS", "CLA"], "AUDI": ["A3"]}
+        known = {"FORD": ["FIESTA", "FOCUS", "KA"], "MERCEDES-BENZ": ["C-CLASS", "CLA"], "AUDI": ["A3"],
+                 "VOLVO": ["XC60"], "SKODA": ["OCTAVIA"]}
         totals = _model_totals_from_groups(conn, known)
         self.assertEqual(totals[("FORD", "FIESTA")], (1500, 390))
         self.assertEqual(totals[("MERCEDES-BENZ", "C-CLASS")], (550, 160))
         self.assertEqual(totals[("MERCEDES-BENZ", "CLA")], (800, 1))
-        self.assertEqual(totals[("FORD", "KA")], (0, 0))
+        self.assertEqual(totals[("FORD", "KA")], (None, None))          # no rows: SQL SUM is NULL
+        self.assertEqual(totals[("VOLVO", "XC60")], (150, None))        # all failures NULL
+        self.assertEqual(totals[("SKODA", "OCTAVIA")], (200, 20))       # SUM ignores the NULL
         for (make, model), (t, f) in totals.items():
             overall = _query_model_overall(conn, make, model)
-            if t >= 100:
+            if t is not None and t >= 100 and f is not None:
                 self.assertEqual((overall["total_tests"], overall["total_failures"]), (t, f), (make, model))
                 rounded = conn.execute("SELECT ROUND(CAST(? AS REAL) / ?, 4)", (f, t)).fetchone()[0]
                 self.assertEqual(overall["fail_rate"], rounded, (make, model))
             else:
                 self.assertIsNone(overall, (make, model))
         conn.close()
+
+    def test_models_without_a_failure_rate_are_listed_but_not_ranked(self):
+        """A valid model whose failures are all NULL keeps its page but has no rate (as the SQL path did)."""
+        from contextlib import contextmanager
+        conn = self._conn()
+        conn.execute("INSERT INTO risks VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                     ("FORD KUGA", "3-5", "0-30k", 250, None, 0.1, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01))
+
+        @contextmanager
+        def fixture_conn():
+            yield conn
+
+        try:
+            seo_pages.initialize_seo_data(fixture_conn)
+            self.assertIn(("ford", "kuga"), seo_pages._model_by_slug)
+            self.assertNotIn(("ford", "kuga"), seo_pages._model_fail_rates)
+            self.assertNotIn(("ford", "kuga"), seo_pages._model_totals)
+            self.assertIn(("ford", "fiesta"), seo_pages._model_totals)
+            self.assertIsNone(_query_model_overall(conn, "FORD", "KUGA"))
+        finally:
+            conn.close()
+            from main import get_sqlite_connection
+            seo_pages.initialize_seo_data(get_sqlite_connection)  # restore shared state
+            seo_pages._seo_cache.clear()
+            seo_pages._sitemap_cache.clear()
 
     def test_startup_totals_match_live_model_pages(self):
         # Spot-check against the real fixture DB through the page-level query.

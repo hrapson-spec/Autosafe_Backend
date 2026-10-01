@@ -18,6 +18,11 @@ restart nor the current date changes a page, so no clock is read at runtime.
 - ``last_change``           — ``{date, significant, reason}`` for the most
   recent reviewed change, so non-significant edits are recorded too.
 
+Tracked sources: the Vite shell and SPA body (index.html, App.tsx,
+components/** excluding tests) for the homepage; seo_pages.py (Python-built
+copy and link selection) plus seo_base.html and each template for the
+server-rendered pages; the static guide and legal HTML files.
+
 ``tests/test_seo.py`` fails when a tracked file's hash no longer matches, which
 forces the author to run ``scripts/update_page_revisions.py`` and state
 explicitly whether the change was significant (``--significant "reason"``) or
@@ -37,9 +42,30 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent
 MANIFEST_PATH = REPO_ROOT / "page_revisions.json"
 
+def _spa_sources() -> tuple[str, ...]:
+    """The SPA shell body: App.tsx and every non-test component module."""
+    found = []
+    for pattern in ("components/**/*.tsx", "components/**/*.ts"):
+        for path in sorted(REPO_ROOT.glob(pattern)):
+            name = path.name
+            if ".test." in name or ".tzspec." in name or ".smoke." in name:
+                continue
+            found.append(path.relative_to(REPO_ROOT).as_posix())
+    return ("App.tsx", *sorted(found))
+
+
+HOMEPAGE_SOURCES: tuple[str, ...] = ("index.html", *_spa_sources())
+
+
+def homepage_sources() -> tuple[str, ...]:
+    """Sources whose content reaches the homepage (/): the Vite shell plus the SPA body."""
+    return HOMEPAGE_SOURCES
+
+
 # Every source file whose content reaches a public, sitemap-listed page.
 TRACKED_SOURCES: tuple[str, ...] = (
-    "index.html",
+    *HOMEPAGE_SOURCES,
+    "seo_pages.py",
     "templates/seo_base.html",
     "templates/seo_index.html",
     "templates/seo_pillar_k7.html",
