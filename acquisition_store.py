@@ -283,8 +283,10 @@ def primary_metric_sql(style: str) -> str:
     ``style`` is ``"pg"`` ($1..$n placeholders) or ``"sqlite"`` (?).
     Parameters: from_ts (inclusive), to_ts (exclusive).
 
-    * Landing: ``landing_observed``, ``source_group = 'google_organic'``,
-      not a bot, public page family. One row per landing_id.
+    * Landing: ``landing_observed``, ``source_group = 'google_organic'``
+      (so ``paid_search``, which wins over the referrer on the client, is in
+      neither numerator nor denominator: D-006), not a bot, public page
+      family. One row per landing_id.
     * Completion: ``result_rendered`` with ``supported_result`` true carrying
       that landing_id, excluding any operation that also has a
       ``render_failed`` (render_failed wins, EVENT_SCHEMA_v1.md).

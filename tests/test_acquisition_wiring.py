@@ -52,12 +52,13 @@ def test_landing_assets_use_no_storage_cookie_or_beacon():
         code = re.sub(r"/\*[\s\S]*?\*/", "", read(path))
         code = re.sub(r"(^|[^:])//.*$", r"\1", code, flags=re.M)
         for token in ("localStorage", "sessionStorage", "indexedDB", "document.cookie", "sendBeacon",
-                      "XMLHttpRequest", "new Image(", "location.search"):
-            if path.suffix == ".ts" and token == "location.search":
-                continue  # the SPA reads and strips its own handoff parameters
+                      "XMLHttpRequest", "new Image("):
             assert token not in code, (path.name, token)
-    # The one query-string read in the public script is the CTA it writes, never the page's own query.
-    assert "location.search" not in read(ROOT / "static" / "acquisition-landing.js")
+    # The public script reads the page's own query in exactly one place: the paid-click test (D-006),
+    # which only compares keys/values and never forwards them.
+    js = re.sub(r"/\*[\s\S]*?\*/", "", read(ROOT / "static" / "acquisition-landing.js"))
+    assert js.count("window.location.search") == 1
+    assert "hasPaidMarker(window.location.search)" in js
 
 
 def test_landing_script_never_reads_the_referrer_beyond_its_origin():

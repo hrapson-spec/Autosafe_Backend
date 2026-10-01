@@ -120,6 +120,11 @@ def build_journeys(source: str):
     # J7 bot landing + completion (excluded)
     l7, s7, o7 = uid(), uid(), uid()
     journeys.append(("J7 crawler-like user agent, organic landing", [landing(l7, "guide", session=s7)], BOT_UA))
+    # J8 paid_search landing that completes (excluded from the organic metric)
+    l8, s8, o8 = uid(), uid(), uid()
+    journeys.append(("J8 paid_search guide landing, completes (excluded: not organic)", [
+        landing(l8, "guide", src="paid_search", session=s8), started(o8, l8, s8), created(o8, l8, s8),
+        rendered(o8, l8, s8)], BROWSER_UA))
     expected = {"denominator": 5, "numerator": 1} if source == "google_organic" else None
     return journeys, expected, j1[0]
 

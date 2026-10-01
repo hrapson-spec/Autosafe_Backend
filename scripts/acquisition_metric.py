@@ -10,8 +10,10 @@ result sharing the landing_id (numerator), over a half-open UTC window.
 Definitions (see docs/acquisition/COLLECTOR.md for the caveats that MUST
 accompany any figure from this script):
 
-* landing:    landing_observed, source_group google_organic, not is_bot,
-              page_family in the public set (not `app`), one per landing_id.
+* landing:    landing_observed, source_group google_organic (paid_search is a
+              separate group and is excluded from numerator and denominator),
+              not is_bot, page_family in the public set (not `app`), one per
+              landing_id. A reload is not a landing (the client does not emit).
 * completion: result_rendered with supported_result true carrying that
               landing_id, unless render_failed exists for the same operation.
 * Raw events exist for 90 days only: windows reaching further back than that
@@ -65,6 +67,7 @@ async def compute(store, from_ts: datetime, to_ts: datetime) -> dict:
         "GROUP BY source_group, page_family, is_bot ORDER BY source_group, page_family, is_bot",
         params,
     )
+    paid = [r for r in landings if r["source_group"] == "paid_search" and not r["is_bot"]]
     earliest = await store.fetch_all("SELECT MIN(received_at) AS earliest FROM acquisition_events")
     earliest_raw = earliest[0]["earliest"] if earliest else None
     den, num = metric["denominator"], metric["numerator"]
@@ -73,6 +76,7 @@ async def compute(store, from_ts: datetime, to_ts: datetime) -> dict:
         "eligible_organic_landings": den,
         "eligible_with_displayed_supported_result": num,
         "rate": (num / den) if den else None,
+        "paid_search_landings_excluded": sum(int(r["landings"]) for r in paid),
         "all_landing_observations_by_group": [
             {"source_group": r["source_group"], "page_family": r["page_family"], "is_bot": bool(r["is_bot"]),
              "landings": int(r["landings"])} for r in landings
@@ -101,7 +105,7 @@ async def main_async(args) -> int:
     out["caveats"] = [
         "Client-reported acknowledgements; they do not prove accuracy or comprehension.",
         "A reload, new tab or typed URL starts an unattributed session (not in this metric).",
-        "Google paid-search clicks also carry a google referrer and cannot be separated from organic here.",
+        "Paid search is separated only when the landing URL carried gclid, gbraid, wbraid or utm_medium cpc/ppc/paid; other paid traffic is indistinguishable from organic.",
         "Landings blocked by Global Privacy Control, script blockers or old cached pages are unobserved.",
     ]
     print(json.dumps(out, indent=2, default=str))

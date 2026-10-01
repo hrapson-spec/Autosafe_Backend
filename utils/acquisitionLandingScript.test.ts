@@ -210,6 +210,77 @@ describe('enabled (test copy)', () => {
   });
 });
 
+function navType(type: string | null) {
+  vi.spyOn(performance, 'getEntriesByType').mockReturnValue(
+    (type === null ? [] : [{ type }]) as unknown as PerformanceEntryList,
+  );
+}
+
+describe('reload is not a landing (D-006)', () => {
+  it.each(['reload', 'back_forward', 'prerender'])('%s: no request, no link rewriting, no global', (type) => {
+    navType(type);
+    setReferrer('https://www.google.com/');
+    document.body.innerHTML = CTA_HTML;
+    run(ENABLED_SOURCE);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(document.getElementById('cta-app')!.getAttribute('href')).toBe('/app');
+    expect((window as unknown as { autosafeLandingQuery?: string }).autosafeLandingQuery).toBeUndefined();
+  });
+
+  it('navigate emits', () => {
+    navType('navigate');
+    run(ENABLED_SOURCE);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('missing entry or missing API fails open and emits', () => {
+    navType(null);
+    run(ENABLED_SOURCE);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    fetchSpy.mockClear();
+    vi.restoreAllMocks();
+    const original = window.performance;
+    Object.defineProperty(window, 'performance', { value: undefined, configurable: true });
+    try {
+      run(ENABLED_SOURCE);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'performance', { value: original, configurable: true });
+    }
+  });
+});
+
+describe('paid search (D-006)', () => {
+  it.each([
+    ['/guides/mot-cost?gclid=SECRETGCLID123XYZ', 'SECRETGCLID123XYZ'],
+    ['/guides/mot-cost?GBRAID=SECRETGBRAID456', 'SECRETGBRAID456'],
+    ['/guides/mot-cost?wbraid=SECRETWBRAID789', 'SECRETWBRAID789'],
+    ['/guides/mot-cost?UTM_MEDIUM=Cpc&utm_campaign=SECRETCAMPAIGN', 'SECRETCAMPAIGN'],
+    ['/guides/mot-cost?utm_medium=paid', 'paid'],
+  ])('%s -> paid_search; nothing from the query is sent or copied into links', (url, secret) => {
+    setReferrer('https://www.google.com/search?q=mot');
+    goto(url);
+    document.body.innerHTML = CTA_HTML;
+    run(ENABLED_SOURCE);
+    const init = fetchSpy.mock.calls[0][1] as { body: string };
+    expect(JSON.parse(init.body).source_group).toBe('paid_search');
+    const hrefs = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '').join(' ');
+    for (const text of [init.body, hrefs, String((window as unknown as { autosafeLandingQuery: string }).autosafeLandingQuery)]) {
+      for (const needle of [secret.length > 4 ? secret : 'zzzz', 'gclid', 'gbraid', 'wbraid', 'utm_', 'google.com']) {
+        expect(text.toLowerCase()).not.toContain(needle.toLowerCase());
+      }
+    }
+    expect(hrefs).toContain('src=paid_search');
+  });
+
+  it('non-paid utm_medium and look-alike keys stay organic', () => {
+    setReferrer('https://www.google.com/');
+    goto('/guides/mot-cost?utm_medium=organic&gclid_x=1');
+    run(ENABLED_SOURCE);
+    expect(JSON.parse((fetchSpy.mock.calls[0][1] as { body: string }).body).source_group).toBe('google_organic');
+  });
+});
+
 describe('source-group parity with the SPA classifier', () => {
   const referrers = [
     '', 'https://www.google.com/', 'https://www.google.co.uk/search?q=a', 'https://www.google.com.au/', 'https://mail.google.com/',

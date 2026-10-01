@@ -5,7 +5,13 @@
  *
  * When enabled, on a public page it:
  *  - derives a source group from the ORIGIN of document.referrer only (the
- *    referrer path and query are never read or sent);
+ *    referrer path and query are never read or sent), except that a paid-click
+ *    marker in this page's own URL (gclid, gbraid, wbraid, utm_medium of
+ *    cpc/ppc/paid) makes it paid_search; the marker and its value are only
+ *    tested, never sent, stored or copied into links;
+ *  - does nothing at all unless this load is a fresh navigation (Navigation
+ *    Timing type 'navigate'); a reload or back/forward is not a landing. If
+ *    the API is unavailable it proceeds (documented fail-open);
  *  - mints a random landing id (memory only);
  *  - sends one landing_observed event to the same-origin collector with an
  *    allowlisted page family (never the path);
@@ -88,11 +94,42 @@
     return 'other_public';
   }
 
+  /* Reload / back_forward / prerender are not landings (D-006). No Navigation
+   * Timing support: fail open and treat the load as a landing. */
+  function isFreshNavigation() {
+    try {
+      var entries = window.performance.getEntriesByType('navigation');
+      var type = entries && entries[0] ? entries[0].type : undefined;
+      return type === undefined ? true : type === 'navigate';
+    } catch (e) {
+      return true;
+    }
+  }
+  if (!isFreshNavigation()) return;
+
+  /* Paid-click marker in this page's own URL. Presence/equality test only. */
+  function hasPaidMarker(search) {
+    var params;
+    try { params = new URLSearchParams(search); } catch (e) { return false; }
+    var found = false;
+    params.forEach(function (value, key) {
+      var k = key.toLowerCase();
+      if (k === 'gclid' || k === 'gbraid' || k === 'wbraid') found = true;
+      if (k === 'utm_medium') {
+        var v = String(value).trim().toLowerCase();
+        if (v === 'cpc' || v === 'ppc' || v === 'paid') found = true;
+      }
+    });
+    return found;
+  }
+
   var landingId = randomId();
   var sessionId = randomId();
   if (!landingId || !sessionId) return;
 
-  var source = classifyReferrer(document.referrer, window.location.hostname);
+  var source = hasPaidMarker(window.location.search)
+    ? 'paid_search'
+    : classifyReferrer(document.referrer, window.location.hostname);
   var family = pageFamily(window.location.pathname);
 
   function post(body, attempt, startedAt) {

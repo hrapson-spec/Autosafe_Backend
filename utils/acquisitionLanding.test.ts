@@ -13,7 +13,10 @@ import {
 } from './acquisitionEvents';
 import {
   classifyReferrer,
+  classifySource,
+  hasPaidSearchMarker,
   initAcquisitionLanding,
+  isFreshNavigation,
   parseHandoff,
   spaLandingFamily,
   stripHandoffParams,
@@ -200,6 +203,121 @@ describe('initAcquisitionLanding', () => {
     expect(window.location.search).toBe('');
     expect(events).toEqual([]);
     expect(getAcquisitionContext().landingId).toBeUndefined();
+  });
+});
+
+function navType(type: string | null) {
+  // null = API returns no entry; 'throw' handled separately
+  vi.spyOn(performance, 'getEntriesByType').mockReturnValue(
+    (type === null ? [] : [{ type }]) as unknown as PerformanceEntryList,
+  );
+}
+
+describe('hasPaidSearchMarker / classifySource (D-006)', () => {
+  it.each([
+    ['?gclid=abc', true],
+    ['?GCLID=abc', true],
+    ['?gclid=', true],
+    ['?x=1&gbraid=z', true],
+    ['?WBRAID=z', true],
+    ['?utm_medium=cpc', true],
+    ['?utm_medium=CPC', true],
+    ['?UTM_MEDIUM=Ppc', true],
+    ['?utm_medium=%20paid%20', true],
+    ['?utm_medium=organic', false],
+    ['?utm_medium=cpcx', false],
+    ['?utm_source=cpc', false],
+    ['?medium=cpc', false],
+    ['?gclid_not=1', false],
+    ['', false],
+  ])('%s -> %s', (search, expected) => {
+    expect(hasPaidSearchMarker(search)).toBe(expected);
+  });
+
+  it('a paid marker wins over the referrer classification', () => {
+    expect(classifySource('https://www.google.com/', HOST, '?gclid=1')).toBe('paid_search');
+    expect(classifySource('', HOST, '?utm_medium=cpc')).toBe('paid_search');
+    expect(classifySource('https://www.google.com/', HOST, '?utm_medium=organic')).toBe('google_organic');
+    expect(classifySource('https://www.google.com/', HOST, '')).toBe('google_organic');
+  });
+
+  it('handoff accepts src=paid_search', () => {
+    expect(parseHandoff(`?al=${AL}&src=paid_search`)).toEqual({ landingId: AL, sourceGroup: 'paid_search' });
+  });
+});
+
+describe('isFreshNavigation (D-006)', () => {
+  it.each([
+    ['navigate', true],
+    ['reload', false],
+    ['back_forward', false],
+    ['prerender', false],
+  ])('%s -> %s', (type, expected) => {
+    navType(type);
+    expect(isFreshNavigation()).toBe(expected);
+  });
+
+  it('fails open when the API returns no entry or is unavailable', () => {
+    navType(null);
+    expect(isFreshNavigation()).toBe(true);
+    vi.spyOn(performance, 'getEntriesByType').mockImplementation(() => {
+      throw new Error('unsupported');
+    });
+    expect(isFreshNavigation()).toBe(true);
+    vi.restoreAllMocks();
+    // jsdom has no navigation entries: also fail open
+    expect(isFreshNavigation()).toBe(true);
+  });
+});
+
+describe('initAcquisitionLanding: reload and paid search (D-006)', () => {
+  it.each(['reload', 'back_forward', 'prerender'])('%s is not a landing: no event, no landing id', (type) => {
+    navType(type);
+    setReferrer('https://www.google.com/');
+    goto('/');
+    initAcquisitionLanding(true);
+    expect(events).toEqual([]);
+    expect(getAcquisitionContext()).toEqual({ sourceGroup: 'unknown', pageFamily: 'app' });
+  });
+
+  it('navigate is a landing', () => {
+    navType('navigate');
+    setReferrer('https://www.google.com/');
+    initAcquisitionLanding(true);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ source_group: 'google_organic' });
+  });
+
+  it('missing Navigation Timing entry still emits the landing (documented fail-open)', () => {
+    navType(null);
+    initAcquisitionLanding(true);
+    expect(events).toHaveLength(1);
+  });
+
+  it.each([
+    ['/app?gclid=SECRETGCLID123XYZ', 'SECRETGCLID123XYZ'],
+    ['/?GBRAID=SECRETGBRAID456&keep=1', 'SECRETGBRAID456'],
+    ['/app?wbraid=SECRETWBRAID789', 'SECRETWBRAID789'],
+    ['/app?utm_medium=CPC&utm_campaign=SECRETCAMPAIGN', 'SECRETCAMPAIGN'],
+  ])('%s -> paid_search, and no parameter or value is emitted', (url, secret) => {
+    setReferrer('https://www.google.com/search?q=mot');
+    goto(url);
+    initAcquisitionLanding(true);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ event: 'landing_observed', source_group: 'paid_search' });
+    const json = JSON.stringify([events, getAcquisitionContext()]);
+    for (const needle of [secret, 'gclid', 'gbraid', 'wbraid', 'utm_', 'cpc', 'CPC']) {
+      expect(json.toLowerCase()).not.toContain(needle.toLowerCase());
+    }
+    // existing stripping is unchanged: only al/src are removed, other params stay in the address bar
+    expect(window.location.search).toContain(url.split('?')[1].split('&')[0]);
+  });
+
+  it('a paid reload is still not a landing', () => {
+    navType('reload');
+    goto('/app?gclid=abc');
+    initAcquisitionLanding(true);
+    expect(events).toEqual([]);
   });
 });
 

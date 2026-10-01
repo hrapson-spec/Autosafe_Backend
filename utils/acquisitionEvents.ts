@@ -55,7 +55,8 @@ export type RenderFailedStage = 'lazy_load' | 'render' | 'contract_invalid';
 export type CheckFailedStage = 'create_report';
 /**
  * `internal` is a same-site referrer (never an organic landing);
- * `internal_test` is synthetic/test traffic.
+ * `paid_search` is a landing whose URL carried a paid-click marker (D-006; the
+ * marker itself is never sent); `internal_test` is synthetic/test traffic.
  */
 export type SourceGroup =
   | 'google_organic'
@@ -64,6 +65,7 @@ export type SourceGroup =
   | 'referral'
   | 'unknown'
   | 'internal'
+  | 'paid_search'
   | 'internal_test';
 /** Allowlisted landing-page families (D-005); the landing path itself is never sent. */
 export type PageFamily =

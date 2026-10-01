@@ -86,11 +86,12 @@ AlwaysTrue = Annotated[StrictBool, AfterValidator(_must_be_true)]
 PageFamily = Literal[
     "home", "app", "guide", "make", "model", "comparison", "pillar", "problem_hub", "other_public"
 ]
-# `internal` is a same-site referrer (never an organic landing). `internal_test`
-# is synthetic/test traffic. Schema v1 had only the latter; D-005 adds the
+# `internal` is a same-site referrer (never an organic landing). `paid_search`
+# is a landing whose URL carried a paid-click marker (D-006; the marker is never
+# sent). `internal_test` is synthetic/test traffic. Schema v1 had only the latter; D-005 adds the
 # landing-page referrer classes.
 SourceGroup = Literal[
-    "google_organic", "other_search", "direct", "referral", "unknown", "internal", "internal_test"
+    "google_organic", "other_search", "direct", "referral", "unknown", "internal", "paid_search", "internal_test"
 ]
 ObservationState = Literal["observed", "consent_not_given", "unsupported"]
 EntryMode = Literal["fresh_check", "restored_link"]

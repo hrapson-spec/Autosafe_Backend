@@ -21,7 +21,11 @@ carries `page_family` and `source_group`). The schema file describes the event p
 collector's strict models (`acquisition_routes.py`) accept exactly schema + envelope, and a
 test checks the combination rules against this schema over a full grid. Source groups are
 `google_organic`, `other_search`, `direct`, `referral`, `unknown`, `internal` (same-site
-referrer) and `internal_test` (synthetic traffic). `page_family` is an allowlisted category
+referrer), `paid_search` (the landing URL carried `gclid`, `gbraid`, `wbraid` or `utm_medium`
+of cpc/ppc/paid, case-insensitive; takes precedence over the referrer; the marker and its value
+are never sent or stored; D-006) and `internal_test` (synthetic traffic). `landing_observed`
+is emitted only for a fresh navigation (Navigation Timing `navigate`), not a reload or
+back/forward; with no Navigation Timing API it is emitted. `page_family` is an allowlisted category
 (`home app guide make model comparison pillar problem_hub other_public`), never a path.
 
 ## Still not decided here

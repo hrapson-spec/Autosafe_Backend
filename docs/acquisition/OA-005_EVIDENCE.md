@@ -52,9 +52,9 @@ Baseline = `oa/004-render-acknowledgement` tip `f19c85d` (same Node 26 environme
 
 | Check | Baseline | This branch |
 |---|---|---|
-| pytest (`tests/`) | 529 passed, 1 skipped | **670 passed, 2 skipped** (+141 passed; the extra skip is the Postgres-only advisory-lock test) |
-| pytest, acquisition files with a local Postgres (`ACQUISITION_TEST_PG_DSN`) | n/a | **152 passed, 1 skipped** (every store test ran on SQLite and PostgreSQL; the skip is the SQLite leg of the Postgres-only test) |
-| vitest | 401 passed, 9 failed (410) | **520 passed, 9 failed (529)**: +119 passed, the same 9 `components/ReportDashboard.test.tsx` failures that pre-exist under Node 26 (nothing else fails) |
+| pytest (`tests/`) | 529 passed, 1 skipped | **671 passed, 2 skipped** (+142 passed; the extra skip is the Postgres-only advisory-lock test) |
+| pytest, acquisition files with a local Postgres (`ACQUISITION_TEST_PG_DSN`) | n/a | **153 passed, 1 skipped** (every store test ran on SQLite and PostgreSQL; the skip is the SQLite leg of the Postgres-only test) |
+| vitest | 401 passed, 9 failed (410) | **563 passed, 9 failed (572)**: +162 passed, the same 9 `components/ReportDashboard.test.tsx` failures that pre-exist under Node 26 (nothing else fails) |
 | Playwright (installed chromium 1243, no temporary config needed) | 29 passed | **32 passed** (3 new in `e2e/acquisition-landing.spec.ts`) |
 | `npm run typecheck`, `npm run lint`, `npm run build` | exit 0 | exit 0, 0 warnings |
 | `scripts/claim_sweep.py` | clean | clean |
@@ -118,7 +118,7 @@ suite skipped table creation (5 failures in one 30-run loop plus two earlier one
 on the store object and a test pins that. 40 further runs of both acquisition test files with
 Postgres enabled were clean.
 
-## Judgement calls and deviations (all small, reversible, flagged for review)
+## Judgement calls and deviations (items 1-5 accepted in D-006; item 6 superseded)
 
 1. **Server flag `ACQUISITION_INGEST_ENABLED`** (default off, 404 when off). Not in D-005; it makes
    the D-005 gate steps possible (production synthetic event with the client still off), is the
@@ -143,13 +143,62 @@ Postgres enabled were clean.
    `RAILWAY_GIT_COMMIT_SHA`/`GIT_SHA`, which the Docker frontend stage already receives as build
    args; non-hex becomes absent). The repo had no frontend SHA constant. The public-page script
    has no build identity and omits it. Not verified inside a real Docker build (see not executed).
-6. **No reload dedup**, exactly as D-005 says. A reload of an organic landing page counts as a
-   second landing (the referrer survives a reload). Detecting `navigation.type === 'reload'`
-   would need no storage and would avoid the double count; it is a one-line follow-up if you
-   want it, but it changes the denominator rule so I did not do it.
+6. **No reload dedup** was my original reading of D-005; **superseded by D-006** (reload is not a landing, below).
 7. **Public set excludes `app`.** "Eligible landing" = a public page family; a Google visit landing
    directly on `/app` is stored (`page_family=app`) and shown separately by the metric script but
    is not in the primary denominator. `/` (home) is included.
+
+## D-006 amendments (lead rulings of 2026-10-01)
+
+Accepted as built: `ACQUISITION_INGEST_ENABLED`, 503 on recording failure, `page_family`, the
+`internal` source group, `data-acq-cta` and the SEO-form handoff. Two amendments implemented:
+
+**1. Reload is not a landing.** `landing_observed` is emitted only when
+`performance.getEntriesByType('navigation')[0].type === 'navigate'`
+(`isFreshNavigation()` in `utils/acquisitionLanding.ts`, same logic in
+`static/acquisition-landing.js`). `reload`, `back_forward` and `prerender` emit nothing, mint no
+`landing_id`, and (public script) rewrite no links and set no handoff query. **Fallback,
+documented in `COLLECTOR.md`:** if the API is unavailable, throws, or returns no entry, the
+landing is emitted. Tests: SPA (`acquisitionLanding.test.ts`: navigate / reload / back_forward /
+prerender / no entry / throwing API / jsdom default) and public script
+(`acquisitionLandingScript.test.ts`: the same four types plus missing entry and `performance`
+undefined). Effect on the KPI: a reload of an organic landing page no longer adds a second
+denominator row; the residual double count exists only in browsers without the API.
+
+**2. Paid search is not organic.** A landing URL carrying `gclid`, `gbraid` or `wbraid`
+(any key case) or `utm_medium` equal to `cpc`/`ppc`/`paid` (any case, trimmed) has
+`source_group = paid_search`, ahead of referrer classification (`hasPaidSearchMarker`,
+`classifySource`; script `hasPaidMarker`). Only presence/equality is tested. `paid_search` was
+added to the client type, the SPA handoff allowlist, the server enum, `event_schema_v1.json`,
+`EVENT_SCHEMA_v1.md` and `COLLECTOR.md`. The privacy notice now lists "paid search" among the
+arrival categories and says the marker is tested in the browser and never sent or kept; it also
+no longer says a reload starts a new measurement. The metric query already filters
+`source_group = 'google_organic'`, so paid landings and their completions are in neither
+numerator nor denominator; the query docstring, `scripts/acquisition_metric.py` (new output
+field `paid_search_landings_excluded`) and `COLLECTOR.md` state this. Tests: marker table (15
+cases incl. look-alikes `gclid_not`, `utm_medium=cpcx`, `utm_source=cpc`), precedence over a
+Google referrer, and for SPA and script a **leak test**: for `gclid`, `gbraid`, `wbraid` and
+`utm_medium` landings the serialised event, context, handoff query and rewritten links contain
+none of the parameter names, values (including an unrelated `utm_campaign` value) or the
+referrer; server tests accept `paid_search` and reject `gclid`/`gbraid`/`wbraid`/`utm_*` as
+fields; the schema-parity grid includes `paid_search`; the primary-metric store test includes a
+completing paid landing that must not count. Existing `al`/`src` stripping is unchanged (the
+tracking parameters themselves stay in the address bar as before).
+
+**Local receipt re-run including a paid_search journey**
+(`docs/acquisition/receipts/OA-005_local_receipt_postgres_run3_d006.json`; same real two-worker
+uvicorn and throwaway Postgres 16.2, tables dropped first so the collector recreated them):
+J8 is a `paid_search` guide landing that completes with a supported prediction. 26 unique events
+(22 + J8's 4) plus the resend, all 202; raw rows 26; **primary metric denominator 5, numerator 1
+(unchanged: J8 excluded)**; `acquisition_daily` total 26, rerun adds 0; the metric script reports
+`paid_search_landings_excluded: 1`; landing rows by source: google_organic 6 (5 eligible + the bot),
+other_search 1, paid_search 1; 0 of 42 ids in the server log. Runs 1 and 2 are retained as before.
+
+Verification after the amendments: pytest **671 passed, 2 skipped** (Postgres-enabled acquisition
+files 153 passed, 1 skipped); vitest **563 passed, 9 failed** (the same 9
+`ReportDashboard.test.tsx` failures only); Playwright 32 passed; typecheck, lint, build and
+`claim_sweep` exit 0; OpenAPI drift clean with no regeneration needed (the route body is an opaque
+object in the snapshot, so the enum change does not alter it).
 
 ## Not executed
 
@@ -169,9 +218,8 @@ Postgres enabled were clean.
 
 ## Escalations
 
-None blocking. Items for the lead: judgement calls 1, 4 and 6 above; the paid-search limitation
-(a Google referrer is not proof of organic: the `google_organic` label cannot be exact while Ads
-run, and D-005 forbids reading the query string for `gclid`); and the pre-existing, separate
+None blocking. Items for the lead: judgement calls 1 and 4 above (accepted in D-006); the paid-search limitation
+(resolved for tagged clicks by D-006; untagged paid traffic still looks organic); and the pre-existing, separate
 client storage that D-005's "no web storage" does not cover but a privacy review may want to see:
 `sessionStorage` (`autosafe_pending_registration`, the SEO registration-form handoff) and
 `localStorage` (`autosafe_consent`, the Ads consent choice). Neither was changed.

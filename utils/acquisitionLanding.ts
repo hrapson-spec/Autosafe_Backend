@@ -19,7 +19,14 @@
  *
  * 2. Direct SPA landing on `/` or `/app` (no handoff). The SPA mints a
  *    landing_id, derives source_group from the `document.referrer` ORIGIN
- *    only, and emits landing_observed with an allowlisted page_family.
+ *    only (or `paid_search` if the URL carries a paid-click marker, D-006),
+ *    and emits landing_observed with an allowlisted page_family.
+ *
+ * A reload (or back/forward, prerender) is not a landing (D-006): the event
+ * is emitted only when Navigation Timing says the load was a `navigate`. If
+ * that API is unavailable the landing IS emitted (fail open: no storage
+ * exists to dedupe with, and an unobservable reload is rarer than a
+ * missing-API browser losing every landing). Reading the type is not storage.
  *
  * Report routes (`/app/report/*`) and every other SPA route are not
  * landings. A reload, new tab or typed URL starts a new, unattributed
@@ -45,6 +52,7 @@ const HANDOFF_SOURCE_GROUPS: ReadonlySet<string> = new Set<SourceGroup>([
   'referral',
   'unknown',
   'internal',
+  'paid_search',
 ]);
 
 /** Search engines other than Google (hostname, with or without `www.`). */
@@ -87,6 +95,50 @@ export function classifyReferrer(referrer: string, ownHostname: string): SourceG
   if (GOOGLE_SEARCH_HOST.test(host)) return 'google_organic';
   if (OTHER_SEARCH_HOSTS.some((re) => re.test(host))) return 'other_search';
   return 'referral';
+}
+
+const PAID_PARAMS: ReadonlySet<string> = new Set(['gclid', 'gbraid', 'wbraid']);
+const PAID_MEDIUMS: ReadonlySet<string> = new Set(['cpc', 'ppc', 'paid']);
+
+/**
+ * True if the landing URL query carries a paid-click marker (`gclid`,
+ * `gbraid`, `wbraid`, or `utm_medium` of cpc/ppc/paid; keys and values
+ * case-insensitive). Only presence/equality is tested: no value is returned,
+ * stored or sent.
+ */
+export function hasPaidSearchMarker(search: string): boolean {
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(search);
+  } catch {
+    return false;
+  }
+  for (const [key, value] of params) {
+    const k = key.toLowerCase();
+    if (PAID_PARAMS.has(k)) return true;
+    if (k === 'utm_medium' && PAID_MEDIUMS.has(value.trim().toLowerCase())) return true;
+  }
+  return false;
+}
+
+/** Source group for a landing: a paid-click marker wins over the referrer origin (D-006). */
+export function classifySource(referrer: string, ownHostname: string, search: string): SourceGroup {
+  return hasPaidSearchMarker(search) ? 'paid_search' : classifyReferrer(referrer, ownHostname);
+}
+
+/**
+ * True when this document load is a fresh navigation. Only `navigate` counts;
+ * `reload`, `back_forward` and `prerender` do not. If Navigation Timing is
+ * unavailable or empty, returns true (documented fail-open).
+ */
+export function isFreshNavigation(): boolean {
+  try {
+    const entries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    const type = entries?.[0]?.type;
+    return type === undefined ? true : type === 'navigate';
+  } catch {
+    return true;
+  }
 }
 
 export interface Handoff {
@@ -135,6 +187,7 @@ export function spaLandingFamily(pathname: string): PageFamily | null {
  */
 export function initAcquisitionLanding(enabled: boolean = ACQUISITION_COLLECTOR_ENABLED): void {
   const handoff = parseHandoff(window.location.search);
+  const search = window.location.search; // read before the strip; used only for the paid-click test
   stripHandoffParams();
   if (!enabled || globalPrivacyControlSet()) return;
 
@@ -144,11 +197,11 @@ export function initAcquisitionLanding(enabled: boolean = ACQUISITION_COLLECTOR_
   }
 
   const family = spaLandingFamily(window.location.pathname);
-  if (!family) {
+  if (!family || !isFreshNavigation()) {
     setAcquisitionContext({ sourceGroup: 'unknown', pageFamily: 'app' });
     return;
   }
-  const sourceGroup = classifyReferrer(document.referrer, window.location.hostname);
+  const sourceGroup = classifySource(document.referrer, window.location.hostname, search);
   const landingId = randomId();
   // Later events happen on the app itself, so they carry page_family 'app';
   // only landing_observed carries the landing's family.

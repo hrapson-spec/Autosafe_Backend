@@ -55,7 +55,7 @@ The body is a JSON object of at most **2048 bytes**, `Content-Type: application/
 | `session_id` | random UUID, one per document, memory only |
 | `landing_id` | random UUID, optional; required on `landing_observed` |
 | `page_family` | `home app guide make model comparison pillar problem_hub other_public` |
-| `source_group` | `google_organic other_search direct referral unknown internal internal_test` |
+| `source_group` | `google_organic other_search direct referral unknown internal paid_search internal_test` |
 | `release_sha` | optional, `^[0-9a-f]{7,40}$` (SPA only; see below) |
 
 then the event-specific fields exactly as in `event_schema_v1.json` (`landing_observed`
@@ -67,7 +67,8 @@ The server adds only `received_at` and `is_bot`. `is_bot` comes from a conservat
 User-Agent pattern (clear crawlers, headless browsers, monitors, HTTP libraries; an absent
 User-Agent counts as a bot). **The User-Agent, IP address, Referer, query string and URL are
 never stored.** The IP address is used by the in-memory rate limiter only. `source_group`
-`internal` is a same-site referrer; `internal_test` is synthetic traffic. Page family is a
+`internal` is a same-site referrer; `paid_search` is a landing whose own URL carried a paid-click
+marker (below); `internal_test` is synthetic traffic. Page family is a
 category, never a path.
 
 | Response | When |
@@ -101,8 +102,9 @@ appear.
 All identifiers are random per page load and held in memory only; none is derived from the
 registration, postcode, report token or any input. A session is one document lifetime plus
 the landing handoff on the CTA link. A reload, new tab or typed URL starts an **unattributed
-session**: there is no 30-minute window and no reload dedup, because nothing is stored. This
-is an accepted coverage limitation and must be reported with the KPI.
+session**: there is no 30-minute window and no stored dedup. A reload is additionally not a
+landing (D-006, below), so it does not inflate the denominator. This is an accepted coverage
+limitation and must be reported with the KPI.
 
 Handoff: a public page appends `?al=<landing_id>&src=<source_group>` to the site's **own
 same-origin links to `/app`** and to links explicitly marked `data-acq-cta` that point at `/`
@@ -114,6 +116,25 @@ holds them in memory and removes them with `history.replaceState` in `index.tsx`
 (`utils/analytics.ts` `trackPageView`, fired from an `App` effect). Umami's loader filter also
 reduces URLs to the path and referrers to the origin, and the global `Referrer-Policy` is
 `strict-origin-when-cross-origin`, so the parameters are never sent to a third party.
+
+### Reload is not a landing, and paid search is not organic (D-006)
+
+* **Reload.** `landing_observed` is emitted only when
+  `performance.getEntriesByType('navigation')[0].type === 'navigate'`, in both
+  `static/acquisition-landing.js` and the SPA (`utils/acquisitionLanding.ts`). A `reload`,
+  `back_forward` or `prerender` load emits nothing, mints no `landing_id` and rewrites no links.
+  **Fallback:** if Navigation Timing is unavailable or returns no entry the landing **is**
+  emitted (fail open; there is no storage to dedupe with, and dropping every landing from a
+  browser without the API would be worse than a rare double count). Reading the navigation
+  type is not device storage.
+* **Paid search.** If the landing URL query has `gclid`, `gbraid` or `wbraid` (any case), or
+  `utm_medium` equal to `cpc`, `ppc` or `paid` (any case), `source_group` is `paid_search`,
+  taking precedence over the referrer classification. The code only tests presence/equality;
+  neither the parameter nor its value is ever sent, stored, logged or copied into a link (tests
+  assert no `gclid` value appears in any emitted payload or rewritten link). Existing
+  stripping of `al`/`src`, `reg`, `postcode` etc. is unchanged. `paid_search` can be handed to
+  the app in `src=`. Other paid traffic without these markers (for example untagged campaigns)
+  is still indistinguishable from organic.
 
 ### Report routes
 
@@ -198,7 +219,7 @@ and idempotency record are gone). That is accepted: the client never replays.
 Definition (MEASUREMENT.md, metric version `oa-metric-v1-draft`):
 
 * **eligible organic landings** (denominator): `landing_observed`, `source_group =
-  'google_organic'`, `is_bot` false, `page_family` public (all families except `app`), one per
+  'google_organic'` (`paid_search` is its own group and is in neither count), `is_bot` false, `page_family` public (all families except `app`), one per
   `landing_id`, `received_at` within the window;
 * **completions** (numerator): of those, landings with a `result_rendered` where
   `supported_result` is true sharing the `landing_id`, **excluding** any operation that also has
@@ -221,14 +242,16 @@ families versus `result_rendered` with a supported `outcome_group`), never as th
 1. It measures *observed* landings only. Invisible: visitors with Global Privacy Control,
    JavaScript blocked, a content blocker that blocks the request, or an old cached page without
    the script.
-2. No storage means no reload/new-tab/typed-URL attribution: those start unattributed sessions,
-   and a reload of an organic landing page counts as a second landing (same referrer).
+2. No storage means no new-tab/typed-URL attribution: those start unattributed sessions. A
+   reload is not counted as a landing (Navigation Timing `navigate` only); a browser without
+   that API fails open and may double count a reload.
 3. Attribution passes only through the site's own `/app` links, marked CTA links and the SEO
    registration form. A visitor who reaches the app any other way (typed URL, bookmark, a
    non-CTA link) has no `al`; a direct SPA landing is then its own landing (with the referrer
    it actually had, usually `internal` or `direct`).
-4. `google_organic` is derived from the referrer origin only. Google **paid** clicks also
-   arrive with a Google referrer and cannot be separated from organic by this method.
+4. `google_organic` is derived from the referrer origin, except that landings whose URL carried
+   a paid-click marker are `paid_search` and excluded from numerator and denominator. Paid
+   clicks without such a marker (untagged) remain indistinguishable from organic.
 5. Landings on SPA routes other than `/` and `/app` (e.g. `/app/guides/*`) are not landings.
 6. Restored/shared report links are never attributed to a landing and are excluded from the
    denominator (MEASUREMENT.md).

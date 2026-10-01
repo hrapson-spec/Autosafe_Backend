@@ -172,6 +172,17 @@ class TestAcceptance:
         assert post(client, pred).status_code == 202
         assert [r["outcome_group"] for r in rows(path)] == ["demo", "demo"]
 
+    def test_paid_search_landing_is_accepted_and_stored(self, collector):
+        client, path = collector
+        assert post(client, landing(source_group="paid_search")).status_code == 202
+        assert rows(path)[0]["source_group"] == "paid_search"
+        # the paid-click marker itself is not a field the collector knows
+        for field in ("gclid", "gbraid", "wbraid", "utm_medium", "utm_campaign"):
+            ev = landing(source_group="paid_search")
+            ev[field] = "SECRET-VALUE"
+            assert post(client, ev).status_code == 400
+        assert "SECRET-VALUE" not in json.dumps(rows(path))
+
     def test_duplicate_event_is_202_and_one_row(self, collector):
         client, path = collector
         ev = landing()
@@ -585,7 +596,7 @@ class TestSchemaParity:
         cases = []
         for pf, sg, st in itertools.product(
             ["home", "app", "guide", "make", "model", "comparison", "pillar", "problem_hub", "other_public", "bad"],
-            ["google_organic", "other_search", "direct", "referral", "unknown", "internal", "internal_test", "bad"],
+            ["google_organic", "other_search", "direct", "referral", "unknown", "internal", "paid_search", "internal_test", "bad"],
             ["observed", "consent_not_given", "unsupported", "bad"],
         ):
             cases.append(landing(lid, page_family=pf, source_group=sg, observation_state=st))
@@ -846,6 +857,12 @@ class TestPrimaryMetric:
         ins(store, rec(t, event="render_failed", landing_id=g, operation_id=op_g, page_family="app", stage="render"))
         # H: landing outside the window -> excluded
         ins(store, rec(NOW - timedelta(days=5), landing_id=uid()))
+        # J: paid_search landing that completes -> in neither numerator nor denominator (D-006)
+        j = uid()
+        ins(store, rec(t, landing_id=j, source_group="paid_search"))
+        ins(store, rec(t, event="result_rendered", landing_id=j, operation_id=uid(), page_family="app",
+                       source_group="paid_search", supported_result=True, render_delivered=True,
+                       outcome_group="prediction"))
         # I: unrelated restored-link result without a landing -> irrelevant
         ins(store, rec(t, event="result_rendered", landing_id=None, operation_id=None, page_family="app",
                        supported_result=True, render_delivered=True, outcome_group="prediction"))
