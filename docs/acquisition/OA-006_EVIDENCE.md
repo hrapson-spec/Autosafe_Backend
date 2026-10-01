@@ -1,7 +1,7 @@
 # OA-006 — Public-template technical triage: evidence record
 
 Branch `oa/006-technical-batch`, based on upstream main `7325720` (production as of 2026-10-01).
-Worker W5, 2026-10-01. Input: `inputs/SEO_ASSESSMENT_2026-10-01.md` (external assessment; every
+Worker W5, 2026-10-01; revised the same day after lead rulings on items E and F (see those sections). Input: `inputs/SEO_ASSESSMENT_2026-10-01.md` (external assessment; every
 claim below was reproduced locally before any change). Nothing here was pushed, merged or deployed.
 
 Labels: **MEASURED** = observed by running code in this worktree; **PROD** = read-only GET against
@@ -19,7 +19,7 @@ www.autosafe.one (normal UA, ≤ 2 req/s); **DERIVED** = computed from measured 
 
 ## Headline before/after (MEASURED, same DB, same harness)
 
-| Measure | Before (7325720) | After (39a1af0) |
+| Measure | Before (7325720) | After (branch head) |
 |---|---|---|
 | Sitemap URLs (unique) | 442 (442) | 442 (442) — unchanged set |
 | Sitemap URLs returning 200 | 442/442 | 442/442 |
@@ -30,7 +30,7 @@ www.autosafe.one (normal UA, ≤ 2 req/s); **DERIVED** = computed from measured 
 | Component pages rendering “£–£” | 60/60 | 0/60 |
 | Component pages noindex + non-self canonical | 60/60 | 0/60 |
 | `<html lang>` on crawled pages | `en` ×1,793 | `en-GB` ×1,793 |
-| Sitemap lastmod histogram | 2026-01-29 ×428, 2026-07-11 ×14 | 2026-10-01 ×442 (see F for why) |
+| Sitemap lastmod histogram | 2026-01-29 ×428, 2026-07-11 ×14 | 2026-07-11 ×439, 2026-07-17 ×3 (last significant content change per source; see F) |
 | `/will-my-car-pass-mot/` cold / warm | 9.36 s / 2.4 ms | 0.084 s / 2.1 ms |
 | App lifespan (startup) in TestClient | 31.0 s | 0.69 s |
 | HEAD on 8 public GET paths | 405 ×8 | 200 ×8 |
@@ -84,6 +84,9 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   back to the template's existing neutral sentence. **Decision for Henri:** a one-line alternative
   (`range_low→min`, `range_high→max`) would instead display e.g. “Usually £80–£350” from
   `repair_costs.py`. That adds a visible quantitative claim, so it was not done here.
+  **Decided (lead, 2026-10-01): keep the range SUPPRESSED.** Publishing repair-price figures needs a
+  provenance review first (prior AutoSafe work found a pricing-fabrication trap); it is a separate
+  claims item, not part of OA-006.
 - Canonical: pages combined `noindex,follow` with a canonical to the parent model page. Chosen
   resolution: self-referencing canonical, noindex kept. Justification: canonical-to-parent asserts
   “this is a duplicate of the parent” while noindex says “drop this URL”; search engines document
@@ -92,30 +95,47 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
 - Tests: no empty range strings; neutral FAQ answer present; robots noindex,follow present;
   canonical equals own URL.
 
-### F — Sitemap lastmod (commits ba12934, 39a1af0)
+### F — Sitemap lastmod (commits ba12934, 39a1af0, and the significance revision below)
 - Reproduced: 428/442 at 2026-01-29 (`DATASET_ARTIFACT_REVISION`), 14 at a hand-set constant
-  2026-07-11. Git facts (MEASURED from history): `templates/seo_base.html`, `index.html`, both legal
-  pages and all 9 guides last changed 2026-10-01 (commit 7325720, Umami restore); the other eight
-  templates last changed 2026-07-11. Every served page therefore changed after its declared lastmod.
-- Rule (documented in `page_revisions.py`): **lastmod = max(dataset artifact revision where the page
-  renders dataset figures, recorded revision date of every source file that renders the page).**
-  `page_revisions.json` holds each tracked source's SHA-256 and revision date. A test fails when a
-  tracked file's hash no longer matches, so the author of a change must run
-  `scripts/update_page_revisions.py` (default date = the day they run it; `--date` to override;
-  `--check` for CI-style verification). No clock is read at runtime; restarts cannot claim freshness.
-  Sitemap-index lastmod = latest entry of each sub-sitemap.
-- Initial dates: git last-commit date per file; files edited in this branch = 2026-10-01. Because
-  `seo_base.html` (shared by every template page) and all static pages changed on 2026-10-01, all
-  442 URLs currently report 2026-10-01. That is what the rule says; it will diverge as files age.
-- Limits: the homepage tracks only the Vite shell `index.html`, not SPA component changes (App.tsx
-  is edited by other in-flight branches; tracking it would make their tests fail). The dataset date
-  stays `DATASET_ARTIFACT_REVISION` (owned by report_contract.py). Sitemap cache maxsize 1 → 8 so
-  the five sitemap documents no longer evict each other.
-- OpenAPI: two reworded route docstrings surfaced as schema drift; restored verbatim (39a1af0),
-  snapshot unchanged.
-- Tests: manifest current; dates valid, ≥ 2026-01-01 and ≤ today; every emitted lastmod is a recorded
-  revision date or the dataset date; per-family rule for 9 representative URLs; index = max of
-  entries; pure-function behaviour; sitemap inventory invariant 442 = 14 + 7 + 30 + 371 + 20.
+  2026-07-11. Git facts (MEASURED): the templates' titles, descriptions and body copy were rewritten
+  on 2026-07-11 (f34319e/fafd4d0, RC1 truth remediation); the legal pages and the homepage shell
+  paragraph were reworded on 2026-07-17 (85f737d, c37c75e); every later commit to these files
+  (7325720 Umami script tag; this branch's footer links, `lang`, hub links, plain-text age cells)
+  touched only boilerplate, markup or scripts.
+- Rule (lead ruling; documented in `page_revisions.py` and `scripts/update_page_revisions.py`):
+  **lastmod = max(dataset artifact revision where the page renders dataset figures, the
+  `significant_revision` of every source file that renders the page).** Significant = a change to
+  main content (titles, headings, body copy, figures, FAQs). Boilerplate, footer, navigation links,
+  markup, styling, analytics/consent scripts and language tags are not significant and do not move
+  lastmod. `page_revisions.json` stores per source: `sha256`, `significant_revision`, `reason`, and
+  `last_change {date, significant, reason}` so non-significant edits are recorded too. A test fails
+  when a tracked file's hash changes; the update script then refuses to write (exit 2) until the
+  author chooses `--significant "reason"` (moves the date; default today, `--date` to override) or
+  `--non-significant "reason"` (hash only). No clock is read at runtime. Sitemap-index lastmod = latest
+  entry of each sub-sitemap.
+- Seeded history (one-off, from inspected diffs): all nine SEO templates 2026-07-11 (RC1 rewrite);
+  `seo_base.html` 2026-02-06 (creation; it contributes only header/nav/CTA/footer/related-links
+  boilerplate, and every later edit was boilerplate, consent, styling or analytics); the nine guides
+  2026-07-11 (body/FAQ copy rewritten in f34319e, verified per file); `terms.html` and
+  `privacy.html` 2026-07-17; `index.html` 2026-07-17 (homepage paragraph). Branch changes recorded as
+  non-significant: C footer links, D hub navigation links (lead ruling), B plain-text age cells,
+  H `lang=en-GB`. `seo_component.html` is recorded as significant 2026-10-01 (E range removal) but
+  those pages are noindex and not in the sitemap, so no lastmod moves.
+- Resulting distribution (MEASURED, crawl): **2026-07-11 ×439** (371 models, 30 makes, 20
+  comparisons, 7 hubs, `/mot-check/`, pillar, 9 guides) and **2026-07-17 ×3** (`/`, `/privacy`,
+  `/terms`). Sitemap index: content 2026-07-17, makes/models/comparisons 2026-07-11. Compared with
+  production (2026-01-29 ×428 / 2026-07-11 ×14) this moves the dataset-page family to the date their
+  content was actually rewritten and the legal/home pages forward by six days.
+- Limits: the homepage tracks only the Vite shell `index.html`, not SPA component changes. The dataset
+  date stays `DATASET_ARTIFACT_REVISION` (owned by report_contract.py). Significance is an author
+  judgement recorded with a reason; the test enforces that a judgement is recorded, not what it is.
+  Sitemap cache maxsize 1 → 8 so the five sitemap documents no longer evict each other.
+- OpenAPI: two reworded route docstrings surfaced as schema drift; restored verbatim (39a1af0).
+- Tests: manifest current; entry schema and dates valid (not in the future, `last_change` ≥
+  significant date); the update script's refusal/non-significant/significant paths exercised on a
+  temp manifest; every emitted lastmod is a recorded significant revision or the dataset date;
+  per-family rule for 9 representative URLs; index = max of entries; sitemap inventory invariant
+  442 = 14 + 7 + 30 + 371 + 20.
 
 ### G — Pillar cold path and startup (commit 7f1ec5c)
 - Reproduced: cold 9.36 s / warm 2.4 ms (crawl); 9.53 s in an isolated old-vs-new run. Cause:
@@ -155,11 +175,11 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   9 guides (static HTML is also public and served directly, so it was included; `page_revisions.json`
   refreshed accordingly).
 
-## Gate results (MEASURED, 39a1af0)
+## Gate results (MEASURED, branch head after the F revision)
 
 | Gate | Baseline (7325720) | After |
 |---|---|---|
-| `pytest tests/ -q` | 529 passed, 1 skipped | 554 passed, 1 skipped (+25 new, 1 rewritten) |
+| `pytest tests/ -q` | 529 passed, 1 skipped | 555 passed, 1 skipped (+26 new, 1 rewritten) |
 | `check_internal_links.py` (AUTOSAFE_DB_PATH=/tmp/autosafe.db) | — | exit 0, 40 static links valid |
 | `scripts/claim_sweep.py` | clean | clean |
 | `scripts/check_openapi_drift.py` | matches | matches |
@@ -178,17 +198,17 @@ Homepage server rendering / H1 / titles / descriptions (OA-002, evidence E05); t
 (OA-007/008/009); apex DNS / GoDaddy / Railway domain (Henri); Search Console / Bing / IndexNow
 submissions (Henri); FAQ markup removal; robots.txt; bearer report routes, analytics, report contract.
 
-## Escalations / decisions for Henri
-1. **A** — confirm `autosafehq@gmail.com` as the Feedback address before merge.
-2. **E** — decide whether component pages should show the repair-cost range from `repair_costs.py`
-   (`min`/`max`; a one-line template key fix) or stay suppressed as delivered.
-3. **F** — the lastmod rule makes all 442 URLs report 2026-10-01 at release because `seo_base.html`
-   and every static page changed on 2026-10-01 upstream and in this branch; this is truthful under
-   the rule but worth knowing before resubmitting the sitemap.
-4. **G** — `_model_where_clause` remains a full scan at request time for model/make/compare pages
-   (make pages ~0.55–0.70 s cold, cached 1 h). Not an OA-006 defect; noted for later.
-5. `check_internal_links.py` still carries the legacy age-band slugs (`0-3-years`, `10-15-years`) and
-   is permissive about age-band pages; the new TestClient tests cover what it cannot. Not changed.
+## Decisions received and remaining notes
+1. **A** — lead confirmed `autosafehq@gmail.com`; no further change.
+2. **E** — lead ruled: keep the repair-cost range suppressed; price figures need provenance review
+   (separate claims item).
+3. **F** — lead ruled: lastmod reflects significant main-content changes only; implemented above.
+   Distribution now 2026-07-11 ×439, 2026-07-17 ×3 (was going to be 2026-10-01 ×442 under the
+   first rule).
+4. `_model_where_clause` remains a full scan at request time for model/make/compare pages (make pages
+   ~0.55–0.70 s cold, cached 1 h). Noted; not an OA-006 defect; no action in this batch.
+5. `check_internal_links.py` still carries the legacy age-band slugs and is permissive about age-band
+   pages; the new TestClient tests cover what it cannot. Noted; no action in this batch.
 
 ## Assurance status
 All verification is by the same worker on the same implementation path (self-review, two

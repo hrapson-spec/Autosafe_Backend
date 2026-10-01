@@ -1,21 +1,32 @@
 """
-Source-file revision dates for public page <lastmod> values.
+Significant-revision dates for public page <lastmod> values.
 =============================================================
 
-Sitemap ``<lastmod>`` must state when a page last changed. Two things change a
-public page here: the checked-in dataset artifact (``DATASET_ARTIFACT_REVISION``
-in report_contract.py) and the source files that render it (Jinja templates,
-static guide/legal HTML, the SPA shell). Neither a worker restart nor the
-current date changes a page, so no clock is read at runtime.
+Search-engine guidance: sitemap ``<lastmod>`` is the date of the last
+*significant* change to a page's main content — not boilerplate, footer,
+markup, styling or analytics-script edits. Two things can significantly change
+a public page here: the checked-in dataset artifact (``DATASET_ARTIFACT_REVISION``
+in report_contract.py) and the main content of the source files that render it
+(Jinja templates, static guide/legal HTML, the SPA shell). Neither a worker
+restart nor the current date changes a page, so no clock is read at runtime.
 
-``page_revisions.json`` records, for each tracked source file, its SHA-256 and
-the date it was last revised. ``tests/test_seo.py`` fails when a tracked file's
-hash no longer matches, which forces the date to be updated through
-``scripts/update_page_revisions.py`` as part of the same change. The page's
-lastmod is then the latest of the dataset revision (where the page renders
-dataset figures) and the revision dates of every source file it is built from.
+``page_revisions.json`` records, for each tracked source file:
 
-See docs/acquisition/OA-006_EVIDENCE.md (item F) for the rule and its limits.
+- ``sha256``                — hash of the file as last reviewed;
+- ``significant_revision``  — date of its last significant main-content change;
+- ``reason``                — what that significant change was;
+- ``last_change``           — ``{date, significant, reason}`` for the most
+  recent reviewed change, so non-significant edits are recorded too.
+
+``tests/test_seo.py`` fails when a tracked file's hash no longer matches, which
+forces the author to run ``scripts/update_page_revisions.py`` and state
+explicitly whether the change was significant (``--significant "reason"``) or
+not (``--non-significant "reason"``). Only significant revisions move lastmod.
+A page's lastmod is the latest of the dataset revision (where the page renders
+dataset figures) and the significant revisions of the sources it is built from.
+
+See docs/acquisition/OA-006_EVIDENCE.md (item F) for the rule, the seeded
+history and its limits.
 """
 from __future__ import annotations
 
@@ -51,6 +62,8 @@ TRACKED_SOURCES: tuple[str, ...] = (
     "static/guides/first-mot-guide.html",
 )
 
+ENTRY_KEYS = ("sha256", "significant_revision", "reason", "last_change")
+
 
 def sha256_of(relpath: str) -> str:
     return hashlib.sha256((REPO_ROOT / relpath).read_bytes()).hexdigest()
@@ -64,7 +77,7 @@ def load_manifest(path: Path = MANIFEST_PATH) -> dict:
 _MANIFEST: dict | None = None
 
 
-def _files() -> dict[str, dict[str, str]]:
+def _files() -> dict[str, dict]:
     global _MANIFEST
     if _MANIFEST is None:
         _MANIFEST = load_manifest()
@@ -72,12 +85,12 @@ def _files() -> dict[str, dict[str, str]]:
 
 
 def source_revision(*relpaths: str) -> str:
-    """Latest recorded revision date (ISO yyyy-mm-dd) across the given source files."""
+    """Latest significant revision date (ISO yyyy-mm-dd) across the given source files."""
     files = _files()
     dates = []
     for relpath in relpaths:
         try:
-            dates.append(files[relpath]["revised"])
+            dates.append(files[relpath]["significant_revision"])
         except KeyError as exc:
             raise KeyError(f"{relpath} is not tracked in {MANIFEST_PATH.name}") from exc
     return max(dates)
@@ -100,9 +113,8 @@ def stale_sources(manifest: dict | None = None) -> list[tuple[str, str]]:
         if entry is None:
             stale.append((relpath, "missing from manifest"))
             continue
-        current = sha256_of(relpath)
-        if current != entry.get("sha256"):
-            stale.append((relpath, "content changed since its recorded revision"))
+        if sha256_of(relpath) != entry.get("sha256"):
+            stale.append((relpath, "content changed since it was last reviewed"))
     for relpath in files:
         if relpath not in TRACKED_SOURCES:
             stale.append((relpath, "in manifest but not in TRACKED_SOURCES"))

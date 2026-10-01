@@ -1280,10 +1280,12 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
 
     # --- Sitemaps -------------------------------------------------------------
-    # <lastmod> rule (OA-006 F): a page last changed when either the checked-in
-    # dataset artifact or one of the source files that render it last changed.
-    # Source revision dates come from page_revisions.json (hash-verified by
-    # tests/test_seo.py); the dataset date is DATASET_ARTIFACT_REVISION. No
+    # <lastmod> rule (OA-006 F): the last *significant* main-content change —
+    # either the checked-in dataset artifact or the main content of a source
+    # file that renders the page. Significant-revision dates come from
+    # page_revisions.json (hash-verified by tests/test_seo.py; boilerplate,
+    # footer, markup and analytics edits are recorded as non-significant and do
+    # not move lastmod); the dataset date is DATASET_ARTIFACT_REVISION. No
     # runtime clock is consulted, so a worker restart never claims freshness.
 
     BASE_TEMPLATE = "templates/seo_base.html"

@@ -556,7 +556,7 @@ class TestSitemapInventoryInvariant(unittest.TestCase):
 
 
 class TestSitemapLastmodRule(unittest.TestCase):
-    """OA-006 F: lastmod is derived from recorded source/dataset revisions, never from the clock."""
+    """OA-006 F: lastmod = last significant main-content revision (source or dataset), never the clock."""
 
     def test_tracked_sources_match_the_revision_manifest(self):
         stale = page_revisions.stale_sources()
@@ -566,15 +566,61 @@ class TestSitemapLastmodRule(unittest.TestCase):
             "so the sitemap lastmod reflects the change: " + "; ".join(f"{p} ({r})" for p, r in stale),
         )
 
-    def test_manifest_dates_are_valid_and_not_in_the_future(self):
+    def test_manifest_entries_carry_significance_metadata(self):
         for relpath, entry in page_revisions.load_manifest()["files"].items():
-            revised = date.fromisoformat(entry["revised"])
+            self.assertEqual(tuple(sorted(entry)), tuple(sorted(page_revisions.ENTRY_KEYS)), relpath)
+            revised = date.fromisoformat(entry["significant_revision"])
             self.assertLessEqual(revised, date.today(), relpath)
             self.assertGreaterEqual(revised, date(2026, 1, 1), relpath)
+            self.assertTrue(entry["reason"].strip(), relpath)
             self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
+            last = entry["last_change"]
+            self.assertIsInstance(last["significant"], bool, relpath)
+            self.assertGreaterEqual(date.fromisoformat(last["date"]), revised, relpath)
+            if last["significant"]:
+                self.assertEqual(last["date"], entry["significant_revision"], relpath)
+
+    def test_update_script_requires_an_explicit_significance_decision(self):
+        import json
+        import shutil
+        import subprocess
+        import tempfile
+        script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "scripts", "update_page_revisions.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = os.path.join(tmp, "page_revisions.json")
+            shutil.copy(page_revisions.MANIFEST_PATH, manifest)
+            data = json.load(open(manifest))
+            target = "templates/seo_model.html"
+            data["files"][target]["sha256"] = "0" * 64  # simulate an edited template
+            original_sig = data["files"][target]["significant_revision"]
+            json.dump(data, open(manifest, "w"))
+
+            def run(*args):
+                return subprocess.run([sys.executable, script, "--manifest", manifest, *args],
+                                      capture_output=True, text=True)
+
+            self.assertEqual(run("--check").returncode, 1)
+            undecided = run()
+            self.assertEqual(undecided.returncode, 2)
+            self.assertIn(target, undecided.stdout)
+            self.assertEqual(json.load(open(manifest))["files"][target]["sha256"], "0" * 64, "must not write")
+
+            self.assertEqual(run("--non-significant", "footer tweak", "--date", "2026-09-30").returncode, 0)
+            entry = json.load(open(manifest))["files"][target]
+            self.assertEqual(entry["significant_revision"], original_sig)
+            self.assertEqual(entry["sha256"], page_revisions.sha256_of(target))
+            self.assertEqual(entry["last_change"], {"date": "2026-09-30", "significant": False, "reason": "footer tweak"})
+
+            data = json.load(open(manifest)); data["files"][target]["sha256"] = "1" * 64; json.dump(data, open(manifest, "w"))
+            self.assertEqual(run("--significant", "rewrote body copy", "--date", "2026-09-30").returncode, 0)
+            entry = json.load(open(manifest))["files"][target]
+            self.assertEqual(entry["significant_revision"], "2026-09-30")
+            self.assertEqual(entry["reason"], "rewrote body copy")
+            self.assertEqual(run("--check").returncode, 0)
 
     def test_every_lastmod_is_a_recorded_revision_date(self):
-        allowed = {e["revised"] for e in page_revisions.load_manifest()["files"].values()} | {DATASET_ARTIFACT_REVISION}
+        allowed = {e["significant_revision"] for e in page_revisions.load_manifest()["files"].values()} | {DATASET_ARTIFACT_REVISION}
         for path, lastmod in _sitemap_entries():
             self.assertIn(lastmod, allowed, f"{path} lastmod {lastmod} is not a recorded revision")
         index = client.get("/sitemap.xml").text
