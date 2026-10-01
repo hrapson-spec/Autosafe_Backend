@@ -24,6 +24,7 @@ import page_revisions
 import seo_pages
 from seo_pages import (
     _align_component_rates,
+    _model_totals_from_groups,
     _query_model_age_bands,
     _query_model_overall,
     _summarise_models,
@@ -380,6 +381,22 @@ class TestModelPageDistinctiveness(unittest.TestCase):
         self.assertIn("Open Government Licence v3", r.text)
 
 
+from contextlib import contextmanager
+
+
+@contextmanager
+def seo_pages_conn():
+    """A pooled SQLite connection with sqlite3.Row rows, as the SEO routes use it."""
+    from main import get_sqlite_connection
+    with get_sqlite_connection() as conn:
+        old_factory = conn.row_factory
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.row_factory = old_factory
+
+
 def _internal_hrefs(html: str) -> set[str]:
     """Site-relative hrefs on a rendered page, without query strings or fragments."""
     return {h.split("?")[0].split("#")[0] for h in re.findall(r'href="(/[^"]*)"', html)}
@@ -598,6 +615,71 @@ class TestSitemapLastmodRule(unittest.TestCase):
         self.assertEqual(page_revisions.page_lastmod("index.html", dataset_revision="2999-12-31"), "2999-12-31")
         with self.assertRaises(KeyError):
             page_revisions.source_revision("templates/not-tracked.html")
+
+
+class TestStartupModelTotals(unittest.TestCase):
+    """OA-006 G: the one-pass startup aggregation reproduces the per-model SQL exactly."""
+
+    COLUMNS = (
+        "model_id TEXT, age_band TEXT, mileage_band TEXT, Total_Tests INTEGER, Total_Failures INTEGER, "
+        "Risk_Brakes REAL, Risk_Suspension REAL, Risk_Tyres REAL, Risk_Steering REAL, Risk_Visibility REAL, "
+        "Risk_Lamps_Reflectors_And_Electrical_Equipment REAL, Risk_Body_Chassis_Structure REAL"
+    )
+
+    def _conn(self):
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.execute(f"CREATE TABLE risks ({self.COLUMNS})")
+        comps = (0.1, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01)
+        rows = [
+            ("FORD FIESTA", "3-5", "0-30k", 1000, 200) + comps,          # exact match
+            ("FORD FIESTA ST", "6-10", "0-30k", 300, 90) + comps,        # prefix match
+            ("ford fiesta zetec", "6-10", "0-30k", 200, 100) + comps,    # LIKE is case-insensitive
+            ("FORD FIESTAVAN", "6-10", "0-30k", 500, 250) + comps,       # no space: must not match
+            ("FORD FIESTA", "Unknown", "0-30k", 9999, 9999) + comps,     # excluded age band
+            ("FORD FOCUS", "3-5", "0-30k", 150, 30) + comps,
+            ("MERCEDES-BENZ C", "3-5", "0-30k", 400, 100) + comps,       # alt form for C-CLASS
+            ("MERCEDES-BENZ C-CLASS", "3-5", "0-30k", 100, 50) + comps,
+            ("MERCEDES-BENZ C 220", "3-5", "0-30k", 50, 10) + comps,
+            ("MERCEDES-BENZ CLA", "3-5", "0-30k", 800, 1) + comps,       # must not match C-CLASS
+            ("AUDI A3", "3-5", "0-30k", 40, 10) + comps,                 # below the 100-test floor
+        ]
+        conn.executemany("INSERT INTO risks VALUES (" + ",".join("?" * 12) + ")", rows)
+        return conn
+
+    def test_grouped_totals_equal_per_model_sql(self):
+        conn = self._conn()
+        known = {"FORD": ["FIESTA", "FOCUS", "KA"], "MERCEDES-BENZ": ["C-CLASS", "CLA"], "AUDI": ["A3"]}
+        totals = _model_totals_from_groups(conn, known)
+        self.assertEqual(totals[("FORD", "FIESTA")], (1500, 390))
+        self.assertEqual(totals[("MERCEDES-BENZ", "C-CLASS")], (550, 160))
+        self.assertEqual(totals[("MERCEDES-BENZ", "CLA")], (800, 1))
+        self.assertEqual(totals[("FORD", "KA")], (0, 0))
+        for (make, model), (t, f) in totals.items():
+            overall = _query_model_overall(conn, make, model)
+            if t >= 100:
+                self.assertEqual((overall["total_tests"], overall["total_failures"]), (t, f), (make, model))
+                rounded = conn.execute("SELECT ROUND(CAST(? AS REAL) / ?, 4)", (f, t)).fetchone()[0]
+                self.assertEqual(overall["fail_rate"], rounded, (make, model))
+            else:
+                self.assertIsNone(overall, (make, model))
+        conn.close()
+
+    def test_startup_totals_match_live_model_pages(self):
+        # Spot-check against the real fixture DB through the page-level query.
+        for make_slug, model_slug in list(sorted(seo_pages._model_totals))[:5] + [("ford", "fiesta")]:
+            info = seo_pages._model_by_slug[(make_slug, model_slug)]
+            with seo_pages_conn() as conn:
+                overall = _query_model_overall(conn, info["make"], info["model_id"])
+            expected = {k: overall[k] for k in ("total_tests", "total_failures", "fail_rate")}
+            self.assertEqual(seo_pages._model_totals[(make_slug, model_slug)], expected, (make_slug, model_slug))
+
+    def test_pillar_ranks_models_from_startup_totals(self):
+        r = client.get("/will-my-car-pass-mot/")
+        self.assertEqual(r.status_code, 200)
+        top = sorted(seo_pages._model_totals.items(), key=lambda kv: kv[1]["total_tests"], reverse=True)[:10]
+        for (make_slug, model_slug), _ in top:
+            self.assertIn(f"/mot-check/{make_slug}/{model_slug}/", r.text)
 
 
 if __name__ == "__main__":

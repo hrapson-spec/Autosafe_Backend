@@ -77,6 +77,10 @@ _model_by_slug: dict = {}
 _models_for_make: dict = {}
 # (make_slug, model_slug) -> fail_rate (for data-driven related models)
 _model_fail_rates: dict = {}
+# (make_slug, model_slug) -> {"total_tests", "total_failures", "fail_rate"}; the
+# same figures _query_model_overall returns, computed once at startup so the
+# pillar page does not re-scan the table for every model (OA-006 G).
+_model_totals: dict = {}
 # Models with enough tests for age-band pages (staged rollout)
 _age_band_eligible: set = set()  # set of (make_slug, model_slug)
 # Age band slug mappings
@@ -200,10 +204,81 @@ def _model_where_clause(make: str, model: str):
     return f"({' OR '.join(conditions)})", params
 
 
+def _sqlite_like_prefix(model_id: str, prefix: str) -> bool:
+    """Python equivalent of SQLite ``model_id LIKE prefix || ' %'`` for a wildcard-free prefix.
+
+    SQLite's default LIKE folds ASCII case only; ``bytes.upper()`` does the same.
+    Callers must not pass prefixes containing ``%`` or ``_`` (see
+    ``_model_totals_from_groups``), which fall back to SQL.
+    """
+    needle = (prefix + " ").encode("utf-8").upper()
+    return model_id.encode("utf-8").upper().startswith(needle)
+
+
+def _model_keys(make: str, model: str) -> list[str]:
+    """The model_id values and prefixes matched by ``_model_where_clause``."""
+    keys = [f"{make} {model}"]
+    if model.endswith("-CLASS"):
+        keys.append(f"{make} {model.replace('-CLASS', '')}")
+    return keys
+
+
+def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[str, str], tuple[int, int]]:
+    """Return {(make, model): (total_tests, total_failures)} for every known model.
+
+    One ``GROUP BY model_id`` scan replaces one full-table scan per model (the
+    LIKE predicate in ``_model_where_clause`` cannot use the model_id index, so
+    each per-model query scanned all rows). Matching reproduces the SQL
+    predicate exactly: ``model_id = key OR model_id LIKE key || ' %'`` for each
+    key. Any key containing a LIKE wildcard is resolved with the original SQL.
+    """
+    grouped = conn.execute(
+        """SELECT model_id, SUM(Total_Tests) AS t, SUM(Total_Failures) AS f
+           FROM risks WHERE age_band != 'Unknown' GROUP BY model_id"""
+    )
+    sums: dict[str, tuple[int, int]] = {}
+    by_upper: dict[bytes, list[str]] = {}
+    for model_id, t, f in grouped:
+        sums[model_id] = (t or 0, f or 0)
+        by_upper.setdefault(model_id.encode("utf-8").upper(), []).append(model_id)
+    upper_keys = sorted(by_upper)
+
+    from bisect import bisect_left
+
+    totals: dict[tuple[str, str], tuple[int, int]] = {}
+    for make, models in known.items():
+        for model in models:
+            keys = _model_keys(make, model)
+            if any(ch in key for key in keys for ch in "%_"):
+                where, params = _model_where_clause(make, model)
+                row = conn.execute(
+                    f"SELECT SUM(Total_Tests), SUM(Total_Failures) FROM risks WHERE {where} AND age_band != 'Unknown'",
+                    params,
+                ).fetchone()
+                totals[(make, model)] = (row[0] or 0, row[1] or 0) if row else (0, 0)
+                continue
+            matched: set[str] = set()
+            for key in keys:
+                if key in sums:
+                    matched.add(key)
+                needle = (key + " ").encode("utf-8").upper()
+                i = bisect_left(upper_keys, needle)
+                while i < len(upper_keys) and upper_keys[i].startswith(needle):
+                    matched.update(by_upper[upper_keys[i]])
+                    i += 1
+            t = sum(sums[m][0] for m in matched)
+            f = sum(sums[m][1] for m in matched)
+            totals[(make, model)] = (t, f)
+    return totals
+
+
 def initialize_seo_data(get_sqlite_connection):
     """
     Build slug lookup dicts at startup from KNOWN_MODELS,
     filtered to models with >= 100 tests in SQLite.
+
+    Also records per-model totals (``_model_totals``) so the pillar page can
+    rank models without re-querying every model per worker (OA-006 G).
     """
     from consolidate_models import get_canonical_models_for_make
 
@@ -221,52 +296,40 @@ def initialize_seo_data(get_sqlite_connection):
         if models:
             known[make] = models
 
-    # Query SQLite to filter to models with >= 100 total tests
-    valid_models = set()
+    # One grouped scan gives every model's totals; the same numbers decide
+    # inclusion (>= 100 tests), age-band eligibility (>= 10,000 tests), the
+    # linking fail rate and the pillar ranking.
     with get_sqlite_connection() as conn:
         if conn is None:
             logger.error("SEO: Cannot initialize - no SQLite connection")
             return
+        try:
+            totals = _model_totals_from_groups(conn, known)
+        except sqlite3.Error as e:
+            logger.error("SEO model aggregation failed: type=%s", type(e).__name__)
+            return
 
-        for make, models in known.items():
-            for model in models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"SELECT SUM(Total_Tests) as total FROM risks WHERE {where} AND age_band != 'Unknown'",
-                        params,
-                    ).fetchone()
-                    if row and row[0] and row[0] >= 100:
-                        valid_models.add((make, model))
-                except sqlite3.Error as e:
-                    logger.warning(
-                        "SEO model check failed: make=%s model=%s type=%s",
-                        make,
-                        model,
-                        type(e).__name__,
-                    )
+        valid_models = {key for key, (t, _f) in totals.items() if t >= 100}
+        age_band_candidates = {key for key, (t, _f) in totals.items() if t >= 10000}
 
-    # Identify top models eligible for age-band pages (>= 10,000 total tests)
-    age_band_candidates = set()
-    with get_sqlite_connection() as conn:
-        if conn:
-            for make, model in valid_models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"SELECT SUM(Total_Tests) as total FROM risks WHERE {where} AND age_band != 'Unknown'",
-                        params,
-                    ).fetchone()
-                    if row and row[0] and row[0] >= 10000:
-                        age_band_candidates.add((make, model))
-                except sqlite3.Error:
-                    pass
+        # Fail rates use the identical SQLite arithmetic as the per-model
+        # queries they replace: CAST(SUM(F) AS REAL) / SUM(T), and ROUND(.., 4)
+        # for the value _query_model_overall reports on pages.
+        rates: dict[tuple[str, str], tuple[float, float]] = {}
+        for key in valid_models:
+            t, f = totals[key]
+            raw, rounded = conn.execute(
+                "SELECT CAST(? AS REAL) / ?, ROUND(CAST(? AS REAL) / ?, 4)", (f, t, f, t)
+            ).fetchone()
+            rates[key] = (float(raw), float(rounded))
 
     # Build lookup dicts
     _make_by_slug.clear()
     _model_by_slug.clear()
     _models_for_make.clear()
     _age_band_eligible.clear()
+    _model_fail_rates.clear()
+    _model_totals.clear()
 
     makes_with_models = set()
     for make, model in valid_models:
@@ -284,6 +347,15 @@ def initialize_seo_data(get_sqlite_connection):
         if (make, model) in age_band_candidates:
             _age_band_eligible.add((make_slug, model_slug))
 
+        raw_rate, rounded_rate = rates[(make, model)]
+        _model_fail_rates[(make_slug, model_slug)] = raw_rate
+        total_tests, total_failures = totals[(make, model)]
+        _model_totals[(make_slug, model_slug)] = {
+            "total_tests": int(total_tests),
+            "total_failures": int(total_failures),
+            "fail_rate": rounded_rate,
+        }
+
     for make in makes_with_models:
         slug = _slugify(make)
         _make_by_slug[slug] = {"make": make, "display": _display_name(make)}
@@ -293,26 +365,6 @@ def initialize_seo_data(get_sqlite_connection):
         _models_for_make[make_slug].sort(
             key=lambda ms: _model_by_slug[(make_slug, ms)]["display"]
         )
-
-    # Compute failure rates for all models (for data-driven related model linking)
-    _model_fail_rates.clear()
-    with get_sqlite_connection() as conn:
-        if conn:
-            for make, model in valid_models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"""SELECT CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests) as fail_rate
-                            FROM risks WHERE {where} AND age_band != 'Unknown'
-                            HAVING SUM(Total_Tests) >= 100""",
-                        params,
-                    ).fetchone()
-                    if row and row[0] is not None:
-                        make_slug = _slugify(make)
-                        model_slug = _slugify(model)
-                        _model_fail_rates[(make_slug, model_slug)] = float(row[0])
-                except sqlite3.Error:
-                    pass
 
     total_pages = len(_make_by_slug) + len(_model_by_slug)
     logger.info(
@@ -1130,16 +1182,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             old_factory = conn.row_factory
             conn.row_factory = sqlite3.Row
 
-            # Top 20 models by test volume
+            # Top 20 models by test volume, from the startup totals (previously
+            # one full-table scan per model on every cold cache: ~9 s).
             top_models = []
             for (make_slug, model_slug), model_info in _model_by_slug.items():
-                make = model_info["make"]
-                model = model_info["model_id"]
-                overall = _query_model_overall(conn, make, model)
+                overall = _model_totals.get((make_slug, model_slug))
                 if overall:
                     make_info = _make_by_slug.get(make_slug, {})
                     top_models.append({
-                        "make_display": make_info.get("display", make),
+                        "make_display": make_info.get("display", model_info["make"]),
                         "model_display": model_info["display"],
                         "make_slug": make_slug,
                         "model_slug": model_slug,
