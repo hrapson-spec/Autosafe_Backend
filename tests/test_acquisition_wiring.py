@@ -23,6 +23,28 @@ def test_collection_is_off_in_this_branch():
         assert not re.search(r"^ACQUISITION_INGEST_ENABLED=(1|true)", read(env_example), re.M | re.I)
 
 
+def test_the_two_client_flags_agree():
+    """D-007.6: the SPA constant and the public-page script flag must be equal."""
+    ts = re.search(r"export const ACQUISITION_COLLECTOR_ENABLED: boolean = (true|false);",
+                   read(ROOT / "utils" / "acquisitionEvents.ts"))
+    js = re.search(r"var ENABLED = (true|false);", read(ROOT / "static" / "acquisition-landing.js"))
+    assert ts and js
+    assert ts.group(1) == js.group(1)
+
+
+def test_handoff_is_a_fragment_never_a_query_parameter():
+    js = re.sub(r"/\*[\s\S]*?\*/", "", read(ROOT / "static" / "acquisition-landing.js"))
+    assert "'#al='" in js and "'?al='" not in js and "?al=" not in js
+    assert "url.pathname + url.search + fragment" in js
+    seo = read(ROOT / "templates" / "seo_base.html")
+    assert "window.autosafeLandingHandoff" in seo and "autosafeLandingQuery" not in seo
+    index = read(ROOT / "index.html")
+    first = [m for m in re.finditer(r"<script(?![^>]*ld\+json)[^>]*>([\s\S]*?)</script>", index)][0]
+    assert "__autosafeLandingHandoff" in first.group(1)
+    assert index.index("__autosafeLandingHandoff") < index.index("googletagmanager")
+    assert index.index("__autosafeLandingHandoff") < index.index("umami-production")
+
+
 def test_landing_script_is_on_every_public_template_and_guide_but_not_legal_pages():
     base = read(ROOT / "templates" / "seo_base.html")
     assert base.count('<script src="/static/acquisition-landing.js" defer></script>') == 1
@@ -80,6 +102,9 @@ NOTICE_FACTS = [
     "your IP address (it is used in memory only",
     "Only the site operator can access them",
     "no new service provider",
+    "after a #, which browsers never send to any server",
+    "recorded to the minute",
+    "daily counts of landing visits",
 ]
 
 
@@ -104,3 +129,16 @@ def test_enable_gate_documents_the_notice_as_a_gate_item():
     evidence = read(ROOT / "docs" / "acquisition" / "OA-005_EVIDENCE.md")
     assert "privacy notice" in collector.lower() and "enable gate" in collector.lower()
     assert "notice text is part of the enable gate" in evidence.lower()
+
+
+def test_lia_exists_in_the_repo_structure_and_is_linked():
+    lia = read(ROOT / "docs" / "LIA_ACQUISITION_MEASUREMENT.md")
+    for heading in ("## 1. Processing actually implemented", "## 2. Purpose test",
+                    "## 3. Necessity and minimisation test", "## 4. Balancing test",
+                    "## 5. Retention and rights", "## 7. Operational conditions", "## 8. Review triggers"):
+        assert heading in lia, heading
+    for fact in ("90 days", "25 calendar months", "Global Privacy Control", "autosafehq@gmail.com",
+                 "URL fragment", "truncated to the minute", "HTTP-log retention"):
+        assert fact in lia, fact
+    assert "LIA_ACQUISITION_MEASUREMENT.md" in read(ROOT / "docs" / "acquisition" / "COLLECTOR.md")
+    assert "LIA_ACQUISITION_MEASUREMENT.md" in read(ROOT / "docs" / "acquisition" / "OA-005_EVIDENCE.md")
