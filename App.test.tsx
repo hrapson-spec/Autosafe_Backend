@@ -31,6 +31,7 @@ vi.mock('./services/autosafeApi', () => ({
 vi.mock('./utils/analytics', () => ({
   trackConversion: vi.fn(),
   trackFunnel: vi.fn(),
+  trackPageView: vi.fn(),
   trackReportView: vi.fn(),
 }));
 

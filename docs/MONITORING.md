@@ -83,8 +83,11 @@ third-party tracking scripts into templates:
   personalised ads denied, and automatic page views disabled.
 - Product fonts/assets remain local or use system fallbacks; do not reintroduce
   pre-consent remote font/CDN requests or widen the CSP for them.
-- Umami uses `data-auto-track=false`; only fixed-name custom funnel events are
-  sent.
+- Umami uses `data-auto-track=false`. Page views are sent explicitly (SPA route
+  changes via `trackPageView`; standalone and SEO pages via `/static/umami.js`)
+  and every payload passes `autosafeUmamiBeforeSend`, which drops report routes
+  and reduces the URL to its path and the referrer to its origin. Custom funnel
+  events use fixed names.
 - Event data uses a fixed allowlist. Registration, postcode, email, token,
   request body, referrer path/query/fragment, and free text are forbidden.
 - `/app/report/...` disables custom analytics, including SPA navigation into a

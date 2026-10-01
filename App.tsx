@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Routes, Route as RouterRoute, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route as RouterRoute, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import HeroForm from './components/HeroForm';
 
@@ -15,7 +15,7 @@ import { createReport } from './services/reportApi';
 import { ReportApiError, mapErrorToMessage } from './services/errorMessages';
 import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
 import { Logo } from './components/Logo';
-import { trackConversion, trackFunnel } from './utils/analytics';
+import { trackConversion, trackFunnel, trackPageView } from './utils/analytics';
 
 interface HomePageProps {
   onSubmit: (data: RegistrationQuery) => void;
@@ -178,6 +178,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -187,6 +188,11 @@ const App: React.FC = () => {
   useEffect(() => {
     getPublicStats().then(setStats).catch(() => { });
   }, []);
+
+  // One page view per route; trackPageView skips bearer report routes.
+  useEffect(() => {
+    trackPageView();
+  }, [pathname]);
 
   const handleCarCheck = async ({ registration, postcode }: RegistrationQuery) => {
     setLoading(true);

@@ -48,6 +48,27 @@ def test_bearer_report_routes_disable_automatic_analytics():
     assert "send_page_view: false" in index
     assert "G-8PV2HG1QDC" not in index
     assert '<script defer src="https://umami' not in index
+    assert "data-before-send', 'autosafeUmamiBeforeSend'" in index
+    assert "payload.url = window.location.pathname" in index
+
+
+def test_standalone_and_seo_pages_load_the_filtered_umami_page_view_loader():
+    pages = [
+        ROOT / "static" / "privacy.html",
+        ROOT / "static" / "terms.html",
+        ROOT / "templates" / "seo_base.html",
+        *sorted((ROOT / "static" / "guides").glob("*.html")),
+    ]
+    for page in pages:
+        source = page.read_text(encoding="utf-8")
+        assert source.count('<script src="/static/umami.js"></script>') == 1, page.name
+        assert "umami-production" not in source, page.name
+
+    loader = (ROOT / "static" / "umami.js").read_text(encoding="utf-8")
+    assert "if (/^\\/app\\/report\\//.test(window.location.pathname)) return;" in loader
+    assert "script.setAttribute('data-auto-track', 'false')" in loader
+    assert "script.setAttribute('data-before-send', 'autosafeUmamiBeforeSend')" in loader
+    assert "payload.url = window.location.pathname" in loader
 
 
 def test_standalone_static_pages_use_the_shared_consent_gate():

@@ -105,8 +105,23 @@
       })();
     </script>
 
-    <!-- Umami is deliberately not loaded on bearer-token report routes. -->
+    <!-- Umami is deliberately not loaded on bearer-token report routes.
+         Automatic tracking stays off: the SPA sends page views explicitly
+         (utils/analytics.ts trackPageView), and every payload passes through
+         autosafeUmamiBeforeSend, which drops report routes and reduces the
+         URL to its path and the referrer to its origin. -->
     <script>
+      window.autosafeUmamiBeforeSend = function (type, payload) {
+        if (/^\/app\/report\//.test(window.location.pathname)) return false;
+        payload.url = window.location.pathname;
+        var referrer = '';
+        try {
+          var ref = payload.referrer ? new URL(payload.referrer) : null;
+          if (ref && ref.origin !== window.location.origin) referrer = ref.origin + '/';
+        } catch (e) {}
+        payload.referrer = referrer;
+        return payload;
+      };
       if (window.autosafeAnalyticsAllowed) {
         var umamiScript = document.createElement('script');
         umamiScript.defer = true;
@@ -114,6 +129,10 @@
         umamiScript.setAttribute('data-website-id', '0dead4c2-42a2-456c-abc1-42f93e1a991b');
         umamiScript.setAttribute('data-domains', 'autosafe.one,www.autosafe.one');
         umamiScript.setAttribute('data-auto-track', 'false');
+        umamiScript.setAttribute('data-before-send', 'autosafeUmamiBeforeSend');
+        umamiScript.addEventListener('load', function () {
+          window.dispatchEvent(new Event('autosafe:umami-ready'));
+        });
         document.head.appendChild(umamiScript);
       }
     </script>

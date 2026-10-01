@@ -33,7 +33,7 @@ const PrivacyPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 11 July 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 1 October 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -287,7 +287,7 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Cookies</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              We use cookieless Umami Analytics for limited website event statistics. Event payloads are configured without direct identifiers; like any web service, its hosting infrastructure may process network metadata such as an IP address for delivery and security.
+              We use cookieless Umami Analytics for aggregate page-view and website event statistics. Page views record only the page path (never query strings or saved-report links) and the referring site's domain; event payloads are configured without direct identifiers; like any web service, its hosting infrastructure may process network metadata such as an IP address for delivery and security.
             </p>
             <p className="text-slate-600 leading-relaxed mb-4">
               Analytics events use a fixed allowlist and never include registration, postcode, email address or saved-report token. Automatic analytics are disabled on saved-report link routes, and those values are not placed in analytics URLs.

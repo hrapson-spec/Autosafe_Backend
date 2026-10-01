@@ -1,13 +1,20 @@
 /**
  * Analytics utility.
  * - Google Ads conversion tracking (gtag)
- * - Umami custom event tracking for funnel visibility
+ * - Umami page views and custom event tracking for funnel visibility
  */
+
+type UmamiPayload = Record<string, unknown>;
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
-    umami?: { track: (event: string, data?: Record<string, string | number>) => void };
+    umami?: {
+      track: (
+        event?: string | ((props: UmamiPayload) => UmamiPayload),
+        data?: Record<string, string | number>
+      ) => void;
+    };
   }
 }
 
@@ -55,6 +62,47 @@ export function trackConversion(type: ConversionType): void {
       // Analytics is never allowed to break the user operation it observes.
     }
   }
+}
+
+// ============================================================================
+// Page views (Umami, cookieless)
+// ============================================================================
+
+const UMAMI_READY_EVENT = 'autosafe:umami-ready';
+let pageViewPending = false;
+
+function sendPageView(): void {
+  if (!analyticsAllowed() || !window.umami?.track) return;
+  try {
+    // Path only: no query string, hash or report token ever reaches Umami.
+    // index.html's autosafeUmamiBeforeSend enforces the same rule.
+    window.umami.track((props) => ({ ...props, url: window.location.pathname }));
+  } catch {
+    // Analytics is best-effort and must not alter product behaviour.
+  }
+}
+
+/**
+ * Record a page view for the current route. Umami loads deferred, so a view
+ * requested before it is ready is sent once the script's load event fires;
+ * views requested while waiting collapse into one for the route current then.
+ */
+export function trackPageView(): void {
+  if (!analyticsAllowed()) return;
+  if (window.umami?.track) {
+    sendPageView();
+    return;
+  }
+  if (pageViewPending) return;
+  pageViewPending = true;
+  window.addEventListener(
+    UMAMI_READY_EVENT,
+    () => {
+      pageViewPending = false;
+      sendPageView();
+    },
+    { once: true }
+  );
 }
 
 // ============================================================================
