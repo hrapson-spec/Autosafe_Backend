@@ -744,16 +744,36 @@ class TestPublicHttpBehaviour(unittest.TestCase):
             self.assertEqual(head.headers.get("content-type"), get.headers.get("content-type"), path)
             self.assertEqual(head.headers.get("content-length"), get.headers.get("content-length"), path)
 
-    def test_head_on_unknown_and_post_only_routes_is_not_widened(self):
-        # HEAD answers exactly as GET would; POST-only endpoints acquire no
-        # successful HEAD (GET on them already falls through to the 404 catch-all).
+    def test_head_on_unknown_public_paths_mirrors_get_404(self):
         self.assertEqual(client.head("/mot-check/no-such-make/", follow_redirects=False).status_code, 404)
-        for path in ("/api/v2/reports", "/api/submit-lead"):
-            get = client.get(path, follow_redirects=False)
-            head = client.head(path, follow_redirects=False)
-            self.assertEqual(head.status_code, get.status_code, path)
-            self.assertNotEqual(head.status_code, 200, path)
-            self.assertEqual(head.content, b"", path)
+        self.assertEqual(client.head("/guides/no-such-guide", follow_redirects=False).status_code, 404)
+
+    def test_head_is_never_routed_as_get_under_api(self):
+        """HEAD must not run API GET handlers: some have side effects or upstream calls."""
+        from unittest.mock import AsyncMock, patch
+        import main as main_module
+        with patch.object(main_module.db, "get_lead_assignment_by_id", new=AsyncMock(return_value=None)) as lookup:
+            r = client.head("/api/garage/outcome/abc?result=won", follow_redirects=False)
+            self.assertEqual(r.status_code, 405)
+            lookup.assert_not_called()
+            # Control: the GET handler does reach the lookup (and 404s on the mocked None).
+            g = client.get("/api/garage/outcome/abc?result=won", follow_redirects=False)
+            self.assertEqual(g.status_code, 404)
+            lookup.assert_awaited_once_with("abc")
+        for path in ("/api/risk?make=FORD&model=FIESTA&year=2015&mileage=50000", "/api/vehicle?registration=AB12CDE",
+                     "/api/makes", "/api/v2/reports", "/api/submit-lead", "/api/version", "/api/stats"):
+            self.assertEqual(client.head(path, follow_redirects=False).status_code, 405, path)
+
+    def test_head_allowlist_covers_public_documents_only(self):
+        from public_http import head_is_routed_as_get
+        for path in ("/", "/app", "/app/report/abc", "/robots.txt", "/sitemap.xml", "/sitemap-models.xml",
+                     "/privacy", "/terms", "/will-my-car-pass-mot/", "/mot-check/", "/mot-check/ford/fiesta/",
+                     "/guides/mot-cost", "/static/logo_clean.png", "/assets/index-DskXiKVN.js",
+                     "/insights/", "/local-mot/london/", "/health", "/ready"):
+            self.assertTrue(head_is_routed_as_get(path), path)
+        for path in ("/api/makes", "/api/garage/outcome/abc", "/api/v2/reports", "/admin", "/apple", "/foo",
+                     "/application", "/openapi.json", "/docs"):
+            self.assertFalse(head_is_routed_as_get(path), path)
 
     def test_head_follows_the_same_redirects_as_get(self):
         r = client.head("/static/terms.html", follow_redirects=False)
