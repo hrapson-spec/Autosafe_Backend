@@ -647,8 +647,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             key=lambda m: m["display_name"],
         )
 
+        # Crawlable links to the seven top-level component hubs, which are in
+        # the sitemap but previously had no inbound internal link (OA-006 D).
+        # Anchor text reuses each hub's own H1; no new copy claims.
+        component_hubs = [
+            {"slug": slug, "name": name} for slug, (_col, name) in COMPONENT_SLUGS.items()
+        ]
+
         template = jinja_env.get_template("seo_index.html")
-        html = template.render(makes=makes)
+        html = template.render(makes=makes, component_hubs=component_hubs)
         _seo_cache[cache_key] = html
         return _html_response(html)
 
@@ -844,6 +851,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             overall_fail_rate=overall["fail_rate"],
             overall_tests=overall["total_tests"],
             age_bands=age_bands,
+            age_band_pages_enabled=age_band_pages_exist(make_slug, model_slug),
             components=overall["components"],
             top_components=overall["components"][:3],
             sibling_models=sibling_models,

@@ -456,5 +456,26 @@ class TestFooterLegalLinks(unittest.TestCase):
             self.assertEqual(r.headers["location"], new)
 
 
+class TestComponentHubDiscoverability(unittest.TestCase):
+    """OA-006 D: the seven /mot-check/problems/ hubs are reachable from /mot-check/."""
+
+    def test_index_links_every_component_hub(self):
+        index = client.get("/mot-check/")
+        self.assertEqual(index.status_code, 200)
+        hrefs = _internal_hrefs(index.text)
+        hub_paths = {f"/mot-check/problems/{slug}/" for slug in seo_pages.COMPONENT_SLUGS}
+        self.assertEqual(len(hub_paths), 7)
+        self.assertTrue(hub_paths <= hrefs, f"missing hub links: {sorted(hub_paths - hrefs)}")
+        for path in sorted(hub_paths):
+            self.assertEqual(client.get(path, follow_redirects=False).status_code, 200, path)
+
+    def test_hub_anchor_text_reuses_the_hub_h1(self):
+        index = client.get("/mot-check/").text
+        for slug, (_col, name) in seo_pages.COMPONENT_SLUGS.items():
+            hub = client.get(f"/mot-check/problems/{slug}/").text
+            h1 = re.search(r"<h1>(.*?)</h1>", hub, re.DOTALL).group(1).strip()
+            self.assertIn(f">{h1}</a>", index, f"anchor for {slug} does not reuse hub H1 {h1!r}")
+
+
 if __name__ == "__main__":
     unittest.main()
