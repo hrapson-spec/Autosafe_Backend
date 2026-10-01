@@ -1396,12 +1396,18 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
         base = "https://www.autosafe.one"
         entries = []
+        complete = True
         for name, build in SUB_SITEMAPS.items():
-            lastmod = max(entry[1] for entry in build())
+            # lastmod is optional in a sitemap index; an empty sub-sitemap
+            # (e.g. SEO data not yet initialised) is listed without one.
+            lastmod = max((entry[1] for entry in build()), default=None)
+            if lastmod is None:
+                complete = False
+            lastmod_line = f"    <lastmod>{lastmod}</lastmod>\n" if lastmod else ""
             entries.append(
                 f"  <sitemap>\n"
                 f"    <loc>{base}/{name}</loc>\n"
-                f"    <lastmod>{lastmod}</lastmod>\n"
+                f"{lastmod_line}"
                 f"  </sitemap>"
             )
 
@@ -1411,7 +1417,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             + "\n".join(entries)
             + "\n</sitemapindex>\n"
         )
-        _sitemap_cache[cache_key] = xml
+        if complete:
+            _sitemap_cache[cache_key] = xml
         return _xml_response(xml)
 
     @app.get("/sitemap-content.xml", response_class=Response)

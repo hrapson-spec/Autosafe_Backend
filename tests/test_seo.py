@@ -558,6 +558,23 @@ class TestSitemapInventoryInvariant(unittest.TestCase):
 class TestSitemapLastmodRule(unittest.TestCase):
     """OA-006 F: lastmod = last significant main-content revision (source or dataset), never the clock."""
 
+    def test_sitemap_index_survives_an_empty_sub_sitemap(self):
+        """An empty sub-sitemap (SEO data not initialised) must not 500 the
+        index; it is listed without the optional lastmod and not cached."""
+        from unittest import mock
+        client = TestClient(app)
+        seo_pages._sitemap_cache.clear()
+        try:
+            with mock.patch.dict(seo_pages._make_by_slug, {}, clear=True):
+                r = client.get("/sitemap.xml")
+                self.assertEqual(r.status_code, 200)
+                block = re.search(r"<sitemap>\s*<loc>[^<]*/sitemap-makes\.xml</loc>\s*(.*?)</sitemap>", r.text, re.S)
+                self.assertIsNotNone(block)
+                self.assertNotIn("<lastmod>", block.group(1))
+                self.assertNotIn("sitemap:index", seo_pages._sitemap_cache)
+        finally:
+            seo_pages._sitemap_cache.clear()
+
     def test_tracked_sources_match_the_revision_manifest(self):
         stale = page_revisions.stale_sources()
         self.assertEqual(

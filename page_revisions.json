@@ -262,13 +262,13 @@
       }
     },
     "seo_pages.py": {
-      "sha256": "bc72f6e37c9ae05f6994674161d8b6313fc662d8da706b38eea10347d57afdde",
+      "sha256": "10571904e8e650dfdb8488b91c616411381f450fa7646e5405a26646063e80ac",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
       "last_change": {
         "date": "2026-10-01",
         "significant": false,
-        "reason": "OA-006 B/D link emission, F sitemap lastmod, G startup aggregation (rendered output byte-identical), review fixes"
+        "reason": "Sitemap index tolerates an empty sub-sitemap (no output change when data is loaded)"
       }
     },
     "templates/seo_base.html": {
