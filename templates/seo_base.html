@@ -510,6 +510,7 @@
         }
     </style>
     <script src="/static/umami.js"></script>
+    <script src="/static/acquisition-landing.js" defer></script>
 </head>
 
 <body>
@@ -520,7 +521,7 @@
         <nav class="site-nav">
             <a href="/mot-check/">MOT Check</a>
             <a href="/guides/common-mot-failures">Guides</a>
-            <a href="/" class="nav-cta">Free Comparison</a>
+            <a href="/" class="nav-cta" data-acq-cta>Free Comparison</a>
         </nav>
     </header>
 
@@ -532,7 +533,7 @@
             <h3>{% block cta_heading %}Compare Your Vehicle With Recorded Outcomes{% endblock %}</h3>
             <p>{% block cta_text %}See recorded MOT details and failure rates for the closest available comparison group.{%
                 endblock %}</p>
-            <a href="/">Compare Your Vehicle Free</a>
+            <a href="/" data-acq-cta>Compare Your Vehicle Free</a>
         </div>
 
         <h2>Related Guides</h2>
@@ -573,7 +574,7 @@
           return;
         }
         try { sessionStorage.setItem('autosafe_pending_registration', normalized); } catch (e) {}
-        window.location.assign('/app');
+        window.location.assign('/app' + (window.autosafeLandingQuery || ''));
       });
     </script>
 </body>
