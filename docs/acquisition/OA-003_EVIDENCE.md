@@ -82,7 +82,7 @@ Consent accepted and declined, for a home to report client transition and for a 
 
 ## Logs
 
-- Production `Dockerfile` CMD starts uvicorn with `--no-access-log`, so request lines are not logged in production; the staging doc command also uses it. `docker-compose.staging.yml` was not inspected for this flag. A uvicorn run without it would log the token in the request line.
+- Production `Dockerfile` CMD starts uvicorn with `--no-access-log`, so request lines are not logged in production; the staging doc command also uses it, and the `app` service in `docker-compose.staging.yml` has no `command` override so it inherits the Dockerfile CMD. A uvicorn run without it would log the token in the request line.
 - Application logging goes through `safe_log_path`, which renders `/api/v2/reports/{token}` and `/app/report/{token}`. Smoke log after the matrix: 0 occurrences of the synthetic token; entries such as `report_api_error ... path=/api/v2/reports/{token}`.
 - Finding fixed: `safe_log_path` did not match trailing-slash paths, which would have logged the token (e.g. on the 429 or 500 handler for `/api/v2/reports/<token>/`). One-line pattern change, tested.
 - `report_referrer` stored with risk checks goes through `safe_referrer` (origin only), unchanged.
