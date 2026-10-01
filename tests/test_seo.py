@@ -377,5 +377,28 @@ class TestModelPageDistinctiveness(unittest.TestCase):
         self.assertIn("Open Government Licence v3", r.text)
 
 
+class TestFooterLegalLinks(unittest.TestCase):
+    """OA-006 C: footer links go straight to the canonical legal URLs, not via 301s."""
+
+    def test_footer_links_point_at_canonical_legal_urls(self):
+        r = client.get("/mot-check/ford/fiesta/")
+        self.assertIn('href="/terms"', r.text)
+        self.assertIn('href="/privacy"', r.text)
+        self.assertNotIn("/static/terms.html", r.text)
+        self.assertNotIn("/static/privacy.html", r.text)
+
+    def test_canonical_legal_urls_serve_directly(self):
+        for path in ("/terms", "/privacy"):
+            r = client.get(path, follow_redirects=False)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertIn("text/html", r.headers["content-type"])
+
+    def test_legacy_static_legal_urls_still_redirect(self):
+        for old, new in (("/static/terms.html", "/terms"), ("/static/privacy.html", "/privacy")):
+            r = client.get(old, follow_redirects=False)
+            self.assertEqual(r.status_code, 301)
+            self.assertEqual(r.headers["location"], new)
+
+
 if __name__ == "__main__":
     unittest.main()
