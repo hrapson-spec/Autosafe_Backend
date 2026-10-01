@@ -17,8 +17,12 @@ accompany any figure from this script):
 * completion: result_rendered with supported_result true carrying that
               landing_id, unless render_failed exists for the same operation.
 * Raw events exist for 90 days only: windows reaching further back than that
-  are incomplete (the script warns). Older periods are only available as the
-  identifier-free daily counts in acquisition_daily.
+  are incomplete in the raw figure (the script warns). The identifier-free
+  per-day landing counts in acquisition_landing_daily (kept 25 months, written
+  when a landing is one day old, D-007.4) are reported alongside as
+  `landing_aggregate_*`: they cover whole UTC days, count only landings older
+  than one day, and reproduce the raw figure for the same whole-day window once
+  those landings have been rolled up. Use them for periods beyond 90 days.
 
 Read-only. Never prints an identifier.
 """
@@ -70,12 +74,20 @@ async def compute(store, from_ts: datetime, to_ts: datetime) -> dict:
     paid = [r for r in landings if r["source_group"] == "paid_search" and not r["is_bot"]]
     earliest = await store.fetch_all("SELECT MIN(received_at) AS earliest FROM acquisition_events")
     earliest_raw = earliest[0]["earliest"] if earliest else None
+    try:
+        agg = await store.landing_aggregate_metric(from_ts.date(), to_ts.date())
+    except Exception:  # noqa: BLE001 - table absent on an older deployment
+        agg = None
     den, num = metric["denominator"], metric["numerator"]
     return {
         "window_utc": [from_ts.isoformat(), to_ts.isoformat()],
         "eligible_organic_landings": den,
         "eligible_with_displayed_supported_result": num,
         "rate": (num / den) if den else None,
+        "landing_aggregate_days_utc": [from_ts.date().isoformat(), to_ts.date().isoformat()],
+        "landing_aggregate_eligible_organic_landings": agg["denominator"] if agg else None,
+        "landing_aggregate_with_displayed_supported_result": agg["numerator"] if agg else None,
+        "landing_aggregate_matches_raw": (agg == metric) if agg else None,
         "paid_search_landings_excluded": sum(int(r["landings"]) for r in paid),
         "all_landing_observations_by_group": [
             {"source_group": r["source_group"], "page_family": r["page_family"], "is_bot": bool(r["is_bot"]),
@@ -104,6 +116,8 @@ async def main_async(args) -> int:
         out["warning"] = "window starts before the 90-day raw retention limit; the figure is incomplete"
     out["caveats"] = [
         "Client-reported acknowledgements; they do not prove accuracy or comprehension.",
+        "landing_aggregate_* holds only landings already rolled up (older than one day) and whole UTC days; "
+        "a raw window that includes the last day will differ until those landings age.",
         "A reload, new tab or typed URL starts an unattributed session (not in this metric).",
         "Paid search is separated only when the landing URL carried gclid, gbraid, wbraid or utm_medium cpc/ppc/paid; other paid traffic is indistinguishable from organic.",
         "Landings blocked by Global Privacy Control, script blockers or old cached pages are unobserved.",

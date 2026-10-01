@@ -30,7 +30,7 @@ beforeEach(() => {
   fetchSpy = vi.fn(() => Promise.resolve({ status: 202 } as Response));
   vi.stubGlobal('fetch', fetchSpy);
   Object.defineProperty(window, 'fetch', { value: fetchSpy, configurable: true, writable: true });
-  delete (window as unknown as { autosafeLandingQuery?: string }).autosafeLandingQuery;
+  delete (window as unknown as { autosafeLandingHandoff?: string }).autosafeLandingHandoff;
   setReferrer('');
   goto('/guides/mot-cost');
   document.body.innerHTML = '';
@@ -46,7 +46,8 @@ afterEach(() => {
 const CTA_HTML = `
   <a id="cta-app" href="/app">Enter a registration</a>
   <a id="cta-app-slash" href="/app/">slash</a>
-  <a id="cta-abs" href="${window.location.origin}/app#top">absolute same-origin</a>
+  <a id="cta-abs" href="${window.location.origin}/app">absolute same-origin</a>
+  <a id="has-fragment" href="/app#top">already has a fragment</a>
   <a id="cta-marked" href="/" data-acq-cta>marked home</a>
   <a id="logo" href="/">logo</a>
   <a id="with-query" href="/app?x=1">has query</a>
@@ -70,7 +71,7 @@ describe('shipped file is OFF', () => {
     run(scriptSource);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(document.getElementById('cta-app')!.getAttribute('href')).toBe('/app');
-    expect((window as unknown as { autosafeLandingQuery?: string }).autosafeLandingQuery).toBeUndefined();
+    expect((window as unknown as { autosafeLandingHandoff?: string }).autosafeLandingHandoff).toBeUndefined();
   });
 });
 
@@ -111,15 +112,16 @@ describe('enabled (test copy)', () => {
     document.body.innerHTML = CTA_HTML;
     run(ENABLED_SOURCE);
     const wire = JSON.parse((fetchSpy.mock.calls[0][1] as { body: string }).body);
-    const q = `?al=${wire.landing_id}&src=other_search`;
+    const q = `#al=${wire.landing_id}&src=other_search`;
     const href = (id: string) => document.getElementById(id)!.getAttribute('href');
     expect(href('cta-app')).toBe(`/app${q}`);
+    expect(href('has-fragment')).toBe('/app#top'); // an existing fragment is never altered
     expect(href('cta-app-slash')).toBe(`/app/${q}`);
-    expect(href('cta-abs')).toBe(`/app${q}#top`);
+    expect(href('cta-abs')).toBe(`/app${q}`);
     expect(href('cta-marked')).toBe(`/${q}`);
     // untouched
     expect(href('logo')).toBe('/');
-    expect(href('with-query')).toBe('/app?x=1');
+    expect(href('with-query')).toBe(`/app?x=1${q}`); // the query is kept; only a fragment is added
     expect(href('external')).toBe('https://example.com/app');
     expect(href('other-origin-port')).toBe('http://localhost:9999/app');
     expect(href('guide')).toBe('/guides/mot-checklist');
@@ -127,17 +129,18 @@ describe('enabled (test copy)', () => {
     expect(href('mailto')).toBe('mailto:autosafehq@gmail.com');
     expect(document.getElementById('no-href')!.hasAttribute('href')).toBe(false);
     // only the two parameters, nothing else is appended
-    expect(href('cta-app')!.replace(/^\/app/, '')).toMatch(/^\?al=[0-9a-f-]{36}&src=other_search$/);
+    expect(href('cta-app')!.replace(/^\/app/, '')).toMatch(/^#al=[0-9a-f-]{36}&src=other_search$/);
+    expect(href('cta-app')).not.toContain('?'); // nothing is ever added to the query string
   });
 
-  it('exposes the same query for the registration form that navigates to /app itself', () => {
+  it('exposes the same fragment for the registration form that navigates to /app itself', () => {
     document.body.innerHTML = CTA_HTML;
     run(ENABLED_SOURCE);
     const wire = JSON.parse((fetchSpy.mock.calls[0][1] as { body: string }).body);
-    expect((window as unknown as { autosafeLandingQuery: string }).autosafeLandingQuery).toBe(
-      `?al=${wire.landing_id}&src=direct`,
+    expect((window as unknown as { autosafeLandingHandoff: string }).autosafeLandingHandoff).toBe(
+      `#al=${wire.landing_id}&src=direct`,
     );
-    expect(baseTemplate).toContain("window.location.assign('/app' + (window.autosafeLandingQuery || ''));");
+    expect(baseTemplate).toContain("window.location.assign('/app' + (window.autosafeLandingHandoff || ''));");
   });
 
   it('rewrites links that appear before DOMContentLoaded (script runs while parsing)', () => {
@@ -147,7 +150,7 @@ describe('enabled (test copy)', () => {
     expect(document.getElementById('late')!.getAttribute('href')).toBe('/app');
     Object.defineProperty(document, 'readyState', { value: 'complete', configurable: true });
     document.dispatchEvent(new Event('DOMContentLoaded'));
-    expect(document.getElementById('late')!.getAttribute('href')).toMatch(/^\/app\?al=[0-9a-f-]{36}&src=direct$/);
+    expect(document.getElementById('late')!.getAttribute('href')).toMatch(/^\/app#al=[0-9a-f-]{36}&src=direct$/);
   });
 
   it('never runs on a report route', () => {
@@ -224,7 +227,7 @@ describe('reload is not a landing (D-006)', () => {
     run(ENABLED_SOURCE);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(document.getElementById('cta-app')!.getAttribute('href')).toBe('/app');
-    expect((window as unknown as { autosafeLandingQuery?: string }).autosafeLandingQuery).toBeUndefined();
+    expect((window as unknown as { autosafeLandingHandoff?: string }).autosafeLandingHandoff).toBeUndefined();
   });
 
   it('navigate emits', () => {
@@ -265,7 +268,7 @@ describe('paid search (D-006)', () => {
     const init = fetchSpy.mock.calls[0][1] as { body: string };
     expect(JSON.parse(init.body).source_group).toBe('paid_search');
     const hrefs = Array.from(document.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '').join(' ');
-    for (const text of [init.body, hrefs, String((window as unknown as { autosafeLandingQuery: string }).autosafeLandingQuery)]) {
+    for (const text of [init.body, hrefs, String((window as unknown as { autosafeLandingHandoff: string }).autosafeLandingHandoff)]) {
       for (const needle of [secret.length > 4 ? secret : 'zzzz', 'gclid', 'gbraid', 'wbraid', 'utm_', 'google.com']) {
         expect(text.toLowerCase()).not.toContain(needle.toLowerCase());
       }

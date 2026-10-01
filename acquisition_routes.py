@@ -258,9 +258,14 @@ def parse_event(payload: Any) -> BaseModel:
 # Real browsers (including mobile and in-app webviews) must not match. An
 # absent User-Agent is treated as a bot: every real browser sends one.
 _BOT_RE = re.compile(
-    r"bot\b|bot/|crawl|spider|slurp|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|"
-    r"monitor|facebookexternalhit|embedly|curl/|wget/|python-requests|python-urllib|aiohttp|httpx|"
-    r"go-http-client|java/|okhttp/|libwww|scrapy|phantomjs|selenium|playwright|puppeteer|"
+    # Named crawlers (substring: their tokens are distinctive) ...
+    r"googlebot|bingbot|yandexbot|duckduckbot|applebot|baiduspider|ahrefsbot|semrushbot|mj12bot|petalbot|"
+    r"bytespider|gptbot|claudebot|ccbot|facebookbot|twitterbot|linkedinbot|slackbot|telegrambot|"
+    r"discordbot|pinterestbot|amazonbot|dotbot|rogerbot|exabot|sogou|"
+    # ... generic tokens, on word boundaries so "Cubot" phones are not bots
+    r"\bbot\b|[a-z]bot/\d|crawler|crawling|\bspider\b|slurp|headless|lighthouse|pagespeed|gtmetrix|"
+    r"pingdom|uptime|monitor|facebookexternalhit|embedly|curl/|wget/|python-requests|python-urllib|"
+    r"aiohttp|httpx|go-http-client|java/|okhttp/|libwww|scrapy|phantomjs|selenium|playwright|puppeteer|"
     r"node-fetch|axios/|postmanruntime|http_request2|apache-httpclient",
     re.IGNORECASE,
 )
@@ -349,7 +354,35 @@ async def _read_limited_body(request: Request) -> Optional[bytes]:
     return b"".join(chunks)
 
 
+class _RedactRateLimitKey(logging.Filter):
+    """slowapi logs ``ratelimit <limit> (<key>) exceeded at endpoint: <path>``
+    and the key is the client IP. D-007.2: no client IP in any log. Applied to
+    the ``slowapi`` logger, so it covers every route, not just the collector."""
+
+    _KEY = re.compile(r"\([^()]*\)")
+    _IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b|\b[0-9a-fA-F]{0,4}(?::[0-9a-fA-F]{0,4}){2,7}\b")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+            if "ratelimit" in message and "exceeded" in message:
+                message = self._KEY.sub("([redacted])", message, count=1)
+            message = self._IP.sub("[redacted-ip]", message)
+            record.msg, record.args = message, ()
+        except Exception:  # noqa: BLE001 - never let a logging filter break logging
+            record.msg, record.args = "slowapi log message withheld", ()
+        return True
+
+
+def install_log_redaction() -> None:
+    slowapi_logger = logging.getLogger("slowapi")
+    if not any(isinstance(f, _RedactRateLimitKey) for f in slowapi_logger.filters):
+        slowapi_logger.addFilter(_RedactRateLimitKey())
+
+
 def register_acquisition_routes(app: FastAPI, limiter) -> None:
+    install_log_redaction()
+
     @app.middleware("http")
     async def _acquisition_no_store(request, call_next):
         response = await call_next(request)
@@ -410,7 +443,9 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
 
         record = _record_from_event(
             event,
-            store_mod.utcnow(),
+            # D-007.5: stored to the minute, so a row cannot be joined to an
+            # external timestamped log (edge, proxy) by second.
+            store_mod.utcnow().replace(second=0, microsecond=0),
             is_bot_user_agent(request.headers.get("user-agent")),
         )
         try:
@@ -438,15 +473,24 @@ _retention_task: Optional["asyncio.Task[None]"] = None
 
 
 async def run_retention_once(store=None, now=None) -> Optional[store_mod.RetentionResult]:
-    """One idempotent retention pass. Safe to call from any worker, any time."""
+    """One idempotent retention pass. Safe to call from any worker, any time.
+
+    D-007.3: runs whenever the acquisition tables exist, whatever the ingest
+    flag says, so turning ingest off never stops deletion. With ingest off it
+    never creates tables."""
     store = store or _get_store()
     if store is None:
         return None
-    await _ensure_schema_once(store)
+    if ingest_enabled():
+        await _ensure_schema_once(store)
+    elif not await store.tables_exist():
+        return None
     result = await store.run_retention(now or store_mod.utcnow())
     logger.info(
-        "acquisition_retention skipped_locked=%s rolled_up=%d deleted_raw=%d deleted_aggregate_rows=%d",
-        result.skipped_locked, result.rolled_up_events, result.deleted_raw_events, result.deleted_aggregate_rows,
+        "acquisition_retention skipped_locked=%s rolled_up=%d rolled_up_landings=%d deleted_raw=%d "
+        "deleted_aggregate_rows=%d",
+        result.skipped_locked, result.rolled_up_events, result.rolled_up_landings, result.deleted_raw_events,
+        result.deleted_aggregate_rows,
     )
     return result
 
@@ -470,11 +514,12 @@ def start_background_retention(
     daily: float = DAILY_SECONDS,
     retry: float = RETRY_AFTER_FAILURE_SECONDS,
 ) -> Optional["asyncio.Task[None]"]:
-    """Schedule the retention loop as a background task. Returns None (and
-    touches nothing) unless the server-side ingest flag is on, so a
-    deployment with the collector disabled never creates tables or runs DDL."""
+    """Schedule the retention loop as a background task, whatever the ingest
+    flag says (D-007.3). Returns None only when no store is configured at all.
+    Each pass does nothing unless the acquisition tables already exist, and
+    creates them only when ingest is enabled."""
     global _retention_task
-    if not ingest_enabled():
+    if _get_store() is None:
         return None
     if _retention_task is not None and not _retention_task.done():
         return _retention_task

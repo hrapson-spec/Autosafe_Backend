@@ -1,21 +1,21 @@
 /**
- * Landing attribution for the SPA (OA-005, DECISIONS.md D-005). Collection
- * is OFF (ACQUISITION_COLLECTOR_ENABLED=false): in that state this module's
- * only effect is hygiene, removing `al`/`src` from the address bar if a
- * visitor arrives with them.
+ * Landing attribution for the SPA (OA-005, DECISIONS.md D-005, D-006, D-007).
+ * Collection is OFF (ACQUISITION_COLLECTOR_ENABLED=false): in that state this
+ * module records nothing and emits nothing.
  *
  * Two entry paths:
  *
- * 1. Handoff from a public page. The site's own CTA links to the app append
- *    `?al=<landing_id>&src=<source_group>` (static/acquisition-landing.js).
- *    The SPA validates both against the exact shapes we mint, holds them in
- *    memory and removes them with `history.replaceState` straight away. They
- *    are never stored, and never sent to a third party: Umami's filter
- *    reduces URLs to the path, the global Referrer-Policy is
- *    strict-origin-when-cross-origin, and the strip below runs from
- *    index.tsx before React renders, so before the first Umami page view
- *    (utils/analytics.ts trackPageView, fired from an App effect).
- *    The public page already emitted landing_observed; the SPA does not.
+ * 1. Handoff from a public page. The site's own CTA links to the app carry
+ *    `#al=<landing_id>&src=<source_group>` in the URL FRAGMENT
+ *    (static/acquisition-landing.js). Fragments are never sent in HTTP
+ *    requests or Referer headers, so the id reaches no proxy log and no third
+ *    party. The first inline script in index.html's <head> consumes and
+ *    removes the fragment with `history.replaceState` before gtag or Umami
+ *    exist, and leaves the raw values in `window.__autosafeLandingHandoff`.
+ *    This module reads that variable once (and deletes it), validates both
+ *    values against the exact shapes we mint, and holds them in memory. It
+ *    never reads the URL's fragment again. The public page already emitted
+ *    landing_observed; the SPA does not.
  *
  * 2. Direct SPA landing on `/` or `/app` (no handoff). The SPA mints a
  *    landing_id, derives source_group from the `document.referrer` ORIGIN
@@ -29,8 +29,8 @@
  * missing-API browser losing every landing). Reading the type is not storage.
  *
  * Report routes (`/app/report/*`) and every other SPA route are not
- * landings. A reload, new tab or typed URL starts a new, unattributed
- * session by design (no storage; accepted coverage limitation).
+ * landings. A new tab or typed URL starts a new, unattributed session by
+ * design (no storage; accepted coverage limitation).
  */
 import {
   ACQUISITION_COLLECTOR_ENABLED,
@@ -146,30 +146,26 @@ export interface Handoff {
   sourceGroup: SourceGroup;
 }
 
+/** Raw values left by the inline head script in index.html (unvalidated strings or null). */
+export interface RawHandoff {
+  al?: unknown;
+  src?: unknown;
+}
+
+declare global {
+  interface Window {
+    __autosafeLandingHandoff?: RawHandoff;
+  }
+}
+
 /** Validate the `al`/`src` pair. Anything not exactly what we mint is ignored. */
-export function parseHandoff(search: string): Handoff | null {
-  const params = new URLSearchParams(search);
-  const al = params.get('al');
-  const src = params.get('src');
-  if (al && src && UUID_PATTERN.test(al) && HANDOFF_SOURCE_GROUPS.has(src)) {
+export function parseHandoff(raw: RawHandoff | null | undefined): Handoff | null {
+  const al = raw?.al;
+  const src = raw?.src;
+  if (typeof al === 'string' && typeof src === 'string' && UUID_PATTERN.test(al) && HANDOFF_SOURCE_GROUPS.has(src)) {
     return { landingId: al, sourceGroup: src as SourceGroup };
   }
   return null;
-}
-
-/** Remove `al` and `src` (only those) from the address bar, keeping the path, other params and hash. */
-export function stripHandoffParams(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has('al') && !params.has('src')) return false;
-  params.delete('al');
-  params.delete('src');
-  const query = params.toString();
-  window.history.replaceState(
-    window.history.state,
-    '',
-    window.location.pathname + (query ? `?${query}` : '') + window.location.hash,
-  );
-  return true;
 }
 
 /** Page family for an SPA landing; null for every route that is not a landing (including report routes). */
@@ -181,14 +177,14 @@ export function spaLandingFamily(pathname: string): PageFamily | null {
 }
 
 /**
- * Run once at startup, BEFORE React renders (index.tsx). Always strips the
- * handoff parameters; the rest happens only when collection is enabled and
- * Global Privacy Control is not set.
+ * Run once at startup, BEFORE React renders (index.tsx). Always consumes the
+ * handoff variable (so the raw values do not linger on `window`); the rest
+ * happens only when collection is enabled and Global Privacy Control is not
+ * set.
  */
 export function initAcquisitionLanding(enabled: boolean = ACQUISITION_COLLECTOR_ENABLED): void {
-  const handoff = parseHandoff(window.location.search);
-  const search = window.location.search; // read before the strip; used only for the paid-click test
-  stripHandoffParams();
+  const handoff = parseHandoff(window.__autosafeLandingHandoff);
+  delete window.__autosafeLandingHandoff;
   if (!enabled || globalPrivacyControlSet()) return;
 
   if (handoff) {
@@ -201,7 +197,8 @@ export function initAcquisitionLanding(enabled: boolean = ACQUISITION_COLLECTOR_
     setAcquisitionContext({ sourceGroup: 'unknown', pageFamily: 'app' });
     return;
   }
-  const sourceGroup = classifySource(document.referrer, window.location.hostname, search);
+  // The query is read only to test for a paid-click marker (D-006); no value is kept.
+  const sourceGroup = classifySource(document.referrer, window.location.hostname, window.location.search);
   const landingId = randomId();
   // Later events happen on the app itself, so they carry page_family 'app';
   // only landing_observed carries the landing's family.

@@ -2,6 +2,7 @@
 
 Status: **implemented, collection OFF.** Governing decision: `DECISIONS.md` D-005 in the
 organic-acquisition work area (UK GDPR Art. 6(1)(f); cookieless; memory-only identifiers).
+Legitimate interests assessment: [`../LIA_ACQUISITION_MEASUREMENT.md`](../LIA_ACQUISITION_MEASUREMENT.md).
 Event semantics: [`EVENT_SCHEMA_v1.md`](EVENT_SCHEMA_v1.md) and
 [`event_schema_v1.json`](event_schema_v1.json). Evidence: [`OA-005_EVIDENCE.md`](OA-005_EVIDENCE.md).
 
@@ -15,22 +16,23 @@ personalisation or per-person decision.
 |---|---|---|---|
 | `ACQUISITION_COLLECTOR_ENABLED` | `utils/acquisitionEvents.ts` | SPA installs no transport; the bundler drops the transport code from the build (no `api/acquisition` string in the bundle); events go to a no-op sink | code change + deploy |
 | `var ENABLED` | `static/acquisition-landing.js` | public pages do nothing: no request, no link rewriting | code change + deploy |
-| `ACQUISITION_INGEST_ENABLED` | server environment | `POST /api/acquisition/events` returns 404, no table is created, the retention job is not scheduled | env change (no code deploy) |
+| `ACQUISITION_INGEST_ENABLED` | server environment | `POST /api/acquisition/events` returns 404 and no table is created. **The retention job still runs whenever the tables exist** (D-007.3), so turning ingest off never stops deletion | env change (no code deploy) |
 
 Rollback is any of these: set the two code constants back to `false` (stops all new
 collection), and/or unset `ACQUISITION_INGEST_ENABLED` (fastest: the server stops accepting
 and the clients' requests simply 404, which they ignore). Neither deletes stored rows;
-`python migrations/add_acquisition_tables.py --rollback` does (drops both tables).
+`python migrations/add_acquisition_tables.py --rollback` does (drops all three tables).
 
 ## Architecture
 
 ```
 public page (templates/*.html, static/guides/*.html)
   static/acquisition-landing.js   source_group from document.referrer ORIGIN, landing_id,
-        |                         landing_observed, appends ?al=&src= to own links to /app
+        |                         landing_observed, appends #al=&src= (fragment) to own links to /app
         v
-SPA (index.tsx -> utils/acquisitionLanding.ts)   reads al/src, strips them immediately, holds
-        |                                        them in memory; direct landing on / or /app
+index.html head script  consumes #al=&src= (fragment) before gtag/Umami, leaves it in a window var
+        v
+SPA (index.tsx -> utils/acquisitionLanding.ts)   reads that var once, validates, holds in memory; direct landing on / or /app
         v                                        mints its own landing_id
 utils/acquisitionEvents.ts   fetch sink (keepalive, credentials omit, no-referrer, no-store);
         |                    one retry on network error/5xx within 10 s; no queue, no storage
@@ -63,7 +65,7 @@ carries `observation_state`; `result_rendered` accepts `outcome_group` `demo` pe
 never `match_scope=unavailable`). Cross-field combination rules are enforced server-side and
 checked against the JSON schema over a full grid in `tests/test_acquisition_collector.py`.
 
-The server adds only `received_at` and `is_bot`. `is_bot` comes from a conservative
+The server adds only `received_at` (stored **truncated to the minute**, D-007.5, so a row cannot be joined to an external timestamped log) and `is_bot`. `is_bot` comes from a conservative
 User-Agent pattern (clear crawlers, headless browsers, monitors, HTTP libraries; an absent
 User-Agent counts as a bot). **The User-Agent, IP address, Referer, query string and URL are
 never stored.** The IP address is used by the in-memory rate limiter only. `source_group`
@@ -97,6 +99,14 @@ Application logs never contain a request body, `event_id`, `session_id`, `landin
 `--no-access-log`. Tests capture logs at DEBUG and assert none of the IDs, IP or User-Agent
 appear.
 
+**No client IP in any log (D-007.2).** slowapi logs `ratelimit <limit> (<client ip>) exceeded at
+endpoint: ...` on every 429, from the limiter decorator, i.e. even when ingest is off. A logging
+filter on the `slowapi` logger (`acquisition_routes._RedactRateLimitKey`, installed when the
+collector routes register) rewrites that key to `[redacted]` and scrubs any IPv4/IPv6 literal from
+slowapi messages. It applies to every route on the site, not just the collector. Tests send 429s
+with a known `X-Forwarded-For` to the collector (ingest on and off) and to a report route and
+assert the address never reaches the log, while the warning and endpoint still do.
+
 ### Identifiers and session rule
 
 All identifiers are random per page load and held in memory only; none is derived from the
@@ -106,16 +116,28 @@ session**: there is no 30-minute window and no stored dedup. A reload is additio
 landing (D-006, below), so it does not inflate the denominator. This is an accepted coverage
 limitation and must be reported with the KPI.
 
-Handoff: a public page appends `?al=<landing_id>&src=<source_group>` to the site's **own
-same-origin links to `/app`** and to links explicitly marked `data-acq-cta` that point at `/`
-(the main CTA boxes; see "Judgement calls" in the evidence file), and exposes the same query
-to the SEO registration form that navigates to `/app` itself. The SPA validates both against
-the exact shapes we mint (lower-case UUID; `src` in the handoff subset, never `internal_test`),
-holds them in memory and removes them with `history.replaceState` in `index.tsx`, before
-`root.render`, i.e. before any effect and so before the first Umami page view
-(`utils/analytics.ts` `trackPageView`, fired from an `App` effect). Umami's loader filter also
-reduces URLs to the path and referrers to the origin, and the global `Referrer-Policy` is
-`strict-origin-when-cross-origin`, so the parameters are never sent to a third party.
+Handoff (D-007.1): a public page appends `#al=<landing_id>&src=<source_group>` (the URL
+**fragment**) to the site's **own same-origin links to `/app`** and to links explicitly marked
+`data-acq-cta` that point at `/` (the main CTA boxes; see "Judgement calls" in the evidence
+file), and exposes the same fragment (`window.autosafeLandingHandoff`) to the SEO registration
+form, whose handler navigates with `location.assign('/app' + fragment)`. A link that already has a
+fragment is left alone; an existing query string is kept and nothing is ever added to it.
+Fragments are never sent in an HTTP request or a Referer, so the id reaches no Railway edge or
+proxy log and no third party (`301` redirects such as non-www to www keep the original fragment).
+
+The **first executing inline script in `index.html`'s `<head>`** (it must stay first; a test pins
+this) reads the fragment, removes `al`/`src` with `history.replaceState` (keeping the path, query,
+history state and any other fragment content) and leaves the raw strings in
+`window.__autosafeLandingHandoff`, all before the gtag bootstrap or the Umami loader exist.
+`index.tsx` calls `initAcquisitionLanding()` before `root.render`; it reads that variable once and
+deletes it, validates both values against the exact shapes we mint (lower-case UUID; `src` in the
+handoff subset, never `internal_test`), holds them in memory and never reads the URL's fragment or
+`al`/`src` query. An old-style `?al=&src=` query is no longer interpreted. Umami's loader filter
+also reduces URLs to the path and referrers to the origin, and the global `Referrer-Policy` is
+`strict-origin-when-cross-origin`. The Playwright spec `e2e/acquisition-landing.spec.ts` runs with
+Ads consent **accepted** (so gtag and Umami are really injected), records the address bar at the
+moment each external script is attached, and captures every non-same-origin request, body, header
+and the gtag `dataLayer`: none contains the id or the source value.
 
 ### Reload is not a landing, and paid search is not organic (D-006)
 
@@ -153,23 +175,35 @@ no build identity and omits it.
 ### Storage and retention
 
 Tables (`migrations/add_acquisition_tables.py`, also created by the collector on first use
-when ingest is enabled; identical DDL from `acquisition_store.py`):
+when ingest is enabled, under an advisory lock so two workers cannot race the DDL; identical DDL
+from `acquisition_store.py`):
 
 * `acquisition_events`: one row per event, `UNIQUE (event_id)`, typed columns only
   (no IP, User-Agent, Referer, query, URL, free text), plus `received_at`, `rolled_up_at`.
 * `acquisition_daily (day, page_family, source_group, event, outcome_group, entry_mode,
   persistence_mode, is_bot, count)`: no IDs. `day` is the **UTC** calendar day of `received_at`
   (record this next to Umami's and Search Console's own reporting timezones).
+* `acquisition_landing_daily (day, source_group, page_family, landings,
+  landings_with_supported_result)` (D-007.4): per-day **landing-level** counts, counts only, no
+  IDs. `landings` = distinct non-bot `landing_observed` landing ids first rolled up that day;
+  `landings_with_supported_result` = those with at least one supported displayed result (same
+  rule as the raw metric: `render_failed` for the same operation wins). All source groups and page
+  families are kept, so the primary metric is `source_group = 'google_organic'` and a public
+  `page_family`; `paid_search` and the rest are excluded by that filter. A completion that arrives
+  more than a day after its landing (the rollup point) is not attributed; a landing id replayed
+  after it was rolled up is not counted again.
 
 The retention job (`acquisition_routes.run_retention_once`) is one transaction:
 
-1. roll raw events older than 1 day into `acquisition_daily`, marking each rolled row with
-   `rolled_up_at` **in the same statement** that counts it, so a rerun, a crash and retry, or a
-   concurrent second worker cannot count an event twice;
+1. roll raw events older than 1 day into `acquisition_daily` and, from the same rows,
+   `acquisition_landing_daily`, marking each rolled row with `rolled_up_at` **in the same
+   statement** that counts it, so a rerun, a crash and retry, or a concurrent second worker cannot
+   count an event or a landing twice;
 2. delete raw events older than 90 days (only rows already rolled up);
-3. delete aggregate rows older than 25 calendar months.
+3. delete aggregate rows (both tables) older than 25 calendar months.
 
-It runs in a background task 20 s after startup (it never delays the lifespan or `/health`)
+It runs **whenever the tables exist, whatever `ACQUISITION_INGEST_ENABLED` says** (D-007.3; with
+ingest off it never creates tables), in a background task 20 s after startup (it never delays the lifespan or `/health`)
 and then every 24 h, retrying hourly after a failure. Under `uvicorn --workers 2` both workers
 schedule it; a transaction-level Postgres advisory lock (`pg_try_advisory_xact_lock`) makes the
 second skip, and the `rolled_up_at` marker keeps the result exactly-once even without the lock
@@ -187,6 +221,14 @@ and idempotency record are gone). That is accepted: the client never replays.
       `static/privacy.html` and `components/PrivacyPage.tsx` is part of the enable gate: review
       it against what is actually collected, and against this document, immediately before
       flipping the flag; it goes live on merge while collection is still off);
+- [ ] **re-read `docs/LIA_ACQUISITION_MEASUREMENT.md`** against what is about to be enabled and
+      close its open condition (Railway HTTP-log retention recorded);
+- [ ] **run `python migrations/add_acquisition_tables.py` (as the database owner) BEFORE setting
+      `ACQUISITION_INGEST_ENABLED`** on each environment, which avoids a concurrent-DDL race
+      (the runtime also serialises its own DDL, but the migration is the supported path);
+- [ ] **confirm Railway's HTTP-log retention** for the service (request paths and IPs are logged at
+      the edge even though the application logs nothing) and **record it here and in the evidence
+      file**; the handoff is a fragment precisely so that no id appears in those logs;
 - [ ] **synthetic staging events received and aggregated as expected** (the OA-005 receipt):
       set `ACQUISITION_INGEST_ENABLED=1` on the staging service (client flags stay false), then
       `python scripts/acquisition_synthetic_check.py --base-url https://<staging> --allow-remote`
@@ -211,7 +253,9 @@ and idempotency record are gone). That is accepted: the client never replays.
       `utils/acquisitionEvents.test.ts` "the collector flag is false",
       `utils/acquisitionTransport.test.ts` "the flag is false and the installer installs nothing",
       `utils/acquisitionLandingScript.test.ts` "shipped file is OFF",
-      `utils/acquisitionJourney.test.tsx` "collector flag false", and
+      `utils/acquisitionJourney.test.tsx` "collector flag false",
+      `tests/test_acquisition_wiring.py::test_the_two_client_flags_agree` (the two client flags must
+      be equal and are flipped together; the server flag stays the fast rollback), and
       `e2e/acquisition-landing.spec.ts` (asserts no collector request). Merging to `main` auto-deploys and is Henri's decision (not covered by D-005).
 
 ## Primary metric: how to run it
@@ -232,10 +276,12 @@ python scripts/acquisition_metric.py --sqlite /path/to/local.sqlite --from ... -
 
 The script (read-only, prints no identifier) runs `primary_metric_sql` from
 `acquisition_store.py`; the same SQL text runs on Postgres and SQLite. Only the last 90 days
-of raw events exist: a window reaching further back is incomplete (the script warns). Older
-periods exist only as `acquisition_daily` event counts, which are **not** session-deduplicated:
-use them for year-on-year *event* comparisons (`landing_observed` for `google_organic` public
-families versus `result_rendered` with a supported `outcome_group`), never as the session KPI.
+of raw events exist: a window reaching further back is incomplete in the raw figure (the script
+warns). For older periods use the landing-level aggregates, which the script reports alongside
+(`landing_aggregate_*`, whole UTC days, landings already rolled up): they reproduce the raw
+figure and survive raw deletion for 25 months, so year-on-year comparison of the session KPI is
+possible. `acquisition_daily` remains event counts, which are **not** session-deduplicated; do
+not use them as the session KPI.
 
 **Coverage caveats that must accompany any figure from this metric**
 

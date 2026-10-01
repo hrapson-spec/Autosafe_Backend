@@ -450,12 +450,85 @@ class TestPrivacy:
         assert "AB12CDE" not in caplog.text and "vrm" not in caplog.text
 
 
+class TestNoClientIpInLogs:
+    """D-007.2: slowapi's `ratelimit ... (<client ip>) exceeded` warning must not carry the IP."""
+
+    IP = "203.0.113.77"
+
+    def _assert_clean(self, text):
+        assert self.IP not in text
+        assert "203.0.113" not in text
+
+    def test_429_on_the_collector_logs_no_client_ip(self, collector, caplog):
+        client, path = collector
+        caplog.set_level(logging.DEBUG)
+        hdr = {"X-Forwarded-For": self.IP}
+        statuses = [post(client, landing(), headers=hdr).status_code for _ in range(250)]
+        assert 429 in statuses
+        assert "ratelimit" in caplog.text and "exceeded" in caplog.text  # the warning still exists...
+        self._assert_clean(caplog.text)                                   # ...without the address
+        assert "[redacted]" in caplog.text
+        assert "/api/acquisition/events" in caplog.text                   # the endpoint is still logged
+
+    def test_429_with_ingest_off_logs_no_client_ip(self, collector, monkeypatch, caplog):
+        client, path = collector
+        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+        caplog.set_level(logging.DEBUG)
+        hdr = {"X-Forwarded-For": self.IP}
+        statuses = [post(client, landing(), headers=hdr).status_code for _ in range(250)]
+        assert 429 in statuses  # the limiter runs before the ingest check
+        self._assert_clean(caplog.text)
+
+    def test_429_on_another_route_logs_no_client_ip(self, collector, caplog):
+        client, path = collector
+        caplog.set_level(logging.DEBUG)
+        statuses = [client.get("/api/v2/reports/" + "a" * 43, headers={"X-Forwarded-For": self.IP}).status_code
+                    for _ in range(130)]
+        assert 429 in statuses
+        assert "ratelimit" in caplog.text
+        self._assert_clean(caplog.text)
+
+    def test_ipv6_key_is_redacted_too(self, caplog):
+        logger = logging.getLogger("slowapi")
+        routes.install_log_redaction()
+        caplog.set_level(logging.DEBUG)
+        logger.warning("ratelimit %s (%s) exceeded at endpoint: %s", "5 per 1 minute", "2001:db8::1234", "/x")
+        logger.warning("something about %s", "198.51.100.9")
+        assert "2001:db8" not in caplog.text and "198.51.100.9" not in caplog.text
+        assert "exceeded at endpoint: /x" in caplog.text
+
+    def test_filter_is_installed_once(self):
+        routes.install_log_redaction()
+        routes.install_log_redaction()
+        filters = [f for f in logging.getLogger("slowapi").filters if isinstance(f, routes._RedactRateLimitKey)]
+        assert len(filters) == 1
+
+
+class TestReceivedAtGranularity:
+    def test_received_at_is_stored_truncated_to_the_minute(self, collector, monkeypatch):
+        client, path = collector
+        monkeypatch.setattr(store_mod, "utcnow", lambda: datetime(2026, 11, 5, 13, 47, 52, 123456, tzinfo=UTC))
+        assert post(client, landing()).status_code == 202
+        stored = rows(path)[0]["received_at"]
+        assert stored == "2026-11-05T13:47:00.000000Z"
+
+
 class TestBotFlag:
     @pytest.mark.parametrize("ua,bot", [
         (BROWSER_UA, False),
         ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1", False),
         ("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36", False),
         ("Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Mobile/15E148 [FBAN/FBIOS;FBAV/450.0]", False),
+        ("Mozilla/5.0 (Linux; Android 10; CUBOT KINGKONG 5) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36", False),
+        ("Mozilla/5.0 (Linux; Android 11; CUBOT_X30) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36", False),
+        ("Mozilla/5.0 (Linux; Android 9; Cubot P30) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36", False),
+        ("Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)", True),
+        ("Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)", True),
+        ("Mozilla/5.0 (compatible; DuckDuckBot/1.1)", True),
+        ("Mozilla/5.0 (compatible; SomeNewBot/1.2)", True),
+        ("Mozilla/5.0 (compatible; bot)", True),
+        ("Mozilla/5.0 (compatible; MyCrawler/1.0)", True),
+        ("Mozilla/5.0 (compatible; Baiduspider/2.0)", True),
         ("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html)", True),
         ("Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)", True),
         ("Mozilla/5.0 AppleWebKit/537.36 HeadlessChrome/126.0 Safari/537.36", True),
@@ -787,7 +860,7 @@ class TestRetention:
         # ...then run at NOW: 25 calendar months before 2026-12-20 is 2024-11-20.
         res = run(store, store.run_retention(NOW))
         assert res.aggregate_cutoff_day == "2024-11-20"
-        assert res.deleted_aggregate_rows == 1
+        assert res.deleted_aggregate_rows == 2  # one acquisition_daily row + one acquisition_landing_daily row
         remaining = daily(store)
         assert [str(a["day"])[:10] for a in remaining] == ["2024-11-20"]
 
@@ -819,6 +892,104 @@ class TestRetention:
         cols = set(daily(store)[0])
         assert cols == {"day", "page_family", "source_group", "event", "outcome_group",
                         "entry_mode", "persistence_mode", "is_bot", "count"}
+
+
+class TestLandingAggregates:
+    """D-007.4: per-day landing-level counts so the primary metric survives raw deletion."""
+
+    def landing_rows(self, store):
+        return run(store, store.fetch_all(
+            "SELECT day, source_group, page_family, landings, landings_with_supported_result "
+            "FROM acquisition_landing_daily ORDER BY day, source_group, page_family"))
+
+    def _journey(self, store, t, *, family="guide", source="google_organic", complete=False, fail_render=False,
+                 bot=False, landings=1):
+        lid, op = uid(), uid()
+        for _ in range(landings):
+            ins(store, rec(t, landing_id=lid, page_family=family, source_group=source, is_bot=bot))
+        if complete:
+            ins(store, rec(t, event="result_rendered", landing_id=lid, operation_id=op, page_family="app",
+                           source_group=source, is_bot=bot, supported_result=True, render_delivered=True,
+                           outcome_group="prediction"))
+        if fail_render:
+            ins(store, rec(t, event="render_failed", landing_id=lid, operation_id=op, page_family="app",
+                           source_group=source, is_bot=bot, stage="render"))
+        return lid
+
+    def test_counts_reproduce_the_raw_metric_before_raw_deletion(self, store):
+        t = NOW - timedelta(days=3, hours=2)
+        self._journey(store, t, complete=True)
+        self._journey(store, t, family="home")
+        self._journey(store, t, family="model", complete=True)
+        self._journey(store, t, family="make", complete=True, fail_render=True)   # render_failed wins
+        self._journey(store, t, source="other_search", complete=True)             # excluded by source
+        self._journey(store, t, source="paid_search", complete=True)              # excluded by source
+        self._journey(store, t, bot=True, complete=True)                          # bot: never counted
+        self._journey(store, t, family="app", complete=True)                      # not a public family
+        window = (NOW - timedelta(days=10), NOW)
+        raw = run(store, store.primary_metric(*window))
+        assert raw == {"denominator": 4, "numerator": 2}
+        res = run(store, store.run_retention(NOW))
+        assert res.rolled_up_landings == 7  # every non-bot landing: 4 organic public + other + paid + app
+        agg = run(store, store.landing_aggregate_metric((NOW - timedelta(days=10)).date(), (NOW + timedelta(days=1)).date()))
+        assert agg == raw
+        # ... and still after the raw rows are deleted
+        late = NOW + timedelta(days=100)
+        run(store, store.run_retention(late))
+        assert raw_count(store) == 0
+        assert run(store, store.landing_aggregate_metric((NOW - timedelta(days=10)).date(), (NOW + timedelta(days=1)).date())) == raw
+
+    def test_rows_hold_counts_only_by_day_source_and_family(self, store):
+        self._journey(store, NOW - timedelta(days=3), complete=True)
+        run(store, store.run_retention(NOW))
+        rows_ = self.landing_rows(store)
+        assert set(rows_[0]) == {"day", "source_group", "page_family", "landings", "landings_with_supported_result"}
+        assert (rows_[0]["landings"], rows_[0]["landings_with_supported_result"]) == (1, 1)
+
+    def test_exactly_once_across_reruns_and_concurrent_runs(self, store):
+        t = NOW - timedelta(days=3)
+        for _ in range(5):
+            self._journey(store, t, complete=True)
+        for _ in range(3):
+            self._journey(store, t)
+
+        async def both():
+            return await asyncio.gather(store.run_retention(NOW), store.run_retention(NOW))
+
+        a, b = run(store, both())
+        assert a.rolled_up_landings + b.rolled_up_landings == 8
+        for _ in range(3):
+            assert run(store, store.run_retention(NOW)).rolled_up_landings == 0
+        rows_ = self.landing_rows(store)
+        assert sum(r["landings"] for r in rows_) == 8 and sum(r["landings_with_supported_result"] for r in rows_) == 5
+
+    def test_a_duplicated_landing_id_is_counted_once(self, store):
+        t = NOW - timedelta(days=3)
+        self._journey(store, t, complete=True, landings=3)  # same landing_id, three landing_observed events
+        run(store, store.run_retention(NOW))
+        rows_ = self.landing_rows(store)
+        assert sum(r["landings"] for r in rows_) == 1
+        # a later replay of the same landing_id in a second run is not counted again
+        lid = run(store, store.fetch_all("SELECT landing_id FROM acquisition_events LIMIT 1"))[0]["landing_id"]
+        ins(store, rec(t + timedelta(hours=1), landing_id=str(lid), page_family="guide"))
+        run(store, store.run_retention(NOW + timedelta(days=1)))
+        assert sum(r["landings"] for r in self.landing_rows(store)) == 1
+
+    def test_young_landings_are_not_rolled_up_until_they_age(self, store):
+        self._journey(store, NOW - timedelta(hours=3), complete=True)
+        assert run(store, store.run_retention(NOW)).rolled_up_landings == 0
+        assert self.landing_rows(store) == []
+        assert run(store, store.run_retention(NOW + timedelta(days=1, hours=1))).rolled_up_landings == 1
+
+    def test_landing_aggregates_are_deleted_after_25_months(self, store):
+        old = datetime(2024, 11, 19, 8, tzinfo=UTC)
+        keep = datetime(2024, 11, 20, 8, tzinfo=UTC)
+        self._journey(store, old, complete=True)
+        self._journey(store, keep, complete=True)
+        run(store, store.run_retention(datetime(2024, 11, 21, 12, tzinfo=UTC)))
+        assert len(self.landing_rows(store)) == 2
+        run(store, store.run_retention(NOW))
+        assert [str(r["day"])[:10] for r in self.landing_rows(store)] == ["2024-11-20"]
 
 
 class TestPrimaryMetric:
@@ -875,13 +1046,79 @@ class TestPrimaryMetric:
 # ---------------------------------------------------------------------------
 
 class TestBackgroundRetention:
-    def test_not_started_when_ingest_is_off(self, monkeypatch):
-        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+    def test_not_started_when_no_store_is_configured(self, monkeypatch):
+        monkeypatch.delenv("ACQUISITION_SQLITE_PATH", raising=False)
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        routes.set_store_for_tests(None)
 
         async def go():
             return routes.start_background_retention()
 
         assert asyncio.run(go()) is None
+
+    def test_retention_runs_with_ingest_off_when_tables_exist_and_deletes(self, monkeypatch, tmp_path):
+        # D-007.3: switching ingest off must never stop deletion.
+        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+        s = SqliteStore(str(tmp_path / "off.sqlite"))
+        asyncio.run(s.ensure_schema())
+        old_event = rec(NOW - timedelta(days=100))
+        asyncio.run(s.insert_event(old_event))
+        routes.set_store_for_tests(s)
+        try:
+            res = asyncio.run(routes.run_retention_once(now=NOW))
+        finally:
+            routes.set_store_for_tests(None)
+        assert res is not None and res.deleted_raw_events == 1
+        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"] == 0
+
+    def test_background_task_runs_with_ingest_off_and_stops_cleanly(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+        s = SqliteStore(str(tmp_path / "off2.sqlite"))
+        asyncio.run(s.ensure_schema())
+        asyncio.run(s.insert_event(rec(NOW - timedelta(days=400))))
+        routes.set_store_for_tests(s)
+
+        async def go():
+            task = routes.start_background_retention(startup_delay=0.01, daily=3600, retry=3600)
+            assert task is not None
+            await asyncio.sleep(0.4)
+            await routes.stop_background_retention()
+
+        try:
+            asyncio.run(go())
+        finally:
+            routes.set_store_for_tests(None)
+        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"] == 0
+
+    def test_with_ingest_off_and_no_tables_nothing_is_created(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+        path = str(tmp_path / "none.sqlite")
+        s = SqliteStore(path)
+        routes.set_store_for_tests(s)
+        try:
+            assert asyncio.run(routes.run_retention_once(now=NOW)) is None
+        finally:
+            routes.set_store_for_tests(None)
+        assert not os.path.exists(path)
+
+    def test_with_ingest_off_and_a_partial_schema_nothing_is_created(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
+        path = str(tmp_path / "partial.sqlite")
+        conn = sqlite3.connect(path)
+        conn.execute("CREATE TABLE acquisition_events (id INTEGER)")
+        conn.commit()
+        conn.close()
+        s = SqliteStore(path)
+        assert asyncio.run(s.tables_exist()) is False
+        routes.set_store_for_tests(s)
+        try:
+            assert asyncio.run(routes.run_retention_once(now=NOW)) is None
+        finally:
+            routes.set_store_for_tests(None)
+        conn = sqlite3.connect(path)
+        names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        conn.close()
+        assert names == {"acquisition_events"}
 
     def test_runs_in_background_without_blocking_and_stops_cleanly(self, monkeypatch, tmp_path):
         monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "1")
@@ -991,7 +1228,9 @@ class TestMigrationScript:
         assert "UNIQUE (event_id)" in out
         for banned in ("ip ", "user_agent", "referer", "url "):
             assert banned not in out.lower()
-        assert mod.rollback_statements() == ["DROP TABLE IF EXISTS acquisition_daily",
+        assert "CREATE TABLE IF NOT EXISTS acquisition_landing_daily" in out
+        assert mod.rollback_statements() == ["DROP TABLE IF EXISTS acquisition_landing_daily",
+                                             "DROP TABLE IF EXISTS acquisition_daily",
                                              "DROP TABLE IF EXISTS acquisition_events"]
 
 

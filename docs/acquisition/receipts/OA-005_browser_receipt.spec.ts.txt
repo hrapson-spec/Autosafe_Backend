@@ -1,0 +1,87 @@
+import { test, expect, type Page, type BrowserContext } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
+import { fixtureExactHigh } from '../fixtures/reportResponses';
+
+const OUT = '/private/tmp/claude-501/-Users-henrirapson/f1077448-9622-4571-aa79-e8f1a3be89fc/scratchpad/browser_receipt.json';
+const SECRET_GCLID = 'SECRETGCLIDVALUE12345';
+const receipt: Record<string, unknown> = {};
+
+async function wire(context: BrowserContext, page: Page, log: { collector: any[]; external: string[]; navigations: string[] }) {
+  await context.route((url) => !['127.0.0.1', 'localhost'].includes(url.hostname), (r) => r.abort());
+  await page.route('**/api/v2/reports', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixtureExactHigh) });
+  });
+  await page.route('**/api/v2/reports/*', (route) =>
+    route.request().method() === 'GET'
+      ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixtureExactHigh) })
+      : route.fallback());
+  page.on('request', (req) => {
+    const u = new URL(req.url());
+    if (u.pathname === '/api/acquisition/events') {
+      log.collector.push({ body: JSON.parse(req.postData() ?? '{}'), referer: req.headers()['referer'] ?? null, cookie: req.headers()['cookie'] ?? null });
+    } else if (!['127.0.0.1', 'localhost'].includes(u.hostname)) {
+      log.external.push(req.url());
+    }
+  });
+  page.on('framenavigated', (f) => { if (f === page.mainFrame()) log.navigations.push(f.url()); });
+}
+
+async function doCheck(page: Page) {
+  await page.getByLabel('Registration Number', { exact: false }).fill('AB12CDE');
+  await page.getByRole('textbox', { name: 'Postcode' }).fill('SW1A 1AA');
+  await page.getByRole('button', { name: /check this car/i }).click();
+  await expect(page.getByTestId('comparison-result')).toBeVisible();
+}
+
+test('browser-driven receipt with the collector flags flipped (local throwaway only)', async ({ browser }) => {
+  // A: organic guide landing -> CTA click -> check -> displayed supported result
+  const ctxA = await browser.newContext();
+  const pA = await ctxA.newPage();
+  const logA = { collector: [] as any[], external: [] as string[], navigations: [] as string[] };
+  await wire(ctxA, pA, logA);
+  await pA.goto('/guides/mot-cost', { referer: 'https://www.google.com/search?q=SECRETQUERY+mot+cost' });
+  await expect.poll(() => logA.collector.length).toBeGreaterThanOrEqual(1);
+  const ctaHref = await pA.locator('a[data-acq-cta]').first().getAttribute('href');
+  await pA.locator('a[data-acq-cta]').first().click();
+  await pA.waitForURL((u) => u.pathname === '/');
+  await doCheck(pA);
+  await expect.poll(() => logA.collector.length).toBeGreaterThanOrEqual(4);
+  receipt.A = { ctaHref, navigations: logA.navigations, finalUrl: pA.url(), events: logA.collector.map((c) => c.body.event),
+    landingIds: [...new Set(logA.collector.map((c) => c.body.landing_id))].length, sources: [...new Set(logA.collector.map((c) => c.body.source_group))],
+    sessions: [...new Set(logA.collector.map((c) => c.body.session_id))].length, referers: logA.collector.map((c) => c.referer), cookies: logA.collector.map((c) => c.cookie),
+    external: logA.external, storage: await pA.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookie: document.cookie })),
+    contextCookies: await ctxA.cookies(), bodies: JSON.stringify(logA.collector.map((c) => c.body)) };
+  // D: reload of the organic guide is not a landing
+  const ctxD = await browser.newContext();
+  const pD = await ctxD.newPage();
+  const logD = { collector: [] as any[], external: [] as string[], navigations: [] as string[] };
+  await wire(ctxD, pD, logD);
+  await pD.goto('/guides/mot-checklist', { referer: 'https://www.google.com/' });
+  await expect.poll(() => logD.collector.length).toBe(1);
+  await pD.reload();
+  await pD.waitForTimeout(1500);
+  receipt.D = { landingEventsAfterReload: logD.collector.filter((c) => c.body.event === 'landing_observed').length };
+  // B: organic landing, no attempt
+  const ctxB = await browser.newContext();
+  const pB = await ctxB.newPage();
+  const logB = { collector: [] as any[], external: [] as string[], navigations: [] as string[] };
+  await wire(ctxB, pB, logB);
+  await pB.goto('/guides/common-mot-failures', { referer: 'https://www.google.co.uk/' });
+  await expect.poll(() => logB.collector.length).toBe(1);
+  // C: paid landing -> check -> displayed supported result (excluded from the organic metric)
+  const ctxC = await browser.newContext();
+  const pC = await ctxC.newPage();
+  const logC = { collector: [] as any[], external: [] as string[], navigations: [] as string[] };
+  await wire(ctxC, pC, logC);
+  await pC.goto('/guides/mot-rules-2026?gclid=' + SECRET_GCLID + '&utm_medium=cpc', { referer: 'https://www.google.com/' });
+  await expect.poll(() => logC.collector.length).toBe(1);
+  await pC.locator('a[data-acq-cta]').first().click();
+  await pC.waitForURL((u) => u.pathname === '/');
+  await doCheck(pC);
+  await expect.poll(() => logC.collector.length).toBeGreaterThanOrEqual(4);
+  receipt.C = { sources: [...new Set(logC.collector.map((c) => c.body.source_group))], events: logC.collector.map((c) => c.body.event),
+    leaks: JSON.stringify(logC.collector).includes(SECRET_GCLID) || JSON.stringify(logC.collector).toLowerCase().includes('gclid') };
+  receipt.B = { events: logB.collector.map((c) => c.body.event), source: logB.collector[0].body.source_group, page_family: logB.collector[0].body.page_family };
+  writeFileSync(OUT, JSON.stringify(receipt, null, 2));
+});

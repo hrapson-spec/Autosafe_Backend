@@ -95,7 +95,7 @@ describe('collector flag false (as shipped)', () => {
 
 describe('force-enabled in test', () => {
   it('sends check_started, report_created and result_rendered with one session and the landing id, and nothing sensitive', async () => {
-    window.history.replaceState(null, '', `/app?al=${AL}&src=google_organic`);
+    window.__autosafeLandingHandoff = { al: AL, src: 'google_organic' }; // as left by index.html's head script
     initAcquisitionLanding(true);
     expect(installAcquisitionTransport(true)).toBe(true);
     await journey();

@@ -26,7 +26,7 @@ request, push, PR, merge, third-party service, cookie, web storage or lockfile c
 | Legitimate interests, product-improvement purpose only | notice section "First-party measurement of visits and check outcomes" in both privacy pages; purpose/data/retention table rows | `test_privacy_notice_covers_d005_in_static_and_react_pages` |
 | PECR: nothing stored on or read from the device; no cookies/localStorage/sessionStorage/IndexedDB; no fingerprinting | transport and landing code hold ids in memory only; no storage token in either landing asset or the transport | `test_landing_assets_use_no_storage_cookie_or_beacon`; `acquisitionEvents.test.ts` "exactly one transport (fetch) and no storage"; `acquisitionTransport.test.ts` "never touches web storage, cookies or IndexedDB"; landing-script "touches no storage and sets no cookie" |
 | Random per-load ids, never derived from inputs: `session_id`, `operation_id`, `landing_id` | `randomId()` (CSPRNG; refuses without secure random); script `randomId()` returns null and measures nothing without it | `acquisitionTransport.test.ts` session id; landing tests ("mints a landing id"); script "measures nothing when no secure random source exists" |
-| `landing_id` carried to `/app` only as `?al=&src=` on own CTA links; app reads it, removes it with `history.replaceState`, does not store it | `static/acquisition-landing.js` rewrites same-origin `/app` links and marked CTA links; `utils/acquisitionLanding.ts` validates, holds in memory, strips in `index.tsx` before `root.render` | `acquisitionLandingScript.test.ts` "rewrites only same-origin /app links..."; `acquisitionLanding.test.ts` handoff, invalid al/src ignored, strip keeps other params/hash/state; Playwright `acquisition-landing.spec.ts` |
+| `landing_id` carried to `/app` only as a single parameter on own CTA links; app reads it, removes it with `history.replaceState`, does not store it (**form superseded by D-007.1: URL fragment `#al=&src=`, consumed by index.html's first head script**) | `static/acquisition-landing.js` rewrites same-origin `/app` links and marked CTA links; `index.html` head script consumes the fragment; `utils/acquisitionLanding.ts` validates the window variable and holds it in memory | `acquisitionLandingScript.test.ts` "rewrites only same-origin /app links..."; `acquisitionLanding.test.ts` handoff, invalid al/src ignored, strip keeps other params/hash/state; Playwright `acquisition-landing.spec.ts` |
 | Never sent to third parties (Umami path-only filter, `strict-origin-when-cross-origin`) | strip runs before any analytics page view; filter and header unchanged | ordering tests below; `test_collector_is_same_origin_only_by_csp`; `test_report_route_headers_do_not_gain_collector_headers` |
 | Session = one document lifetime plus the CTA handoff; reload/new tab/typed URL unattributed; no 30-min window, no reload dedup | no storage anywhere | documented as coverage limit 2 in `COLLECTOR.md`; notice text |
 | Source group from `document.referrer` **origin** only; google_organic / other_search / referral / direct / unknown (+ `internal`); referrer never sent | `classifyReferrer` (SPA) and `classifyReferrer` (script), kept in step | `acquisitionLanding.test.ts` 20-case table incl. `google.com.evil.example`, `mail.google.com`; script parity test over 14 referrers; "never ... derived from the referrer path or query" |
@@ -52,23 +52,20 @@ Baseline = `oa/004-render-acknowledgement` tip `f19c85d` (same Node 26 environme
 
 | Check | Baseline | This branch |
 |---|---|---|
-| pytest (`tests/`) | 529 passed, 1 skipped | **671 passed, 2 skipped** (+142 passed; the extra skip is the Postgres-only advisory-lock test) |
-| pytest, acquisition files with a local Postgres (`ACQUISITION_TEST_PG_DSN`) | n/a | **153 passed, 1 skipped** (every store test ran on SQLite and PostgreSQL; the skip is the SQLite leg of the Postgres-only test) |
-| vitest | 401 passed, 9 failed (410) | **563 passed, 9 failed (572)**: +162 passed, the same 9 `components/ReportDashboard.test.tsx` failures that pre-exist under Node 26 (nothing else fails) |
-| Playwright (installed chromium 1243, no temporary config needed) | 29 passed | **32 passed** (3 new in `e2e/acquisition-landing.spec.ts`) |
+| pytest (`tests/`) | 529 passed, 1 skipped | **699 passed, 2 skipped** (+170 passed; the extra skip is the Postgres-only advisory-lock test) |
+| pytest, acquisition files with a local Postgres (`ACQUISITION_TEST_PG_DSN`) | n/a | **187 passed, 1 skipped** (every store test ran on SQLite and PostgreSQL; the skip is the SQLite leg of the Postgres-only test) |
+| vitest | 401 passed, 9 failed (410) | **568 passed, 9 failed (577)**: +167 passed, the same 9 `components/ReportDashboard.test.tsx` failures that pre-exist under Node 26 (nothing else fails) |
+| Playwright (installed chromium 1243, no temporary config needed) | 29 passed | **35 passed** (6 in `e2e/acquisition-landing.spec.ts`, 3 of them with Ads consent accepted) |
 | `npm run typecheck`, `npm run lint`, `npm run build` | exit 0 | exit 0, 0 warnings |
 | `scripts/claim_sweep.py` | clean | clean |
 | `scripts/check_openapi_drift.py` | clean | clean after regenerating `openapi.json` with `--write`: **43 added lines, 0 removed** (the new `POST /api/acquisition/events`); this snapshot change is intended |
 | Built bundle with the flag off | n/a | no `api/acquisition` or `keepalive` string in any `static/assets/*.js`: the transport is tree-shaken out |
 
-Mutation check on the ordering claim: moving `initAcquisitionLanding()` after `root.render(...)` in
-`index.tsx` fails `utils/acquisitionLanding.test.ts` ("the source order in index.tsx is ...").
-The two behavioural ordering tests do **not** fail on that mutation by themselves (React renders
-asynchronously, so a later synchronous call still precedes the first effect); the source-order
-test is the discriminating one. The ordering claim therefore rests on: strip is synchronous at
-module evaluation, before `root.render`; `trackPageView` fires only from an `App` effect; Umami is
-`data-auto-track=false` and its payload is reduced to path and referrer origin by
-`autosafeUmamiBeforeSend`.
+Mutation checks: (D-007.1) disabling the `replaceState` in `index.html`'s head script fails 5 of the 6
+Playwright specs in `e2e/acquisition-landing.spec.ts` (the fragment-removal, consent-accepted
+third-party, report-route and SEO-form specs); removing the slowapi redaction filter fails all 5
+`TestNoClientIpInLogs` tests. (Earlier, D-005 era: the query-string handoff's ordering claim rested on
+a source-order test because React renders asynchronously; that mechanism is gone.)
 
 ## Local part of the OA-005 receipt (synthetic, throwaway database, never production)
 
@@ -200,13 +197,66 @@ files 153 passed, 1 skipped); vitest **563 passed, 9 failed** (the same 9
 `claim_sweep` exit 0; OpenAPI drift clean with no regeneration needed (the route body is an opaque
 object in the snapshot, so the enum change does not alter it).
 
+## D-007 privacy-review hardening (lead rulings of 2026-10-01)
+
+Implemented in full; LIA added at the lead's request:
+[`../LIA_ACQUISITION_MEASUREMENT.md`](../LIA_ACQUISITION_MEASUREMENT.md) (structure of
+`docs/LIA_RISK_CHECKS.md`; sourced from D-005 to D-007; linked from `COLLECTOR.md`).
+
+| D-007 item | Change | Proving test / evidence |
+|---|---|---|
+| 1. Handoff in the URL **fragment** | `static/acquisition-landing.js` appends `#al=&src=` (existing query kept; a link that already has a fragment is left alone); `index.html` gets a new **first executing inline head script** that moves `al`/`src` into `window.__autosafeLandingHandoff` and removes them with `replaceState` (path, query, history state and other fragment content kept) before gtag or Umami exist; `utils/acquisitionLanding.ts` reads that variable once and never the URL's fragment or `al`/`src` query (old `?al=` links are no longer interpreted); SEO registration form uses `window.autosafeLandingHandoff`; notice and docs reworded | vitest: head-script-first and ahead of gtag/Umami (source order), script behaviour in jsdom (fragment removal, other-fragment and no-op cases), variable consumption, `index.tsx` reads no URL; Playwright with Ads consent **accepted** (gtag.js and Umami really injected): location fragment empty at the moment every external script is attached, 0 of the non-same-origin requests/bodies/headers/Referer and the gtag `dataLayer` contain the landing id or `google_organic`, bearer report route also consumed, SEO form `location.assign('/app#al=...')` keeps the fragment across the navigation (commit URL recorded) and the app consumes it. A browser-keeps-fragment check was needed because the SEO form is a JS-intercepted submit, not a GET form action; no storage alternative was needed |
+| 2. No client IP in any log | `_RedactRateLimitKey` filter on the `slowapi` logger (all routes; `([redacted])` replaces the key, IPv4/IPv6 literals scrubbed from any slowapi message) | `TestNoClientIpInLogs`: 429s with a known `X-Forwarded-For` on the collector (ingest on and off, the limiter runs first) and on a report route, plus IPv6 and idempotent-install; the warning and endpoint remain. The leak was reproduced before the fix: `ratelimit 120 per 1 minute (203.0.113.77) exceeded at endpoint: /api/acquisition/events` |
+| 3. Retention runs whatever the ingest flag says | `start_background_retention` returns None only when no store is configured; `run_retention_once` creates tables only when ingest is on and otherwise runs only if all three tables exist | tests: ingest off + tables exist -> rows deleted; background task runs with ingest off and deletes; ingest off + no tables or a partial schema -> nothing created |
+| 4. Landing-level aggregates | new table `acquisition_landing_daily (day, source_group, page_family, landings, landings_with_supported_result)` (counts only, 25 months), filled from the same rows and in the same statement/transaction as the existing rollup; a landing already counted is never counted again; `scripts/acquisition_metric.py` reports it as `landing_aggregate_*` | `TestLandingAggregates` on SQLite and PostgreSQL: reproduces the raw metric (render_failed wins, bots/other sources/paid/app excluded) before and after raw deletion, counts only, exactly once across reruns and concurrent runs, duplicate landing id counted once, young landings wait, 25-month deletion |
+| 5. `received_at` to the minute | truncated when the record is built | `TestReceivedAtGranularity`; live row seconds all 0 |
+| 6. Client flags must agree | test pins equality; checklist item | `test_the_two_client_flags_agree` |
+| 7. Gate additions | migration before `ACQUISITION_INGEST_ENABLED` (runtime DDL is also serialised on an advisory lock); confirm and record Railway HTTP-log retention (**open, not recorded**) | `COLLECTOR.md` checklist; LIA section 7 |
+| 9. Bot regex | named crawlers plus `\bbot\b`, `[a-z]bot/\d`, `crawler`, `\bspider\b` instead of `bot\b` | Cubot UA variants (3) are not bots; 8 crawler/generic bot UAs are |
+
+**Local receipts after D-007**
+
+1. *Real browser, real server, flags flipped in a temporary build (reverted, never committed; the
+   Playwright spec is kept as `docs/acquisition/receipts/OA-005_browser_receipt.spec.ts.txt`)*:
+   Playwright chromium against a real two-worker `uvicorn` and a throwaway Postgres 16.2, external hosts
+   aborted, createReport mocked. Journeys: A organic guide landing (referrer google) -> click the CTA ->
+   check -> displayed supported result; B organic landing, no attempt; C paid landing
+   (`gclid=...&utm_medium=cpc`) -> CTA -> check -> result; D organic guide **reloaded**. Observed
+   (`OA-005_local_browser_receipt_d007.json`): the CTA href was `/#al=<id>&src=google_organic`; the
+   navigation commit URL carried the fragment and the app's next URL was clean; guide and app events
+   shared **one** landing id (two sessions, one per document); source `google_organic`; no `Referer`, no
+   cookie header, `localStorage`/`sessionStorage`/cookies all empty; the only external requests were
+   attempted Umami script loads (aborted); the paid journey was `paid_search` and nothing from the query
+   (name or value) was in any payload; the reload produced **no** second `landing_observed`; stored
+   `received_at` seconds all 0.
+2. *Aggregates reproduce the raw metric on those browser-generated rows*
+   (`OA-005_local_browser_aggregate_receipt_d007.json`): raw metric **3 / 1** (eligible organic
+   landings / with a supported result); after the rollup `acquisition_landing_daily` gave **3 / 1**
+   (google_organic guide 3 / 1, paid_search guide 1 / 1, the paid row not in the organic figure); rerun
+   rolled 0 landings; after simulating 100 days (raw rows 0) the aggregate still gave **3 / 1**.
+3. *Synthetic scripted run, now including aggregate checks*
+   (`OA-005_local_receipt_postgres_run4_d007.json`): 26 unique events + resend all 202, raw rows 26,
+   metric **5 / 1**, rolled up 26 events and 7 landings, rerun 0, aggregate **5 / 1** and **5 / 1**
+   again with raw rows 0; all six receipt checks true; slowapi/log inspection: no `203.0.113` or UA in
+   the server log.
+
+Verification after D-007: pytest **699 passed, 2 skipped** (Postgres-enabled acquisition files **187
+passed, 1 skipped**); vitest **568 passed, 9 failed** (the same 9 `ReportDashboard.test.tsx` failures
+only); Playwright **35 passed**; typecheck, lint, build, `claim_sweep` exit 0; OpenAPI drift clean (no
+regeneration needed); flags confirmed OFF in the committed tree.
+
+D-007.8 (accepted as-is) is recorded in the LIA: present-tense notice slightly ahead of enabling; a reused
+copied CTA link counts once per landing; a `restored_link` render carrying an in-memory landing id counts
+with `entry_mode` reported; a client may post `internal_test` (excluded from the metric).
+
 ## Not executed
 
 - **Production and staging**: no request to either; the staging synthetic receipt and the production
   synthetic event/delete steps of the enable gate are not done (procedure in `COLLECTOR.md`).
-- **A real browser with the flags flipped on** (network capture, cookie/storage inspection, GPC in
-  a real browser): the flags were not flipped in any build. The transport, handoff and ordering are
-  covered by jsdom/vitest and the Playwright OFF-state spec only.
+- **A real browser with the flags flipped on, against staging or production:** only done locally (D-007
+  section: Playwright chromium against a real two-worker uvicorn and a throwaway Postgres, flags
+  flipped in a temporary build and reverted). GPC in a real browser was not exercised there (GPC is
+  covered in jsdom and by the server `Sec-GPC` test).
 - **A real Docker build** (`__RELEASE_SHA__` from build args, Railway migration/restart behaviour):
   Docker was not running; `release_sha` is therefore proven only by unit tests.
 - **Postgres outage behaviour live**: the 503/timeout/breaker path is tested with fake failing and

@@ -164,7 +164,9 @@ async def main_async(args) -> int:
         store, pool = await open_store(args)
         try:
             now = datetime.now(timezone.utc)
-            window = (now - timedelta(hours=1), now + timedelta(hours=1))
+            # Whole UTC days, so the raw metric and the day-keyed landing aggregates describe the same window.
+            day0 = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+            window = (day0 - timedelta(days=1), day0 + timedelta(days=2))
             raw = (await store.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"]
             receipt["raw_rows"] = int(raw)
             receipt["metric_before_rollup"] = await store.primary_metric(*window)
@@ -178,11 +180,28 @@ async def main_async(args) -> int:
             receipt["daily_total"] = int(daily[0]["n"])
             receipt["daily_by_event"] = {r["event"]: int(r["n"]) for r in by_event}
             receipt["metric_after_rollup"] = await store.primary_metric(*window)
+            receipt["rollup_first_run"]["rolled_up_landings"] = r1.rolled_up_landings
+            receipt["rollup_rerun"]["rolled_up_landings"] = r2.rolled_up_landings
+            receipt["landing_aggregate_metric"] = await store.landing_aggregate_metric(window[0].date(), window[1].date())
+            receipt["landing_daily_rows"] = [
+                {k: (str(v) if k == "day" else v) for k, v in r.items()}
+                for r in await store.fetch_all(
+                    "SELECT day, source_group, page_family, landings, landings_with_supported_result "
+                    "FROM acquisition_landing_daily ORDER BY source_group, page_family")]
+            # Re-run the metric from aggregates AFTER the raw rows are gone (simulated 100 days later).
+            await store.run_retention(now + timedelta(days=100))
+            receipt["raw_rows_after_100_days"] = int((await store.fetch_all(
+                "SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"])
+            receipt["landing_aggregate_metric_after_raw_deleted"] = await store.landing_aggregate_metric(
+                window[0].date(), window[1].date())
             receipt["checks"] = {
                 "raw_rows_equals_unique_events_sent": receipt["raw_rows"] == sent_unique,
                 "rollup_counts_every_event_once": r1.rolled_up_events == sent_unique and receipt["daily_total"] == sent_unique,
                 "rerun_adds_nothing": r2.rolled_up_events == 0,
                 "metric_matches_expectation": (expected is None) or receipt["metric_before_rollup"] == expected,
+                "landing_aggregates_reproduce_raw_metric": receipt["landing_aggregate_metric"] == receipt["metric_after_rollup"],
+                "landing_aggregates_survive_raw_deletion": receipt["raw_rows_after_100_days"] == 0
+                and receipt["landing_aggregate_metric_after_raw_deleted"] == receipt["metric_after_rollup"],
             }
             receipt["expected_metric"] = expected
         finally:

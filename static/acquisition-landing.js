@@ -15,10 +15,12 @@
  *  - mints a random landing id (memory only);
  *  - sends one landing_observed event to the same-origin collector with an
  *    allowlisted page family (never the path);
- *  - appends ?al=<landing id>&src=<source group> to the site's own links to
- *    the app (links to /app, and CTA links marked data-acq-cta) so the app can
- *    attribute a displayed result to this landing. The app reads and removes
- *    the parameters straight away.
+ *  - appends #al=<landing id>&src=<source group> (the URL FRAGMENT, which is
+ *    never sent in a request or a Referer) to the site's own links to the app
+ *    (links to /app, and CTA links marked data-acq-cta) so the app can attribute
+ *    a displayed result to this landing. A link that already has a fragment is
+ *    left alone. The first inline script in the app's index.html consumes and
+ *    removes the fragment before any third-party script can run.
  *
  * No cookies, localStorage, sessionStorage or IndexedDB. Sends nothing if
  * navigator.globalPrivacyControl is true. Never runs on report routes.
@@ -169,9 +171,9 @@
     }), 0, new Date().getTime());
   }
 
-  var query = '?al=' + landingId + '&src=' + source;
+  var fragment = '#al=' + landingId + '&src=' + source;
   /* For the registration form on SEO pages, which navigates to /app itself. */
-  window.autosafeLandingQuery = query;
+  window.autosafeLandingHandoff = fragment;
 
   function isAppCta(anchor) {
     var href = anchor.getAttribute('href');
@@ -179,7 +181,7 @@
     var url;
     try { url = new URL(href, window.location.href); } catch (e) { return false; }
     if (url.origin !== window.location.origin) return false;
-    if (url.search) return false; /* never alter a link that already carries parameters */
+    if (url.hash) return false; /* never alter a link that already has a fragment */
     var path = url.pathname.replace(/\/+$/, '') || '/';
     if (path === '/app') return true;
     return anchor.hasAttribute('data-acq-cta') && path === '/';
@@ -190,7 +192,7 @@
     for (var i = 0; i < anchors.length; i++) {
       if (!isAppCta(anchors[i])) continue;
       var url = new URL(anchors[i].getAttribute('href'), window.location.href);
-      anchors[i].setAttribute('href', url.pathname + query + url.hash);
+      anchors[i].setAttribute('href', url.pathname + url.search + fragment);
     }
   }
 
