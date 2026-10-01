@@ -20,6 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi.testclient import TestClient
 from main import app
 from report_contract import DATASET_ARTIFACT_REVISION
+import seo_pages
 from seo_pages import (
     _align_component_rates,
     _query_model_age_bands,
@@ -375,6 +376,61 @@ class TestModelPageDistinctiveness(unittest.TestCase):
         r = client.get("/mot-check/ford/fiesta/")
         self.assertIn("DVSA anonymised MOT tests and results", r.text)
         self.assertIn("Open Government Licence v3", r.text)
+
+
+def _internal_hrefs(html: str) -> set[str]:
+    """Site-relative hrefs on a rendered page, without query strings or fragments."""
+    return {h.split("?")[0].split("#")[0] for h in re.findall(r'href="(/[^"]*)"', html)}
+
+
+class TestAgeBandLinkConsistency(unittest.TestCase):
+    """OA-006 B: age-band links are emitted only where the age-band route serves a page."""
+
+    def _representative_models(self):
+        eligible = sorted(seo_pages._age_band_eligible)[:3]
+        ineligible = sorted(set(seo_pages._model_by_slug) - seo_pages._age_band_eligible)[:3]
+        self.assertTrue(eligible, "fixture DB has no age-band-eligible model")
+        self.assertTrue(ineligible, "fixture DB has no age-band-ineligible model")
+        return eligible, ineligible
+
+    def test_every_internal_link_on_representative_model_pages_resolves(self):
+        eligible, ineligible = self._representative_models()
+        checked = 0
+        for make_slug, model_slug in eligible + ineligible:
+            page = client.get(f"/mot-check/{make_slug}/{model_slug}/")
+            self.assertEqual(page.status_code, 200)
+            for href in sorted(_internal_hrefs(page.text)):
+                r = client.get(href, follow_redirects=False)
+                self.assertEqual(
+                    r.status_code, 200,
+                    f"{href} linked from /mot-check/{make_slug}/{model_slug}/ returned {r.status_code}",
+                )
+                checked += 1
+        self.assertGreater(checked, 50)
+
+    def test_ineligible_model_page_emits_no_age_band_links(self):
+        _, ineligible = self._representative_models()
+        for make_slug, model_slug in ineligible:
+            self.assertFalse(seo_pages.age_band_pages_exist(make_slug, model_slug))
+            page = client.get(f"/mot-check/{make_slug}/{model_slug}/")
+            self.assertEqual(page.status_code, 200)
+            self.assertFalse(
+                [h for h in _internal_hrefs(page.text) if h.endswith("-years/")],
+                f"ineligible model {make_slug}/{model_slug} still links age-band pages",
+            )
+            # The route agrees with the predicate.
+            r = client.get(f"/mot-check/{make_slug}/{model_slug}/3-5-years/", follow_redirects=False)
+            self.assertEqual(r.status_code, 404)
+
+    def test_eligible_model_page_age_band_links_are_served(self):
+        eligible, _ = self._representative_models()
+        for make_slug, model_slug in eligible:
+            self.assertTrue(seo_pages.age_band_pages_exist(make_slug, model_slug))
+            page = client.get(f"/mot-check/{make_slug}/{model_slug}/")
+            band_links = [h for h in _internal_hrefs(page.text) if h.endswith("-years/")]
+            self.assertTrue(band_links, f"eligible model {make_slug}/{model_slug} emits no age-band links")
+            for href in band_links:
+                self.assertEqual(client.get(href, follow_redirects=False).status_code, 200, href)
 
 
 class TestFooterLegalLinks(unittest.TestCase):

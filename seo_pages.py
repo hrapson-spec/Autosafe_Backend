@@ -94,6 +94,17 @@ AGE_BAND_DISPLAY = {
     "15+": "15+",
 }
 
+
+def age_band_pages_exist(make_slug: str, model_slug: str) -> bool:
+    """Single source of truth for whether /mot-check/{make}/{model}/{band}-years/ is served.
+
+    The age-band route and every template that emits an age-band link must use
+    this predicate, so link emission can never outrun page existence (OA-006 B:
+    model pages linked bands for every model with >= 100 tests while the route
+    only served models with >= 10,000).
+    """
+    return (make_slug, model_slug) in _age_band_eligible
+
 # Competitor model mapping (same-segment rivals for internal linking)
 COMPETITOR_MODELS = {
     "FIESTA": [("VAUXHALL", "CORSA"), ("VOLKSWAGEN", "POLO"), ("RENAULT", "CLIO"), ("PEUGEOT", "208")],
@@ -873,7 +884,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return _not_found_html(
                 f"Model not found for {_make_by_slug[make_slug]['display']}."
             )
-        if (make_slug, model_slug) not in _age_band_eligible:
+        if not age_band_pages_exist(make_slug, model_slug):
             return _not_found_html("Detailed data not available for this model yet.")
 
         # --- Determine whether this is a year or age-band request ---
