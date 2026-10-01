@@ -158,9 +158,9 @@ async function openReportViaTransition(page: Page) {
   return homeBefore;
 }
 
-async function openReportDirect(page: Page): Promise<void> {
+async function openReportDirect(page: Page, prefix = '/app/report'): Promise<void> {
   await mockGetReport(page, TOKEN, fixtureExactHigh, 200);
-  await page.goto(`/app/report/${TOKEN}`);
+  await page.goto(`${prefix}/${TOKEN}`);
   await expect(page.getByTestId('comparison-result')).toBeVisible();
 }
 
@@ -240,6 +240,31 @@ for (const consent of ['accepted', 'declined'] as const) {
       expect(state).toMatchObject({ canonical: 0, ldJson: 0, description: 0, og: 0, twitter: 0 });
       expect(state.robots).toEqual(['noindex, nofollow']);
     });
+
+    // react-router matches routes case-insensitively, so /app/Report/<token>
+    // renders the report. Every suppression gate must treat it as a report
+    // route (index.html inline script, analytics.ts, metadata hook).
+    for (const prefix of ['/app/Report', '/app/REPORT']) {
+      test(`mixed-case direct load ${prefix}/<token>: no analytics loaded, no token to third parties, metadata neutral`, async ({
+        page,
+        baseURL,
+      }) => {
+        const seen = recordRequests(page);
+        await openReportDirect(page, prefix);
+        await page.waitForLoadState('networkidle');
+
+        expect(page.url()).toContain(`${prefix}/${TOKEN}`);
+        expectNoSecretsIn(thirdParty(seen, baseURL as string));
+        expect(seen.filter((s) => s.url.startsWith(UMAMI_HOST))).toHaveLength(0);
+        expect(seen.filter((s) => s.url.startsWith('https://www.googletagmanager.com'))).toHaveLength(0);
+        expect(seen.filter((s) => s.url.startsWith('https://www.google-analytics.com'))).toHaveLength(0);
+
+        const state = await headState(page);
+        expect(state.title).not.toContain(TOKEN);
+        expect(state).toMatchObject({ canonical: 0, ldJson: 0, description: 0, og: 0, twitter: 0 });
+        expect(state.robots).toEqual(['noindex, nofollow']);
+      });
+    }
   });
 }
 

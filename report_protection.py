@@ -36,11 +36,15 @@ BEARER_REPORT_HEADERS: Dict[str, str] = {
 NEUTRAL_REPORT_TITLE = "AutoSafe report"
 ROBOTS_META = '<meta name="robots" content="noindex, nofollow" />'
 
-_BEARER_PATH_RE = re.compile(r"^/+(?:app/report|api/v2/reports)(?:/|$)")
+_BEARER_PATH_RE = re.compile(r"^/+(?:app/report|api/v2/reports)(?:/|$)", re.IGNORECASE)
 
 
 def is_bearer_report_path(path: str) -> bool:
-    """True for the report SPA shell routes and the v2 report API routes."""
+    """True for the report SPA shell routes and the v2 report API routes.
+
+    Case-insensitive: react-router matches client routes case-insensitively,
+    so /app/Report/<token> renders the report in the browser and must receive
+    the same controls as /app/report/<token>."""
     return bool(_BEARER_PATH_RE.match(path or ""))
 
 

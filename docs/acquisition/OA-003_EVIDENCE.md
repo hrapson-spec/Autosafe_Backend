@@ -15,7 +15,7 @@ Every response on a bearer report route now carries `X-Robots-Tag: noindex, nofo
 | `utils.py` | `safe_log_path` also redacts a trailing-slash variant (`/app/report/<token>/`, `/api/v2/reports/<token>/`); previously those logged the token. One-line regex + rstrip. |
 | `utils/shellMetadata.ts` (new) | `suppressShellMetadata()` detaches inherited canonical, description, `og:*`, `twitter:*`, `ld+json` (skips react-helmet `data-rh` tags) and returns a restore function that re-inserts each node at its original position (reverse order). |
 | `components/ReportScreen.tsx` | `ReportHead` (title + `<meta name="robots" content="noindex, nofollow">`) in loading, ready and unavailable states; `useEffect(() => suppressShellMetadata(), [])` above the early returns. Titles unchanged. |
-| Tests | `tests/test_report_protection.py` (29), `components/ReportScreenMetadata.test.tsx` (8), `utils/shellMetadata.test.ts` (4), `e2e/report-bearer-privacy.spec.ts` (6), `e2e/helpers/consent.ts` (`seedConsentChoice`). |
+| Tests | `tests/test_report_protection.py` (35), `components/ReportScreenMetadata.test.tsx` (8), `utils/shellMetadata.test.ts` (4), `utils/analytics.test.ts` (+15 case-variant cases), `e2e/report-bearer-privacy.spec.ts` (10), `e2e/helpers/consent.ts` (`seedConsentChoice`). |
 
 Unchanged on purpose: `static/robots.txt`, `analytics.ts`, the analytics/consent inline scripts in `index.html` (byte-identical in the report shell, asserted), `openapi.json`.
 
@@ -57,14 +57,14 @@ Report HTML (smoke): head has `<title>AutoSafe report</title>`, `<meta name="rob
 
 | Command | Exit | Result | Baseline (at 7325720) |
 |---|---|---|---|
-| `.venv/bin/python -m pytest tests/ -q` | 0 | 558 passed, 1 skipped | 529 passed, 1 skipped (+29 new) |
+| `.venv/bin/python -m pytest tests/ -q` | 0 | 564 passed, 1 skipped | 529 passed, 1 skipped (+35 new) |
 | `python scripts/claim_sweep.py` | 0 | clean | clean |
 | `python scripts/check_openapi_drift.py` | 0 | schema matches snapshot; `openapi.json` not modified (no contract change) | same |
 | `npm run typecheck` | 0 | pass | pass |
 | `npm run lint` | 0 | pass | pass |
-| `npm test` | 1 | 284 passed, 9 failed (293) | 272 passed, 9 failed (281): +12 new tests; the 9 failing test names are identical to baseline (all in `ReportDashboard.test.tsx`, Node 26 `localStorage` issue); not touched |
+| `npm test` | 1 | 299 passed, 9 failed (308) | 272 passed, 9 failed (281): +27 new tests; the 9 failing test names are identical to baseline (all in `ReportDashboard.test.tsx`, Node 26 `localStorage` issue); not touched |
 | `npm run build` | 0 | pass | pass |
-| `npx playwright test` (chromium-1243, vite preview) | 0 | 35 passed (29 existing + 6 new) | not in baseline |
+| `npx playwright test` (chromium-1243, vite preview) | 0 | 39 passed (29 existing + 10 new) | not in baseline |
 | local uvicorn smoke + curl matrix | n/a | table above | n/a |
 
 Sensitivity checks (mutation): removing `suppressShellMetadata` fails 7 of 8 vitest metadata tests and 4 of 6 new e2e tests; running the new pytest file against baseline `main.py`/`utils.py` fails 20 of 29.
@@ -104,3 +104,49 @@ Consent accepted and declined, for a home to report client transition and for a 
 - A user who loads a report URL directly and then navigates client-side to the homepage sees a homepage without its canonical/JSON-LD until reload (the server stripped them from that document). Crawlers are unaffected.
 - Public routes' unhandled 500s still return without security headers (pre-existing; not changed to keep public responses as they were).
 - The homepage SEO tags removed from report HTML also include the `og:image`; nothing else in the shell referenced them.
+
+## Review findings
+
+### R1. Mixed-case report paths bypassed every bearer control (fixed)
+
+Reported by the lead, reproduced on production with a synthetic probe: `GET /app/Report/invalid-w4-probe` returned 200 with the homepage canonical, no `X-Robots-Tag`/`Cache-Control`, and `Referrer-Policy: strict-origin-when-cross-origin`. Cause: react-router-dom 7 matches client routes case-insensitively, so `/app/Report/<token>` renders the report, while the server path matcher, `safe_log_path` and all client suppression regexes were case-sensitive. On such a URL Umami and gtag could therefore load and fire with the token in the URL. The analytics part pre-dates OA-003; the server part was this branch's own gap (my matcher was case-sensitive).
+
+Fix (behaviour otherwise identical):
+
+| Gate | Change |
+|---|---|
+| `report_protection._BEARER_PATH_RE` | `re.IGNORECASE` (headers, and the report-shell branch in `serve_spa`, which calls `is_bearer_report_path`) |
+| `utils.safe_log_path` | case-insensitive (see R2) |
+| `index.html` inline: `autosafeAnalyticsAllowed` and `autosafeUmamiBeforeSend` | `i` flag |
+| `static/umami.js` loader gate and before-send | `i` flag |
+| `utils/analytics.ts` `analyticsAllowed` | `i` flag |
+| `static/consent.js` `analyticsAllowed` (standalone/SEO pages; not found by the lead, found by repo-wide search, same literal) | `i` flag, consistency only |
+
+Server behaviour by path (local uvicorn, synthetic token, no DB):
+
+| Path | Status | X-Robots-Tag / Cache-Control / Referrer-Policy | HTML title |
+|---|---|---|---|
+| /app/report/{t} | 200 | noindex, nofollow / no-store / no-referrer | AutoSafe report |
+| /app/Report/{t} | 200 | same | AutoSafe report |
+| /app/REPORT/{t} | 200 | same | AutoSafe report |
+| /App/report/{t} | 404 | same | Not Found (catch-all only serves `app*` case-sensitively) |
+| /api/v2/reports/{t} | 503 | same | n/a |
+| /api/v2/Reports/{t} | 404 | same | Not Found (FastAPI routing is case-sensitive) |
+| /app/reports (not a report route) | 200 | absent / absent / strict-origin-when-cross-origin | homepage title |
+
+Token occurrences in the uvicorn log after the matrix: 0.
+
+Tests added:
+- pytest: header plus byte-identical neutral shell for `/app/Report`, `/app/REPORT`, `/app/rEpOrT`; headers on `/App/report`, `/APP/REPORT`, `/api/v2/Reports`, `/API/V2/REPORTS`; matcher yes/no lists extended (`/app/Reportx` still not matched); `safe_log_path` cases; a source-level guard that every `/^\/app\/report\//` literal in `index.html` (2), `static/umami.js` (2), `static/consent.js` (1) and `utils/analytics.ts` (1) carries `i`, and that no such literal exists in `App.tsx`, `index.tsx`, components, services or hooks; `tests/test_privacy_surfaces.py` literal assertion updated for the flag. With the fixes reverted, 5 of these tests fail.
+- vitest (`utils/analytics.test.ts`, which already executes the real `index.html` and `static/umami.js` source): case variants for analytics.ts (events, conversions, page views, including a queued view), both before-send filters, the `static/umami.js` loader, and the actual `autosafeAnalyticsAllowed` assignment extracted from `index.html`. Verified failing (11 failures) with the client fixes reverted.
+- Playwright: `/app/Report/<token>` and `/app/REPORT/<token>` direct loads, consent accepted and declined, with indiscreet Umami/gtag stubs: zero Umami/GTM/google-analytics requests, no token/registration/postcode in any third-party request, neutral head metadata, robots noindex. Verified failing (4 of 4) with the `index.html` and `analytics.ts` fixes reverted.
+
+Limit: the e2e runs against `vite preview` with the built shell and the client fix; mixed-case server HTML is covered by pytest and the local uvicorn run only. The production fix takes effect only after deploy; nothing here was run against production.
+
+### R2. `safe_log_path` residuals (fixed)
+
+`/app/report//<token>` and `/app/report/<token>/<extra>` were logged with the token (the previous pattern allowed exactly one non-slash segment plus an optional trailing slash). Replaced with one case-insensitive regex that redacts everything after the report prefix: `^(/+(?:api/v2/reports|app/report))/+[^/].*$` returns the prefix as typed plus `/{token}`. Covered: `/app/Report/t`, `/App/REPORT/t/`, `/api/v2/Reports/t`, `/app/report//t`, `/app/report/t/extra`, `//app/report/t`. Unchanged (nothing to redact): `/app/report`, `/app/report/`, `/api/v2/reports/`, `/app/reports/x`, `/app/reportx/tok`, non-report paths. Existing `tests/test_utils_privacy.py` expectations still pass. Note that the redaction keeps the prefix as typed (so a mixed-case probe is visible in logs as such).
+
+### Still open
+
+- `/App/report/<token>` and `/api/v2/Reports/<token>` reach a 404 page on the server, but a browser at `/App/report/<token>` is not served the SPA by FastAPI (catch-all is case-sensitive), so it never renders a report; the controls still apply to the 404 response.

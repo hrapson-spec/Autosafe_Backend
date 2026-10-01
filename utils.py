@@ -115,24 +115,24 @@ def mask_postcode(postcode) -> str:
     return "***"
 
 
-_SHARE_PATH_PATTERNS = (
-    re.compile(r"^/api/v2/reports/[^/]+/?$"),
-    re.compile(r"^/app/report/[^/]+/?$"),
-)
+# Everything after the report route prefix is credential or garbage: a token,
+# a doubled slash before it, or extra segments after it. Matched
+# case-insensitively because the SPA router serves /app/Report/<token> too.
+_SHARE_PATH_RE = re.compile(r"^(/+(?:api/v2/reports|app/report))/+[^/].*$", re.IGNORECASE)
 
 
 def safe_log_path(path: str) -> str:
     """Redact opaque report bearer tokens from application log paths.
 
-    The route shape is still retained for monitoring, while the credential
-    embedded in the final path segment never reaches a log formatter.
+    The route shape is still retained for monitoring (as typed, up to and
+    including the report prefix); everything after it, i.e. the credential
+    and any extra segments, never reaches a log formatter.
     """
     if not isinstance(path, str):
         return "[invalid-path]"
-    for pattern in _SHARE_PATH_PATTERNS:
-        if pattern.fullmatch(path):
-            prefix = path.rstrip("/").rsplit("/", 1)[0]
-            return prefix + "/{token}"
+    match = _SHARE_PATH_RE.match(path)
+    if match:
+        return match.group(1) + "/{token}"
     return path
 
 

@@ -255,6 +255,39 @@ class TestBearerReportHeaderMatrix(unittest.TestCase):
                 self.assertIn("text/html", resp.headers["content-type"], path)
                 _assert_protected(self, resp, path)
 
+    def test_case_variant_report_paths_get_headers_and_neutral_shell(self):
+        """react-router matches case-insensitively, so /app/Report/<token>
+        renders the report client-side; it must get the same controls and
+        the same neutral shell as /app/report/<token>."""
+        with _isolated_static():
+            expected = report_protection.build_report_shell(_fixture_index_html())
+            for path in (
+                f"/app/Report/{SYNTHETIC_TOKEN}",
+                f"/app/REPORT/{SYNTHETIC_TOKEN}",
+                "/app/Report/invalid-w4-probe",
+                "/app/rEpOrT",
+            ):
+                resp = self.client.get(path)
+                self.assertEqual(resp.status_code, 200, path)
+                _assert_protected(self, resp, path)
+                self.assertEqual(resp.text, expected, path)
+                self.assertEqual(report_protection.leftover_homepage_metadata(resp.text), [], path)
+
+    def test_case_variant_paths_that_miss_the_spa_still_get_headers(self):
+        """/App/report/x and /api/v2/Reports/x are not served by the SPA
+        catch-all or the API router (both case-sensitive), but a browser can
+        still be sent there; whatever answers must carry the controls."""
+        with _isolated_static():
+            for path in (
+                f"/App/report/{SYNTHETIC_TOKEN}",
+                f"/APP/REPORT/{SYNTHETIC_TOKEN}",
+                f"/api/v2/Reports/{SYNTHETIC_TOKEN}",
+                f"/API/V2/REPORTS/{SYNTHETIC_TOKEN}",
+            ):
+                resp = self.client.get(path)
+                self.assertIn(resp.status_code, (200, 404), path)
+                _assert_protected(self, resp, path)
+
     def test_spa_report_shell_trailing_slash_api_redirect_is_protected(self):
         resp = self.client.get(f"/api/v2/reports/{SYNTHETIC_TOKEN}/", follow_redirects=False)
         self.assertIn(resp.status_code, (200, 301, 307, 308, 404))
@@ -300,8 +333,9 @@ class TestLandingPagesUnchanged(unittest.TestCase):
         self.assertEqual(resp.text, _fixture_index_html())
 
     def test_path_matcher(self):
-        yes = ["/app/report/x", "/app/report", "/app/report/", "/api/v2/reports", "/api/v2/reports/x", "//app/report/x"]
-        no = ["/", "/app", "/app/", "/app/reports", "/app/reportx", "/api/v2/reportsx", "/api/v2/version",
+        yes = ["/app/report/x", "/app/report", "/app/report/", "/api/v2/reports", "/api/v2/reports/x", "//app/report/x",
+               "/app/Report/x", "/app/REPORT/x", "/App/report/x", "/api/v2/Reports/x", "/API/V2/REPORTS"]
+        no = ["/", "/app", "/app/", "/app/reports", "/app/reportx", "/app/Reportx", "/api/v2/reportsx", "/api/v2/version",
               "/api/version", "/guides/report", "/mot-check/", "/api/reports/x"]
         for p in yes:
             self.assertTrue(report_protection.is_bearer_report_path(p), p)
@@ -395,6 +429,58 @@ class TestLogRedaction(unittest.TestCase):
         self.assertEqual(safe_log_path("/api/v2/reports/secrettoken123/"), "/api/v2/reports/{token}")
         self.assertEqual(safe_log_path("/app/report/secrettoken123/"), "/app/report/{token}")
         self.assertEqual(safe_log_path("/api/v2/reports"), "/api/v2/reports")
+
+    def test_safe_log_path_is_case_insensitive_and_covers_doubled_slash_and_extra_segments(self):
+        cases = {
+            "/app/Report/secrettoken123": "/app/Report/{token}",
+            "/App/REPORT/secrettoken123/": "/App/REPORT/{token}",
+            "/api/v2/Reports/secrettoken123": "/api/v2/Reports/{token}",
+            "/app/report//secrettoken123": "/app/report/{token}",
+            "/app/report/secrettoken123/extra": "/app/report/{token}",
+            "/api/v2/reports/secrettoken123/extra/more": "/api/v2/reports/{token}",
+            "//app/report/secrettoken123": "//app/report/{token}",
+        }
+        for raw, expected in cases.items():
+            self.assertEqual(safe_log_path(raw), expected, raw)
+            self.assertNotIn("secrettoken123", safe_log_path(raw), raw)
+
+    def test_safe_log_path_leaves_non_report_paths_alone(self):
+        for p in ("/", "/app", "/app/report", "/app/report/", "/app/reports/x", "/app/reportx/tok",
+                  "/api/v2/reports/", "/api/version", "/guides/mot-cost"):
+            self.assertEqual(safe_log_path(p), p, p)
+
+
+class TestClientRegexCaseFlags(unittest.TestCase):
+    """Every client-side bearer-route gate must be case-insensitive. The
+    behavioural versions run in vitest (utils/analytics.test.ts) against the
+    real source text; this is the source-level guard that no gate regresses
+    to a case-sensitive literal."""
+
+    LITERAL = re.compile(r"/\^\\/app\\/report\\//([a-z]*)")
+
+    def test_every_report_route_regex_has_the_i_flag(self):
+        expected = {
+            "index.html": 2,        # autosafeAnalyticsAllowed + inline before-send
+            "static/umami.js": 2,   # loader gate + before-send
+            "static/consent.js": 1,  # standalone/SEO pages' mirror of the gate
+            "utils/analytics.ts": 1,
+        }
+        for rel, count in expected.items():
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            flags = self.LITERAL.findall(text)
+            self.assertEqual(len(flags), count, f"{rel}: report-route regex literals")
+            for f in flags:
+                self.assertIn("i", f, f"{rel}: regex literal lacks the i flag")
+
+    def test_no_unreviewed_report_route_regex_elsewhere_in_client_sources(self):
+        for rel in ("App.tsx", "index.tsx"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            self.assertEqual(self.LITERAL.findall(text), [], rel)
+        for path in [*sorted((ROOT / "components").glob("*.tsx")), *sorted((ROOT / "services").glob("*.ts")),
+                     *sorted((ROOT / "hooks").glob("*.ts*"))]:
+            if ".test." in path.name:
+                continue
+            self.assertEqual(self.LITERAL.findall(path.read_text(encoding="utf-8")), [], path.name)
 
 
 if __name__ == "__main__":

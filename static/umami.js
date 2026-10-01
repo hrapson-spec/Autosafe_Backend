@@ -7,10 +7,10 @@
 (function () {
   'use strict';
 
-  if (/^\/app\/report\//.test(window.location.pathname)) return;
+  if (/^\/app\/report\//i.test(window.location.pathname)) return;
 
   window.autosafeUmamiBeforeSend = function (type, payload) {
-    if (/^\/app\/report\//.test(window.location.pathname)) return false;
+    if (/^\/app\/report\//i.test(window.location.pathname)) return false;
     payload.url = window.location.pathname;
     var referrer = '';
     try {
