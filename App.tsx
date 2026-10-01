@@ -166,7 +166,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
               <Link to="/app/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
               <Link to="/app/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
-              <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
+              <a href="mailto:autosafehq@gmail.com" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
             </div>
           </div>
 
