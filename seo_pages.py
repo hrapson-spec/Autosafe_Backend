@@ -1376,7 +1376,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     @app.get("/sitemap.xml", response_class=Response)
     def sitemap_index():
-        """Sitemap index; each sub-sitemap's lastmod is the latest of its entries."""
+        """Sitemap index pointing to segmented sub-sitemaps."""
+        # Each sub-sitemap's lastmod is the latest of its entries.
         cache_key = "sitemap:index"
         if cache_key in _sitemap_cache:
             return _xml_response(_sitemap_cache[cache_key])
@@ -1403,7 +1404,8 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     @app.get("/sitemap-content.xml", response_class=Response)
     def sitemap_content():
-        """Sub-sitemap: homepage, pillar, guides, legal pages, component hubs."""
+        """Sub-sitemap: homepage, pillar, guides, insights, legal pages."""
+        # (Also the seven component hubs; the docstring is part of the OpenAPI snapshot.)
         return _sub_sitemap("sitemap-content.xml")
 
     @app.get("/sitemap-makes.xml", response_class=Response)
