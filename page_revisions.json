@@ -242,13 +242,13 @@
       }
     },
     "static/privacy.html": {
-      "sha256": "b651d20c782ebb55e7375bc62334d60289b513941e6861c56f4545bdcda5eb52",
+      "sha256": "a079458fc0ea171b1e1a0ace92a21980428812bf6b9ca6acd5f9ae0314c00e6f",
       "significant_revision": "2026-10-02",
-      "reason": "Privacy notice identifies the verified measurement database region",
+      "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable",
       "last_change": {
         "date": "2026-10-02",
         "significant": true,
-        "reason": "Privacy notice identifies the verified measurement database region"
+        "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable"
       }
     },
     "static/guides/mot-checklist.html": {

@@ -2,9 +2,9 @@
  * OA-005: a full App journey (landing -> check -> report -> displayed result)
  * through the REAL App, ReportScreen and ReportDashboard.
  *
- *  - Default build (collector flag false): a fetch spy proves nothing is ever
+ *  - Explicit disabled installer: a fetch spy proves nothing is ever
  *    sent, even though every acknowledgement point runs.
- *  - Force-enabled in test: the same journey sends exactly the expected
+ *  - Default enabled release: the same journey sends exactly the expected
  *    first-party events, carrying only enums, booleans and random ids.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,11 +82,10 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-describe('collector flag false (as shipped)', () => {
+describe('explicit disabled transport', () => {
   it('sends nothing during a full journey', async () => {
-    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(false);
-    // What index.tsx does at startup: both are no-ops while the flag is false.
-    expect(installAcquisitionTransport()).toBe(false);
+    window.autosafeMeasurement = { getContext: () => ({landingId: AL, sourceGroup: 'google_organic', windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'cost'}), isOff: () => false, setOff: vi.fn() };
+    expect(installAcquisitionTransport(false)).toBe(false);
     initAcquisitionLanding();
     await journey();
     await new Promise((r) => setTimeout(r, 50));
@@ -94,11 +93,12 @@ describe('collector flag false (as shipped)', () => {
   });
 });
 
-describe('force-enabled in test', () => {
+describe('default enabled release', () => {
   it('sends check_started, report_created and result_rendered with one session and the landing id, and nothing sensitive', async () => {
     window.autosafeMeasurement = { getContext: () => ({landingId: AL, sourceGroup: 'google_organic', pageFamily:'app', windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'cost'}), isOff: () => false, setOff: vi.fn() };
     initAcquisitionLanding(true);
-    expect(installAcquisitionTransport(true)).toBe(true);
+    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(true);
+    expect(installAcquisitionTransport()).toBe(true);
     await journey();
     await waitFor(() => expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(3));
 

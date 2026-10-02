@@ -27,6 +27,8 @@ import { test as base, expect } from '@playwright/test';
 import { seedConsent } from './consent';
 import { blockExternalRequests } from './network';
 import { mockStats } from './mockApi';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 export const test = base.extend<{ forEachTest: void }>({
   forEachTest: [
@@ -34,6 +36,15 @@ export const test = base.extend<{ forEachTest: void }>({
       await seedConsent(page);
       await blockExternalRequests(page);
       await mockStats(page);
+      // Vite preview serves its output directory at /; FastAPI serves these
+      // shared assets under /static. Supply the actual checked-in script at
+      // that production path, without changing its release flag.
+      await page.route('**/static/acquisition-landing.js', route => route.fulfill({
+        contentType:'application/javascript',body:readFileSync(resolve(process.cwd(),'static/acquisition-landing.js'),'utf8'),
+      }));
+      await page.route('**/api/acquisition/events', route => route.fulfill({
+        status:202,contentType:'application/json',body:'{"status":"accepted"}',
+      }));
       await use();
     },
     { auto: true },

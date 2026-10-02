@@ -1,12 +1,13 @@
-/* First-party service measurement v2. No identifiers in links. Disabled until
- * migration, privacy controls and synthetic production acceptance pass.
+/* First-party service measurement v2. No identifiers in links. Enabled after
+ * migration, privacy controls and synthetic production acceptance passed.
  * A fixed 30-minute sessionStorage context preserves the original arrival.
  * See docs/acquisition/COLLECTOR.md for coverage and purpose boundaries. */
 (function () {
   'use strict';
-  var ENABLED = false;
+  var ENABLED = true;
   var CONTEXT_KEY = 'autosafe_measurement_v2';
   var PREFERENCE_KEY = 'autosafe_measurement_choice';
+  var TAB_OFF_KEY = 'autosafe_measurement_off';
   var ENDPOINT = '/api/acquisition/events';
   var WINDOW_MINUTES = 30;
   var volatileOff = false;
@@ -29,6 +30,7 @@
   function objection() {
     if (gpc() || volatileOff) { clear(); return true; }
     try {
+      if (sessionStorage.getItem(TAB_OFF_KEY) === '1') { clear(); return true; }
       var p = JSON.parse(localStorage.getItem(PREFERENCE_KEY) || 'null');
       if (p && p.off === true && p.until > Date.now()) { clear(); return true; }
       if (p) localStorage.removeItem(PREFERENCE_KEY);
@@ -117,9 +119,16 @@
   function setOff(off) {
     volatileOff = off;
     clear();
+    // Preserve an objection across this tab's navigation even when a full
+    // localStorage quota prevents saving the 90-day preference. No ID.
+    try {
+      if (off) sessionStorage.setItem(TAB_OFF_KEY, '1');
+      else sessionStorage.removeItem(TAB_OFF_KEY);
+    } catch (_) {}
     try {
       if (off) localStorage.setItem(PREFERENCE_KEY, JSON.stringify({off:true,until:Date.now()+90*86400000}));
       else localStorage.removeItem(PREFERENCE_KEY);
+      sessionStorage.removeItem(TAB_OFF_KEY);
     } catch (_) {}
     // Switching on never retroactively creates an arrival. Next eligible
     // external/direct navigation can start a new observation.
@@ -137,7 +146,12 @@
     var off = objection();
     bar.replaceChildren();
     var text = document.createElement('span');
-    text.textContent = off ? 'Website measurement is off. We remember this choice for 90 days in this browser. ' : 'We measure how these pages and the check tool work for up to 30 minutes. ';
+    var saved = false;
+    try { var preference = JSON.parse(localStorage.getItem(PREFERENCE_KEY) || 'null'); saved = !!(preference && preference.off === true && preference.until > Date.now()); } catch (_) {}
+    text.textContent = gpc() ? 'Global Privacy Control has turned website measurement off. '
+      : off ? saved ? 'Website measurement is off. We remember this choice for 90 days in this browser. '
+        : 'Website measurement is off. Browser storage limits may prevent saving this choice beyond this tab. '
+      : 'We measure how these pages and the check tool work for up to 30 minutes. ';
     var link = document.createElement('a'); link.href='/privacy#website-measurement'; link.textContent='How it works';
     var button = document.createElement('button'); button.type='button';
     button.textContent = gpc() ? 'Measurement off (GPC)' : off ? 'Measurement off — turn on' : 'Turn measurement off';

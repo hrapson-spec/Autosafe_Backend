@@ -61,9 +61,9 @@ beforeEach(() => {
 });
 afterEach(() => __resetAcquisitionStateForTests());
 
-describe('acquisition events: collection is OFF (the OA-005 transport exists but is not installed)', () => {
-  it('the collector flag is false', () => {
-    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(false);
+describe('acquisition events: enabled release keeps transport boundaries', () => {
+  it('the release flag is enabled', () => {
+    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(true);
   });
 
   const stripComments = (source: string) =>

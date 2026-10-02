@@ -1,7 +1,6 @@
 /**
  * OA-005: the first-party fetch transport (utils/acquisitionEvents.ts).
- * Collection is OFF in this build; these tests force-enable the transport
- * through its test-visible parameters and prove the D-005 transport rules.
+ * These tests exercise enabled collection and the explicit rollback switch.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -49,12 +48,19 @@ afterEach(() => {
   __resetAcquisitionStateForTests();
 });
 
-describe('transport is OFF by default', () => {
-  it('the flag is false and the installer installs nothing', () => {
+describe('transport enablement and rollback', () => {
+  it('the default transport follows the enabled release flag', () => {
+    const spy = vi.fn(() => ok(202));
+    vi.stubGlobal('fetch', spy);
+    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(true);
+    expect(installAcquisitionTransport()).toBe(true);
+    emitAcquisitionEvent(STARTED);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+  it('the explicit disabled installer sends nothing', () => {
     const spy = vi.fn();
     vi.stubGlobal('fetch', spy);
-    expect(ACQUISITION_COLLECTOR_ENABLED).toBe(false);
-    expect(installAcquisitionTransport()).toBe(false);
+    expect(installAcquisitionTransport(false)).toBe(false);
     emitAcquisitionEvent(STARTED);
     vi.advanceTimersByTime(60_000);
     expect(spy).not.toHaveBeenCalled();

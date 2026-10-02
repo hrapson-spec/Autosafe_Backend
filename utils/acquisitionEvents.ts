@@ -8,16 +8,16 @@ import type { ApiErrorCode, MatchScope, ResultKind } from '../types';
 import type { OutcomeGroup } from './resultAcknowledgement';
 
 /**
- * Collection is OFF. Flipped to true only at the D-005 enable gate. Rollback
+ * Collection is enabled after the v2 production acceptance gate. Rollback
  * is flipping it back to false (and unsetting ACQUISITION_INGEST_ENABLED on
  * the server).
  */
-export const ACQUISITION_COLLECTOR_ENABLED: boolean = false;
+export const ACQUISITION_COLLECTOR_ENABLED: boolean = true;
 
 export const ACQUISITION_ENDPOINT = '/api/acquisition/events';
 
 export const ACQUISITION_SCHEMA_VERSION = 2;
-/** Draft: the metric version is frozen before release (MEASUREMENT.md). */
+/** Frozen v2 metric; see COLLECTOR.md and ENABLEMENT_RECEIPT.md. */
 export const ACQUISITION_METRIC_VERSION = 'oa-journey-30m-v2';
 
 export type EntryMode = 'fresh_check' | 'restored_link';
@@ -387,7 +387,7 @@ export function createFetchSink(options: FetchSinkOptions = {}): AcquisitionSink
 
 /**
  * Install the fetch sink. A no-op unless `enabled` (default: the
- * ACQUISITION_COLLECTOR_ENABLED constant, false) and Global Privacy Control is
+ * ACQUISITION_COLLECTOR_ENABLED release constant) and Global Privacy Control is
  * not set. Returns whether a transport was installed.
  */
 export function installAcquisitionTransport(enabled: boolean = ACQUISITION_COLLECTOR_ENABLED): boolean {

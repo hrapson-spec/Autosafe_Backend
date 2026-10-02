@@ -5,10 +5,10 @@ ROOT=Path(__file__).resolve().parent.parent
 
 def read(name): return (ROOT/name).read_text()
 
-def test_candidate_keeps_collection_off_and_flags_agree():
+def test_enabled_release_flags_agree():
     ts=re.search(r'ACQUISITION_COLLECTOR_ENABLED: boolean = (true|false);',read('utils/acquisitionEvents.ts'))
     js=re.search(r'var ENABLED = (true|false);',read('static/acquisition-landing.js'))
-    assert ts and js and ts.group(1)==js.group(1)=='false'
+    assert ts and js and ts.group(1)==js.group(1)=='true'
 
 def test_shared_script_covers_public_app_and_legal_surfaces_for_objection():
     for p in ['index.html','templates/seo_base.html','static/privacy.html','static/terms.html'] + [str(p.relative_to(ROOT)) for p in (ROOT/'static/guides').glob('*.html')]:
