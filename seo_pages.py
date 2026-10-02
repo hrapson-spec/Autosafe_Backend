@@ -19,6 +19,7 @@ import logging
 import sqlite3
 import re
 from datetime import date
+from page_revisions import homepage_sources, page_lastmod
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
 
@@ -65,7 +66,7 @@ jinja_env.globals.update(
 
 # --- Dedicated SEO cache (separate from API cache in main.py) ---
 _seo_cache: TTLCache = TTLCache(maxsize=2000, ttl=3600)
-_sitemap_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)
+_sitemap_cache: TTLCache = TTLCache(maxsize=8, ttl=3600)
 
 # --- Slug lookup dicts (populated at startup) ---
 # slug -> {"make": "FORD", "display": "Ford"}
@@ -76,6 +77,10 @@ _model_by_slug: dict = {}
 _models_for_make: dict = {}
 # (make_slug, model_slug) -> fail_rate (for data-driven related models)
 _model_fail_rates: dict = {}
+# (make_slug, model_slug) -> {"total_tests", "total_failures", "fail_rate"}; the
+# same figures _query_model_overall returns, computed once at startup so the
+# pillar page does not re-scan the table for every model (OA-006 G).
+_model_totals: dict = {}
 # Models with enough tests for age-band pages (staged rollout)
 _age_band_eligible: set = set()  # set of (make_slug, model_slug)
 # Age band slug mappings
@@ -93,6 +98,17 @@ AGE_BAND_DISPLAY = {
     "11-15": "11-15",
     "15+": "15+",
 }
+
+
+def age_band_pages_exist(make_slug: str, model_slug: str) -> bool:
+    """Single source of truth for whether /mot-check/{make}/{model}/{band}-years/ is served.
+
+    The age-band route and every template that emits an age-band link must use
+    this predicate, so link emission can never outrun page existence (OA-006 B:
+    model pages linked bands for every model with >= 100 tests while the route
+    only served models with >= 10,000).
+    """
+    return (make_slug, model_slug) in _age_band_eligible
 
 # Competitor model mapping (same-segment rivals for internal linking)
 COMPETITOR_MODELS = {
@@ -163,10 +179,6 @@ COMPONENT_SLUGS = {
 }
 
 DATASET_REFERENCE_FAIL_RATE = POPULATION_DEFAULT_FAILURE_RISK
-# Source-controlled page-copy revision for non-dataset sitemap entries. Unlike
-# ``date.today()``, this does not claim every URL changed whenever a worker
-# restarts. Update deliberately when those public pages materially change.
-SITE_CONTENT_REVISION = "2026-07-11"
 
 
 
@@ -192,10 +204,83 @@ def _model_where_clause(make: str, model: str):
     return f"({' OR '.join(conditions)})", params
 
 
+def _model_keys(make: str, model: str) -> list[str]:
+    """The model_id values and prefixes matched by ``_model_where_clause``."""
+    keys = [f"{make} {model}"]
+    if model.endswith("-CLASS"):
+        keys.append(f"{make} {model.replace('-CLASS', '')}")
+    return keys
+
+
+def _model_totals_from_groups(conn, known: dict[str, list[str]]) -> dict[tuple[str, str], tuple[int | None, int | None]]:
+    """Return {(make, model): (SUM(Total_Tests), SUM(Total_Failures))} for every known model.
+
+    Either value is None when SQL would report NULL (no matching rows, or
+    every matched value NULL); callers apply the same None checks the
+    per-model queries did.
+
+    One ``GROUP BY model_id`` scan replaces one full-table scan per model (the
+    LIKE predicate in ``_model_where_clause`` cannot use the model_id index, so
+    each per-model query scanned all rows). Matching reproduces the SQL
+    predicate exactly: ``model_id = key OR model_id LIKE key || ' %'`` for each
+    key. Any key containing a LIKE wildcard is resolved with the original SQL.
+    """
+    grouped = conn.execute(
+        """SELECT model_id, SUM(Total_Tests) AS t, SUM(Total_Failures) AS f
+           FROM risks WHERE age_band != 'Unknown' GROUP BY model_id"""
+    )
+    # Per model_id: (SUM(Total_Tests), SUM(Total_Failures)); a SUM is None only
+    # when every value in the group is NULL, exactly as SQLite reports it.
+    sums: dict[str, tuple[int | None, int | None]] = {}
+    by_upper: dict[bytes, list[str]] = {}
+    for model_id, t, f in grouped:
+        if model_id is None:
+            continue  # NULL never satisfies model_id = ? or model_id LIKE ?
+        sums[model_id] = (t, f)
+        by_upper.setdefault(model_id.encode("utf-8").upper(), []).append(model_id)
+    upper_keys = sorted(by_upper)
+
+    from bisect import bisect_left
+
+    def _sql_sum(values):
+        present = [v for v in values if v is not None]
+        return sum(present) if present else None
+
+    totals: dict[tuple[str, str], tuple[int | None, int | None]] = {}
+    for make, models in known.items():
+        for model in models:
+            keys = _model_keys(make, model)
+            if any(ch in key for key in keys for ch in "%_"):
+                where, params = _model_where_clause(make, model)
+                row = conn.execute(
+                    f"SELECT SUM(Total_Tests), SUM(Total_Failures) FROM risks WHERE {where} AND age_band != 'Unknown'",
+                    params,
+                ).fetchone()
+                totals[(make, model)] = (row[0], row[1]) if row else (None, None)
+                continue
+            matched: set[str] = set()
+            for key in keys:
+                if key in sums:
+                    matched.add(key)
+                needle = (key + " ").encode("utf-8").upper()
+                i = bisect_left(upper_keys, needle)
+                while i < len(upper_keys) and upper_keys[i].startswith(needle):
+                    matched.update(by_upper[upper_keys[i]])
+                    i += 1
+            totals[(make, model)] = (
+                _sql_sum(sums[m][0] for m in matched),
+                _sql_sum(sums[m][1] for m in matched),
+            )
+    return totals
+
+
 def initialize_seo_data(get_sqlite_connection):
     """
     Build slug lookup dicts at startup from KNOWN_MODELS,
     filtered to models with >= 100 tests in SQLite.
+
+    Also records per-model totals (``_model_totals``) so the pillar page can
+    rank models without re-querying every model per worker (OA-006 G).
     """
     from consolidate_models import get_canonical_models_for_make
 
@@ -213,52 +298,45 @@ def initialize_seo_data(get_sqlite_connection):
         if models:
             known[make] = models
 
-    # Query SQLite to filter to models with >= 100 total tests
-    valid_models = set()
+    # One grouped scan gives every model's totals; the same numbers decide
+    # inclusion (>= 100 tests), age-band eligibility (>= 10,000 tests), the
+    # linking fail rate and the pillar ranking.
     with get_sqlite_connection() as conn:
         if conn is None:
             logger.error("SEO: Cannot initialize - no SQLite connection")
             return
+        try:
+            totals = _model_totals_from_groups(conn, known)
+        except sqlite3.Error as e:
+            logger.error("SEO model aggregation failed: type=%s", type(e).__name__)
+            return
 
-        for make, models in known.items():
-            for model in models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"SELECT SUM(Total_Tests) as total FROM risks WHERE {where} AND age_band != 'Unknown'",
-                        params,
-                    ).fetchone()
-                    if row and row[0] and row[0] >= 100:
-                        valid_models.add((make, model))
-                except sqlite3.Error as e:
-                    logger.warning(
-                        "SEO model check failed: make=%s model=%s type=%s",
-                        make,
-                        model,
-                        type(e).__name__,
-                    )
+        valid_models = {key for key, (t, _f) in totals.items() if t is not None and t >= 100}
+        age_band_candidates = {key for key, (t, _f) in totals.items() if t is not None and t >= 10000}
 
-    # Identify top models eligible for age-band pages (>= 10,000 total tests)
-    age_band_candidates = set()
-    with get_sqlite_connection() as conn:
-        if conn:
-            for make, model in valid_models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"SELECT SUM(Total_Tests) as total FROM risks WHERE {where} AND age_band != 'Unknown'",
-                        params,
-                    ).fetchone()
-                    if row and row[0] and row[0] >= 10000:
-                        age_band_candidates.add((make, model))
-                except sqlite3.Error:
-                    pass
+        # Fail rates use the identical SQLite arithmetic as the per-model
+        # queries they replace: CAST(SUM(F) AS REAL) / SUM(T), and ROUND(.., 4)
+        # for the value _query_model_overall reports on pages. A model whose
+        # failures are all NULL has no rate (SQL returned NULL), exactly as
+        # before: it is listed but excluded from rate-driven linking and the
+        # pillar ranking.
+        rates: dict[tuple[str, str], tuple[float, float]] = {}
+        for key in valid_models:
+            t, f = totals[key]
+            if f is None:
+                continue
+            raw, rounded = conn.execute(
+                "SELECT CAST(? AS REAL) / ?, ROUND(CAST(? AS REAL) / ?, 4)", (f, t, f, t)
+            ).fetchone()
+            rates[key] = (float(raw), float(rounded))
 
     # Build lookup dicts
     _make_by_slug.clear()
     _model_by_slug.clear()
     _models_for_make.clear()
     _age_band_eligible.clear()
+    _model_fail_rates.clear()
+    _model_totals.clear()
 
     makes_with_models = set()
     for make, model in valid_models:
@@ -276,6 +354,16 @@ def initialize_seo_data(get_sqlite_connection):
         if (make, model) in age_band_candidates:
             _age_band_eligible.add((make_slug, model_slug))
 
+        if (make, model) in rates:
+            raw_rate, rounded_rate = rates[(make, model)]
+            _model_fail_rates[(make_slug, model_slug)] = raw_rate
+            total_tests, total_failures = totals[(make, model)]
+            _model_totals[(make_slug, model_slug)] = {
+                "total_tests": int(total_tests),
+                "total_failures": int(total_failures),
+                "fail_rate": rounded_rate,
+            }
+
     for make in makes_with_models:
         slug = _slugify(make)
         _make_by_slug[slug] = {"make": make, "display": _display_name(make)}
@@ -285,26 +373,6 @@ def initialize_seo_data(get_sqlite_connection):
         _models_for_make[make_slug].sort(
             key=lambda ms: _model_by_slug[(make_slug, ms)]["display"]
         )
-
-    # Compute failure rates for all models (for data-driven related model linking)
-    _model_fail_rates.clear()
-    with get_sqlite_connection() as conn:
-        if conn:
-            for make, model in valid_models:
-                try:
-                    where, params = _model_where_clause(make, model)
-                    row = conn.execute(
-                        f"""SELECT CAST(SUM(Total_Failures) AS REAL) / SUM(Total_Tests) as fail_rate
-                            FROM risks WHERE {where} AND age_band != 'Unknown'
-                            HAVING SUM(Total_Tests) >= 100""",
-                        params,
-                    ).fetchone()
-                    if row and row[0] is not None:
-                        make_slug = _slugify(make)
-                        model_slug = _slugify(model)
-                        _model_fail_rates[(make_slug, model_slug)] = float(row[0])
-                except sqlite3.Error:
-                    pass
 
     total_pages = len(_make_by_slug) + len(_model_by_slug)
     logger.info(
@@ -504,7 +572,7 @@ def _not_found_html(message: str) -> HTMLResponse:
     html = template.render(content=f'<h1>Not Found</h1><p>{message}</p>')
     # For 404, render inline since we can't easily use block overrides
     html = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -636,8 +704,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             key=lambda m: m["display_name"],
         )
 
+        # Crawlable links to the seven top-level component hubs, which are in
+        # the sitemap but previously had no inbound internal link (OA-006 D).
+        # Anchor text reuses each hub's own H1; no new copy claims.
+        component_hubs = [
+            {"slug": slug, "name": name} for slug, (_col, name) in COMPONENT_SLUGS.items()
+        ]
+
         template = jinja_env.get_template("seo_index.html")
-        html = template.render(makes=makes)
+        html = template.render(makes=makes, component_hubs=component_hubs)
         _seo_cache[cache_key] = html
         return _html_response(html)
 
@@ -833,6 +908,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             overall_fail_rate=overall["fail_rate"],
             overall_tests=overall["total_tests"],
             age_bands=age_bands,
+            age_band_pages_enabled=age_band_pages_exist(make_slug, model_slug),
             components=overall["components"],
             top_components=overall["components"][:3],
             sibling_models=sibling_models,
@@ -873,7 +949,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             return _not_found_html(
                 f"Model not found for {_make_by_slug[make_slug]['display']}."
             )
-        if (make_slug, model_slug) not in _age_band_eligible:
+        if not age_band_pages_exist(make_slug, model_slug):
             return _not_found_html("Detailed data not available for this model yet.")
 
         # --- Determine whether this is a year or age-band request ---
@@ -1114,16 +1190,15 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             old_factory = conn.row_factory
             conn.row_factory = sqlite3.Row
 
-            # Top 20 models by test volume
+            # Top 20 models by test volume, from the startup totals (previously
+            # one full-table scan per model on every cold cache: ~9 s).
             top_models = []
             for (make_slug, model_slug), model_info in _model_by_slug.items():
-                make = model_info["make"]
-                model = model_info["model_id"]
-                overall = _query_model_overall(conn, make, model)
+                overall = _model_totals.get((make_slug, model_slug))
                 if overall:
                     make_info = _make_by_slug.get(make_slug, {})
                     top_models.append({
-                        "make_display": make_info.get("display", make),
+                        "make_display": make_info.get("display", model_info["make"]),
                         "model_display": model_info["display"],
                         "make_slug": make_slug,
                         "model_slug": model_slug,
@@ -1212,47 +1287,78 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         )
 
 
-    @app.get("/sitemap.xml", response_class=Response)
-    def sitemap_index():
-        """Sitemap index pointing to segmented sub-sitemaps."""
-        cache_key = "sitemap:index"
-        if cache_key in _sitemap_cache:
-            return Response(
-                content=_sitemap_cache[cache_key],
-                media_type="application/xml",
-                headers={"Cache-Control": "public, max-age=3600"},
-            )
+    # --- Sitemaps -------------------------------------------------------------
+    # <lastmod> rule (OA-006 F): the last *significant* main-content change —
+    # either the checked-in dataset artifact or the main content of a source
+    # file that renders the page. Significant-revision dates come from
+    # page_revisions.json (hash-verified by tests/test_seo.py; boilerplate,
+    # footer, markup and analytics edits are recorded as non-significant and do
+    # not move lastmod); the dataset date is DATASET_ARTIFACT_REVISION. No
+    # runtime clock is consulted, so a worker restart never claims freshness.
 
+    # Every template page is rendered by this module (Python-built copy such as
+    # comparison titles, 404 text and link selection) plus seo_base + its template.
+    TEMPLATE_PAGE_SOURCES = ("seo_pages.py", "templates/seo_base.html")
+
+    def _template_lastmod(template_name: str) -> str:
+        """lastmod for a dataset-rendering page built from seo_pages + seo_base + one template."""
+        return page_lastmod(*TEMPLATE_PAGE_SOURCES, f"templates/{template_name}",
+                            dataset_revision=DATASET_ARTIFACT_REVISION)
+
+    def _content_entries() -> list[tuple[str, str, str, str]]:
+        """(loc, lastmod, priority, changefreq) for homepage, pillar, guides, legal, hubs."""
         base = "https://www.autosafe.one"
-        sitemaps = [
-            (f"{base}/sitemap-content.xml", SITE_CONTENT_REVISION),
-            (f"{base}/sitemap-makes.xml", DATASET_ARTIFACT_REVISION),
-            (f"{base}/sitemap-models.xml", DATASET_ARTIFACT_REVISION),
-            (f"{base}/sitemap-comparisons.xml", DATASET_ARTIFACT_REVISION),
+        entries = [
+            (f"{base}/", page_lastmod(*homepage_sources()), "1.0", "weekly"),
+            (f"{base}/mot-check/", _template_lastmod("seo_index.html"), "0.9", "weekly"),
+            (f"{base}/will-my-car-pass-mot/", _template_lastmod("seo_pillar_k7.html"), "0.95", "weekly"),
         ]
+        for slug in (
+            "mot-checklist", "common-mot-failures", "when-is-mot-due",
+            "mot-failure-rates-by-car", "mot-rules-2026", "mot-defect-categories",
+            "mot-cost", "mot-history-check", "first-mot-guide",
+        ):
+            entries.append((f"{base}/guides/{slug}", page_lastmod(f"static/guides/{slug}.html"), "0.8", "monthly"))
+        entries.append((f"{base}/privacy", page_lastmod("static/privacy.html"), "0.3", "yearly"))
+        entries.append((f"{base}/terms", page_lastmod("static/terms.html"), "0.3", "yearly"))
+        # Component hubs (top-level aggregation — indexable)
+        for comp_slug in COMPONENT_SLUGS:
+            entries.append((f"{base}/mot-check/problems/{comp_slug}/",
+                            _template_lastmod("seo_component_hub.html"), "0.7", "monthly"))
+        return entries
 
+    def _make_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_make.html")
+        return [(f"{base}/mot-check/{make_slug}/", lastmod, "0.8", "monthly")
+                for make_slug in sorted(_make_by_slug.keys())]
+
+    def _model_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_model.html")
+        return [(f"{base}/mot-check/{make_slug}/{model_slug}/", lastmod, "0.7", "monthly")
+                for (make_slug, model_slug) in sorted(_model_by_slug.keys())]
+
+    def _comparison_entries() -> list[tuple[str, str, str, str]]:
+        base = "https://www.autosafe.one"
+        lastmod = _template_lastmod("seo_compare.html")
         entries = []
-        for loc, lastmod in sitemaps:
-            entries.append(
-                f"  <sitemap>\n"
-                f"    <loc>{loc}</loc>\n"
-                f"    <lastmod>{lastmod}</lastmod>\n"
-                f"  </sitemap>"
-            )
+        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
+            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
+            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            entries.append((f"{base}/mot-check/compare/{s1}-vs-{s2}/", lastmod, "0.6", "monthly"))
+        return entries
 
-        xml = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-            + "\n".join(entries)
-            + "\n</sitemapindex>\n"
-        )
+    SUB_SITEMAPS = {
+        "sitemap-content.xml": _content_entries,
+        "sitemap-makes.xml": _make_entries,
+        "sitemap-models.xml": _model_entries,
+        "sitemap-comparisons.xml": _comparison_entries,
+    }
 
-        _sitemap_cache[cache_key] = xml
-        return Response(
-            content=xml,
-            media_type="application/xml",
-            headers={"Cache-Control": "public, max-age=3600"},
-        )
+    def _xml_response(xml: str) -> Response:
+        return Response(content=xml, media_type="application/xml",
+                        headers={"Cache-Control": "public, max-age=3600"})
 
     def _build_urlset(urls: list[str]) -> str:
         """Build a <urlset> XML string from a list of <url> entries."""
@@ -1273,100 +1379,68 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             f"  </url>"
         )
 
+    def _sub_sitemap(name: str) -> Response:
+        cache_key = f"sitemap:{name}"
+        if cache_key not in _sitemap_cache:
+            urls = [_url_entry(*entry) for entry in SUB_SITEMAPS[name]()]
+            _sitemap_cache[cache_key] = _build_urlset(urls)
+        return _xml_response(_sitemap_cache[cache_key])
+
+    @app.get("/sitemap.xml", response_class=Response)
+    def sitemap_index():
+        """Sitemap index pointing to segmented sub-sitemaps."""
+        # Each sub-sitemap's lastmod is the latest of its entries.
+        cache_key = "sitemap:index"
+        if cache_key in _sitemap_cache:
+            return _xml_response(_sitemap_cache[cache_key])
+
+        base = "https://www.autosafe.one"
+        entries = []
+        complete = True
+        for name, build in SUB_SITEMAPS.items():
+            # lastmod is optional in a sitemap index; an empty sub-sitemap
+            # (e.g. SEO data not yet initialised) is listed without one.
+            lastmod = max((entry[1] for entry in build()), default=None)
+            if lastmod is None:
+                complete = False
+            lastmod_line = f"    <lastmod>{lastmod}</lastmod>\n" if lastmod else ""
+            entries.append(
+                f"  <sitemap>\n"
+                f"    <loc>{base}/{name}</loc>\n"
+                f"{lastmod_line}"
+                f"  </sitemap>"
+            )
+
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "\n".join(entries)
+            + "\n</sitemapindex>\n"
+        )
+        if complete:
+            _sitemap_cache[cache_key] = xml
+        return _xml_response(xml)
+
     @app.get("/sitemap-content.xml", response_class=Response)
     def sitemap_content():
         """Sub-sitemap: homepage, pillar, guides, insights, legal pages."""
-        cache_key = "sitemap:content"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-
-        static_pages = [
-            ("/", "1.0", "weekly"),
-            ("/mot-check/", "0.9", "weekly"),
-            ("/will-my-car-pass-mot/", "0.95", "weekly"),
-            ("/guides/mot-checklist", "0.8", "monthly"),
-            ("/guides/common-mot-failures", "0.8", "monthly"),
-            ("/guides/when-is-mot-due", "0.8", "monthly"),
-            ("/guides/mot-failure-rates-by-car", "0.8", "monthly"),
-            ("/guides/mot-rules-2026", "0.8", "monthly"),
-            ("/guides/mot-defect-categories", "0.8", "monthly"),
-            ("/guides/mot-cost", "0.8", "monthly"),
-            ("/guides/mot-history-check", "0.8", "monthly"),
-            ("/guides/first-mot-guide", "0.8", "monthly"),
-            ("/privacy", "0.3", "yearly"),
-            ("/terms", "0.3", "yearly"),
-        ]
-        for path, priority, freq in static_pages:
-            urls.append(_url_entry(f"{base}{path}", SITE_CONTENT_REVISION, priority, freq))
-
-        # Component hubs (top-level aggregation — indexable)
-        for comp_slug in COMPONENT_SLUGS:
-            urls.append(_url_entry(f"{base}/mot-check/problems/{comp_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        # (Also the seven component hubs; the docstring is part of the OpenAPI snapshot.)
+        return _sub_sitemap("sitemap-content.xml")
 
     @app.get("/sitemap-makes.xml", response_class=Response)
     def sitemap_makes():
         """Sub-sitemap: all make hub pages."""
-        cache_key = "sitemap:makes"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for make_slug in sorted(_make_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/", DATASET_ARTIFACT_REVISION, "0.8", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-makes.xml")
 
     @app.get("/sitemap-models.xml", response_class=Response)
     def sitemap_models():
         """Sub-sitemap: all model detail pages (the core money pages)."""
-        cache_key = "sitemap:models"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for (make_slug, model_slug) in sorted(_model_by_slug.keys()):
-            urls.append(_url_entry(f"{base}/mot-check/{make_slug}/{model_slug}/", DATASET_ARTIFACT_REVISION, "0.7", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-models.xml")
 
     @app.get("/sitemap-comparisons.xml", response_class=Response)
     def sitemap_comparisons():
         """Sub-sitemap: comparison pages."""
-        cache_key = "sitemap:comparisons"
-        if cache_key in _sitemap_cache:
-            return Response(content=_sitemap_cache[cache_key], media_type="application/xml",
-                            headers={"Cache-Control": "public, max-age=3600"})
-
-        base = "https://www.autosafe.one"
-        urls = []
-        for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
-            s1 = f"{_slugify(make1)}-{_slugify(model1)}"
-            s2 = f"{_slugify(make2)}-{_slugify(model2)}"
-            urls.append(_url_entry(f"{base}/mot-check/compare/{s1}-vs-{s2}/", DATASET_ARTIFACT_REVISION, "0.6", "monthly"))
-
-        xml = _build_urlset(urls)
-        _sitemap_cache[cache_key] = xml
-        return Response(content=xml, media_type="application/xml",
-                        headers={"Cache-Control": "public, max-age=3600"})
+        return _sub_sitemap("sitemap-comparisons.xml")
 
     @app.get("/sitemap-local.xml", response_class=Response)
     def sitemap_local():

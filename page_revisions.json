@@ -1,0 +1,475 @@
+{
+  "_rule": "lastmod = max(dataset artifact revision where the page renders dataset figures, significant_revision of every source that renders the page). significant_revision moves only when the author records a change as --significant (main content); boilerplate, footer, markup, styling, analytics and language-tag edits are --non-significant. No runtime clock is used.",
+  "files": {
+    "index.html": {
+      "sha256": "7b9ec3c969296ff3e1cfb8aadbfc36ccadd7685f1fed9df3bc6c8bf99ee103f2",
+      "significant_revision": "2026-07-17",
+      "reason": "c37c75e 2026-07-17: homepage result-state paragraph reworded (main content)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami before-send script; OA-006 H lang=en-GB"
+      }
+    },
+    "App.tsx": {
+      "sha256": "e4ddbba3931dcdcaed04fe68191f4227eeab634ca467389c594539f733aaaec5",
+      "significant_revision": "2026-07-18",
+      "reason": "f30bc38/b951b7f 2026-07-18: homepage headline and social-proof copy changed",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami page-view hook; OA-006 A Feedback mailto address"
+      }
+    },
+    "components/GarageFinderModal.tsx": {
+      "sha256": "7747e71c9f80bd81e7be107def0f6ca024e78ad17a55277f557b460326785aac",
+      "significant_revision": "2026-07-17",
+      "reason": "0e7f4bf 2026-07-17: prediction-aware garage modal wording",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": true,
+        "reason": "0e7f4bf 2026-07-17: prediction-aware garage modal wording"
+      }
+    },
+    "components/HeroForm.tsx": {
+      "sha256": "5b939abe424d6397abbfaaac07c2f4ba40c07f833f48e646543a23d12e6ba1eb",
+      "significant_revision": "2026-07-18",
+      "reason": "f30bc38 2026-07-18: social-proof copy removed",
+      "last_change": {
+        "date": "2026-07-18",
+        "significant": true,
+        "reason": "f30bc38 2026-07-18: social-proof copy removed"
+      }
+    },
+    "components/Icons.tsx": {
+      "sha256": "d76df53fb6605727b6701411de84025a83e4a23db24dc1c1026c99806799110f",
+      "significant_revision": "2026-01-18",
+      "reason": "8016a25 2026-01-18: created; later edits add SVG icon markup only",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": false,
+        "reason": "23a1da4 report redesign added icons (markup)"
+      }
+    },
+    "components/Logo.tsx": {
+      "sha256": "659f329023eb6cfaec6cc47a4fbeb945a001588e481c9389815140165e2a4637",
+      "significant_revision": "2026-01-18",
+      "reason": "8016a25 2026-01-18: created; later edit fixed an image path",
+      "last_change": {
+        "date": "2026-07-03",
+        "significant": false,
+        "reason": "0c79a93 logo path fix"
+      }
+    },
+    "components/MotReminderCapture.tsx": {
+      "sha256": "fdabec4c68b39964b3062e13e7c57c5d6ea8e3dcc9f0a3841dccd50f27364291",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy"
+      }
+    },
+    "components/MotivatorCard.tsx": {
+      "sha256": "3ce9d6eee035a8aad209f125cfb9af43f0ff8e7461656c818f4e32cd7bb45f63",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy"
+      }
+    },
+    "components/PrivacyPage.tsx": {
+      "sha256": "0fc9cc3754628882901d348bc09d013f668786bdd2bcc8c41d040dab31597cc1",
+      "significant_revision": "2026-07-17",
+      "reason": "c37c75e 2026-07-17: privacy notice wording for report result states",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami disclosure wording in analytics section"
+      }
+    },
+    "components/RecommendationBlock.tsx": {
+      "sha256": "f052f6442b2937e9f7dde5f3df94186b780358c0f6c2038d06218b579be7db65",
+      "significant_revision": "2026-02-14",
+      "reason": "9e74b34 2026-02-14: created",
+      "last_change": {
+        "date": "2026-02-14",
+        "significant": true,
+        "reason": "9e74b34 2026-02-14: created"
+      }
+    },
+    "components/ReportCopy.tsx": {
+      "sha256": "c773eade1fa6cbc3d308e168cf2eb11df507b6a3357c697b14ce087eb71a94d7",
+      "significant_revision": "2026-07-17",
+      "reason": "c37c75e 2026-07-17: claim-boundary report copy",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": true,
+        "reason": "c37c75e 2026-07-17: claim-boundary report copy"
+      }
+    },
+    "components/ReportDashboard.tsx": {
+      "sha256": "9111ef5634b04c8d72efe80fa33653f529f3747d33fa4739bf49cc60362240d8",
+      "significant_revision": "2026-07-17",
+      "reason": "23a1da4 2026-07-17: report redesign with X-in-Y frequency wording",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": true,
+        "reason": "23a1da4 2026-07-17: report redesign with X-in-Y frequency wording"
+      }
+    },
+    "components/ReportResult.tsx": {
+      "sha256": "8fa8d0e11421229d9ba2f0ddafa530562daf0c5b846b0deed3c4c14f3be1dff8",
+      "significant_revision": "2026-07-17",
+      "reason": "23a1da4 2026-07-17: report redesign wording",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": false,
+        "reason": "f3875da mobile overflow fix (layout)"
+      }
+    },
+    "components/ReportScreen.tsx": {
+      "sha256": "9e63b96efe500d300eb48d8ff00c4bc05c4d04b58f48204ef0c1e053ef5f3512",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy"
+      }
+    },
+    "components/ReportUnavailable.tsx": {
+      "sha256": "f6c1cbdd690681bd952d8a1017a2c23d09fcf85fc3fa4c7ee9aac5d6f558d779",
+      "significant_revision": "2026-07-11",
+      "reason": "bf2d1a2 2026-07-11: created",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "bf2d1a2 2026-07-11: created"
+      }
+    },
+    "components/StickyCta.tsx": {
+      "sha256": "f145e0877885fad01b39ff91f0bc5c17642bf837cd0e73d468abeddb065e8fa7",
+      "significant_revision": "2026-02-14",
+      "reason": "9e74b34 2026-02-14: created; later edit hid an inactive action (markup)",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": false,
+        "reason": "7d0e2ea hide inactive sticky action"
+      }
+    },
+    "components/TermsPage.tsx": {
+      "sha256": "bc0e369847efed7eebede4898d87793df33c690f4d61a6877d05bd7d2c50cbe1",
+      "significant_revision": "2026-07-17",
+      "reason": "85f737d 2026-07-17: legal copy describes both result states",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": true,
+        "reason": "85f737d 2026-07-17: legal copy describes both result states"
+      }
+    },
+    "components/guides/CommonFailures.tsx": {
+      "sha256": "a8b9e099ef2c810d825846cfad4f51fed0ce8ec0c919f2a458b54e977862d075",
+      "significant_revision": "2026-01-21",
+      "reason": "03b26db 2026-01-21: created",
+      "last_change": {
+        "date": "2026-01-21",
+        "significant": true,
+        "reason": "03b26db 2026-01-21: created"
+      }
+    },
+    "components/guides/GuideLayout.tsx": {
+      "sha256": "e5c783243a02bb8206763ed9bbf7556a2701b99176a33fe7b0bd6dffea9b5761",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy (guide CTA text)",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation reworded copy (guide CTA text)"
+      }
+    },
+    "components/guides/MOTChecklist.tsx": {
+      "sha256": "97b1090bb6d16e53851ca9084a85f54327479b478b6ffbfed3f4587ac7711e6d",
+      "significant_revision": "2026-01-21",
+      "reason": "03b26db 2026-01-21: created",
+      "last_change": {
+        "date": "2026-01-21",
+        "significant": true,
+        "reason": "03b26db 2026-01-21: created"
+      }
+    },
+    "components/guides/WhenMOTDue.tsx": {
+      "sha256": "400f5850df97e1c0b4284d2135884aa708416bc8a2aa9d1b59799ebbf291a5b2",
+      "significant_revision": "2026-01-21",
+      "reason": "03b26db 2026-01-21: created",
+      "last_change": {
+        "date": "2026-01-21",
+        "significant": true,
+        "reason": "03b26db 2026-01-21: created"
+      }
+    },
+    "components/guides/index.ts": {
+      "sha256": "7af2f30faa31c4b8f088072bf6fd5a27e35fc4541b725fcabca019874b870a23",
+      "significant_revision": "2026-01-21",
+      "reason": "03b26db 2026-01-21: created (re-exports)",
+      "last_change": {
+        "date": "2026-01-21",
+        "significant": true,
+        "reason": "03b26db 2026-01-21: created (re-exports)"
+      }
+    },
+    "components/ui/Button.tsx": {
+      "sha256": "2176bbe7cd1c6edd1965f67221f4219ad4dd9fc4629890dd3f039b659b753112",
+      "significant_revision": "2026-01-19",
+      "reason": "1d422ba 2026-01-19: created (UI primitive)",
+      "last_change": {
+        "date": "2026-01-19",
+        "significant": true,
+        "reason": "1d422ba 2026-01-19: created (UI primitive)"
+      }
+    },
+    "components/ui/Card.tsx": {
+      "sha256": "dc3fca95e14ceeeb45f5b5e288c316346d4e583868d0288b11f673f61759ed6e",
+      "significant_revision": "2026-01-19",
+      "reason": "1d422ba 2026-01-19: created (UI primitive); later edit is layout markup",
+      "last_change": {
+        "date": "2026-07-17",
+        "significant": false,
+        "reason": "23a1da4 report redesign layout"
+      }
+    },
+    "components/ui/Input.tsx": {
+      "sha256": "c8e7c8da8455336d8aa8dc273329040de54496fbe42236f7e63be82a34d056fe",
+      "significant_revision": "2026-01-19",
+      "reason": "1d422ba 2026-01-19: created (UI primitive); later edit is accessibility markup",
+      "last_change": {
+        "date": "2026-01-21",
+        "significant": false,
+        "reason": "03b26db accessibility attributes"
+      }
+    },
+    "components/ui/index.ts": {
+      "sha256": "e7a9f414b1072d0d0c6f86476456b4ff3986771c0e25f0e776db5fbbb9fa20cd",
+      "significant_revision": "2026-01-19",
+      "reason": "1d422ba 2026-01-19: created (re-exports)",
+      "last_change": {
+        "date": "2026-01-19",
+        "significant": true,
+        "reason": "1d422ba 2026-01-19: created (re-exports)"
+      }
+    },
+    "seo_pages.py": {
+      "sha256": "10571904e8e650dfdb8488b91c616411381f450fa7646e5405a26646063e80ac",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "Sitemap index tolerates an empty sub-sitemap (no output change when data is loaded)"
+      }
+    },
+    "templates/seo_base.html": {
+      "sha256": "6c89210ee298dafca13fab8f7cd4857b70c29214b8e31575d2cabd396a37fdc1",
+      "significant_revision": "2026-02-06",
+      "reason": "6b9ff53 2026-02-06: shared layout created; every later edit (disclaimer footer, nav/CTA copy, consent gate, styling, Umami tag, footer link targets, lang) is boilerplate",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 C footer links to /terms,/privacy; OA-006 H lang=en-GB"
+      }
+    },
+    "templates/seo_index.html": {
+      "sha256": "88a00cfa3c6e97abd2cb4783ca5f0bb5cd6c48477b5b5e43f8b08b818bd3b0ac",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "OA-006 D navigation links to the seven component hubs (lead ruling: non-significant)"
+      }
+    },
+    "templates/seo_pillar_k7.html": {
+      "sha256": "45ea283c8c581c6730454eb544d7ab2b837771a7bd60970261a9d221b63e9464",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+      }
+    },
+    "templates/seo_component_hub.html": {
+      "sha256": "5085588ba9889f1ba7d58e5f23ef5e13735f258562f946e98c4f5af94b23429f",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+      }
+    },
+    "templates/seo_make.html": {
+      "sha256": "a29c88ef2a66c8c6a85eb3e61ea5003f3786a1511bc7276c38030e535c87a0b4",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+      }
+    },
+    "templates/seo_model.html": {
+      "sha256": "1810a06b7d996f72fd282e84e76ce637c0e110f7899e40877d86294152002ae6",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "OA-006 B: age-band table cells rendered as plain text where no age-band page exists (link markup only)"
+      }
+    },
+    "templates/seo_compare.html": {
+      "sha256": "4724de3b6ba54aecb547e149f86e441d693d49df29b2bc3b518feb3e81edfa8d",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+      }
+    },
+    "templates/seo_model_age.html": {
+      "sha256": "e25a4507cda3d1290e22c21d3b3a70683984e17564754a1fcfb7f0ab126b1361",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
+      "last_change": {
+        "date": "2026-07-11",
+        "significant": true,
+        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+      }
+    },
+    "templates/seo_component.html": {
+      "sha256": "383368b42f18b09bcd46cfd7f2b035bdf0556bc587c03548a2cd169fdd4212f7",
+      "significant_revision": "2026-10-01",
+      "reason": "OA-006 E: empty repair-cost range removed from stat box and FAQ answer (noindex pages, not in sitemap)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": true,
+        "reason": "OA-006 E range suppression; self-referencing canonical"
+      }
+    },
+    "static/terms.html": {
+      "sha256": "6c0d4ff118efcb94c803df26ba99df4dcf9aff0a47c5021936e839f8f35a9bd9",
+      "significant_revision": "2026-07-17",
+      "reason": "85f737d 2026-07-17: legal copy describes both result states",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/privacy.html": {
+      "sha256": "c57b9a120fd08c73ac2ef7ecfbe1eb950daad03e650d81a32faeedb30469b148",
+      "significant_revision": "2026-07-17",
+      "reason": "c37c75e 2026-07-17: privacy notice wording for report result states",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-checklist.html": {
+      "sha256": "4c80841d42bc701e72d056d0a07ece783f494e8ec32906c97708d177e63e4e0c",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/common-mot-failures.html": {
+      "sha256": "eee1e593c9852a824f58a4df584112f9fcc2229de0703aea9d206380c011d3bf",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/when-is-mot-due.html": {
+      "sha256": "b3cd58e6cbec07edf09e11a3c982f00cb8c6455ba7d32c392c60064c1b50bd6d",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-failure-rates-by-car.html": {
+      "sha256": "4f55b1082681844d97e838c9402382dc41164a9dbff835389912ba44730b33da",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-rules-2026.html": {
+      "sha256": "9599f2531a7cbde86e82501b0a355602156ccc76f073974132d7bf2b6980ffa4",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-defect-categories.html": {
+      "sha256": "6af32307026456d913a0db3ea9b0d694dfad3b30d68f9762c8d4f84b024dc43c",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-cost.html": {
+      "sha256": "482c3e796c35c9138c58041f0cd9656e6b5c3d05e470c8d4b58ee6c43002fb77",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/mot-history-check.html": {
+      "sha256": "1901d2997b97f3dceb98a6e9b7d8aaa853a72cfe2351db7d9ff2614eb066b3ff",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    },
+    "static/guides/first-mot-guide.html": {
+      "sha256": "90e21f44dfa9c2ed18aed0cf0473c31c828535d5cfdee1c664ecc662fad16ffe",
+      "significant_revision": "2026-07-11",
+      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "last_change": {
+        "date": "2026-10-01",
+        "significant": false,
+        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+      }
+    }
+  }
+}
