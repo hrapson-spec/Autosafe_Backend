@@ -10,9 +10,7 @@ and deletion; version/pilot aggregate keys; GPC and a visible objection switch;
 retired automatic Umami loading; fail-closed admission when deletion is overdue.
 
 Local verification so far: 463 frontend tests; 208 focused backend/privacy/report
-checks with two skips; TypeScript and lint passed. Real PostgreSQL concurrency,
-real-image staging, live database migration, production synthetic receipt and
-client enablement remain pending. These local counts do not establish production
+checks with two skips; TypeScript and lint passed. Real PostgreSQL and real-image staging passed in CI run 36989872050, including HTTP receipt/dedup/GPC, failure precedence, aggregate deletion and disposable rollback. The browser run passed the new measurement-control journey but found two old tests still expecting retired Umami requests; those assertions have been corrected. Fresh CI, live migration, production synthetic receipt and client enablement remain pending. These local counts do not establish production
 collection or a running pilot. Additional changes require current reruns.
 
 The original v1 evidence below is retained as a historical record, **superseded

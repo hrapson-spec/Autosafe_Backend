@@ -192,13 +192,13 @@
       }
     },
     "static/privacy.html": {
-      "sha256": "c54740e10876ae550021a3e4de7505f293b4884958d2bca5a500b6840b99d6f7",
-      "significant_revision": "2026-07-17",
-      "reason": "c37c75e 2026-07-17: privacy notice wording for report result states",
+      "sha256": "b651d20c782ebb55e7375bc62334d60289b513941e6861c56f4545bdcda5eb52",
+      "significant_revision": "2026-10-02",
+      "reason": "Privacy notice identifies the verified measurement database region",
       "last_change": {
         "date": "2026-10-02",
-        "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "significant": true,
+        "reason": "Privacy notice identifies the verified measurement database region"
       }
     },
     "static/guides/mot-checklist.html": {

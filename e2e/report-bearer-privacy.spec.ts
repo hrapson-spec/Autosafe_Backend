@@ -182,14 +182,9 @@ for (const consent of ['accepted', 'declined'] as const) {
       expect(homeBefore.ldJson).toBe(2);
       await page.waitForLoadState('networkidle');
 
-      // Control: the stubbed Umami pipeline really ran on the homepage.
-      const umamiHits = seen.filter((s) => s.url === `${UMAMI_HOST}/api/send`);
-      expect(umamiHits.length).toBeGreaterThanOrEqual(1);
-      for (const hit of umamiHits) {
-        // before-send reduced the payload to the path before it left the page.
-        expect(hit.postData).toContain('"url":"/');
-        expect(hit.postData).not.toContain('http://localhost');
-      }
+      // Automatic Umami has been retired: neither its script nor events
+      // may load on the homepage or the report, regardless of Ads consent.
+      expect(seen.filter((s) => s.url.startsWith(UMAMI_HOST))).toHaveLength(0);
       // Consent accepted additionally loads (stubbed) gtag on the homepage.
       const gtagLoaded = seen.some((s) => s.url.startsWith('https://www.googletagmanager.com/gtag/js'));
       expect(gtagLoaded).toBe(consent === 'accepted');
@@ -201,16 +196,6 @@ for (const consent of ['accepted', 'declined'] as const) {
       expect(onReport.title).toBe('Your Vehicle Report | AutoSafe');
       expect(onReport).toMatchObject({ canonical: 0, ldJson: 0, description: 0, og: 0, twitter: 0 });
       expect(onReport.robots).toEqual(['noindex, nofollow']);
-
-      // No Umami event describes the report route: the funnel events that
-      // fire around navigation (reg_entered) were emitted from the homepage
-      // path, and report_viewed / report-path page views are suppressed.
-      for (const hit of umamiHits) {
-        expect(hit.postData).not.toContain('report_viewed');
-        expect(hit.postData).not.toContain('/app/report');
-        // cross-origin Referer is origin-only (policy of the homepage document)
-        expect(hit.referer).toBe(new URL(baseURL as string).origin + '/');
-      }
 
       // Back to the homepage: inherited metadata is intact again.
       await page.goBack();

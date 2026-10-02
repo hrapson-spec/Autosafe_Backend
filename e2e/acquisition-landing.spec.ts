@@ -191,6 +191,7 @@ test.describe('bounded measurement controls in a real browser', () => {
     const context=await page.evaluate(()=>window.autosafeMeasurement?.getContext());
     expect(context?.sourceGroup).toBe('google_organic');expect(context?.pilotGroup).toBe('cost');
     expect(context?.landingId).toBe(events[0].landing_id);
+    await page.screenshot({path:'e2e-artifacts/measurement-control.png'});
     expect(page.url()).not.toContain(String(events[0].landing_id));
     await page.getByRole('button',{name:'Turn measurement off'}).click();
     await expect(page.getByRole('button',{name:'Measurement off — turn on'})).toBeVisible();
