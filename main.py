@@ -24,6 +24,7 @@ import secrets
 # Import database module for fallback
 import database as db
 from utils import get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
+from report_protection import apply_bearer_report_headers, is_bearer_report_path, report_shell_html
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
@@ -217,10 +218,13 @@ async def redirect_non_www(request, call_next):
 
 
 # Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    """Add security headers to all responses."""
-    response = await call_next(request)
+def apply_security_headers(response, path: str):
+    """Set the common security headers on `response`; bearer report routes
+    (report_protection.is_bearer_report_path) additionally get the explicit
+    noindex / no-store / no-referrer protections, overriding the global
+    Referrer-Policy. Shared by the middleware below and by the unhandled-
+    exception handler, because Starlette runs that handler in
+    ServerErrorMiddleware, outside every @app.middleware layer."""
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -230,7 +234,15 @@ async def add_security_headers(request, call_next):
     # CSP - self-host product assets; permit only the disclosed Umami and
     # consent-gated Google Ads endpoints. Remote font/CDN hosts are excluded.
     response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
+    apply_bearer_report_headers(path, response)
     return response
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    return apply_security_headers(response, request.url.path)
 
 
 # Global Exception Handler - prevent stack trace leakage
@@ -266,13 +278,19 @@ async def global_exception_handler(request, exc):
         f"error_id={correlation_id} path={safe_log_path(request.url.path)} "
         f"exception_type={type(exc).__name__}",
     )
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content={
             "detail": "An internal error occurred. Please try again later.",
             "error_id": correlation_id
         }
     )
+    # This handler runs in ServerErrorMiddleware, outside add_security_headers,
+    # so bearer report routes must get their headers here. Public routes are
+    # deliberately left exactly as before (OA-003 does not change them).
+    if is_bearer_report_path(request.url.path):
+        apply_security_headers(response, request.url.path)
+    return response
 
 # Check for PostgreSQL first, then SQLite
 # OPTIMIZATION: Prefer local built-on-start SQLite DB if available (faster, fresher data)
@@ -2496,6 +2514,12 @@ if os.path.isdir("static"):
     @app.get("/{path:path}")
     async def serve_spa(path: str):
         if path == "" or path.startswith("app"):
+            if is_bearer_report_path("/" + path):
+                # Bearer report shell: same bundle, no homepage metadata,
+                # noindex (report_protection.build_report_shell).
+                report_html = report_shell_html('static/index.html')
+                if report_html is not None:
+                    return HTMLResponse(report_html)
             return FileResponse('static/index.html')
         # Unknown path — return proper HTTP 404 instead of soft-404
         from seo_pages import _not_found_html

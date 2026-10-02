@@ -23,7 +23,7 @@ type ConversionType = 'risk_check' | 'mot_booking' | 'repair_booking' | 'mot_rem
 function analyticsAllowed(): boolean {
   return (
     typeof window !== 'undefined' &&
-    !/^\/app\/report\//.test(window.location.pathname)
+    !/^\/app\/report\//i.test(window.location.pathname)
   );
 }
 

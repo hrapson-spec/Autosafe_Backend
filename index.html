@@ -56,7 +56,7 @@
           var cleanQuery = params.toString();
           history.replaceState(null, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : ''));
         }
-        window.autosafeAnalyticsAllowed = !/^\/app\/report\//.test(window.location.pathname);
+        window.autosafeAnalyticsAllowed = !/^\/app\/report\//i.test(window.location.pathname);
       })();
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
@@ -112,7 +112,7 @@
          URL to its path and the referrer to its origin. -->
     <script>
       window.autosafeUmamiBeforeSend = function (type, payload) {
-        if (/^\/app\/report\//.test(window.location.pathname)) return false;
+        if (/^\/app\/report\//i.test(window.location.pathname)) return false;
         payload.url = window.location.pathname;
         var referrer = '';
         try {

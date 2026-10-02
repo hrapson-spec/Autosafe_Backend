@@ -19,7 +19,7 @@
     );
   }
 
-  var analyticsAllowed = !/^\/app\/report\//.test(window.location.pathname);
+  var analyticsAllowed = !/^\/app\/report\//i.test(window.location.pathname);
   window.autosafeAnalyticsAllowed = analyticsAllowed;
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };

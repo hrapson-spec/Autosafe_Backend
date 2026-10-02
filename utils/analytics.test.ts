@@ -76,6 +76,28 @@ describe('analytics privacy boundary', () => {
     expect(gtag).not.toHaveBeenCalled();
   });
 
+  // react-router matches routes case-insensitively, so /app/Report/<token>
+  // renders the report; suppression must not depend on the URL's case.
+  it.each(['/app/Report/opaque-bearer-token', '/app/REPORT/opaque-bearer-token', '/App/report/opaque-bearer-token'])(
+    'suppresses all custom analytics and page views on the case variant %s',
+    (path) => {
+      const umamiTrack = vi.fn();
+      const gtag = vi.fn();
+      window.umami = { track: umamiTrack };
+      window.gtag = gtag;
+      window.history.pushState({}, '', path);
+
+      trackReportView('FORD', 'FIESTA', 42);
+      trackFunnel('share_copy_link', { risk_percent: 42 });
+      trackConversion('mot_reminder');
+      trackPageView();
+      window.dispatchEvent(new Event('autosafe:umami-ready'));
+
+      expect(umamiTrack).not.toHaveBeenCalled();
+      expect(gtag).not.toHaveBeenCalled();
+    },
+  );
+
   it('never lets a third-party analytics exception break the report flow', () => {
     window.umami = { track: vi.fn(() => { throw new Error('analytics offline'); }) };
     window.gtag = vi.fn(() => { throw new Error('tag offline'); });
@@ -189,6 +211,39 @@ describe.each([
 
     expect(beforeSend('event', { url: '/app/report/opaque-bearer-token' })).toBe(false);
   });
+
+  it.each(['/app/Report/opaque-bearer-token', '/app/REPORT/opaque-bearer-token'])(
+    'drops every payload on the case variant %s',
+    (path) => {
+      window.history.replaceState({}, '', '/app');
+      const beforeSend = load();
+      window.history.pushState({}, '', path);
+
+      expect(beforeSend('event', { url: path })).toBe(false);
+    },
+  );
+});
+
+describe('index.html inline analytics gate', () => {
+  function inlineAllowed(path: string): boolean {
+    const html = readFileSync(resolve(ROOT, 'index.html'), 'utf-8');
+    const match = html.match(/window\.autosafeAnalyticsAllowed = [^;]+;/);
+    if (!match) throw new Error('autosafeAnalyticsAllowed assignment not found in index.html');
+    window.history.replaceState({}, '', path);
+    new Function(match[0])();
+    return (window as unknown as { autosafeAnalyticsAllowed: boolean }).autosafeAnalyticsAllowed;
+  }
+
+  it.each([
+    ['/app/report/opaque-bearer-token', false],
+    ['/app/Report/opaque-bearer-token', false],
+    ['/app/REPORT/opaque-bearer-token', false],
+    ['/app', true],
+    ['/app/terms', true],
+    ['/app/reports', true],
+  ])('allows analytics on %s: %s', (path, allowed) => {
+    expect(inlineAllowed(path)).toBe(allowed);
+  });
 });
 
 describe('static/umami.js loader', () => {
@@ -199,6 +254,17 @@ describe('static/umami.js loader', () => {
     expect(document.head.querySelector('script[data-website-id]')).toBeNull();
     expect(window.autosafeUmamiBeforeSend).toBeUndefined();
   });
+
+  it.each(['/app/Report/opaque-bearer-token', '/app/REPORT/opaque-bearer-token'])(
+    'does not load Umami at all on the case variant %s',
+    (path) => {
+      window.history.replaceState({}, '', path);
+      new Function(readFileSync(resolve(ROOT, 'static', 'umami.js'), 'utf-8'))();
+
+      expect(document.head.querySelector('script[data-website-id]')).toBeNull();
+      expect(window.autosafeUmamiBeforeSend).toBeUndefined();
+    },
+  );
 
   it('loads Umami with automatic tracking off and the before-send filter attached', () => {
     window.history.replaceState({}, '', '/guides/mot-cost');

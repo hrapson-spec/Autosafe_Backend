@@ -65,7 +65,7 @@ def test_standalone_and_seo_pages_load_the_filtered_umami_page_view_loader():
         assert "umami-production" not in source, page.name
 
     loader = (ROOT / "static" / "umami.js").read_text(encoding="utf-8")
-    assert "if (/^\\/app\\/report\\//.test(window.location.pathname)) return;" in loader
+    assert "if (/^\\/app\\/report\\//i.test(window.location.pathname)) return;" in loader
     assert "script.setAttribute('data-auto-track', 'false')" in loader
     assert "script.setAttribute('data-before-send', 'autosafeUmamiBeforeSend')" in loader
     assert "payload.url = window.location.pathname" in loader
