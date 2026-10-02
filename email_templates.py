@@ -301,6 +301,7 @@ def generate_lead_email(
                 <p style="margin: 0 0 16px 0; font-size: 14px; color: #64748B;">
                     How did this lead go? Your feedback helps us send better leads.
                 </p>
+                <p style="font-size:14px;color:#4B5563;">Choose an outcome below, then confirm it on the page. Opening a link does not record a result.</p>
                 <table cellpadding="0" cellspacing="0">
                     <tr>
                         <td style="padding-right: 8px;">
@@ -417,7 +418,7 @@ CUSTOMER CONTACT:
 
 ----------------------------------------------------------------------
 
-REPORT OUTCOME:
+REPORT OUTCOME (confirm your choice on the page):
 * Won Job: {{ base_url }}/api/garage/outcome/{{ assignment_id }}?result=won
 * Lost: {{ base_url }}/api/garage/outcome/{{ assignment_id }}?result=lost
 * Couldn't Reach: {{ base_url }}/api/garage/outcome/{{ assignment_id }}?result=no_response

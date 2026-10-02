@@ -118,7 +118,7 @@ def mask_postcode(postcode) -> str:
 # Everything after the report route prefix is credential or garbage: a token,
 # a doubled slash before it, or extra segments after it. Matched
 # case-insensitively because the SPA router serves /app/Report/<token> too.
-_SHARE_PATH_RE = re.compile(r"^(/+(?:api/v2/reports|app/report))/+[^/].*$", re.IGNORECASE)
+_SHARE_PATH_RE = re.compile(r"^(/+(?:api/v2/reports|app/report|api/garage/outcome))/+[^/].*$", re.IGNORECASE)
 
 
 def safe_log_path(path: str) -> str:

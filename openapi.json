@@ -1957,7 +1957,7 @@
     },
     "/api/garage/outcome/{assignment_id}": {
       "get": {
-        "description": "Handle outcome reporting from email links.\n\nIf result is provided, record the outcome and return confirmation.\nOtherwise, return info about the assignment.",
+        "description": "Read-only confirmation page; email scanners and prefetches cannot record outcomes.",
         "operationId": "get_outcome_page_api_garage_outcome__assignment_id__get",
         "parameters": [
           {
@@ -1989,8 +1989,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -2009,7 +2011,7 @@
         "summary": "Get Outcome Page"
       },
       "post": {
-        "description": "Report outcome for a lead assignment.\n\nBody should contain: {\"outcome\": \"won\" | \"lost\" | \"no_response\"}\nRequires PostgreSQL to be available (no SQLite fallback for writes).",
+        "description": "Record an explicitly confirmed same-origin submission. The link is a bearer capability.",
         "operationId": "report_outcome_api_garage_outcome__assignment_id__post",
         "parameters": [
           {

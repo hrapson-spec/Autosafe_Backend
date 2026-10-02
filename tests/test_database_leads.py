@@ -65,15 +65,21 @@ class FakeTransactionContext:
 class FakeConnection:
     """Programmable fake for asyncpg.Connection: execute() only."""
 
-    def __init__(self, execute_side_effects=None):
+    def __init__(self, execute_side_effects=None, previous_outcome=None, exists=True):
         # Optional list of exceptions (or None) to raise/return per execute()
         # call, consumed in order; None means "succeed with default result".
+        self.previous_outcome = previous_outcome
+        self.exists = exists
         self._execute_side_effects = list(execute_side_effects or [])
         self.calls = []
         self.transaction_depth = 0
 
     def transaction(self):
         return FakeTransactionContext(self)
+
+    async def fetchrow(self, query, *params):
+        self.calls.append(("fetchrow", query, params, self.transaction_depth > 0))
+        return {"outcome": self.previous_outcome, "garage_id": "garage-1"} if self.exists else None
 
     async def execute(self, query, *params):
         in_transaction = self.transaction_depth > 0
@@ -122,15 +128,15 @@ class TestUpdateLeadAssignmentOutcomeTransaction(unittest.TestCase):
         asyncio.run(run_test())
 
         kinds = [c[0] for c in conn.calls]
-        self.assertEqual(kinds, ["transaction_enter", "execute", "transaction_exit"])
+        self.assertEqual(kinds, ["transaction_enter", "fetchrow", "execute", "transaction_exit"])
 
         # The execute happened while inside the transaction.
-        execute_call = conn.calls[1]
+        execute_call = conn.calls[2]
         self.assertTrue(execute_call[3], "execute() ran outside the transaction")
         self.assertIn("UPDATE lead_assignments", execute_call[1])
 
         # Clean exit -> commit (no exception propagating).
-        exit_call = conn.calls[2]
+        exit_call = conn.calls[3]
         self.assertTrue(exit_call[1], "transaction exited as a rollback, not a commit")
 
     def test_won_outcome_increments_garage_counter_atomically(self):
@@ -148,17 +154,45 @@ class TestUpdateLeadAssignmentOutcomeTransaction(unittest.TestCase):
         asyncio.run(run_test())
 
         kinds = [c[0] for c in conn.calls]
-        self.assertEqual(kinds, ["transaction_enter", "execute", "execute", "transaction_exit"])
+        self.assertEqual(kinds, ["transaction_enter", "fetchrow", "execute", "execute", "transaction_exit"])
 
-        first_execute, second_execute = conn.calls[1], conn.calls[2]
+        first_execute, second_execute = conn.calls[2], conn.calls[3]
         self.assertTrue(first_execute[3], "outcome UPDATE ran outside the transaction")
         self.assertTrue(second_execute[3], "garages increment ran outside the transaction")
         self.assertIn("UPDATE lead_assignments", first_execute[1])
         self.assertIn("UPDATE garages", second_execute[1])
-        self.assertIn("leads_converted = leads_converted + 1", second_execute[1])
+        self.assertIn("GREATEST(0, leads_converted + $1)", second_execute[1])
+        self.assertEqual(second_execute[2], (1, "garage-1"))
+        self.assertIn("FOR UPDATE", conn.calls[1][1])
+        self.assertTrue(conn.calls[1][3])
 
-        exit_call = conn.calls[3]
+        exit_call = conn.calls[4]
         self.assertTrue(exit_call[1], "transaction exited as a rollback, not a commit")
+
+    def test_retry_does_not_increment_or_change_timestamp(self):
+        conn = FakeConnection(previous_outcome="won")
+        async def run():
+            with _patched_get_pool(FakePool(conn)):
+                return await database.update_lead_assignment_outcome("assign-1", "won")
+        self.assertTrue(asyncio.run(run()))
+        self.assertFalse([c for c in conn.calls if c[0] == "execute"])
+
+    def test_correcting_a_win_reverses_its_counter(self):
+        conn = FakeConnection(previous_outcome="won")
+        async def run():
+            with _patched_get_pool(FakePool(conn)):
+                return await database.update_lead_assignment_outcome("assign-1", "lost")
+        self.assertTrue(asyncio.run(run()))
+        writes = [c for c in conn.calls if c[0] == "execute"]
+        self.assertEqual(writes[1][2], (-1, "garage-1"))
+
+    def test_missing_assignment_does_not_write(self):
+        conn = FakeConnection(exists=False)
+        async def run():
+            with _patched_get_pool(FakePool(conn)):
+                return await database.update_lead_assignment_outcome("missing", "won")
+        self.assertFalse(asyncio.run(run()))
+        self.assertFalse([c for c in conn.calls if c[0] == "execute"])
 
     def test_no_pool_returns_false(self):
         """Unchanged pre-existing behaviour: no pool -> False, no attempt
@@ -188,8 +222,8 @@ class TestUpdateLeadAssignmentOutcomeTransaction(unittest.TestCase):
         # second raised), and exit was recorded as a rollback (exception
         # propagating out of the `async with` block).
         kinds = [c[0] for c in conn.calls]
-        self.assertEqual(kinds, ["transaction_enter", "execute", "execute", "transaction_exit"])
-        exit_call = conn.calls[3]
+        self.assertEqual(kinds, ["transaction_enter", "fetchrow", "execute", "execute", "transaction_exit"])
+        exit_call = conn.calls[4]
         self.assertFalse(exit_call[1], "transaction exited as a commit despite the failure")
 
 

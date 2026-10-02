@@ -14,7 +14,7 @@ from starlette.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Dict, Optional
 from datetime import datetime
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qs, quote
 import asyncio
 import os
 import re
@@ -25,6 +25,7 @@ import secrets
 import database as db
 from utils import get_age_band, get_mileage_band, hash_vrm, safe_log_path, safe_referrer
 from report_protection import apply_bearer_report_headers, is_bearer_report_path, report_shell_html
+from garage_outcomes import OUTCOMES, confirmation_page, is_outcome_path, same_origin_submission
 from confidence import wilson_interval, classify_confidence
 from consolidate_models import extract_base_model
 from repair_costs import calculate_expected_repair_cost
@@ -241,6 +242,11 @@ def apply_security_headers(response, path: str):
     # consent-gated Google Ads endpoints. Remote font/CDN hosts are excluded.
     response.headers["Content-Security-Policy"] = "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://umami-production-cb51.up.railway.app https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.google.co.uk https://www.googleadservices.com; connect-src 'self' https://umami-production-cb51.up.railway.app https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.co.uk; frame-src https://www.googletagmanager.com https://www.googleadservices.com"
     apply_bearer_report_headers(path, response)
+    if is_outcome_path(path):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
     return response
 
 
@@ -294,7 +300,7 @@ async def global_exception_handler(request, exc):
     # This handler runs in ServerErrorMiddleware, outside add_security_headers,
     # so bearer report routes must get their headers here. Public routes are
     # deliberately left exactly as before (OA-003 does not change them).
-    if is_bearer_report_path(request.url.path):
+    if is_bearer_report_path(request.url.path) or is_outcome_path(request.url.path):
         apply_security_headers(response, request.url.path)
     return response
 
@@ -1932,78 +1938,56 @@ async def test_dvsa_connection(
 # Outcome Tracking Endpoints
 # ============================================================================
 
-@app.get("/api/garage/outcome/{assignment_id}")
+@app.get("/api/garage/outcome/{assignment_id}", response_class=HTMLResponse)
 async def get_outcome_page(assignment_id: str, result: Optional[str] = None):
-    """
-    Handle outcome reporting from email links.
-
-    If result is provided, record the outcome and return confirmation.
-    Otherwise, return info about the assignment.
-    """
+    """Read-only confirmation page; email scanners and prefetches cannot record outcomes."""
     assignment = await db.get_lead_assignment_by_id(assignment_id)
-
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-
-    # If result provided via query param, record it
-    if result in ['won', 'lost', 'no_response']:
-        # CRITICAL: Check PostgreSQL is available before write
-        if not await db.is_postgres_available():
-            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
-        success = await db.update_lead_assignment_outcome(assignment_id, result)
-        if success:
-            return {
-                "success": True,
-                "message": "Thanks for letting us know!",
-                "outcome": result,
-                "vehicle": f"{assignment['vehicle_year']} {assignment['vehicle_make']} {assignment['vehicle_model']}"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to record outcome")
-
-    # Return assignment info
-    return {
-        "assignment_id": assignment_id,
-        "garage_name": assignment['garage_name'],
-        "vehicle": f"{assignment['vehicle_year']} {assignment['vehicle_make']} {assignment['vehicle_model']}",
-        "outcome": assignment.get('outcome'),
-        "outcome_reported_at": assignment.get('outcome_reported_at')
-    }
+    return HTMLResponse(confirmation_page(assignment_id, assignment, result))
 
 
 @app.post("/api/garage/outcome/{assignment_id}")
 async def report_outcome(assignment_id: str, request: Request):
-    """
-    Report outcome for a lead assignment.
-
-    Body should contain: {"outcome": "won" | "lost" | "no_response"}
-    Requires PostgreSQL to be available (no SQLite fallback for writes).
-    """
-    # CRITICAL: Check PostgreSQL is available before write
+    """Record an explicitly confirmed same-origin submission. The link is a bearer capability."""
+    if not same_origin_submission(request):
+        raise HTTPException(status_code=403, detail="Submit the confirmation form on this site")
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    raw = await request.body()
+    if len(raw) > 2048:
+        raise HTTPException(status_code=413, detail="Submission too large")
+    form_submission = content_type == "application/x-www-form-urlencoded"
+    try:
+        if form_submission:
+            values = parse_qs(raw.decode("utf-8"), keep_blank_values=True, max_num_fields=3)
+            if any(len(v) != 1 for v in values.values()):
+                raise ValueError("duplicate field")
+            body = {k: v[0] for k, v in values.items()}
+            confirmed = body.get("confirmed") == "yes"
+        elif content_type == "application/json":
+            import json
+            body = json.loads(raw)
+            if not isinstance(body, dict):
+                raise ValueError("not an object")
+            confirmed = body.get("confirmed") is True
+        else:
+            raise HTTPException(status_code=415, detail="Unsupported submission type")
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(status_code=400, detail="Invalid submission") from None
+    outcome = body.get("outcome")
+    if not isinstance(outcome, str) or outcome not in OUTCOMES or not confirmed or set(body) != {"outcome", "confirmed"}:
+        raise HTTPException(status_code=400, detail="Select and explicitly confirm an outcome")
     if not await db.is_postgres_available():
         raise HTTPException(status_code=503, detail="Database temporarily unavailable")
-
     assignment = await db.get_lead_assignment_by_id(assignment_id)
-
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
-
-    body = await request.json()
-    outcome = body.get('outcome')
-
-    if outcome not in ['won', 'lost', 'no_response']:
-        raise HTTPException(status_code=400, detail="Invalid outcome. Must be: won, lost, or no_response")
-
-    success = await db.update_lead_assignment_outcome(assignment_id, outcome)
-
-    if not success:
+    if not await db.update_lead_assignment_outcome(assignment_id, outcome):
         raise HTTPException(status_code=500, detail="Failed to record outcome")
-
-    return {
-        "success": True,
-        "message": "Outcome recorded. Thanks!",
-        "outcome": outcome
-    }
+    if form_submission:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/api/garage/outcome/" + quote(assignment_id, safe=""), status_code=303)
+    return {"success": True, "message": "Confirmed outcome recorded. Thanks!", "outcome": outcome}
 
 
 @app.get("/api/admin/export-risk-checks")

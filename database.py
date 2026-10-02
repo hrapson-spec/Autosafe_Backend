@@ -686,7 +686,13 @@ async def create_lead_assignment(
 
 
 async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bool:
-    """Update the outcome of a lead assignment."""
+    """Record the current outcome once, with a matching garage counter delta.
+
+    Lock the assignment so retries and concurrent confirmations cannot count
+    the same booking twice. Correcting a previous win reverses its increment.
+    """
+    if outcome not in ("won", "lost", "no_response"):
+        return False
     pool = await get_pool()
     if not pool:
         return False
@@ -694,6 +700,14 @@ async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bo
     try:
         async with pool.acquire() as conn:
             async with conn.transaction():
+                previous = await conn.fetchrow(
+                    "SELECT outcome, garage_id FROM lead_assignments WHERE id = $1 FOR UPDATE",
+                    assignment_id,
+                )
+                if previous is None:
+                    return False
+                if previous["outcome"] == outcome:
+                    return True
                 await conn.execute(
                     """UPDATE lead_assignments
                        SET outcome = $1, outcome_reported_at = NOW()
@@ -701,12 +715,12 @@ async def update_lead_assignment_outcome(assignment_id: str, outcome: str) -> bo
                     outcome, assignment_id
                 )
 
-                # If outcome is 'won', increment garage's leads_converted
-                if outcome == 'won':
+                delta = int(outcome == "won") - int(previous["outcome"] == "won")
+                if delta:
                     await conn.execute(
-                        """UPDATE garages SET leads_converted = leads_converted + 1
-                           WHERE id = (SELECT garage_id FROM lead_assignments WHERE id = $1)""",
-                        assignment_id
+                        """UPDATE garages SET leads_converted = GREATEST(0, leads_converted + $1)
+                           WHERE id = $2""",
+                        delta, previous["garage_id"]
                     )
 
             return True
