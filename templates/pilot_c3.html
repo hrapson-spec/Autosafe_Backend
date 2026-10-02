@@ -1,0 +1,31 @@
+{% extends "seo_model.html" %}
+{% block title %}Citroen C3 MOT Failure Rates &amp; Used-Car Checks | AutoSafe{% endblock %}
+{% block meta_description %}Read Citroen C3 MOT failure rates by age band and component category. Use the sample counts, then review the exact car's MOT history before a viewing.{% endblock %}
+{% block model_heading %}Citroen C3 MOT Failure Rates and Used-Car Checks{% endblock %}
+{% block pilot_intro %}
+<style>.data-table { display: block; max-width: 100%; overflow-x: auto; }</style>
+<p>Looking at a used Citroen C3? These historical figures describe the model group. They can help you organise
+  questions for a viewing, but a low group rate does not establish that the particular C3 is sound.</p>
+{% endblock %}
+{% block pilot_guidance %}
+<div class="methodology">
+  <h2>Read the C3's own record before a viewing</h2>
+  <ol>
+    <li><a href="/app">Check the C3 registration</a> and read the dates, recorded mileage, failures and advisories
+      that are available. Ask the seller about gaps or repeated entries rather than assuming their cause.</li>
+    <li>Ask for evidence of repairs to earlier defects. A later pass is a test result on that date, not a full
+      service history or a guarantee of today's condition.</li>
+    <li>Use the closest age band below as context. This page does not separate generations, engines or trims,
+      and its component categories are historical records rather than a list of faults on the car for sale.</li>
+  </ol>
+  <p>Arrange an inspection where condition is uncertain. For visible preparation checks, use the
+    <a href="/guides/mot-checklist">car MOT checklist</a>. AutoSafe labels estimates, comparisons, references
+    and unavailable results separately so you can read what the evidence supports.</p>
+</div>
+{% endblock %}
+{% block cta_heading %}Read a Specific C3's MOT Record{% endblock %}
+{% block cta_text %}Use the registration of the car you are considering. Review its record and evidence label,
+  then check unresolved questions with the seller or an inspecting garage.{% endblock %}
+
+{# No FAQ markup for a page without a visible question/answer section. Dataset schema remains. #}
+{% block model_faq %}{% endblock %}

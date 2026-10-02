@@ -1,0 +1,36 @@
+{% extends "seo_compare.html" %}
+{% block title %}Renault Clio vs Peugeot 208: MOT Records Compared | AutoSafe{% endblock %}
+{% block meta_description %}Compare Renault Clio and Peugeot 208 recorded MOT rates, age bands and test counts. Read the limits, then check the exact cars on your shortlist.{% endblock %}
+{% block comparison_heading %}Renault Clio vs Peugeot 208: What the MOT Records Show{% endblock %}
+{% block pilot_intro %}
+<style>
+.data-table, .compare-component-table { display: block; max-width: 100%; overflow-x: auto; }
+.compare-grid .stat-highlight h3 a { color: #1d4ed8 !important; }
+.verdict-box { background: #eef2f7; border-color: #64748b; }
+.verdict-box p, .compare-component-table th, .compare-component-table td { color: #334155; }
+.compare-component-table th, .compare-component-table td { border-color: #cbd5e1; }
+.compare-component-table .better { color: #166534; }
+.compare-component-table .worse { color: #b91c1c; }
+.age-sample { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #475569; }
+</style>
+<p>Comparing a Clio with a 208? The overall rates below combine different ages and mileages. Start with the
+  age-band rows when the two cars on your shortlist are of similar age; an overall gap can reflect different
+  mixes of tested vehicles.</p>
+{% endblock %}
+{% block pilot_guidance %}
+<div class="methodology">
+  <h2>Turn the comparison into questions about two cars</h2>
+  <p>Write down the registration, age and recorded mileage of each car. Read the test count for each relevant
+    age band before comparing its rate. Even within one age band, this is not an adjustment for mileage,
+    maintenance, engine or generation, so it cannot tell you which individual car is in better condition.</p>
+  <p><a href="/app">Check the Clio and 208 registrations in turn</a>. Compare their own failures, repeat
+    advisories and evidence of repairs. Ask about outstanding questions before a viewing and arrange an
+    inspection where needed. A supported AutoSafe result has its own evidence label; these page figures remain
+    historical group comparisons.</p>
+</div>
+{% endblock %}
+
+{% block age_sample1 %}<span class="age-sample">{{ "{:,}".format(band1.total_tests) }} tests</span>{% endblock %}
+{% block age_sample2 %}<span class="age-sample">{{ "{:,}".format(band2.total_tests) }} tests</span>{% endblock %}
+{# No FAQ markup for a page without a visible question/answer section. #}
+{% block structured_data %}{% endblock %}

@@ -29,7 +29,7 @@ age-band and component-category sample evidence.{% endblock %}
   ]
 }
 </script>
-<script type="application/ld+json">
+{% block model_faq %}<script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -52,7 +52,7 @@ age-band and component-category sample evidence.{% endblock %}
     }
   ]
 }
-</script>
+</script>{% endblock %}
 {% endblock %}
 
 {% block breadcrumb_data %}
@@ -80,7 +80,7 @@ age-band and component-category sample evidence.{% endblock %}
 {% endblock %}
 
 {% block content %}
-<h1>{{ make_display }} {{ model_display }} Recorded MOT Outcomes</h1>
+<h1>{% block model_heading %}{{ make_display }} {{ model_display }} Recorded MOT Outcomes{% endblock %}</h1>{% block pilot_intro %}{% endblock %}
 <div class="stat-highlight">
   <div class="big-number">{{ "%.1f"|format(overall_fail_rate * 100) }}%</div>
   <div class="label">historical failure rate from {{ "{:,}".format(overall_tests) }} tests</div>
@@ -102,7 +102,7 @@ age-band and component-category sample evidence.{% endblock %}
     or buying recommendation.</p>
 </div>
 
-{% if age_bands %}
+{% block pilot_guidance %}{% endblock %}{% if age_bands %}
 <h2>Recorded Failure Rate by Age Band</h2>
 <table class="data-table">
   <thead>
