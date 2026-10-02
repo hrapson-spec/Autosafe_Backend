@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation, useParams } from 'react-router-dom';
+import { Link, MemoryRouter, useLocation, useParams } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import type { PublicStats } from './types';
 import App from './App';
 import { ReportApiError, mapErrorToMessage } from './services/errorMessages';
-import { fixtureExactHigh, fixtureUnavailableDegraded } from './fixtures/reportResponses';
+import { fixtureExactHigh, fixtureUnavailableDegraded, fixtureVehiclePrediction } from './fixtures/reportResponses';
+import {
+  __resetAcquisitionStateForTests,
+  __setAcquisitionSinkForTests,
+  type AcquisitionEvent,
+} from './utils/acquisitionEvents';
+import { loadEventSchema, validates } from './utils/acquisitionSchemaCheck.testutil';
 
 // ---------------------------------------------------------------------------
 // Module mocks
@@ -39,12 +45,14 @@ vi.mock('./components/ReportScreen', () => ({
   default: function ReportScreenProbe() {
     const { token } = useParams();
     const location = useLocation();
-    const state = (location.state ?? {}) as { postcode?: string; inlineReport?: unknown };
+    const state = (location.state ?? {}) as { postcode?: string; inlineReport?: unknown; operationId?: string };
     return (
       <div data-testid="report-screen-probe">
         <span data-testid="probe-token">{token}</span>
         <span data-testid="probe-postcode">{state.postcode ?? ''}</span>
         <span data-testid="probe-inline">{state.inlineReport ? 'yes' : 'no'}</span>
+        <span data-testid="probe-operation">{state.operationId ?? ''}</span>
+        <Link to="/app">back to form</Link>
       </div>
     );
   },
@@ -255,5 +263,207 @@ describe('App: remount regression via stats resolving mid-typing', () => {
     expect(screen.queryByText(/vehicles checked this month/i)).not.toBeInTheDocument();
 
     expect(regInput).toHaveValue('AB12CDE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OA-004: acquisition measurement emitted by App.tsx. Collection is OFF: the
+// recording sink below is the test-only injection point; nothing is sent.
+// ---------------------------------------------------------------------------
+describe('App: acquisition events (OA-004)', () => {
+  let events: AcquisitionEvent[] = [];
+  let log: string[] = [];
+  const schema = loadEventSchema();
+
+  async function submit(user: ReturnType<typeof userEvent.setup>, reg = 'AB12CDE', postcode = 'SW1A 1AA') {
+    const regInput = screen.getByLabelText('Registration Number', { exact: false });
+    await user.clear(regInput);
+    await user.type(regInput, reg);
+    const pcInput = screen.getByRole('textbox', { name: 'Postcode' });
+    await user.clear(pcInput);
+    await user.type(pcInput, postcode);
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+  }
+
+  beforeEach(() => {
+    __resetAcquisitionStateForTests();
+    events = [];
+    log = [];
+    __setAcquisitionSinkForTests({
+      emit: (e) => {
+        events.push(e);
+        log.push(`event:${e.event}`);
+      },
+    });
+  });
+
+  afterEach(() => {
+    __resetAcquisitionStateForTests();
+  });
+
+  it('emits check_started before the API call and report_created after it, both schema-valid and free of form values', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport).mockImplementation(async () => {
+      log.push('createReport');
+      return fixtureExactHigh;
+    });
+    renderApp(['/app']);
+    await submit(user);
+    expect(await screen.findByTestId('report-screen-probe')).toBeInTheDocument();
+
+    expect(log.indexOf('event:check_started')).toBeGreaterThanOrEqual(0);
+    expect(log.indexOf('event:check_started')).toBeLessThan(log.indexOf('createReport'));
+    expect(log.indexOf('createReport')).toBeLessThan(log.indexOf('event:report_created'));
+
+    const started = events.find((e) => e.event === 'check_started')!;
+    const created = events.find((e) => e.event === 'report_created')!;
+    expect(created).toMatchObject({
+      result_kind: 'comparison',
+      match_scope: 'exact_band',
+      persistence_mode: 'saved',
+      entry_mode: 'fresh_check',
+    });
+    const op = (started as { operation_id: string }).operation_id;
+    expect((created as { operation_id: string }).operation_id).toBe(op);
+    // The operation id travels to the report route in navigation state.
+    expect(screen.getByTestId('probe-operation')).toHaveTextContent(op);
+
+    for (const e of events) expect(validates(schema, e), JSON.stringify(e)).toBe(true);
+    const json = JSON.stringify(events);
+    for (const secret of ['AB12CDE', 'SW1A', fixtureExactHigh.report_token as string, fixtureExactHigh.vehicle.make]) {
+      expect(json).not.toContain(secret);
+    }
+    // The operation id is not derived from the inputs.
+    expect(op).not.toContain('AB12');
+  });
+
+  it('pins the existing third-party calls: same payload, same order, after createReport, before navigation, once each', async () => {
+    const user = userEvent.setup();
+    const probeVisibleAt: Record<string, boolean> = {};
+    vi.mocked(createReport).mockImplementation(async () => {
+      log.push('createReport');
+      return fixtureExactHigh;
+    });
+    vi.mocked(trackConversion).mockImplementation((...args: unknown[]) => {
+      log.push('trackConversion');
+      probeVisibleAt.conversion = screen.queryByTestId('report-screen-probe') !== null;
+      expect(args).toEqual(['risk_check']);
+    });
+    vi.mocked(trackFunnel).mockImplementation((...args: unknown[]) => {
+      log.push('trackFunnel');
+      probeVisibleAt.funnel = screen.queryByTestId('report-screen-probe') !== null;
+      expect(args).toEqual(['reg_entered']);
+    });
+    renderApp(['/app']);
+    await submit(user);
+    await screen.findByTestId('report-screen-probe');
+
+    expect(trackConversion).toHaveBeenCalledTimes(1);
+    expect(trackConversion).toHaveBeenCalledWith('risk_check');
+    expect(trackFunnel).toHaveBeenCalledTimes(1);
+    expect(trackFunnel).toHaveBeenCalledWith('reg_entered');
+    expect(probeVisibleAt).toEqual({ conversion: false, funnel: false });
+    // check_started -> createReport -> risk_check -> reg_entered -> report_created (navigation follows)
+    expect(log).toEqual([
+      'event:check_started',
+      'createReport',
+      'trackConversion',
+      'trackFunnel',
+      'event:report_created',
+    ]);
+  });
+
+  it('a throwing sink cannot change the user flow or the analytics calls', async () => {
+    const user = userEvent.setup();
+    __setAcquisitionSinkForTests({ emit: () => { throw new Error('sink down'); } });
+    vi.mocked(createReport).mockResolvedValue(fixtureExactHigh);
+    renderApp(['/app']);
+    await submit(user);
+    expect(await screen.findByTestId('report-screen-probe')).toBeInTheDocument();
+    expect(trackConversion).toHaveBeenCalledWith('risk_check');
+    expect(trackFunnel).toHaveBeenCalledWith('reg_entered');
+  });
+
+  it('inline persistence-degraded success: report_created persistence_mode inline_unsaved; operation id in state', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport).mockResolvedValue({ ...fixtureVehiclePrediction, report_token: null });
+    renderApp(['/app']);
+    await submit(user);
+    expect(await screen.findByTestId('probe-inline')).toHaveTextContent('yes');
+    const created = events.find((e) => e.event === 'report_created')!;
+    expect(created).toMatchObject({
+      persistence_mode: 'inline_unsaved',
+      result_kind: 'vehicle_prediction',
+      match_scope: 'model_prediction',
+    });
+    expect(screen.getByTestId('probe-operation')).not.toHaveTextContent('');
+    expect(validates(schema, created)).toBe(true);
+  });
+
+  it('check_failed carries a fixed category and stage, never the message; no report_created, no navigation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport).mockRejectedValue(new ReportApiError('rate_limited', mapErrorToMessage('rate_limited'), 429));
+    renderApp(['/app']);
+    await submit(user);
+    await screen.findByText(mapErrorToMessage('rate_limited'));
+    const failed = events.find((e) => e.event === 'check_failed')!;
+    expect(failed).toMatchObject({ error_category: 'rate_limited', stage: 'create_report', entry_mode: 'fresh_check' });
+    expect(events.map((e) => e.event)).toEqual(['check_started', 'check_failed']);
+    expect(JSON.stringify(events)).not.toContain(mapErrorToMessage('rate_limited'));
+    for (const e of events) expect(validates(schema, e)).toBe(true);
+    expect(trackConversion).not.toHaveBeenCalled();
+    expect(trackFunnel).not.toHaveBeenCalled();
+  });
+
+  it('a non-ReportApiError failure is category unknown', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport).mockRejectedValue(new TypeError('AB12CDE exploded'));
+    renderApp(['/app']);
+    await submit(user);
+    await screen.findByText(mapErrorToMessage('unknown'));
+    expect(events.find((e) => e.event === 'check_failed')).toMatchObject({ error_category: 'unknown' });
+    expect(JSON.stringify(events)).not.toContain('exploded');
+  });
+
+  it('a retry of the same unresolved operation keeps the operation id and does not announce a second start', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport)
+      .mockRejectedValueOnce(new ReportApiError('network_error', mapErrorToMessage('network_error')))
+      .mockResolvedValueOnce(fixtureExactHigh);
+    renderApp(['/app']);
+    await submit(user);
+    await screen.findByText(mapErrorToMessage('network_error'));
+    await user.click(screen.getByRole('button', { name: /check this car/i }));
+    await screen.findByTestId('report-screen-probe');
+
+    expect(events.map((e) => e.event)).toEqual(['check_started', 'check_failed', 'report_created']);
+    const ops = new Set(events.map((e) => (e as { operation_id: string }).operation_id));
+    expect(ops.size).toBe(1);
+    expect(screen.getByTestId('probe-operation')).toHaveTextContent([...ops][0]);
+  });
+
+  it('a later deliberate check of the same vehicle, in the same App instance, is a new operation', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createReport).mockResolvedValue(fixtureExactHigh);
+    renderApp(['/app']);
+    await submit(user);
+    await screen.findByTestId('report-screen-probe');
+    const op1 = screen.getByTestId('probe-operation').textContent;
+
+    await user.click(screen.getByRole('link', { name: 'back to form' }));
+    await submit(user); // identical registration and postcode
+    await waitFor(() => expect(screen.getByTestId('probe-operation').textContent).not.toBe(op1));
+    const op2 = screen.getByTestId('probe-operation').textContent;
+
+    expect(op1).toBeTruthy();
+    expect(op2).toBeTruthy();
+    expect(op1).not.toBe(op2);
+    expect(createReport).toHaveBeenCalledTimes(2);
+    // A completed operation does not leak its idempotency key to the next deliberate check either.
+    const keys = vi.mocked(createReport).mock.calls.map((c) => c[2]);
+    expect(keys[0]).not.toBe(keys[1]);
+    const starts = events.filter((e) => e.event === 'check_started').map((e) => (e as { operation_id: string }).operation_id);
+    expect(starts).toEqual([op1, op2]);
+    expect(events.filter((e) => e.event === 'report_created')).toHaveLength(2);
   });
 });

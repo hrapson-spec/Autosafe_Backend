@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ReportEmailSubmission, ReportV2 } from '../types';
 import { submitReportEmail } from '../services/autosafeApi';
 import { trackConversion, trackFunnel } from '../utils/analytics';
@@ -25,6 +25,15 @@ interface ReportDashboardProps {
   report: ReportV2;
   postcode?: string;
   onReset: () => void;
+  /**
+   * Called once this final, non-loading view (the header plus ReportResult
+   * and the scope disclosure) is mounted: scheduled from a post-commit effect
+   * with setTimeout(0) and cancelled if the view unmounts first (e.g. an
+   * error boundary replacing it after a descendant effect throws). Never
+   * called while the lazy chunk is loading, and never if rendering throws.
+   * Receives no data.
+   */
+  onRendered?: () => void;
 }
 
 function daysUntil(dateIso: string | null, now: number = Date.now()): number | undefined {
@@ -33,12 +42,31 @@ function daysUntil(dateIso: string | null, now: number = Date.now()): number | u
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onReset }) => {
+const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onReset, onRendered }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [emailReportEmail, setEmailReportEmail] = useState('');
   const [emailReportState, setEmailReportState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Committed-render acknowledgement (OA-004). Children's effects run before
+  // this one, so ReportResult is already mounted when it fires.
+  const onRenderedRef = useRef(onRendered);
+  useEffect(() => {
+    onRenderedRef.current = onRendered;
+  });
+  // The acknowledgement is deferred one macrotask and cancelled by the
+  // effect cleanup. If a descendant's passive effect throws, React still runs
+  // this effect in the same flush, but then re-renders the error boundary,
+  // which unmounts this view and runs the cleanup before the timer fires: a
+  // torn-down result is never acknowledged. (An error AFTER the timer fires
+  // can still yield both events; see EVENT_SCHEMA_v1.md.)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onRenderedRef.current?.();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [report]);
 
   const reminderBlockRef = useRef<HTMLDivElement>(null!);
   const { showStickyCta } = useStickyCtaVisibility({
