@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Fail when public copy overstates the v2 report contract.
 
-The release-candidate path serves recorded vehicle/MOT details plus a disclosed
-comparable-vehicle failure rate. It is not a vehicle inspection, diagnosis, or
-forecast of the next MOT result. Public copy must preserve that distinction.
+The report path distinguishes model estimates, recorded group comparisons,
+dataset references and unavailable evidence. Serving a model output does not
+establish predictive qualification. No mode is an inspection or diagnosis;
+comparison figures must not be described as individual predictions.
 
 Run: python scripts/claim_sweep.py   (exit 0 = clean, 1 = violations)
 Wired into CI as a hard check.
@@ -226,7 +227,7 @@ def main() -> int:
         for path, line, why, snippet in violations:
             print(f"  {path}:{line}  [{why}]\n      {snippet}")
         return 1
-    print("CLAIM SWEEP: clean — no unsupported capability claims in public copy")
+    print("CLAIM SWEEP: registered checks passed (not a complete factual or model-qualification review)")
     return 0
 
 if __name__ == "__main__":
