@@ -1,132 +1,66 @@
 import React from 'react';
 import GuideLayout from './GuideLayout';
 
-const MOTChecklist: React.FC = () => {
-  return (
-    <GuideLayout
-      title="DIY Pre-MOT Checklist"
-      metaTitle="DIY Pre-MOT Checklist - What to Check Before Your MOT Test"
-      metaDescription="Complete DIY pre-MOT checklist. Check lights, tyres, brakes, wipers and more before your MOT test. Avoid common failures and save money on retests."
-      canonicalPath="/guides/mot-checklist"
-      lastUpdated="2 October 2026"
-    >
-      <div className="prose prose-slate max-w-none">
-        <p className="text-lg text-slate-600 leading-relaxed mb-8">
-          A few simple checks before your MOT can help you avoid common failures.
-          This guide covers everything you can inspect at home without specialist tools.
-        </p>
+const MOTChecklist: React.FC = () => (
+  <GuideLayout
+    title="Pre-MOT Checklist: What You Can Check on Your Car"
+    metaTitle="Pre-MOT Checklist: Car Checks and When to Ask a Garage"
+    metaDescription="Prepare for a car MOT with visible checks for lights, tyres, visibility and seatbelts. Review earlier advisories and know when a garage inspection is needed."
+    canonicalPath="/guides/mot-checklist"
+    lastUpdated="2 October 2026"
+  >
+    <div className="max-w-none">
+      <p className="text-sm text-slate-500 mb-6">For cars in Great Britain. Checked against GOV.UK and the DVSA inspection manual.</p>
 
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Lights and Signals</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Check that the required lights work. Ask a garage about faults you cannot assess safely.
-          </p>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Headlights:</strong> Check both dipped and main beam work</li>
-            <li><strong>Indicators:</strong> Front, rear, and side repeaters all flash correctly</li>
-            <li><strong>Brake lights:</strong> Ask someone to press the pedal while you check</li>
-            <li><strong>Rear fog light:</strong> Often forgotten but must work</li>
-            <li><strong>Number plate light:</strong> Bulb must illuminate the plate clearly</li>
-            <li><strong>Hazard lights:</strong> All indicators should flash simultaneously</li>
-          </ul>
-        </section>
+<p className="text-slate-600 leading-relaxed mb-4">A walk-round can reveal visible problems before your appointment. It cannot test every MOT item or
+  guarantee a pass. Park safely, use your vehicle handbook and ask a garage about anything you cannot assess.</p>
+<div className="my-8 rounded-xl bg-slate-100 p-6">
+  <h2 className="font-serif text-2xl font-medium text-slate-900 mt-8 mb-4">Read the previous MOT first</h2>
+  <p className="text-slate-600 leading-relaxed mb-4">Look for repeat advisories and earlier failures, then check repair receipts. A recorded advisory does not
+    prove that a fault is still present. AutoSafe labels each result according to its available evidence.</p>
+  <a className="text-blue-700 underline" href="/app">Check your car's MOT record</a>
+</div>
+<h2 className="font-serif text-2xl font-medium text-slate-900 mt-8 mb-4">Visible checks before the appointment</h2>
+<ul className="list-disc pl-6 text-slate-600 space-y-3 mb-6">
+  <li><strong>Lights and signals:</strong> check the lights, indicators and brake lights with help where needed.
+    Check that the number plates are readable and secure.</li>
+  <li><strong>Tyres:</strong> inspect the fitted road tyres for visible damage and measure tread. For cars the
+    minimum is 1.6mm across the central three-quarters, around the entire circumference. Check pressures
+    against the handbook; ask a tyre professional if wear or damage is uncertain.</li>
+  <li><strong>Visibility:</strong> check that wipers clear the screen, washers work and mirrors give a clear
+    view. Have windscreen damage assessed for its position, size and effect on the driver's view.</li>
+  <li><strong>Seatbelts:</strong> look for visible damage and check that accessible belts fasten, release
+    and retract. Tell the garage about any concern.</li>
+  <li><strong>Fluids and warning lights:</strong> follow the handbook for routine level checks and the
+    meaning of warning lights. Do not open a hot cooling system or ignore a warning to stop driving.</li>
+</ul>
+<p className="text-slate-600 leading-relaxed mb-4">These checks draw on <a className="text-blue-700 underline" href="https://www.gov.uk/check-vehicle-safe">GOV.UK's vehicle safety guidance</a>
+  and the <a className="text-blue-700 underline" href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles">DVSA MOT inspection manual</a>.
+  The manual's <a className="text-blue-700 underline" href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles/5-axles-wheels-tyres-and-suspension">tyre section</a>
+  covers fitted road wheels; a spare tyre is not an MOT inspection item. Windscreen size thresholds are not
+  automatic failure rules: the <a className="text-blue-700 underline" href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles/3-visibility">visibility section</a>
+  explains the effect on the driver's view.</p>
+<h2 className="font-serif text-2xl font-medium text-slate-900 mt-8 mb-4">Checks that need professional assessment</h2>
+<p className="text-slate-600 leading-relaxed mb-4">Brake performance, steering, suspension, emissions and structural condition need assessment beyond a
+  walk-round. Do not use a hill or emergency braking manoeuvre as a home MOT test, or go under an unsupported
+  car. If braking, steering or another safety issue concerns you, arrange professional advice before driving.</p>
+<p className="text-slate-600 leading-relaxed mb-4">A current MOT certificate does not make an unsafe car roadworthy. A past pass and an online comparison
+  cannot replace an inspection of its current condition.</p>
+<h2 className="font-serif text-2xl font-medium text-slate-900 mt-8 mb-4">After a failure or an advisory</h2>
+<p className="text-slate-600 leading-relaxed mb-4">Read the actual defect category and ask what needs repair. An advisory and a failed item are different
+  findings; neither an old advisory nor a model-group statistic diagnoses the car today. Keep evidence of
+  completed work with the vehicle's records.</p>
+<p className="text-slate-600 leading-relaxed mb-4">Retest charges depend on the circumstances. See the <a className="text-blue-700 underline" href="/guides/mot-cost">MOT fees and retest guide</a>
+  and <a className="text-blue-700 underline" href="https://www.gov.uk/getting-an-mot/after-the-test">official advice after the test</a> before
+  arranging repairs or driving the car away.</p>
 
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Tyres</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Tyres are a major safety item. Check all four plus your spare if you have one.
-          </p>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Tread depth:</strong> Minimum 1.6mm across the central 3/4 of the tyre</li>
-            <li><strong>Sidewall damage:</strong> Look for cuts, bulges, or cracking</li>
-            <li><strong>Correct size:</strong> All tyres should match the specifications for your vehicle</li>
-            <li><strong>Pressure:</strong> While not tested, incorrect pressure can cause uneven wear</li>
-          </ul>
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mt-4">
-            <p className="text-blue-900 text-sm">
-              <strong>Tip:</strong> Use a 20p coin to check tread depth. Insert it into the grooves -
-              if you can see the outer band of the coin, your tread may be too low.
-            </p>
-          </div>
-        </section>
+      <h2 className="font-serif text-2xl font-medium text-slate-900 mt-8 mb-4">Questions before your MOT</h2>
+<div className="my-4 rounded-lg bg-slate-50 p-5"><h3 className="font-medium text-slate-900 mb-2">Can this checklist guarantee an MOT pass?</h3><p className="text-slate-600">No. It helps with visible preparation checks but does not cover the full inspection. Brakes, suspension, emissions and other systems need professional assessment.</p></div>
+<div className="my-4 rounded-lg bg-slate-50 p-5"><h3 className="font-medium text-slate-900 mb-2">Does an old advisory mean my car still has that fault?</h3><p className="text-slate-600">Not necessarily. Read later records and repair receipts and ask a garage to assess the current condition. A historical entry alone does not show whether a fault remains.</p></div>
+<div className="my-4 rounded-lg bg-slate-50 p-5"><h3 className="font-medium text-slate-900 mb-2">Is the spare tyre part of the MOT?</h3><p className="text-slate-600">The MOT tyre inspection covers tyres fitted to the road wheels, not the spare. The spare can still matter for safe use, so follow the vehicle handbook.</p></div>
 
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Windscreen and Wipers</h2>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Chips and cracks:</strong> Damage needs assessment for its location, size and effect on the driver’s view. The 10mm zone A and 40mm swept-area thresholds are not automatic failure rules. See the <a href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles/3-visibility">DVSA visibility guidance</a></li>
-            <li><strong>Wiper blades:</strong> Should clear the screen effectively without smearing</li>
-            <li><strong>Washer jets:</strong> Must spray fluid onto the screen</li>
-            <li><strong>Washer fluid:</strong> Top up the reservoir</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Mirrors</h2>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Interior mirror:</strong> Must be present and securely attached</li>
-            <li><strong>Door mirrors:</strong> Both must be present, undamaged, and adjustable</li>
-            <li><strong>Visibility:</strong> No cracks or fogging that obscures the view</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Brakes</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            While you cannot test brake efficiency at home, you can check for obvious issues:
-          </p>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Brake fluid:</strong> Check the level is between min and max</li>
-            <li><strong>Warning light:</strong> Should go out after starting the engine</li>
-            <li><strong>Handbrake:</strong> Should hold the car on a hill and not travel too far</li>
-            <li><strong>Feel:</strong> Pedal should feel firm, not spongy</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Seatbelts</h2>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>All belts:</strong> Pull out and check for fraying or cuts</li>
-            <li><strong>Buckles:</strong> Should click securely and release cleanly</li>
-            <li><strong>Retraction:</strong> Belts should retract smoothly when released</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Horn</h2>
-          <p className="text-slate-600 leading-relaxed">
-            Simply press it - the horn must produce a consistent sound loud enough to warn others.
-          </p>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Number Plates</h2>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Legibility:</strong> All characters must be clearly readable</li>
-            <li><strong>Correct format:</strong> Must meet DVLA standards (no illegal spacing)</li>
-            <li><strong>Security:</strong> Plates must be securely fixed</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Fluid Levels</h2>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Engine oil:</strong> Between min and max on dipstick</li>
-            <li><strong>Coolant:</strong> Visible in the expansion tank (check when cold)</li>
-            <li><strong>Power steering fluid:</strong> If applicable, check the reservoir</li>
-          </ul>
-        </section>
-
-        <div className="p-6 bg-amber-50 border border-amber-200 rounded-lg">
-          <h3 className="font-medium text-amber-900 mb-2">Remember</h3>
-          <p className="text-amber-800">
-            This checklist covers items you can inspect yourself, but the MOT test is comprehensive.
-            Issues with suspension, emissions, or structural components require professional inspection.
-            If your car has warning lights on the dashboard, get these diagnosed before your MOT.
-          </p>
-        </div>
-      </div>
-    </GuideLayout>
-  );
-};
+    </div>
+  </GuideLayout>
+);
 
 export default MOTChecklist;

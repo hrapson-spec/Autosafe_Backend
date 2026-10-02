@@ -249,7 +249,7 @@ outcomes from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} r
     }
 </style>
 
-<h1>{{ display1 }} vs {{ display2 }} &mdash; MOT Failure Rate Comparison</h1>
+<h1>{% block comparison_heading %}{{ display1 }} vs {{ display2 }} &mdash; MOT Failure Rate Comparison{% endblock %}</h1>{% block pilot_intro %}{% endblock %}
 
 <!-- Side-by-side stat highlights -->
 <div class="compare-grid">
@@ -299,7 +299,7 @@ outcomes from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} r
     {% endif %}
 </div>
 
-<!-- Age-band comparison table -->
+{% block pilot_guidance %}{% endblock %}<!-- Age-band comparison table -->
 {% if age_bands1 and age_bands2 %}
 <h2>Failure Rate by Vehicle Age</h2>
 <p>How the {{ display1 }} and {{ display2 }} compare across different age groups:</p>
@@ -324,12 +324,12 @@ outcomes from {{ "{:,}".format(overall1.total_tests + overall2.total_tests) }} r
             <td>
                 <span class="fail-rate {% if band1.fail_rate <= band2.fail_rate %}low{% else %}high{% endif %}">
                     {{ "%.1f"|format(band1.fail_rate * 100) }}%
-                </span>
+                </span>{% block age_sample1 scoped %}{% endblock %}
             </td>
             <td>
                 <span class="fail-rate {% if band2.fail_rate <= band1.fail_rate %}low{% else %}high{% endif %}">
                     {{ "%.1f"|format(band2.fail_rate * 100) }}%
-                </span>
+                </span>{% block age_sample2 scoped %}{% endblock %}
             </td>
             <td>
                 {% if diff_val > 0 %}

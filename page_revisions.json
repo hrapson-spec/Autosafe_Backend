@@ -82,13 +82,13 @@
       }
     },
     "seo_pages.py": {
-      "sha256": "10571904e8e650dfdb8488b91c616411381f450fa7646e5405a26646063e80ac",
+      "sha256": "73b812af2244acfdc7db567ed47989348012e192b546296d378480a9b3cea453",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "Sitemap index tolerates an empty sub-sitemap (no output change when data is loaded)"
+        "reason": "Route five existing pilot pages to separate content templates; empty extension blocks preserve all other rendered pages and their revision dates"
       }
     },
     "templates/seo_base.html": {
@@ -142,23 +142,73 @@
       }
     },
     "templates/seo_model.html": {
-      "sha256": "1810a06b7d996f72fd282e84e76ce637c0e110f7899e40877d86294152002ae6",
+      "sha256": "b8050bf5f68061f4cf293b0386a8becb5a64a0dba096544e730f6d2ddfeeec1a",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "OA-006 B: age-band table cells rendered as plain text where no age-band page exists (link markup only)"
+        "reason": "Add scoped extension points and remove hidden FAQ markup only on pilot data pages; improve comparison contrast and display existing age-band sample evidence"
       }
     },
     "templates/seo_compare.html": {
-      "sha256": "4724de3b6ba54aecb547e149f86e441d693d49df29b2bc3b518feb3e81edfa8d",
+      "sha256": "f5f5fec37a2cfdc36655e154e085edddffcf613b0635d0488c12cb93e9a37b0c",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
       "last_change": {
-        "date": "2026-07-11",
-        "significant": true,
-        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Add scoped extension points and remove hidden FAQ markup only on pilot data pages; improve comparison contrast and display existing age-band sample evidence"
+      }
+    },
+    "templates/pilot_corsa.html": {
+      "sha256": "4d4470b4fa91484ff701ce3906cb5feeadc01e64dec69b5504ffc4d3b1c53795",
+      "significant_revision": "2026-10-02",
+      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "last_change": {
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+      }
+    },
+    "templates/pilot_c3.html": {
+      "sha256": "63b431c81efa54a76aac61c8b968e86d53be75501de6391a50aba0c4a2ef581d",
+      "significant_revision": "2026-10-02",
+      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "last_change": {
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+      }
+    },
+    "templates/pilot_clio208.html": {
+      "sha256": "e04dd38c53ddb60881542aef4062c20e35f4d9cf39406bc68159524063a9396b",
+      "significant_revision": "2026-10-02",
+      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "last_change": {
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+      }
+    },
+    "templates/pilot_polofiesta.html": {
+      "sha256": "f4a4a8276dca3e1f4bbce6f8e8ae355c735480db96be3ef82fc917c9490a0dc4",
+      "significant_revision": "2026-10-02",
+      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "last_change": {
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+      }
+    },
+    "templates/pilot_yarisjazz.html": {
+      "sha256": "a95495c50799a610e380b34c15bc17e329ca9393f09c90a75423f4a6db2c0ba5",
+      "significant_revision": "2026-10-02",
+      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "last_change": {
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
       }
     },
     "templates/seo_model_age.html": {
@@ -202,13 +252,13 @@
       }
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "d0725772da8c0b2e4937cbc7792c906f82c1ddd048c8503454d180910b55fce2",
+      "sha256": "90b6da74f872249e04b6a1e3fb3bbe82792bad98e4a80fb7feed9271129c9ab5",
       "significant_revision": "2026-10-02",
-      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
+      "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
         "date": "2026-10-02",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
       }
     },
     "static/guides/common-mot-failures.html": {
@@ -262,13 +312,13 @@
       }
     },
     "static/guides/mot-cost.html": {
-      "sha256": "716c270d502d2707514958802ba758ac20cf1bc1571c5cd33f3f4c7982d9c215",
+      "sha256": "c86fd6aa380a2b1ec517781a2e363347f41271960894387728668df93b6f2fa0",
       "significant_revision": "2026-10-02",
-      "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
+      "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
         "date": "2026-10-02",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
       }
     },
     "static/guides/mot-history-check.html": {

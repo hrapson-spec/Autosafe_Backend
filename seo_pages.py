@@ -20,6 +20,7 @@ import sqlite3
 import re
 from datetime import date
 from page_revisions import homepage_sources, page_lastmod
+from organic_pilot import MODEL_TEMPLATES, COMPARISON_TEMPLATES
 from repair_costs import REPAIR_COSTS, normalise_component_name
 from pathlib import Path
 
@@ -678,7 +679,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
         canonical_url = f"https://www.autosafe.one/mot-check/compare/{slug1}-vs-{slug2}/"
 
-        template = jinja_env.get_template("seo_compare.html")
+        template = jinja_env.get_template(COMPARISON_TEMPLATES.get(f"{slug1}-vs-{slug2}", "seo_compare.html"))
         html = template.render(
             display1=display1, display2=display2,
             make1_slug=make1_slug, model1_slug=model1_slug,
@@ -899,7 +900,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
         best_age = min(age_bands, key=lambda b: b["fail_rate"]) if age_bands else None
         worst_age = max(age_bands, key=lambda b: b["fail_rate"]) if age_bands else None
 
-        template = jinja_env.get_template("seo_model.html")
+        template = jinja_env.get_template(MODEL_TEMPLATES.get((make_slug, model_slug), "seo_model.html"))
         html = template.render(
             make_display=make_info["display"],
             make_slug=make_slug,
@@ -1300,9 +1301,12 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
     # comparison titles, 404 text and link selection) plus seo_base + its template.
     TEMPLATE_PAGE_SOURCES = ("seo_pages.py", "templates/seo_base.html")
 
-    def _template_lastmod(template_name: str) -> str:
+    def _template_lastmod(template_name: str, pilot_template: str | None = None) -> str:
         """lastmod for a dataset-rendering page built from seo_pages + seo_base + one template."""
-        return page_lastmod(*TEMPLATE_PAGE_SOURCES, f"templates/{template_name}",
+        sources = (*TEMPLATE_PAGE_SOURCES, f"templates/{template_name}")
+        if pilot_template:
+            sources += (f"templates/{pilot_template}",)
+        return page_lastmod(*sources,
                             dataset_revision=DATASET_ARTIFACT_REVISION)
 
     def _content_entries() -> list[tuple[str, str, str, str]]:
@@ -1335,17 +1339,17 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
 
     def _model_entries() -> list[tuple[str, str, str, str]]:
         base = "https://www.autosafe.one"
-        lastmod = _template_lastmod("seo_model.html")
-        return [(f"{base}/mot-check/{make_slug}/{model_slug}/", lastmod, "0.7", "monthly")
+        return [(f"{base}/mot-check/{make_slug}/{model_slug}/",
+                 _template_lastmod("seo_model.html", MODEL_TEMPLATES.get((make_slug, model_slug))), "0.7", "monthly")
                 for (make_slug, model_slug) in sorted(_model_by_slug.keys())]
 
     def _comparison_entries() -> list[tuple[str, str, str, str]]:
         base = "https://www.autosafe.one"
-        lastmod = _template_lastmod("seo_compare.html")
         entries = []
         for (make1, model1), (make2, model2) in COMPARISON_PAIRS:
             s1 = f"{_slugify(make1)}-{_slugify(model1)}"
             s2 = f"{_slugify(make2)}-{_slugify(model2)}"
+            lastmod = _template_lastmod("seo_compare.html", COMPARISON_TEMPLATES.get(f"{s1}-vs-{s2}"))
             entries.append((f"{base}/mot-check/compare/{s1}-vs-{s2}/", lastmod, "0.6", "monthly"))
         return entries
 

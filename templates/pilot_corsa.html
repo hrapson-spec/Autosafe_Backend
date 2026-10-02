@@ -1,0 +1,32 @@
+{% extends "seo_model.html" %}
+{% block title %}Vauxhall Corsa MOT Failure Rates &amp; Record Checks | AutoSafe{% endblock %}
+{% block meta_description %}Vauxhall Corsa MOT failure rates by age band, with test counts and component categories. See what the figures mean, then check a specific Corsa's MOT record.{% endblock %}
+{% block model_heading %}Vauxhall Corsa MOT Failure Rates and Record Checks{% endblock %}
+{% block pilot_intro %}
+<style>.data-table { display: block; max-width: 100%; overflow-x: auto; }</style>
+<p>Preparing your Corsa for its next MOT? Start with its own previous results and advisories, then use the age-band
+  table below to put the wider model-group figures in context. An old advisory is a reason to check what happened
+  next; it does not establish that the fault is still present.</p>
+{% endblock %}
+{% block pilot_guidance %}
+<div class="methodology">
+  <h2>Before your Corsa's next test</h2>
+  <ol>
+    <li>Read the latest MOT record and any earlier repeat advisories. Check repair invoices or ask your garage
+      whether the work was completed.</li>
+    <li>Find the closest age band below and read its test count alongside the rate. These records combine vehicles
+      with different mileages and histories; they do not isolate your Corsa's condition.</li>
+    <li>Use the <a href="/guides/mot-checklist">pre-MOT checklist</a> for visible checks. Have warning lights,
+      braking concerns or other faults assessed professionally.</li>
+  </ol>
+  <p><a href="/app">Check a Corsa registration</a> to see available MOT records and a clearly labelled result.
+    Depending on evidence, that result may be an estimate, comparison, reference or unavailable state.
+    None replaces an inspection.</p>
+</div>
+{% endblock %}
+{% block cta_heading %}Check a Specific Corsa{% endblock %}
+{% block cta_text %}Start with the registration. Read the recorded history and the result's evidence label before
+  deciding what needs a garage inspection.{% endblock %}
+
+{# No FAQ markup for a page without a visible question/answer section. Dataset schema remains. #}
+{% block model_faq %}{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "seo_compare.html" %}
+{% block title %}VW Polo vs Ford Fiesta: MOT Rates by Age | AutoSafe{% endblock %}
+{% block meta_description %}Volkswagen Polo vs Ford Fiesta MOT rates, age bands and recorded test counts. Understand the group comparison and check each car's own MOT history.{% endblock %}
+{% block comparison_heading %}Volkswagen Polo vs Ford Fiesta: MOT Rates by Age{% endblock %}
+{% block pilot_intro %}
+<style>
+.data-table, .compare-component-table { display: block; max-width: 100%; overflow-x: auto; }
+.compare-grid .stat-highlight h3 a { color: #1d4ed8 !important; }
+.verdict-box { background: #eef2f7; border-color: #64748b; }
+.verdict-box p, .compare-component-table th, .compare-component-table td { color: #334155; }
+.compare-component-table th, .compare-component-table td { border-color: #cbd5e1; }
+.compare-component-table .better { color: #166534; }
+.compare-component-table .worse { color: #b91c1c; }
+.age-sample { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #475569; }
+</style>
+<p>The Polo and Fiesta totals below may contain very different numbers of tests. Compare percentages with their
+  test counts and age bands; the larger number of recorded failures alone would not tell you which group had a
+  higher failure rate.</p>
+{% endblock %}
+{% block pilot_guidance %}
+<div class="methodology">
+  <h2>Use the tables when comparing a Polo and a Fiesta</h2>
+  <p>First compare the age band closest to each car, then read the component-category table for historical
+    context. A percentage-point gap is a difference between group rates, not an extra probability assigned to
+    the car in front of you. The groups are not matched for service history, condition or exact mileage.</p>
+  <p><a href="/app">Read each car's MOT record</a> before relying on a model average. Check what happened after
+    earlier failures and advisories, and ask for repair evidence. If budgeting for a test or retest, the
+    <a href="/guides/mot-cost">MOT cost guide</a> explains the fee rules separately from repair quotes.</p>
+</div>
+{% endblock %}
+
+{% block age_sample1 %}<span class="age-sample">{{ "{:,}".format(band1.total_tests) }} tests</span>{% endblock %}
+{% block age_sample2 %}<span class="age-sample">{{ "{:,}".format(band2.total_tests) }} tests</span>{% endblock %}
+{# No FAQ markup for a page without a visible question/answer section. #}
+{% block structured_data %}{% endblock %}

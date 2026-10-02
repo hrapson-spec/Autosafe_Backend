@@ -1,0 +1,36 @@
+{% extends "seo_compare.html" %}
+{% block title %}Toyota Yaris vs Honda Jazz: MOT History Comparison | AutoSafe{% endblock %}
+{% block meta_description %}Compare Toyota Yaris and Honda Jazz recorded MOT rates with age-band evidence. See why the model averages cannot identify the better individual used car.{% endblock %}
+{% block comparison_heading %}Toyota Yaris vs Honda Jazz: An MOT History Comparison{% endblock %}
+{% block pilot_intro %}
+<style>
+.data-table, .compare-component-table { display: block; max-width: 100%; overflow-x: auto; }
+.compare-grid .stat-highlight h3 a { color: #1d4ed8 !important; }
+.verdict-box { background: #eef2f7; border-color: #64748b; }
+.verdict-box p, .compare-component-table th, .compare-component-table td { color: #334155; }
+.compare-component-table th, .compare-component-table td { border-color: #cbd5e1; }
+.compare-component-table .better { color: #166534; }
+.compare-component-table .worse { color: #b91c1c; }
+.age-sample { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: #475569; }
+</style>
+<p>Choosing between a Yaris and a Jazz means checking the particular cars as well as the model names. This page
+  groups recorded MOT outcomes by model and age; it does not isolate an engine, transmission, hybrid variant
+  or generation.</p>
+{% endblock %}
+{% block pilot_guidance %}
+<div class="methodology">
+  <h2>Check the variant and the individual history</h2>
+  <p>Confirm the specification of each car with its seller. Do not apply the whole-model average as if it were
+    a figure for that exact variant. Read the age-band sample counts and compare the cars' own records for
+    repeat advisories and the sequence of failures, repairs and later tests.</p>
+  <p><a href="/app">Check the Yaris and Jazz registrations</a> and read the result labels. A recorded pass
+    describes the test on that date; it is not a current condition guarantee. Ask about repair evidence and
+    arrange an inspection for unresolved concerns. The <a href="/guides/mot-checklist">pre-MOT checklist</a>
+    can help with visible checks if you already own one of these cars.</p>
+</div>
+{% endblock %}
+
+{% block age_sample1 %}<span class="age-sample">{{ "{:,}".format(band1.total_tests) }} tests</span>{% endblock %}
+{% block age_sample2 %}<span class="age-sample">{{ "{:,}".format(band2.total_tests) }} tests</span>{% endblock %}
+{# No FAQ markup for a page without a visible question/answer section. #}
+{% block structured_data %}{% endblock %}
