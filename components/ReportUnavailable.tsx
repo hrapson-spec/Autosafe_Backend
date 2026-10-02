@@ -5,7 +5,7 @@
  * vehicle data -- its only prop is `reason` -- so a caller can never
  * accidentally leak report contents into an error state.
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle } from './Icons';
 import { Logo } from './Logo';
@@ -15,6 +15,12 @@ export type ReportUnavailableReason = 'expired' | 'not_found' | 'error';
 
 interface ReportUnavailableProps {
   reason: ReportUnavailableReason;
+  /**
+   * Optional post-commit hook, called once per mount with the fixed reason
+   * enum only (never data). Absent for the error-boundary fallback, which is
+   * a render failure, not a delivered unavailable view.
+   */
+  onShown?: (reason: ReportUnavailableReason) => void;
 }
 
 const COPY: Record<ReportUnavailableReason, { heading: string; body: string }> = {
@@ -32,9 +38,18 @@ const COPY: Record<ReportUnavailableReason, { heading: string; body: string }> =
   },
 };
 
-const ReportUnavailable: React.FC<ReportUnavailableProps> = ({ reason }) => {
+const ReportUnavailable: React.FC<ReportUnavailableProps> = ({ reason, onShown }) => {
   const navigate = useNavigate();
   const { heading, body } = COPY[reason];
+  const onShownRef = useRef(onShown);
+  useEffect(() => {
+    onShownRef.current = onShown;
+  });
+
+  // Declared after the ref-sync effect above so it always reads the latest callback.
+  useEffect(() => {
+    onShownRef.current?.(reason);
+  }, [reason]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">

@@ -56,6 +56,13 @@
     {% endfor %}
 </div>
 
+<h2>Recorded Component-Category Rates</h2>
+<div class="related-links">
+    {% for hub in component_hubs %}
+    <a href="/mot-check/problems/{{ hub.slug }}/">Highest Recorded {{ hub.name }} MOT Rates by Model</a>
+    {% endfor %}
+</div>
+
 <p style="margin-top:2rem;">Want to add your vehicle's recorded context? <a href="/" style="color: #e5c07b;">Use our free comparison tool</a> to see the closest available comparable-vehicle failure rate.</p>
 
 <div class="methodology">

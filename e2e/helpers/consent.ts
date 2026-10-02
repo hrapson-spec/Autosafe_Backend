@@ -38,3 +38,20 @@ export async function seedConsent(page: Page): Promise<void> {
     window.localStorage.setItem(key, 'declined');
   }, CONSENT_STORAGE_KEY);
 }
+
+/**
+ * Pre-seeds an explicit consent choice. Registered after the shared
+ * fixture's 'declined' seed, so (init scripts run in registration order) it
+ * wins. 'accepted' makes the root index.html bootstrap call
+ * autosafeLoadGtag() -- specs that use it must stub the gtag host
+ * themselves (see report-bearer-privacy.spec.ts) rather than reach the
+ * real network.
+ */
+export async function seedConsentChoice(page: Page, choice: 'accepted' | 'declined'): Promise<void> {
+  await page.addInitScript(
+    ([key, value]: [string, string]) => {
+      window.localStorage.setItem(key, value);
+    },
+    [CONSENT_STORAGE_KEY, choice] as [string, string]
+  );
+}

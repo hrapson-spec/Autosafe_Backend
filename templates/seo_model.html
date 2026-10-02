@@ -111,8 +111,8 @@ age-band and component-category sample evidence.{% endblock %}
   <tbody>
     {% for band in age_bands %}
     <tr>
-      <td><a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{
-        band.age_band }} years</a></td>
+      <td>{% if age_band_pages_enabled %}<a href="/mot-check/{{ make_slug }}/{{ model_slug }}/{{ band.age_band|replace('+', '-plus') }}-years/">{{
+        band.age_band }} years</a>{% else %}{{ band.age_band }} years{% endif %}</td>
       <td>{{ "%.1f"|format(band.fail_rate * 100) }}%</td>
       <td>{{ "{:,}".format(band.total_tests) }}</td>
       <td>{{ band.worst_component }}</td>

@@ -16,6 +16,7 @@ import { ReportApiError, mapErrorToMessage } from './services/errorMessages';
 import { AlertCircle, BrainCircuit, Database, Route } from './components/Icons';
 import { Logo } from './components/Logo';
 import { trackConversion, trackFunnel, trackPageView } from './utils/analytics';
+import { checkErrorCategory, emitAcquisitionEvent, newOperationId } from './utils/acquisitionEvents';
 
 interface HomePageProps {
   onSubmit: (data: RegistrationQuery) => void;
@@ -166,7 +167,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
               <Link to="/app/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
               <Link to="/app/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
-              <a href="mailto:feedback@autosafe.co.uk" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
+              <a href="mailto:autosafehq@gmail.com" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
             </div>
           </div>
 
@@ -183,7 +184,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [pendingRegistration] = useState(consumePendingRegistration);
-  const pendingSubmission = useRef<{ fingerprint: string; idempotencyKey: string } | null>(null);
+  const pendingSubmission = useRef<{ fingerprint: string; idempotencyKey: string; operationId: string } | null>(null);
 
   useEffect(() => {
     getPublicStats().then(setStats).catch(() => { });
@@ -200,11 +201,23 @@ const App: React.FC = () => {
 
     const fingerprint = `${registration.replace(/\s/g, '').toUpperCase()}|${postcode.replace(/\s/g, '').toUpperCase()}`;
     if (!pendingSubmission.current || pendingSubmission.current.fingerprint !== fingerprint) {
+      // A new logical operation: one random, input-independent operation id
+      // per deliberate check (OA-004). check_started is emitted once per
+      // logical operation; a retry of the same unresolved operation (same
+      // key above) keeps the id and does not announce a second start.
       pendingSubmission.current = {
         fingerprint,
         idempotencyKey: crypto.randomUUID(),
+        operationId: newOperationId(),
       };
+      emitAcquisitionEvent({
+        event: 'check_started',
+        operation_id: pendingSubmission.current.operationId,
+        entry_mode: 'fresh_check',
+      });
     }
+    const operationId = pendingSubmission.current.operationId;
+    let reportCreated = false;
 
     try {
       const report = await createReport(
@@ -219,8 +232,18 @@ const App: React.FC = () => {
       trackConversion('risk_check');
       trackFunnel('reg_entered');
 
+      reportCreated = true;
+      emitAcquisitionEvent({
+        event: 'report_created',
+        operation_id: operationId,
+        entry_mode: 'fresh_check',
+        result_kind: report.result_kind,
+        match_scope: report.evidence.match_scope,
+        persistence_mode: report.report_token ? 'saved' : 'inline_unsaved',
+      });
+
       if (report.report_token) {
-        navigate(`/app/report/${report.report_token}`, { state: { postcode } });
+        navigate(`/app/report/${report.report_token}`, { state: { postcode, operationId } });
       } else {
         // Persistence-degraded response: report_token is null, so there is
         // no share-token route to send the user to. Rather than fabricate
@@ -230,9 +253,18 @@ const App: React.FC = () => {
         // directly instead of fetching. Sharing is already honestly
         // disabled inside the report (persistence.share_available is
         // false), so nothing here implies a link that doesn't exist.
-        navigate('/app/report/unsaved', { state: { postcode, inlineReport: report } });
+        navigate('/app/report/unsaved', { state: { postcode, inlineReport: report, operationId } });
       }
     } catch (err) {
+      if (!reportCreated) {
+        emitAcquisitionEvent({
+          event: 'check_failed',
+          operation_id: operationId,
+          entry_mode: 'fresh_check',
+          error_category: checkErrorCategory(err),
+          stage: 'create_report',
+        });
+      }
       if (err instanceof ReportApiError) {
         // A 409 means the server has positively established that this key
         // cannot represent the pending operation. Reusing it would trap the
