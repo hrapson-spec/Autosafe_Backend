@@ -1,17 +1,24 @@
 # OA-005 v2 acceptance status — 2 October 2026
 
-The current candidate is `oa-journey-30m-v2`; **collection remains OFF**.
-The current specification is `COLLECTOR.md` and the privacy assessment is
-`../LIA_ACQUISITION_MEASUREMENT.md`. The privacy notice text is part of the enable gate.
+The current metric is `oa-journey-30m-v2`. The production acceptance gate passed;
+this release enables the paired client switches. See `ENABLEMENT_RECEIPT.md` for
+the staged/live receipt, corrected Railway mapping and release boundary.
+The current specification is `COLLECTOR.md`; the privacy assessment is
+`../LIA_ACQUISITION_MEASUREMENT.md`.
 
 Implemented: shared sessionStorage attribution without decorated links; a fixed
 30-minute admission/failure window; one raw/aggregate reducer; atomic aggregation
 and deletion; version/pilot aggregate keys; GPC and a visible objection switch;
 retired automatic Umami loading; fail-closed admission when deletion is overdue.
+The objection survives tab navigation if persistent preference storage fails.
 
-Local verification so far: 463 frontend tests; 208 focused backend/privacy/report
-checks with two skips; TypeScript and lint passed. Real PostgreSQL and real-image staging passed in CI run 36989872050, including HTTP receipt/dedup/GPC, failure precedence, aggregate deletion and disposable rollback. The browser run passed the new measurement-control journey but found two old tests still expecting retired Umami requests; those assertions have been corrected. Fresh CI, live migration, production synthetic receipt and client enablement remain pending. These local counts do not establish production
-collection or a running pilot. Additional changes require current reruns.
+Disabled-release CI passed all seven required jobs on 7eb85bb (run36990458018),
+including 46 Chromium cases and 167 PostgreSQL/SQLite staging checks (one skip).
+Production verified migration, receipt/dedup/GPC, real-time scheduled aggregation
+and deletion, expired replay rejection and disabled-ingest rollback. These tests
+use internal_test events and do not count as organic arrivals or pilot outcomes.
+The enabled browser release must pass its own CI and be verified live before the
+pilot clock starts. Preparation or a passing fixture does not establish traffic.
 
 The original v1 evidence below is retained as a historical record, **superseded
 for current behaviour and privacy claims**. It describes the old 90-day/raw and

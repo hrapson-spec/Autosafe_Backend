@@ -12,12 +12,9 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-// First-party acquisition measurement (OA-005). Order matters: the landing
-// handoff parameters are read and removed from the address bar here, before
-// React renders and therefore before the first page view is sent. The
-// transport installs only when ACQUISITION_COLLECTOR_ENABLED is true (it is
-// false, so the bundler also drops the transport code from the build);
-// initAcquisitionLanding then only strips `al`/`src` if present.
+// The shared head script owns bounded attribution and objection handling.
+// Install the gated transport, then copy that context before React renders.
+// Every send rechecks the live shared context, expiry and objection state.
 if (ACQUISITION_COLLECTOR_ENABLED) installAcquisitionTransport();
 initAcquisitionLanding();
 

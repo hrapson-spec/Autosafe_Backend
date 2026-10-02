@@ -8,7 +8,7 @@ function load(path='/guides/mot-cost', ref='https://www.google.com/search?q=PRIV
   history.replaceState(null,'',path);
   Object.defineProperty(document,'referrer',{value:ref,configurable:true});
   vi.spyOn(performance,'getEntriesByType').mockReturnValue(nav ? [{type:nav}] as unknown as PerformanceEntry[] : []);
-  window.eval(source.replace('var ENABLED = false;',`var ENABLED = ${enabled};`));
+  window.eval(source.replace(/var ENABLED = (true|false);/,`var ENABLED = ${enabled};`));
   document.dispatchEvent(new Event('DOMContentLoaded'));
 }
 beforeEach(() => {
@@ -65,7 +65,7 @@ describe('shared bounded journey attribution', () => {
     vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw Error('blocked');});
     load();expect(requests).toHaveLength(0);expect(lid()).toBeUndefined();
   });
-  it('default-disabled code stores and sends nothing', () => {
+  it('disabled code stores and sends nothing', () => {
     load('/guides/mot-cost','https://google.com/','navigate',false);
     expect(requests).toHaveLength(0);expect(sessionStorage.length).toBe(0);expect(localStorage.length).toBe(0);
   });
@@ -86,5 +86,19 @@ describe('shared bounded journey attribution', () => {
     expect(fetch).toHaveBeenCalledTimes(1);expect(lid()).toBeUndefined();
     load();expect(fetch).toHaveBeenCalledTimes(1);
     expect(document.querySelector<HTMLButtonElement>('#autosafe-measurement-control button')!.disabled).toBe(true);
+  });
+  it('keeps objection across tab navigation when localStorage reads work but writes fail', () => {
+    load();
+    const original = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype,'setItem').mockImplementation(function(this: Storage, key: string, value: string) {
+      if (this === localStorage) throw Error('quota');
+      return original.call(this,key,value);
+    });
+    document.querySelector<HTMLButtonElement>('#autosafe-measurement-control button')!.click();
+    expect(sessionStorage.getItem('autosafe_measurement_off')).toBe('1');
+    expect(document.body.textContent).toContain('beyond this tab');
+    expect(document.body.textContent).not.toContain('90 days');
+    load('/app','https://google.com/');
+    expect(requests).toHaveLength(1);expect(lid()).toBeUndefined();
   });
 });
