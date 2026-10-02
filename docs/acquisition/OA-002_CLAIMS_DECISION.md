@@ -1,14 +1,23 @@
 # OA-002 public-claims decision
 
-Decision date: 2026-10-02. This is a product-copy correction within the
-authorised organic-acquisition goal. It does not approve a new model, change
+Decision date: 2026-10-02. This records product-copy changes within the
+organic-acquisition work, with the owner's subsequent correction below. It does not approve a new model, change
 production inference settings, or establish predictive qualification.
+
+## Owner correction, 2026-10-02
+
+The owner rejected the homepage subtitle replacement and the change from
+"Free & instant" to "Free to check". Restore the original visible homepage
+subtitle, "1 in 4 cars fails its MOT. Will yours?", and the "Free & instant"
+badge. This supersedes the subtitle-removal decision in CL-001 below. These
+two changes had no measured SEO benefit; their restoration records the owner's
+copy instruction, not a new statistical or performance validation.
 
 ## Decisions
 
 | Claim | Decision and evidence boundary |
 |---|---|
-| CL-001 product modes | Use “MOT Records & Evidence” consistently in initial HTML and React metadata. Promise recorded information and labelled evidence, with availability stated. The existing `vehicle_prediction` path is described as a **model estimate**; comparisons remain historical group rates. Remove the unsupported “1 in 4 cars” headline statistic. Retain the previously owner-approved brand slogan. |
+| CL-001 product modes | Use “MOT Records & Evidence” consistently in initial HTML and React metadata. Promise recorded information and labelled evidence, with availability stated. The existing `vehicle_prediction` path is described as a **model estimate**; comparisons remain historical group rates. The earlier decision to remove the “1 in 4 cars” subtitle was superseded by the owner correction above. Retain the previously owner-approved brand slogan. |
 | CL-002 age rates | Withdraw conflicting age percentages and explanations about owner behaviour/survivorship from both public guide implementations. Do not select the alternative 39.78% figure merely because another page contains it. Publication of age rates needs compatible populations, periods, numerator, denominator and rounding evidence. |
 | CL-003 windscreen damage | Replace automatic-failure claims in static and React checklists. Explain that location, size and effect on the driver's view matter, with a direct link to the current DVSA manual. |
 | CL-004 source coverage | Retain only the reproducible dataset total and overall ratio as dataset facts: 148,509,908 tests; 39,969,903 failures; 26.9% rounded to one decimal. Source-record coverage dates are not established here. These are tests, not unique cars, and are not current annual or UK-wide rates. Withdraw unreviewed component/category percentages from the reviewed failure guides and checklist. |
