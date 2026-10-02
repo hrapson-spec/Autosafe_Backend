@@ -12,13 +12,13 @@
       }
     },
     "App.tsx": {
-      "sha256": "6b73211b7c2f1fe98a4865518cc931bf340f5cf72b8edb1ba2dc3389a3bae646",
+      "sha256": "e5ccf510261ad98a897e6208a87d20240ba96eb7cc9794c716ed4dd5a8de387d",
       "significant_revision": "2026-10-02",
-      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
+      "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction",
       "last_change": {
         "date": "2026-10-02",
         "significant": true,
-        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
+        "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction"
       }
     },
     "components/HeroForm.tsx": {

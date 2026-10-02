@@ -88,7 +88,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </h1>
 
               <p className="text-lg md:text-xl text-slate-500 font-light tracking-wide max-w-lg mx-auto font-sans">
-                Start with your MOT record. Know what to check next.
+                1 in 4 cars fails its MOT. Will yours?
               </p>
             </div>
 
@@ -105,7 +105,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 tracking-wide mt-4">
               <span>{stats ? `${stats.mot_records} recorded MOT tests analysed` : 'Recorded DVSA MOT tests'}</span>
               <span className="hidden md:inline" aria-hidden="true">&middot;</span>
-              <span>Free to check</span>
+              <span>Free &amp; instant</span>
             </div>
           </div>
 
