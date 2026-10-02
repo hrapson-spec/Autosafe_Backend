@@ -282,13 +282,13 @@
       }
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "90e21f44dfa9c2ed18aed0cf0473c31c828535d5cfdee1c664ecc662fad16ffe",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "9c8a352a869775eae100a1d42609d6475b78b9122f10ce428e4a225954cd522d",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance"
       }
     }
   }
