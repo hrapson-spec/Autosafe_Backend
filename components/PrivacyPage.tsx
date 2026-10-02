@@ -33,7 +33,7 @@ const PrivacyPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 1 October 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 2 October 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -102,7 +102,7 @@ const PrivacyPage: React.FC = () => {
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">First-party page and check-outcome measurement events: random identifiers, page category, arrival category, outcome category, release version, receipt time and an automated-request flag (see "First-party measurement" below)</td>
                     <td className="py-3 pr-4">Your browser, automatically</td>
-                    <td className="py-3">Yes - raw events for 90 days, then daily counts without identifiers for 25 months. No IP address, User-Agent, page address, referrer address, registration or postcode is stored with them</td>
+                    <td className="py-3">Raw events normally deleted within about 35 minutes; daily counts without identifiers kept for three calendar months. No IP address, User-Agent, page address, referrer address, registration or postcode is stored with them</td>
                   </tr>
                 </tbody>
               </table>
@@ -144,7 +144,7 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3">Legitimate interests - improving our service (aggregated data only)</td>
                   </tr>
                   <tr className="border-b border-slate-100">
-                    <td className="py-3 pr-4">Measuring whether visitors from search reach a displayed result (first-party, cookieless)</td>
+                    <td className="py-3 pr-4">Measuring whether visitors from search reach a displayed result (bounded first-party measurement)</td>
                     <td className="py-3">Legitimate interests - improving our service (see "First-party measurement" below)</td>
                   </tr>
                 </tbody>
@@ -197,7 +197,7 @@ const PrivacyPage: React.FC = () => {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Umami Analytics</td>
-                    <td className="py-3 pr-4">Aggregated website statistics</td>
+                    <td className="py-3 pr-4">Historical website statistics; new collection retired</td>
                     <td className="py-3">Self-hosted in the configured service region</td>
                   </tr>
                   <tr>
@@ -245,7 +245,7 @@ const PrivacyPage: React.FC = () => {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">First-party measurement events</td>
-                    <td className="py-3">Raw events deleted after 90 days; daily aggregate counts without identifiers kept for 25 months</td>
+                    <td className="py-3">Raw events normally deleted within about 35 minutes; daily aggregate counts without identifiers kept for three calendar months</td>
                   </tr>
                   <tr>
                     <td className="py-3 pr-4">Analytics data</td>
@@ -300,8 +300,7 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Cookies</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              We use cookieless Umami Analytics for aggregate page-view and website event statistics. Page views record only the page path (never query strings or saved-report links) and the referring site's domain; event payloads are configured without direct identifiers; like any web service, its hosting infrastructure may process network metadata such as an IP address for delivery and security.
-            </p>
+              Automatic Umami collection has been retired. Historical statistics remain separate from the bounded website measurement described below.</p>
             <p className="text-slate-600 leading-relaxed mb-4">
               Analytics events use a fixed allowlist and never include registration, postcode, email address or saved-report token. Automatic analytics are disabled on saved-report link routes, and those values are not placed in analytics URLs.
             </p>
@@ -310,38 +309,16 @@ const PrivacyPage: React.FC = () => {
             </p>
           </section>
 
-          <section className="mb-8">
+          <section id="website-measurement" className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">First-party measurement of visits and check outcomes</h2>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              We measure, in aggregate, whether visitors who arrive at our public pages from a search engine go on to see a result in the check tool. We use this only to improve the service. We do not use it for advertising, profiling or any decision about an individual.
-            </p>
-            <p className="text-slate-600 leading-relaxed mb-4"><strong>What each measurement event contains:</strong></p>
-            <ul className="text-slate-600 space-y-2 list-disc list-inside mb-4">
-              <li>the type of event: a public page or the check tool was opened, a check was started, a report was created, or a result was displayed, could not be shown or failed;</li>
-              <li>random identifiers created by your browser for the page visit, for the check and for the landing visit. They are not derived from your registration, postcode, report link or anything else you enter;</li>
-              <li>a page category (for example home page, guide, make page, model page or the check tool), not the page address;</li>
-              <li>where you arrived from, as one of: Google search, paid search, another search engine, another website, direct, our own site or unknown. Your browser works this out from the website domain that sent you, or from the presence of an advertising-click marker in the address you opened (the marker and its value are tested in your browser and are never sent or kept); we do not send or keep the address of the page that referred you;</li>
-              <li>category and yes/no values describing the outcome (for example the kind of result displayed and whether the report was saved), the software release version and the time we receive the event (recorded to the minute);</li>
-              <li>a yes/no flag, worked out from your browser's User-Agent when the event arrives, saying whether the request looks automated. We do not store the User-Agent.</li>
-            </ul>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              <strong>What we do not record in these events:</strong> your IP address (it is used in memory only, to limit abuse), User-Agent, the referring page, the page address or query string, registration number, postcode, saved-report link, vehicle make or model, any failure rate or sample size, email address, or any free text.
-            </p>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              <strong>How it works.</strong> The events are ordinary requests to our own server, like loading a page. Nothing is stored on, or read from, your device: no cookies, local storage, session storage or IndexedDB, and no fingerprinting. The random identifiers exist only in the page's memory. When you follow a link from one of our public pages to the check tool, a random identifier and the arrival category are added at the end of the link address, after a #, which browsers never send to any server; the tool removes them from the address bar as soon as it loads, before any other script runs, and does not store them. A reload or going back or forward is not counted as a new visit; a new tab or a typed address starts a new, separate measurement. On saved-report pages the same kind of event is sent without the report link or any part of it.
-            </p>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              <strong>Lawful basis.</strong> Legitimate interests (UK GDPR Article 6(1)(f)). Our interest is knowing whether the free service works for the people it is meant to reach, which also lets us fix broken journeys. The data is pseudonymous, minimal and short-lived.
-            </p>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              <strong>How long we keep it.</strong> Individual events are deleted after 90 days. Before then they are rolled up into daily counts, including daily counts of landing visits and of those that reached a displayed result, that contain no identifiers; those counts are kept for 25 months so that we can compare one year with the next.
-            </p>
-            <p className="text-slate-600 leading-relaxed mb-4">
-              <strong>Who can see it.</strong> The events are stored in our existing database, hosted by Railway (listed above); no new service provider is involved. Only the site operator can access them. There is no public dashboard.
-            </p>
-            <p className="text-slate-600 leading-relaxed">
-              <strong>How to object.</strong> If your browser sends a Global Privacy Control signal, we send and record nothing. You can also object by emailing <a href="mailto:autosafehq@gmail.com" className="text-blue-600 hover:underline">autosafehq@gmail.com</a>. Because the identifiers are random and not linked to you, we may not be able to find events that relate to you; the Global Privacy Control signal is the reliable way to opt out.
-            </p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Purpose.</strong> When website measurement is on, we use it only to understand and improve these pages and the check tool in aggregate. We do not use these observations for advertising, profiling or decisions about you, and do not link them to garage enquiries or customer records.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Browser storage.</strong> We keep a random arrival identifier, its start minute, a source category and a public pilot-page label in sessionStorage for a fixed 30-minute window. This lets a journey from a guide through a model page into the check tool retain its original arrival category. We do not add measurement identifiers to links. Reloads and back/forward navigation do not create another arrival. Some visits cannot be observed, including when storage is blocked or the window expires.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Events.</strong> Our server receives random event, document, arrival and check-operation identifiers; page, source and pilot categories; software version; coarse time; and yes/no or category values about a check or displayed result. A pilot label identifies one of a small set of public pages, not the vehicle you enter. No registration, postcode, customer identifier, report link, page/referrer address, query value, failure rate, sample size or free text is accepted. We exclude visits carrying recognised paid-click markers, without keeping their values. IP addresses are used in memory to limit abuse and User-Agent is used to classify likely automated traffic; neither is stored in the measurement rows.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Your choice.</strong> Use the measurement switch at the top of the page to turn it off, without charge or loss of access to the service. This clears the browser journey and stops further transmission, including retries. We remember only your off choice in localStorage for 90 days; it is not an identifier. Global Privacy Control also turns measurement off. Turning it on starts observation only on a later eligible arrival, not retrospectively.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Retention.</strong> The browser journey expires after 30 minutes. Every five minutes we aggregate closed journeys into daily counts and delete their individual events in the same transaction, normally within about 35 minutes of the journey starting. A processing outage can delay deletion; we stop new collection if deletion becomes overdue and investigate. The counts contain no random identifiers and are kept for three calendar months. Existing events follow this expiry even if you turn measurement off; we cannot undo a historical count for a particular person after its identifiers have been deleted.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Privacy basis.</strong> We assess browser storage and access under the PECR statistical-purposes exception, with clear information and a free way to object. Separately, our UK GDPR basis is legitimate interests in improving the service, Article 6(1)(f). Individual events are pseudonymous. We restrict access to the operator, minimise the data and prohibit linking it to other records. Small counts and coarse timestamps can still carry privacy risks, so detailed statistics are not public.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Hosting logs.</strong> Railway hosts the existing database and processes network metadata for delivery and security, including IP address, User-Agent, request path and timestamp. This is separate from our measurement rows. Its Hobby plan provides seven days of log availability, which is not a verified physical-deletion deadline. Our database deletion does not erase provider backups or platform logs. We do not use those logs to identify or enrich measurement journeys. Processing may take place outside the UK under the provider arrangements described above.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Contact.</strong> You can also object or ask about this processing at autosafehq@gmail.com. Because we do not attach measurement identifiers to your customer details and delete them promptly, we may be unable to locate past observations about you. We will explain any applicable limits when handling a rights request.</p>
           </section>
 
           <section className="mb-8">

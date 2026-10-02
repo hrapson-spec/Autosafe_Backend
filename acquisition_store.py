@@ -1,68 +1,61 @@
-"""Storage, retention and the primary-metric query for the first-party
-acquisition collector (OA-005, DECISIONS.md D-005).
+"""Bounded first-party service measurement. See docs/acquisition/COLLECTOR.md.
 
-Two backends share one interface:
-
-* ``PostgresStore``: production. Uses the existing asyncpg pool (``database.get_pool``)
-  against the existing Railway Postgres. No new processor.
-* ``SqliteStore``: local synthetic runs and tests only. It is selected solely
-  when ``ACQUISITION_SQLITE_PATH`` is set, which production never sets.
-
-Privacy boundary (D-005): a stored row holds only enums, booleans, random
-identifiers, the release SHA, ``received_at`` and the derived ``is_bot`` flag.
-No IP address, User-Agent, Referer, query string or URL ever reaches this
-module: ``AcquisitionRecord`` has no field that could carry one.
-
-Retention (D-005, D-007): raw events are rolled into ``acquisition_daily``
-(event counts) and ``acquisition_landing_daily`` (landing-level counts, so the
-primary metric stays reproducible after raw deletion) once they are older than
-one day, deleted after 90 days, and aggregates are deleted after 25 months. The rollup is exactly-once because each raw row is marked
-``rolled_up_at`` in the same transaction that adds it to the aggregate, so a
-rerun (or a concurrent second worker) cannot count a row twice.
+The v2 tables are separate from the unreleased v1 design. A journey has one
+fixed 30-minute receipt window. Inserts and finalisation share a database
+lock. Finalisation adds counts and deletes all closed individual events in
+one transaction. The same reducer defines raw and retained measurements.
+No customer/report identifiers, URL values or network metadata belong here.
 """
 from __future__ import annotations
-
 import asyncio
-import logging
 import os
 import sqlite3
 import uuid
-from dataclasses import dataclass, field, fields
+from collections import Counter, defaultdict
+from dataclasses import dataclass, fields, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence
 
-logger = logging.getLogger(__name__)
-
-# Retention constants (DECISIONS.md D-005 "Retention").
-ROLLUP_AFTER = timedelta(days=1)
-RAW_RETENTION = timedelta(days=90)
-AGGREGATE_RETENTION_MONTHS = 25
-
-# Aggregate day = UTC calendar day of received_at. MEASUREMENT.md requires the
-# onsite reporting timezone to be recorded independently; this is it.
+METRIC_VERSION = "oa-journey-30m-v2"
+WINDOW_MINUTES = 30
+RAW_RETENTION = ROLLUP_AFTER = timedelta(minutes=WINDOW_MINUTES)
+AGGREGATE_RETENTION_MONTHS = 3
 REPORTING_TIMEZONE = "UTC"
+PUBLIC_PAGE_FAMILIES = ("home", "guide", "make", "model", "comparison", "pillar", "problem_hub", "other_public")
+PILOT_GROUPS = ("none", "cost", "checklist", "corsa", "c3", "clio208", "polofiesta", "yarisjazz")
+_RETENTION_LOCK_KEY = 7_052_205
+_SCHEMA_LOCK_KEY = 7_052_206
+EVENTS = "acquisition_v2_events"
+DAILY = "acquisition_v2_daily"
+LANDINGS = "acquisition_v2_landing_daily"
 
-# Sentinel stored in the aggregate key for an absent optional dimension (a
-# NULL in a unique key would let duplicate keys coexist).
-NONE_KEY = "none"
 
-# Page families that count as an eligible *public* landing (MEASUREMENT.md:
-# "starts on a public landing page"). `app` is the product itself, not a public
-# landing page, and is reported separately.
-PUBLIC_PAGE_FAMILIES = (
-    "home",
-    "guide",
-    "make",
-    "model",
-    "comparison",
-    "pillar",
-    "problem_hub",
-    "other_public",
-)
+def utcnow():
+    return datetime.now(timezone.utc)
 
-# Advisory-lock key for the retention job. Arbitrary constant, unique to this job.
-_RETENTION_LOCK_KEY = 7_052_005
-_SCHEMA_LOCK_KEY = 7_052_006
+
+def _as_utc(value):
+    if value.tzinfo is None:
+        raise ValueError("naive datetime not allowed")
+    return value.astimezone(timezone.utc)
+
+
+def _iso(value):
+    return _as_utc(value).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def minute(value):
+    return int(_as_utc(value).timestamp() // 60)
+
+
+def months_before(day, months):
+    index = day.year * 12 + day.month - 1 - months
+    year, month0 = divmod(index, 12)
+    for d in (day.day, 30, 29, 28):
+        try:
+            return date(year, month0 + 1, d)
+        except ValueError:
+            pass
 
 
 @dataclass(frozen=True)
@@ -78,6 +71,8 @@ class AcquisitionRecord:
     page_family: str
     source_group: str
     is_bot: bool
+    window_start_minute: int
+    pilot_group: str
     release_sha: Optional[str] = None
     landing_id: Optional[str] = None
     operation_id: Optional[str] = None
@@ -97,17 +92,9 @@ class AcquisitionRecord:
     observation_state: Optional[str] = None
 
 
-COLUMNS: Sequence[str] = tuple(f.name for f in fields(AcquisitionRecord))
-
-AGGREGATE_KEY = (
-    "page_family",
-    "source_group",
-    "event",
-    "outcome_group",
-    "entry_mode",
-    "persistence_mode",
-    "is_bot",
-)
+COLUMNS = tuple(f.name for f in fields(AcquisitionRecord))
+LANDING_KEY = ("day", "metric_version", "source_group", "pilot_group", "page_family")
+EVENT_KEY = LANDING_KEY + ("event", "outcome_group", "entry_mode", "persistence_mode", "is_bot")
 
 
 @dataclass
@@ -122,471 +109,218 @@ class RetentionResult:
     notes: List[str] = field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
-# Time helpers
-# ---------------------------------------------------------------------------
+def ddl(pg):
+    types = {"received_at": "TIMESTAMPTZ" if pg else "TEXT", "window_start_minute": "BIGINT", "schema_version": "SMALLINT"}
+    for c in ("is_bot", "supported_result", "render_delivered", "rate_valid", "sample_nonzero", "scope_visible"):
+        types[c] = "BOOLEAN" if pg else "INTEGER"
+    for c in ("event_id", "session_id", "landing_id", "operation_id"):
+        types[c] = "UUID" if pg else "TEXT"
+    required = {"event_id", "received_at", "schema_version", "metric_version", "event", "session_id", "landing_id", "page_family", "source_group", "is_bot", "window_start_minute", "pilot_group"}
+    columns = ", ".join(c + " " + types.get(c, "TEXT") + (" PRIMARY KEY" if c == "event_id" else " NOT NULL" if c in required else "") for c in COLUMNS)
+    statements = [f"CREATE TABLE IF NOT EXISTS {EVENTS} ({columns})",
+                  f"CREATE INDEX IF NOT EXISTS idx_acq_v2_window ON {EVENTS} (window_start_minute)",
+                  f"CREATE INDEX IF NOT EXISTS idx_acq_v2_landing ON {EVENTS} (landing_id)"]
+    for table, keys, measures in ((DAILY, EVENT_KEY, ("count",)), (LANDINGS, LANDING_KEY, ("landings", "landings_with_supported_result"))):
+        cols = [f"{k} {'BOOLEAN' if pg else 'INTEGER'} NOT NULL" if k == "is_bot" else f"{k} TEXT NOT NULL" for k in keys]
+        cols += [f"{m} BIGINT NOT NULL" for m in measures]
+        statements.append(f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(cols)}, PRIMARY KEY ({', '.join(keys)}))")
+    return tuple(statements)
 
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+
+POSTGRES_DDL, SQLITE_DDL = ddl(True), ddl(False)
+POSTGRES_ROLLBACK_DDL = tuple(f"DROP TABLE IF EXISTS {t}" for t in (LANDINGS, DAILY, EVENTS))
 
 
-def months_before(day: date, months: int) -> date:
-    """Calendar-month subtraction, clamping the day (31 Mar - 1 month = 28/29 Feb)."""
-    index = day.year * 12 + (day.month - 1) - months
-    year, month0 = divmod(index, 12)
-    month = month0 + 1
-    for d in (day.day, 30, 29, 28):
-        try:
-            return date(year, month, d)
-        except ValueError:
+def admitted(rec, now):
+    # Checked again INSIDE the write lock. An old retry cannot recreate an
+    # already-finalised journey after its IDs have been deleted.
+    start = rec.window_start_minute
+    return (rec.metric_version == METRIC_VERSION and rec.schema_version == 2
+            and rec.landing_id is not None and rec.pilot_group in PILOT_GROUPS
+            and start <= minute(now) < start + WINDOW_MINUTES
+            and rec.source_group != "paid_search")
+
+
+def summarise(rows):
+    """One reducer for raw inspection AND rollup, including failure precedence.
+
+    Each tuple (version, landing_id, window start) is one journey. The route
+    and store prevent source/pilot drift. A completion requires a fresh
+    check_started and a supported, delivered render for the same operation;
+    any render_failed in that window cancels that operation. Another genuine
+    successful operation can still complete the journey. Restores never count.
+    """
+    events = Counter()
+    journeys = defaultdict(list)
+    for r in rows:
+        day = datetime.fromtimestamp(r["window_start_minute"] * 60, timezone.utc).date().isoformat()
+        key = (day, r["metric_version"], r["source_group"], r["pilot_group"], r["page_family"])
+        events[key + (r["event"], r["outcome_group"] or "none", r["entry_mode"] or "none", r["persistence_mode"] or "none", bool(r["is_bot"]))] += 1
+        journeys[(r["metric_version"], str(r["landing_id"]), r["window_start_minute"])].append(r)
+    landings = defaultdict(lambda: [0, 0])
+    for group in journeys.values():
+        arrivals = [r for r in group if r["event"] == "landing_observed" and not r["is_bot"] and r["observation_state"] == "observed"]
+        if not arrivals:
             continue
-    raise ValueError("unreachable")  # pragma: no cover
+        l = arrivals[0]
+        day = datetime.fromtimestamp(l["window_start_minute"] * 60, timezone.utc).date().isoformat()
+        key = (day, l["metric_version"], l["source_group"], l["pilot_group"], l["page_family"])
+        started = {str(r["operation_id"]) for r in group if r["event"] == "check_started" and r["operation_id"] and r["entry_mode"] == "fresh_check" and not r["is_bot"]}
+        failed = {str(r["operation_id"]) for r in group if r["event"] == "render_failed" and r["operation_id"] and not r["is_bot"]}
+        done = any(r["event"] == "result_rendered" and r["entry_mode"] == "fresh_check"
+                   and r["supported_result"] and r["render_delivered"] and not r["is_bot"]
+                   and str(r["operation_id"]) in started - failed for r in group)
+        landings[key][0] += 1
+        landings[key][1] += int(done)
+    return events, landings
 
 
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        raise ValueError("naive datetime not allowed")
-    return value.astimezone(timezone.utc)
+def metric(tally, from_day, to_day, pilot_group=None, metric_version=METRIC_VERSION):
+    den = num = 0
+    for (day, version, source, pilot, family), pair in tally.items():
+        if (str(from_day) <= day < str(to_day) and version == metric_version and source == "google_organic"
+                and family in PUBLIC_PAGE_FAMILIES and (pilot_group is None or pilot == pilot_group)):
+            den += pair[0]
+            num += pair[1]
+    return {"denominator": den, "numerator": num}
 
 
-def _iso(value: datetime) -> str:
-    """Fixed-width UTC ISO form: lexicographic order == chronological order."""
-    return _as_utc(value).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+def upsert_sql(table, keys, measures, pg):
+    cols = keys + measures
+    marks = ",".join(f"${i+1}" if pg else "?" for i in range(len(cols)))
+    assignments = ", ".join(f"{m} = {table}.{m} + excluded.{m}" for m in measures)
+    return f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({marks}) ON CONFLICT ({', '.join(keys)}) DO UPDATE SET {assignments}"
 
 
-# ---------------------------------------------------------------------------
-# DDL (shared by migrations/add_acquisition_tables.py and runtime ensure_schema)
-# ---------------------------------------------------------------------------
-
-POSTGRES_DDL: Sequence[str] = (
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_events (
-        id BIGSERIAL PRIMARY KEY,
-        event_id UUID NOT NULL,
-        received_at TIMESTAMPTZ NOT NULL,
-        rolled_up_at TIMESTAMPTZ,
-        schema_version SMALLINT NOT NULL,
-        metric_version VARCHAR(32) NOT NULL,
-        release_sha VARCHAR(40),
-        event VARCHAR(24) NOT NULL,
-        session_id UUID NOT NULL,
-        landing_id UUID,
-        operation_id UUID,
-        page_family VARCHAR(16) NOT NULL,
-        source_group VARCHAR(16) NOT NULL,
-        is_bot BOOLEAN NOT NULL,
-        entry_mode VARCHAR(16),
-        persistence_mode VARCHAR(16),
-        outcome_group VARCHAR(32),
-        supported_result BOOLEAN,
-        render_delivered BOOLEAN,
-        rate_valid BOOLEAN,
-        sample_nonzero BOOLEAN,
-        scope_visible BOOLEAN,
-        result_kind VARCHAR(24),
-        match_scope VARCHAR(24),
-        reason VARCHAR(16),
-        error_category VARCHAR(32),
-        stage VARCHAR(24),
-        observation_state VARCHAR(24),
-        CONSTRAINT uq_acquisition_events_event_id UNIQUE (event_id)
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_acquisition_events_received_at "
-    "ON acquisition_events (received_at)",
-    "CREATE INDEX IF NOT EXISTS idx_acquisition_events_unrolled "
-    "ON acquisition_events (received_at) WHERE rolled_up_at IS NULL",
-    "CREATE INDEX IF NOT EXISTS idx_acquisition_events_landing "
-    "ON acquisition_events (landing_id) WHERE landing_id IS NOT NULL",
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_daily (
-        day DATE NOT NULL,
-        page_family VARCHAR(16) NOT NULL,
-        source_group VARCHAR(16) NOT NULL,
-        event VARCHAR(24) NOT NULL,
-        outcome_group VARCHAR(32) NOT NULL DEFAULT 'none',
-        entry_mode VARCHAR(16) NOT NULL DEFAULT 'none',
-        persistence_mode VARCHAR(16) NOT NULL DEFAULT 'none',
-        is_bot BOOLEAN NOT NULL,
-        count BIGINT NOT NULL,
-        PRIMARY KEY (day, page_family, source_group, event, outcome_group,
-                     entry_mode, persistence_mode, is_bot)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_landing_daily (
-        day DATE NOT NULL,
-        source_group VARCHAR(16) NOT NULL,
-        page_family VARCHAR(16) NOT NULL,
-        landings BIGINT NOT NULL,
-        landings_with_supported_result BIGINT NOT NULL,
-        PRIMARY KEY (day, source_group, page_family)
-    )
-    """,
-)
-
-POSTGRES_ROLLBACK_DDL: Sequence[str] = (
-    "DROP TABLE IF EXISTS acquisition_landing_daily",
-    "DROP TABLE IF EXISTS acquisition_daily",
-    "DROP TABLE IF EXISTS acquisition_events",
-)
-
-SQLITE_DDL: Sequence[str] = (
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id TEXT NOT NULL UNIQUE,
-        received_at TEXT NOT NULL,
-        rolled_up_at TEXT,
-        schema_version INTEGER NOT NULL,
-        metric_version TEXT NOT NULL,
-        release_sha TEXT,
-        event TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        landing_id TEXT,
-        operation_id TEXT,
-        page_family TEXT NOT NULL,
-        source_group TEXT NOT NULL,
-        is_bot INTEGER NOT NULL,
-        entry_mode TEXT,
-        persistence_mode TEXT,
-        outcome_group TEXT,
-        supported_result INTEGER,
-        render_delivered INTEGER,
-        rate_valid INTEGER,
-        sample_nonzero INTEGER,
-        scope_visible INTEGER,
-        result_kind TEXT,
-        match_scope TEXT,
-        reason TEXT,
-        error_category TEXT,
-        stage TEXT,
-        observation_state TEXT
-    )
-    """,
-    "CREATE INDEX IF NOT EXISTS idx_acquisition_events_received_at "
-    "ON acquisition_events (received_at)",
-    "CREATE INDEX IF NOT EXISTS idx_acquisition_events_landing "
-    "ON acquisition_events (landing_id)",
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_daily (
-        day TEXT NOT NULL,
-        page_family TEXT NOT NULL,
-        source_group TEXT NOT NULL,
-        event TEXT NOT NULL,
-        outcome_group TEXT NOT NULL DEFAULT 'none',
-        entry_mode TEXT NOT NULL DEFAULT 'none',
-        persistence_mode TEXT NOT NULL DEFAULT 'none',
-        is_bot INTEGER NOT NULL,
-        count INTEGER NOT NULL,
-        PRIMARY KEY (day, page_family, source_group, event, outcome_group,
-                     entry_mode, persistence_mode, is_bot)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS acquisition_landing_daily (
-        day TEXT NOT NULL,
-        source_group TEXT NOT NULL,
-        page_family TEXT NOT NULL,
-        landings INTEGER NOT NULL,
-        landings_with_supported_result INTEGER NOT NULL,
-        PRIMARY KEY (day, source_group, page_family)
-    )
-    """,
-)
-
-# Completion rule shared by the raw metric and the landing-level rollup: a
-# supported result_rendered carrying the landing_id, unless render_failed exists
-# for the same operation (render_failed wins).
+def values(rec, pg):
+    out = []
+    for c in COLUMNS:
+        v = getattr(rec, c)
+        if pg and c in ("event_id", "session_id", "landing_id", "operation_id") and v is not None:
+            v = uuid.UUID(v)
+        if not pg and isinstance(v, datetime):
+            v = _iso(v)
+        out.append(v)
+    return out
 
 
-# ---------------------------------------------------------------------------
-# Primary-metric query (portable SQL: identical text runs on Postgres and SQLite)
-# ---------------------------------------------------------------------------
-
-def primary_metric_sql(style: str) -> str:
-    """Eligible organic landings (denominator) and those with a displayed
-    supported result sharing the landing_id (numerator).
-
-    ``style`` is ``"pg"`` ($1..$n placeholders) or ``"sqlite"`` (?).
-    Parameters: from_ts (inclusive), to_ts (exclusive).
-
-    * Landing: ``landing_observed``, ``source_group = 'google_organic'``
-      (so ``paid_search``, which wins over the referrer on the client, is in
-      neither numerator nor denominator: D-006), not a bot, public page
-      family. One row per landing_id.
-    * Completion: ``result_rendered`` with ``supported_result`` true carrying
-      that landing_id, excluding any operation that also has a
-      ``render_failed`` (render_failed wins, EVENT_SCHEMA_v1.md).
-    * The numerator counts a landing once however many results it rendered.
-    """
-    p1, p2 = ("$1", "$2") if style == "pg" else ("?", "?")
-    families = ", ".join("'%s'" % f for f in PUBLIC_PAGE_FAMILIES)
-    true_ = "TRUE" if style == "pg" else "1"
-    false_ = "FALSE" if style == "pg" else "0"
-    return f"""
-    WITH landings AS (
-        SELECT landing_id
-        FROM acquisition_events
-        WHERE event = 'landing_observed'
-          AND source_group = 'google_organic'
-          AND is_bot = {false_}
-          AND page_family IN ({families})
-          AND landing_id IS NOT NULL
-          AND received_at >= {p1} AND received_at < {p2}
-        GROUP BY landing_id
-    ),
-    completions AS (
-        SELECT DISTINCT r.landing_id
-        FROM acquisition_events r
-        WHERE r.event = 'result_rendered'
-          AND r.supported_result = {true_}
-          AND r.is_bot = {false_}
-          AND r.landing_id IS NOT NULL
-          AND NOT EXISTS (
-              SELECT 1 FROM acquisition_events f
-              WHERE f.event = 'render_failed'
-                AND r.operation_id IS NOT NULL
-                AND f.operation_id = r.operation_id
-          )
-    )
-    SELECT COUNT(*) AS denominator,
-           COUNT(c.landing_id) AS numerator
-    FROM landings l
-    LEFT JOIN completions c ON c.landing_id = l.landing_id
-    """
+def compatible(existing, rec):
+    return not existing or all(existing[c] == getattr(rec, c) for c in ("metric_version", "window_start_minute", "source_group", "pilot_group"))
 
 
-def landing_aggregate_sql(style: str) -> str:
-    """The primary metric from ``acquisition_landing_daily`` (counts only):
-    Google-organic landings on public page families (denominator) and those
-    with at least one supported displayed result (numerator), for UTC days
-    ``from_day <= day < to_day``. ``paid_search`` and every other source group
-    are excluded by the same ``source_group`` filter as the raw query.
-    Parameters: from_day, to_day."""
-    p1, p2 = ("$1", "$2") if style == "pg" else ("?", "?")
-    families = ", ".join("'%s'" % f for f in PUBLIC_PAGE_FAMILIES)
-    return f"""
-    SELECT COALESCE(SUM(landings), 0) AS denominator,
-           COALESCE(SUM(landings_with_supported_result), 0) AS numerator
-    FROM acquisition_landing_daily
-    WHERE source_group = 'google_organic'
-      AND page_family IN ({families})
-      AND day >= {p1} AND day < {p2}
-    """
+class _ReadMethods:
+    async def raw_metric(self, from_ts, to_ts, pilot_group=None):
+        rows = await self.fetch_all(f"SELECT * FROM {EVENTS}")
+        return metric(summarise(rows)[1], _as_utc(from_ts).date(), _as_utc(to_ts).date(), pilot_group)
+
+    async def landing_aggregate_metric(self, from_day, to_day, pilot_group=None):
+        rows = await self.fetch_all(f"SELECT * FROM {LANDINGS}")
+        tally = {tuple(r[k] for k in LANDING_KEY): (r["landings"], r["landings_with_supported_result"]) for r in rows}
+        return metric(tally, from_day, to_day, pilot_group)
+
+    async def primary_metric(self, from_ts, to_ts, pilot_group=None):
+        # Canonical completed-day reports use retained counts. Open windows
+        # are deliberately absent; raw_metric is explicitly provisional.
+        return await self.landing_aggregate_metric(_as_utc(from_ts).date(), _as_utc(to_ts).date(), pilot_group)
 
 
-# ---------------------------------------------------------------------------
-# SQLite backend (local synthetic runs and tests only)
-# ---------------------------------------------------------------------------
-
-def _sqlite_value(v: Any) -> Any:
-    if isinstance(v, bool):
-        return int(v)
-    if isinstance(v, datetime):
-        return _iso(v)
-    return v
+class RetentionOverdue(RuntimeError):
+    """Fixed error category; never include row data in this exception."""
 
 
-class SqliteStore:
-    """File-backed SQLite store. One short-lived connection per call; a
-    retention run holds ``BEGIN IMMEDIATE`` (the single-writer lock) for its
-    whole transaction, which is the SQLite analogue of the Postgres advisory
-    lock."""
-
+class SqliteStore(_ReadMethods):
     backend = "sqlite"
+    def __init__(self, path, clock=None):
+        self.path, self.clock = path, clock or (lambda: utcnow())
 
-    def __init__(self, path: str):
-        self.path = path
+    def _connect(self):
+        c = sqlite3.connect(self.path, timeout=5.0, isolation_level=None)
+        c.row_factory = sqlite3.Row
+        return c
 
-    def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path, timeout=5.0, isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        return conn
+    async def ensure_schema(self):
+        def work():
+            c = self._connect()
+            try:
+                for stmt in SQLITE_DDL:
+                    c.execute(stmt)
+            finally:
+                c.close()
+        await asyncio.to_thread(work)
 
-    # -- schema ------------------------------------------------------------
-    async def ensure_schema(self) -> None:
-        await asyncio.to_thread(self._ensure_schema)
-
-    def _ensure_schema(self) -> None:
-        conn = self._connect()
-        try:
-            for stmt in SQLITE_DDL:
-                conn.execute(stmt)
-        finally:
-            conn.close()
-
-    async def tables_exist(self) -> bool:
-        return await asyncio.to_thread(self._tables_exist)
-
-    def _tables_exist(self) -> bool:
+    async def tables_exist(self):
         if not os.path.exists(self.path):
             return False
-        conn = self._connect()
-        try:
-            names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        finally:
-            conn.close()
-        return {"acquisition_events", "acquisition_daily", "acquisition_landing_daily"} <= names
+        rows = await self.fetch_all("SELECT name FROM sqlite_master WHERE type='table'")
+        return {EVENTS, DAILY, LANDINGS} <= {r["name"] for r in rows}
 
-    # -- insert ------------------------------------------------------------
-    async def insert_event(self, rec: AcquisitionRecord) -> bool:
-        """True if a new row was written, False if event_id already existed."""
-        return await asyncio.to_thread(self._insert_event, rec)
-
-    def _insert_event(self, rec: AcquisitionRecord) -> bool:
-        conn = self._connect()
-        try:
-            cols = ", ".join(COLUMNS)
-            marks = ", ".join("?" for _ in COLUMNS)
-            cur = conn.execute(
-                f"INSERT OR IGNORE INTO acquisition_events ({cols}) VALUES ({marks})",
-                [_sqlite_value(getattr(rec, c)) for c in COLUMNS],
-            )
-            return cur.rowcount == 1
-        finally:
-            conn.close()
-
-    # -- retention ---------------------------------------------------------
-    async def run_retention(self, now: datetime) -> RetentionResult:
-        return await asyncio.to_thread(self._run_retention, now)
-
-    def _run_retention(self, now: datetime) -> RetentionResult:
-        now = _as_utc(now)
-        result = RetentionResult()
-        rollup_cutoff = _iso(now - ROLLUP_AFTER)
-        raw_cutoff = _iso(now - RAW_RETENTION)
-        agg_cutoff_day = months_before(now.date(), AGGREGATE_RETENTION_MONTHS)
-        result.raw_cutoff = raw_cutoff
-        result.aggregate_cutoff_day = agg_cutoff_day.isoformat()
-
-        conn = self._connect()
-        try:
-            conn.execute("BEGIN IMMEDIATE")
+    async def insert_event(self, rec):
+        def work():
+            c = self._connect()
             try:
-                key_cols = ", ".join(
-                    f"COALESCE({c}, '{NONE_KEY}')" if c in ("outcome_group", "entry_mode", "persistence_mode") else c
-                    for c in AGGREGATE_KEY
-                )
-                groups = conn.execute(
-                    f"SELECT substr(received_at, 1, 10) AS day, {key_cols}, COUNT(*) AS n "
-                    "FROM acquisition_events "
-                    "WHERE rolled_up_at IS NULL AND received_at < ? "
-                    "GROUP BY 1, 2, 3, 4, 5, 6, 7, 8",
-                    (rollup_cutoff,),
-                ).fetchall()
-                for g in groups:
-                    conn.execute(
-                        "INSERT INTO acquisition_daily "
-                        "(day, page_family, source_group, event, outcome_group, entry_mode, "
-                        " persistence_mode, is_bot, count) VALUES (?,?,?,?,?,?,?,?,?) "
-                        "ON CONFLICT (day, page_family, source_group, event, outcome_group, "
-                        "entry_mode, persistence_mode, is_bot) DO UPDATE SET count = count + excluded.count",
-                        tuple(g),
-                    )
-                # Landing-level counts, from the SAME rows the UPDATE below marks
-                # (computed first, inside the same transaction). A landing_id
-                # already counted by an earlier run is skipped.
-                landings = {}
-                for r in conn.execute(
-                    "SELECT landing_id, substr(received_at, 1, 10) AS day, source_group, page_family "
-                    "FROM acquisition_events a "
-                    "WHERE rolled_up_at IS NULL AND received_at < ? AND event = 'landing_observed' "
-                    "AND is_bot = 0 AND landing_id IS NOT NULL "
-                    "AND NOT EXISTS (SELECT 1 FROM acquisition_events p WHERE p.event = 'landing_observed' "
-                    "  AND p.landing_id = a.landing_id AND p.rolled_up_at IS NOT NULL) "
-                    "ORDER BY received_at, id",
-                    (rollup_cutoff,),
-                ).fetchall():
-                    landings.setdefault(r["landing_id"], (r["day"], r["source_group"], r["page_family"]))
-                tally = {}
-                for landing_id, (day, source_group, page_family) in landings.items():
-                    done = conn.execute(
-                        "SELECT 1 FROM acquisition_events r WHERE r.event = 'result_rendered' "
-                        "AND r.supported_result = 1 AND r.is_bot = 0 AND r.landing_id = ? "
-                        "AND NOT EXISTS (SELECT 1 FROM acquisition_events f WHERE f.event = 'render_failed' "
-                        "  AND r.operation_id IS NOT NULL AND f.operation_id = r.operation_id) LIMIT 1",
-                        (landing_id,),
-                    ).fetchone()
-                    t = tally.setdefault((day, source_group, page_family), [0, 0])
-                    t[0] += 1
-                    t[1] += 1 if done else 0
-                for (day, source_group, page_family), (n, d) in tally.items():
-                    conn.execute(
-                        "INSERT INTO acquisition_landing_daily "
-                        "(day, source_group, page_family, landings, landings_with_supported_result) "
-                        "VALUES (?,?,?,?,?) ON CONFLICT (day, source_group, page_family) DO UPDATE SET "
-                        "landings = landings + excluded.landings, "
-                        "landings_with_supported_result = landings_with_supported_result "
-                        "+ excluded.landings_with_supported_result",
-                        (day, source_group, page_family, n, d),
-                    )
-                result.rolled_up_landings = len(landings)
-                cur = conn.execute(
-                    "UPDATE acquisition_events SET rolled_up_at = ? "
-                    "WHERE rolled_up_at IS NULL AND received_at < ?",
-                    (_iso(now), rollup_cutoff),
-                )
-                result.rolled_up_events = cur.rowcount
-                # Anything past 90 days is already rolled up (the rollup cutoff is earlier).
-                cur = conn.execute(
-                    "DELETE FROM acquisition_events WHERE received_at < ? AND rolled_up_at IS NOT NULL",
-                    (raw_cutoff,),
-                )
-                result.deleted_raw_events = cur.rowcount
-                cur = conn.execute(
-                    "DELETE FROM acquisition_daily WHERE day < ?", (agg_cutoff_day.isoformat(),)
-                )
-                result.deleted_aggregate_rows = cur.rowcount
-                cur = conn.execute(
-                    "DELETE FROM acquisition_landing_daily WHERE day < ?", (agg_cutoff_day.isoformat(),)
-                )
-                result.deleted_aggregate_rows += cur.rowcount
-                conn.execute("COMMIT")
-            except BaseException:
-                conn.execute("ROLLBACK")
-                raise
-        finally:
-            conn.close()
-        return result
-
-    # -- read helpers ------------------------------------------------------
-    async def primary_metric(self, from_ts: datetime, to_ts: datetime) -> Dict[str, int]:
-        return await asyncio.to_thread(self._primary_metric, from_ts, to_ts)
-
-    def _primary_metric(self, from_ts: datetime, to_ts: datetime) -> Dict[str, int]:
-        conn = self._connect()
-        try:
-            row = conn.execute(primary_metric_sql("sqlite"), (_iso(from_ts), _iso(to_ts))).fetchone()
-            return {"denominator": row["denominator"], "numerator": row["numerator"]}
-        finally:
-            conn.close()
-
-    async def landing_aggregate_metric(self, from_day: date, to_day: date) -> Dict[str, int]:
-        sql = landing_aggregate_sql("sqlite")
-        rows = await self.fetch_all(sql, (from_day.isoformat(), to_day.isoformat()))
-        return {"denominator": int(rows[0]["denominator"]), "numerator": int(rows[0]["numerator"])}
-
-    async def fetch_all(self, sql: str, params: Sequence[Any] = ()) -> List[Dict[str, Any]]:
-        def _run() -> List[Dict[str, Any]]:
-            conn = self._connect()
-            try:
-                return [dict(r) for r in conn.execute(sql, params).fetchall()]
+                c.execute("BEGIN IMMEDIATE")
+                now = self.clock()
+                oldest = c.execute(f"SELECT MIN(window_start_minute) FROM {EVENTS}").fetchone()[0]
+                if oldest is not None and oldest < minute(now) - 35:
+                    c.execute("ROLLBACK")
+                    raise RetentionOverdue()
+                if not admitted(rec, now):
+                    c.execute("ROLLBACK")
+                    return False
+                old = c.execute(f"SELECT * FROM {EVENTS} WHERE landing_id = ? LIMIT 1", (rec.landing_id,)).fetchone()
+                if not compatible(old, rec):
+                    c.execute("ROLLBACK")
+                    return False
+                marks = ','.join('?' for _ in COLUMNS)
+                n = c.execute(f"INSERT OR IGNORE INTO {EVENTS} ({', '.join(COLUMNS)}) VALUES ({marks})", values(rec, False)).rowcount
+                c.execute("COMMIT")
+                return n == 1
             finally:
-                conn.close()
+                c.close()
+        return await asyncio.to_thread(work)
 
-        return await asyncio.to_thread(_run)
+    async def run_retention(self, now):
+        cutoff = minute(now) - WINDOW_MINUTES
+        agg_cutoff = months_before(_as_utc(now).date(), AGGREGATE_RETENTION_MONTHS).isoformat()
+        def work():
+            c = self._connect()
+            result = RetentionResult(raw_cutoff=str(cutoff), aggregate_cutoff_day=agg_cutoff)
+            try:
+                c.execute("BEGIN IMMEDIATE")
+                rows = [dict(r) for r in c.execute(f"SELECT * FROM {EVENTS} WHERE window_start_minute <= ?", (cutoff,))]
+                events, landings = summarise(rows)
+                for key, count in events.items():
+                    c.execute(upsert_sql(DAILY, EVENT_KEY, ("count",), False), key + (count,))
+                for key, pair in landings.items():
+                    c.execute(upsert_sql(LANDINGS, LANDING_KEY, ("landings", "landings_with_supported_result"), False), key + tuple(pair))
+                result.rolled_up_events = len(rows)
+                result.rolled_up_landings = sum(p[0] for p in landings.values())
+                result.deleted_raw_events = c.execute(f"DELETE FROM {EVENTS} WHERE window_start_minute <= ?", (cutoff,)).rowcount
+                for t in (DAILY, LANDINGS):
+                    result.deleted_aggregate_rows += c.execute(f"DELETE FROM {t} WHERE day < ?", (agg_cutoff,)).rowcount
+                c.execute("COMMIT")
+            except BaseException:
+                c.execute("ROLLBACK")
+                raise
+            finally:
+                c.close()
+            return result
+        return await asyncio.to_thread(work)
+
+    async def fetch_all(self, sql, params=()):
+        def work():
+            c = self._connect()
+            try:
+                return [dict(r) for r in c.execute(sql, params)]
+            finally:
+                c.close()
+        return await asyncio.to_thread(work)
 
 
-# ---------------------------------------------------------------------------
-# PostgreSQL backend (production)
-# ---------------------------------------------------------------------------
-
-class PostgresStore:
+class PostgresStore(_ReadMethods):
     backend = "postgres"
-
-    def __init__(self, get_pool):
-        self._get_pool = get_pool
+    def __init__(self, get_pool, clock=None):
+        self._get_pool, self.clock = get_pool, clock or (lambda: utcnow())
 
     async def _pool(self):
         pool = await self._get_pool()
@@ -594,193 +328,70 @@ class PostgresStore:
             raise RuntimeError("postgres pool unavailable")
         return pool
 
-    async def ensure_schema(self) -> None:
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            async with conn.transaction():
-                # Two workers (or a worker and the migration script) running
-                # CREATE TABLE IF NOT EXISTS at once can still collide inside
-                # Postgres; serialise the DDL on an advisory lock.
-                await conn.execute("SELECT pg_advisory_xact_lock($1)", _SCHEMA_LOCK_KEY)
+    async def ensure_schema(self):
+        async with (await self._pool()).acquire() as c:
+            async with c.transaction():
+                await c.execute("SELECT pg_advisory_xact_lock($1)", _SCHEMA_LOCK_KEY)
                 for stmt in POSTGRES_DDL:
-                    await conn.execute(stmt)
+                    await c.execute(stmt)
 
-    async def tables_exist(self) -> bool:
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT to_regclass('acquisition_events') IS NOT NULL AS a, "
-                "to_regclass('acquisition_daily') IS NOT NULL AS b, "
-                "to_regclass('acquisition_landing_daily') IS NOT NULL AS c"
-            )
-        return bool(row["a"] and row["b"] and row["c"])
+    async def tables_exist(self):
+        async with (await self._pool()).acquire() as c:
+            return all([await c.fetchval("SELECT to_regclass($1) IS NOT NULL", t) for t in (EVENTS, DAILY, LANDINGS)])
 
-    async def insert_event(self, rec: AcquisitionRecord) -> bool:
-        pool = await self._pool()
-        cols = ", ".join(COLUMNS)
-        marks = ", ".join(f"${i + 1}" for i in range(len(COLUMNS)))
-        sql = (
-            f"INSERT INTO acquisition_events ({cols}) VALUES ({marks}) "
-            "ON CONFLICT (event_id) DO NOTHING"
-        )
-        args = []
-        for c in COLUMNS:
-            v = getattr(rec, c)
-            if c in ("event_id", "session_id", "landing_id", "operation_id") and v is not None:
-                v = uuid.UUID(v)
-            args.append(v)
-        async with pool.acquire() as conn:
-            status = await conn.execute(sql, *args)
-        # asyncpg returns the command tag, e.g. "INSERT 0 1" or "INSERT 0 0".
-        return status.endswith(" 1")
+    async def insert_event(self, rec):
+        async with (await self._pool()).acquire() as c:
+            async with c.transaction():
+                # Exclusive also serialises first events for a journey, so
+                # parallel conflicting envelopes cannot both be admitted.
+                await c.execute("SELECT pg_advisory_xact_lock($1)", _RETENTION_LOCK_KEY)
+                now = self.clock()
+                oldest = await c.fetchval(f"SELECT MIN(window_start_minute) FROM {EVENTS}")
+                if oldest is not None and oldest < minute(now) - 35:
+                    raise RetentionOverdue()
+                if not admitted(rec, now):
+                    return False
+                old = await c.fetchrow(f"SELECT * FROM {EVENTS} WHERE landing_id = $1 LIMIT 1", uuid.UUID(rec.landing_id))
+                if not compatible(old, rec):
+                    return False
+                marks = ','.join(f'${i+1}' for i in range(len(COLUMNS)))
+                tag = await c.execute(f"INSERT INTO {EVENTS} ({', '.join(COLUMNS)}) VALUES ({marks}) ON CONFLICT (event_id) DO NOTHING", *values(rec, True))
+                return tag.endswith(" 1")
 
-    async def run_retention(self, now: datetime) -> RetentionResult:
-        now = _as_utc(now)
-        result = RetentionResult()
-        rollup_cutoff = now - ROLLUP_AFTER
-        raw_cutoff = now - RAW_RETENTION
-        agg_cutoff_day = months_before(now.date(), AGGREGATE_RETENTION_MONTHS)
-        result.raw_cutoff = raw_cutoff.isoformat()
-        result.aggregate_cutoff_day = agg_cutoff_day.isoformat()
-
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            async with conn.transaction():
-                # Transaction-scoped advisory lock: with `uvicorn --workers 2`
-                # both workers run this at startup; the second skips. The lock
-                # releases automatically at commit/rollback.
-                got = await conn.fetchval("SELECT pg_try_advisory_xact_lock($1)", _RETENTION_LOCK_KEY)
-                if not got:
+    async def run_retention(self, now):
+        cutoff = minute(now) - WINDOW_MINUTES
+        agg_cutoff = months_before(_as_utc(now).date(), AGGREGATE_RETENTION_MONTHS).isoformat()
+        result = RetentionResult(raw_cutoff=str(cutoff), aggregate_cutoff_day=agg_cutoff)
+        async with (await self._pool()).acquire() as c:
+            async with c.transaction():
+                if not await c.fetchval("SELECT pg_try_advisory_xact_lock($1)", _RETENTION_LOCK_KEY):
                     result.skipped_locked = True
                     return result
-                # Mark + aggregate in ONE statement: the rows that are marked
-                # are exactly the rows that are counted, so a rerun cannot
-                # double count.
-                rolled_row = await conn.fetchrow(
-                    """
-                    WITH moved AS (
-                        UPDATE acquisition_events
-                           SET rolled_up_at = $1
-                         WHERE rolled_up_at IS NULL AND received_at < $2
-                     RETURNING (received_at AT TIME ZONE 'UTC')::date AS day,
-                               page_family, source_group, event,
-                               COALESCE(outcome_group, 'none') AS outcome_group,
-                               COALESCE(entry_mode, 'none') AS entry_mode,
-                               COALESCE(persistence_mode, 'none') AS persistence_mode,
-                               is_bot, landing_id
-                    ),
-                    agg AS (
-                        SELECT day, page_family, source_group, event, outcome_group,
-                               entry_mode, persistence_mode, is_bot, COUNT(*) AS n
-                          FROM moved
-                         GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
-                    ),
-                    ins AS (
-                        INSERT INTO acquisition_daily
-                            (day, page_family, source_group, event, outcome_group,
-                             entry_mode, persistence_mode, is_bot, count)
-                        SELECT day, page_family, source_group, event, outcome_group,
-                               entry_mode, persistence_mode, is_bot, n FROM agg
-                        ON CONFLICT (day, page_family, source_group, event, outcome_group,
-                                     entry_mode, persistence_mode, is_bot)
-                        DO UPDATE SET count = acquisition_daily.count + EXCLUDED.count
-                        RETURNING 1
-                    ),
-                    land AS (
-                        SELECT m.landing_id, MIN(m.day) AS day, MIN(m.source_group) AS source_group,
-                               MIN(m.page_family) AS page_family
-                          FROM moved m
-                         WHERE m.event = 'landing_observed' AND NOT m.is_bot AND m.landing_id IS NOT NULL
-                           AND NOT EXISTS (SELECT 1 FROM acquisition_events p
-                                            WHERE p.event = 'landing_observed'
-                                              AND p.landing_id = m.landing_id
-                                              AND p.rolled_up_at IS NOT NULL)
-                         GROUP BY m.landing_id
-                    ),
-                    land_done AS (
-                        SELECT l.day, l.source_group, l.page_family,
-                               EXISTS (
-                                   SELECT 1 FROM acquisition_events r
-                                    WHERE r.event = 'result_rendered' AND r.supported_result
-                                      AND NOT r.is_bot AND r.landing_id = l.landing_id
-                                      AND NOT EXISTS (SELECT 1 FROM acquisition_events f
-                                                       WHERE f.event = 'render_failed'
-                                                         AND r.operation_id IS NOT NULL
-                                                         AND f.operation_id = r.operation_id)
-                               ) AS done
-                          FROM land l
-                    ),
-                    land_agg AS (
-                        SELECT day, source_group, page_family, COUNT(*) AS n,
-                               COUNT(*) FILTER (WHERE done) AS d
-                          FROM land_done GROUP BY 1, 2, 3
-                    ),
-                    ins2 AS (
-                        INSERT INTO acquisition_landing_daily
-                            (day, source_group, page_family, landings, landings_with_supported_result)
-                        SELECT day, source_group, page_family, n, d FROM land_agg
-                        ON CONFLICT (day, source_group, page_family)
-                        DO UPDATE SET
-                            landings = acquisition_landing_daily.landings + EXCLUDED.landings,
-                            landings_with_supported_result =
-                                acquisition_landing_daily.landings_with_supported_result
-                                + EXCLUDED.landings_with_supported_result
-                        RETURNING 1
-                    )
-                    SELECT COALESCE((SELECT SUM(n) FROM agg), 0)::bigint,
-                           COALESCE((SELECT SUM(n) FROM land_agg), 0)::bigint
-                    """,
-                    now,
-                    rollup_cutoff,
-                )
-                result.rolled_up_events = int(rolled_row[0] or 0)
-                result.rolled_up_landings = int(rolled_row[1] or 0)
-                tag = await conn.execute(
-                    "DELETE FROM acquisition_events WHERE received_at < $1 AND rolled_up_at IS NOT NULL",
-                    raw_cutoff,
-                )
+                rows = [dict(r) for r in await c.fetch(f"SELECT * FROM {EVENTS} WHERE window_start_minute <= $1", cutoff)]
+                events, landings = summarise(rows)
+                for key, count in events.items():
+                    await c.execute(upsert_sql(DAILY, EVENT_KEY, ("count",), True), *key, count)
+                for key, pair in landings.items():
+                    await c.execute(upsert_sql(LANDINGS, LANDING_KEY, ("landings", "landings_with_supported_result"), True), *key, *pair)
+                result.rolled_up_events = len(rows)
+                result.rolled_up_landings = sum(p[0] for p in landings.values())
+                tag = await c.execute(f"DELETE FROM {EVENTS} WHERE window_start_minute <= $1", cutoff)
                 result.deleted_raw_events = int(tag.split()[-1])
-                tag = await conn.execute(
-                    "DELETE FROM acquisition_daily WHERE day < $1", agg_cutoff_day
-                )
-                result.deleted_aggregate_rows = int(tag.split()[-1])
-                tag = await conn.execute(
-                    "DELETE FROM acquisition_landing_daily WHERE day < $1", agg_cutoff_day
-                )
-                result.deleted_aggregate_rows += int(tag.split()[-1])
+                for t in (DAILY, LANDINGS):
+                    tag = await c.execute(f"DELETE FROM {t} WHERE day < $1", agg_cutoff)
+                    result.deleted_aggregate_rows += int(tag.split()[-1])
         return result
 
-    async def primary_metric(self, from_ts: datetime, to_ts: datetime) -> Dict[str, int]:
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(primary_metric_sql("pg"), _as_utc(from_ts), _as_utc(to_ts))
-        return {"denominator": int(row["denominator"]), "numerator": int(row["numerator"])}
+    async def fetch_all(self, sql, params=()):
+        async with (await self._pool()).acquire() as c:
+            return [dict(r) for r in await c.fetch(sql, *params)]
 
-    async def landing_aggregate_metric(self, from_day: date, to_day: date) -> Dict[str, int]:
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(landing_aggregate_sql("pg"), from_day, to_day)
-        return {"denominator": int(row["denominator"]), "numerator": int(row["numerator"])}
-
-    async def fetch_all(self, sql: str, params: Sequence[Any] = ()) -> List[Dict[str, Any]]:
-        pool = await self._pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(sql, *params)
-        return [dict(r) for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# Backend selection
-# ---------------------------------------------------------------------------
 
 def select_store():
-    """SQLite only when explicitly asked (local/test); else Postgres when
-    DATABASE_URL is configured; else None (collector cannot record)."""
     path = os.environ.get("ACQUISITION_SQLITE_PATH")
     if path:
         return SqliteStore(path)
     if os.environ.get("DATABASE_URL"):
-        import database as db
-
-        return PostgresStore(db.get_pool)
+        import database
+        return PostgresStore(database.get_pool)
     return None

@@ -2,13 +2,13 @@
   "_rule": "lastmod = max(dataset artifact revision where the page renders dataset figures, significant_revision of every source that renders the page). significant_revision moves only when the author records a change as --significant (main content); boilerplate, footer, markup, styling, analytics and language-tag edits are --non-significant. No runtime clock is used.",
   "files": {
     "index.html": {
-      "sha256": "64ce5959fb5cccddc931adb0c47465016ed255cdd2e1b39afd8c3f354b92e3e9",
+      "sha256": "97b3574920c1827340fd98053d7b86c42c3f70cf09967a58f219c8fa4dc4ffd3",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "App.tsx": {
@@ -92,23 +92,23 @@
       }
     },
     "templates/seo_base.html": {
-      "sha256": "6c89210ee298dafca13fab8f7cd4857b70c29214b8e31575d2cabd396a37fdc1",
+      "sha256": "384bcaab07b37d96dd71ab3a93ed44cd76bcbff54a86c0e51632f1f4758545d3",
       "significant_revision": "2026-02-06",
       "reason": "6b9ff53 2026-02-06: shared layout created; every later edit (disclaimer footer, nav/CTA copy, consent gate, styling, Umami tag, footer link targets, lang) is boilerplate",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 C footer links to /terms,/privacy; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "templates/seo_index.html": {
-      "sha256": "88a00cfa3c6e97abd2cb4783ca5f0bb5cd6c48477b5b5e43f8b08b818bd3b0ac",
+      "sha256": "c0009297b6b15f4ba3517f8c30a53b6941d4a16dbb16aa611f0d031c732904ff",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "OA-006 D navigation links to the seven component hubs (lead ruling: non-significant)"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "templates/seo_pillar_k7.html": {
@@ -132,13 +132,13 @@
       }
     },
     "templates/seo_make.html": {
-      "sha256": "a29c88ef2a66c8c6a85eb3e61ea5003f3786a1511bc7276c38030e535c87a0b4",
+      "sha256": "b86ee31814ff7a00ef0c907c208235c90680a614807711c9653e19aab8fb3591",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy",
       "last_change": {
-        "date": "2026-07-11",
-        "significant": true,
-        "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy"
+        "date": "2026-10-02",
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "templates/seo_model.html": {
@@ -182,113 +182,113 @@
       }
     },
     "static/terms.html": {
-      "sha256": "6c0d4ff118efcb94c803df26ba99df4dcf9aff0a47c5021936e839f8f35a9bd9",
+      "sha256": "cdc86afa4623f1282cca58d2652f3eea42c7112554353578ed6c6ac90ca8afdc",
       "significant_revision": "2026-07-17",
       "reason": "85f737d 2026-07-17: legal copy describes both result states",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/privacy.html": {
-      "sha256": "c57b9a120fd08c73ac2ef7ecfbe1eb950daad03e650d81a32faeedb30469b148",
+      "sha256": "c54740e10876ae550021a3e4de7505f293b4884958d2bca5a500b6840b99d6f7",
       "significant_revision": "2026-07-17",
       "reason": "c37c75e 2026-07-17: privacy notice wording for report result states",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "4e4f162bb6f5542ae7417812137c513cbf38b2f9b232fd8fdddf25b5439ae058",
+      "sha256": "d0725772da8c0b2e4937cbc7792c906f82c1ddd048c8503454d180910b55fce2",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/common-mot-failures.html": {
-      "sha256": "b005a3a786e5f4998b9b7d8d85bb92b35aadbe628ec05e4e6a258c68cdec6098",
+      "sha256": "1656e25002ea93607647e8c564b145eae11b3aeec8746f4bdfdd7234165e7908",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/when-is-mot-due.html": {
-      "sha256": "b3cd58e6cbec07edf09e11a3c982f00cb8c6455ba7d32c392c60064c1b50bd6d",
+      "sha256": "e91c0b0a545bf6de27fc77849002111f5cbdca5353ad908169fe91f4f951f986",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-failure-rates-by-car.html": {
-      "sha256": "4cda0e4e8894642c02e9855a01de9ad8c00f17a5f16e6ab72586733d24c382b6",
+      "sha256": "82d51467c8688851806749b7c4a686ce719e583f65e06d6b0742164ad8d68ca6",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-rules-2026.html": {
-      "sha256": "f7bf312643ec3adf1928936b3abc6e8a9b58ea037602253b1f820b7b98a0fc58",
+      "sha256": "634843e5a191afd653eaf7a47201a6671599db493f1cbbb31bcad7065fd94ed8",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-defect-categories.html": {
-      "sha256": "6af32307026456d913a0db3ea9b0d694dfad3b30d68f9762c8d4f84b024dc43c",
+      "sha256": "8efd6d0f0df90ddb7f367d72b8270f17f379df321f866dbe946bae99216273ab",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-cost.html": {
-      "sha256": "c25a3dbe17c5db1d3d0f3c881feb6cb88eae29c517929391bbd96ea8500acb74",
+      "sha256": "716c270d502d2707514958802ba758ac20cf1bc1571c5cd33f3f4c7982d9c215",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/mot-history-check.html": {
-      "sha256": "1901d2997b97f3dceb98a6e9b7d8aaa853a72cfe2351db7d9ff2614eb066b3ff",
+      "sha256": "c6cc447caef64943c305c13fc2e3e9796204cc24dcdc223c82ccec9a7a429e9b",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-01",
+        "date": "2026-10-02",
         "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "9c8a352a869775eae100a1d42609d6475b78b9122f10ce428e4a225954cd522d",
+      "sha256": "34925e3d3110124847115524b79487c6079a91e0a1a662b2a91cd27979268fa4",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": true,
-        "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance"
+        "significant": false,
+        "reason": "Bounded measurement and privacy controls; no main public-page content change"
       }
     }
   }

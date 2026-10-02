@@ -1,7 +1,7 @@
 /**
  * Test-only helper (not imported by the app): a deliberately small JSON
  * Schema checker covering exactly the keywords docs/acquisition/
- * event_schema_v1.json uses -- type, const, enum, pattern, required,
+ * event_schema_v2.json uses -- type, const, enum, pattern, required,
  * properties, additionalProperties:false, oneOf, allOf, if/then, not.
  * No runtime dependency is added. It is a hand check of the documented
  * schema shape, not a general validator.
@@ -14,7 +14,7 @@ type Schema = { [k: string]: Json };
 
 export function loadEventSchema(): Schema {
   // vitest runs from the repository root (jsdom's import.meta.url is not a file URL).
-  const file = resolve(process.cwd(), 'docs/acquisition/event_schema_v1.json');
+  const file = resolve(process.cwd(), 'docs/acquisition/event_schema_v2.json');
   return JSON.parse(readFileSync(file, 'utf8')) as Schema;
 }
 

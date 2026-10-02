@@ -1,3 +1,27 @@
+# OA-005 v2 acceptance status — 2 October 2026
+
+The current candidate is `oa-journey-30m-v2`; **collection remains OFF**.
+The current specification is `COLLECTOR.md` and the privacy assessment is
+`../LIA_ACQUISITION_MEASUREMENT.md`. The privacy notice text is part of the enable gate.
+
+Implemented: shared sessionStorage attribution without decorated links; a fixed
+30-minute admission/failure window; one raw/aggregate reducer; atomic aggregation
+and deletion; version/pilot aggregate keys; GPC and a visible objection switch;
+retired automatic Umami loading; fail-closed admission when deletion is overdue.
+
+Local verification so far: 463 frontend tests; 208 focused backend/privacy/report
+checks with two skips; TypeScript and lint passed. Real PostgreSQL concurrency,
+real-image staging, live database migration, production synthetic receipt and
+client enablement remain pending. These local counts do not establish production
+collection or a running pilot. Additional changes require current reruns.
+
+The original v1 evidence below is retained as a historical record, **superseded
+for current behaviour and privacy claims**. It describes the old 90-day/raw and
+25-month/aggregate policy and fragment attribution, which must not be used as
+the v2 enable receipt.
+
+---
+
 # OA-005 evidence: first-party acquisition collector (collection OFF)
 
 Branch `oa/005-first-party-collector`, stacked on `oa/004-render-acknowledgement` at

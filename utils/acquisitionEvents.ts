@@ -1,36 +1,8 @@
-/**
- * Acquisition measurement events (OA-004 interface) and first-party transport
- * (OA-005, DECISIONS.md D-005). Collection is OFF.
- *
- * `ACQUISITION_COLLECTOR_ENABLED` is false. Until it is true no transport is
- * installed: events go to the default no-op sink and nothing is sent. The
- * flag flips only at the D-005 enable gate (docs/acquisition/COLLECTOR.md).
- *
- * When enabled, the sink POSTs each event once (one retry on network error or
- * 5xx within 10 s, same event_id; never on 4xx/429) to the same-origin
- * `/api/acquisition/events` with keepalive, no credentials, no referrer and no
- * cache. There is no queue and no persistence: no cookies, localStorage,
- * sessionStorage or IndexedDB. `navigator.globalPrivacyControl === true`
- * sends nothing. Every identifier is random, per page load, memory only, and
- * never derived from an input: `session_id` (one per document),
- * `operation_id` (one per deliberate check), `landing_id` (see
- * utils/acquisitionLanding.ts).
- *
- * Safe-field rule (see docs/acquisition/EVENT_SCHEMA_v1.md): every value an
- * event carries is an enum, a boolean, or a random identifier. Never the
- * headline risk, a sample count, a report token or id, a registration,
- * postcode, make/model, URL, referrer, error message or free text.
- * `acquisitionEvents.test.ts` serialises every event type and asserts this.
- *
- * Deduplication state is MEMORY ONLY: it survives remounts and React
- * StrictMode effect replays within one page load, and does NOT survive a
- * reload. Note that browsers keep history.state across a reload, so a
- * reloaded fresh-check report route still carries its operation id and may
- * emit a second result_rendered for the same operation; the collector's
- * per-landing aggregation (not this module) counts a landing once.
- *
- * Acknowledgements are client-reported. They prove neither accuracy nor
- * model qualification.
+/** Client render acknowledgements and bounded service-measurement transport.
+ * Individual journey context expires after 30 minutes. The shared public
+ * script owns sessionStorage, the objection preference and GPC handling.
+ * No report/customer identifiers or URL values are transmitted. Completion
+ * acknowledgements establish rendering, not model accuracy or qualification.
  */
 import type { ApiErrorCode, MatchScope, ResultKind } from '../types';
 import type { OutcomeGroup } from './resultAcknowledgement';
@@ -44,9 +16,9 @@ export const ACQUISITION_COLLECTOR_ENABLED: boolean = false;
 
 export const ACQUISITION_ENDPOINT = '/api/acquisition/events';
 
-export const ACQUISITION_SCHEMA_VERSION = 1;
+export const ACQUISITION_SCHEMA_VERSION = 2;
 /** Draft: the metric version is frozen before release (MEASUREMENT.md). */
-export const ACQUISITION_METRIC_VERSION = 'oa-metric-v1-draft';
+export const ACQUISITION_METRIC_VERSION = 'oa-journey-30m-v2';
 
 export type EntryMode = 'fresh_check' | 'restored_link';
 export type PersistenceMode = 'saved' | 'inline_unsaved';
@@ -306,6 +278,8 @@ export function releaseSha(): string | undefined {
 export interface AcquisitionContext {
   /** Random per landing; present only when this document is attributed to a landing. */
   landingId?: string;
+  windowStartMinute?: number;
+  pilotGroup?: 'none' | 'cost' | 'checklist' | 'corsa' | 'c3' | 'clio208' | 'polofiesta' | 'yarisjazz';
   sourceGroup: SourceGroup;
   pageFamily: PageFamily;
 }
@@ -346,7 +320,17 @@ export function globalPrivacyControlSet(): boolean {
 export function createFetchSink(options: FetchSinkOptions = {}): AcquisitionSink {
   const sessionId = options.sessionId ?? randomId();
 
+  const allowedContext = (): AcquisitionContext | null => {
+    if (globalPrivacyControlSet() || window.autosafeMeasurement?.isOff()) return null;
+    const ctx = window.autosafeMeasurement ? window.autosafeMeasurement.getContext() : context;
+    const now = Math.floor(Date.now() / 60000);
+    if (!ctx?.landingId || ctx.windowStartMinute === undefined || !ctx.pilotGroup
+        || ctx.windowStartMinute > now || now >= ctx.windowStartMinute + 30
+        || ctx.sourceGroup === 'paid_search') return null;
+    return ctx;
+  };
   const send = (body: string, attempt: number, startedAt: number): void => {
+    if (!allowedContext()) return;
     const retryable = () => {
       if (attempt === 0 && Date.now() - startedAt + RETRY_DELAY_MS <= RETRY_WINDOW_MS) {
         setTimeout(() => send(body, 1, startedAt), RETRY_DELAY_MS);
@@ -379,9 +363,12 @@ export function createFetchSink(options: FetchSinkOptions = {}): AcquisitionSink
       try {
         if (globalPrivacyControlSet()) return;
         const sha = releaseSha();
-        const ctx = context;
+        const ctx = allowedContext();
+        if (!ctx) return;
         const wire: Record<string, unknown> = {
-          page_family: ctx.pageFamily,
+          page_family: ctx.pageFamily || 'app',
+          window_start_minute: ctx.windowStartMinute,
+          pilot_group: ctx.pilotGroup,
           source_group: ctx.sourceGroup,
           ...(ctx.landingId ? { landing_id: ctx.landingId } : {}),
           ...(sha ? { release_sha: sha } : {}),

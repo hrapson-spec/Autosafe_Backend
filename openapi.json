@@ -1625,7 +1625,7 @@
             "description": "Event could not be recorded; the client may retry once."
           }
         },
-        "summary": "Record one cookieless acquisition measurement event"
+        "summary": "Record one bounded service measurement event"
       }
     },
     "/api/admin/dvsa-test": {

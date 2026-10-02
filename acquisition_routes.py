@@ -1,30 +1,9 @@
-"""First-party acquisition collector (OA-005, DECISIONS.md D-005).
+"""Strict first-party v2 service measurement, disabled by default.
 
-``POST /api/acquisition/events`` receives the cookieless, identity-free
-measurement events defined by docs/acquisition/EVENT_SCHEMA_v1.md plus the
-D-005 envelope fields (session_id, landing_id, page_family, source_group,
-release_sha). It is OFF unless ``ACQUISITION_INGEST_ENABLED`` is truthy in
-the server environment, and the browser transport is separately OFF behind
-``ACQUISITION_COLLECTOR_ENABLED`` in utils/acquisitionEvents.ts.
-
-Privacy rules enforced here (D-005):
-
-* The body is parsed by hand against strict models (``extra='forbid'``), so a
-  rejected body is never echoed or logged and FastAPI's default 422 (which
-  echoes the offending input) is never produced.
-* The server derives only ``received_at`` and ``is_bot``. The User-Agent is
-  read to compute ``is_bot`` and is not stored; the client IP is used by the
-  in-memory rate limiter only; Referer, query string and URL are never read.
-* Nothing from the body (no event, session, landing or operation id) is ever
-  logged; logs carry fixed reason codes and exception type names only.
-* Responses are ``Cache-Control: no-store``.
-
-Failure semantics: the client ignores the response. A recording failure
-returns 503 quickly (bounded by ``RECORD_TIMEOUT_SECONDS`` plus a short
-circuit breaker) rather than 202, so the transport's single retry with the
-same ``event_id`` can succeed if the store recovers, while a transient outage
-is not reported as a successful write. Either way it never touches other
-routes: the work is a single awaited store call with its own timeout.
+No request-body or header values are logged. Network metadata may still exist
+in provider logs; see the LIA. The store enforces the fixed receipt window and
+atomic aggregation/deletion. Generic 202 includes duplicates/expired events;
+a receipt requires database verification, not an HTTP status alone.
 """
 from __future__ import annotations
 
@@ -56,7 +35,7 @@ RECORD_TIMEOUT_SECONDS = 2.0
 BREAKER_SECONDS = 10.0
 
 # ---------------------------------------------------------------------------
-# Enums (docs/acquisition/event_schema_v1.json + D-004/D-005)
+# Enums (docs/acquisition/event_schema_v2.json + D-004/D-005)
 # ---------------------------------------------------------------------------
 
 UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
@@ -73,8 +52,8 @@ def _must_be_true(v: bool) -> bool:
 
 
 def _must_be_one(v: int) -> int:
-    if v != 1:
-        raise ValueError("must be 1")
+    if v != 2:
+        raise ValueError("must be 2")
     return v
 
 
@@ -117,10 +96,12 @@ class _Event(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     schema_version: SchemaVersion
-    metric_version: MetricVersion
+    metric_version: Literal["oa-journey-30m-v2"]
     event_id: Uuid
     session_id: Uuid
-    landing_id: Optional[Uuid] = None
+    landing_id: Uuid
+    window_start_minute: StrictInt
+    pilot_group: Literal["none", "cost", "checklist", "corsa", "c3", "clio208", "polofiesta", "yarisjazz"]
     page_family: PageFamily
     source_group: SourceGroup
     release_sha: Optional[ReleaseSha] = None
@@ -174,7 +155,7 @@ class ResultRendered(_Event):
 
     @model_validator(mode="after")
     def _combinations(self):
-        # Mirrors the allOf rules of docs/acquisition/event_schema_v1.json;
+        # Mirrors the allOf rules of docs/acquisition/event_schema_v2.json;
         # tests/test_acquisition_collector.py checks parity over a full grid.
         o, k, m = self.outcome_group, self.result_kind, self.match_scope
         has_sample = self.sample_nonzero is not None
@@ -394,7 +375,7 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
         ROUTE_PATH,
         status_code=202,
         include_in_schema=True,
-        summary="Record one cookieless acquisition measurement event",
+        summary="Record one bounded service measurement event",
         openapi_extra={
             "requestBody": {
                 "required": True,
@@ -420,6 +401,9 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
         if request.headers.get("sec-gpc", "").strip() == "1":
             return _json(202, {"status": "accepted"})
 
+        # Cross-site and URL-decorated ingestion is not an accepted transport.
+        if request.headers.get("sec-fetch-site") == "cross-site" or request.url.query:
+            return _reject(400, "invalid_transport")
         body = await _read_limited_body(request)
         if body is None:
             return _reject(413, "payload_too_large")
@@ -443,8 +427,8 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
 
         record = _record_from_event(
             event,
-            # D-007.5: stored to the minute, so a row cannot be joined to an
-            # external timestamped log (edge, proxy) by second.
+            # Coarse receipt time minimises precision; timing correlation
+            # with hosting logs remains possible and is prohibited by policy.
             store_mod.utcnow().replace(second=0, microsecond=0),
             is_bot_user_agent(request.headers.get("user-agent")),
         )
@@ -466,8 +450,8 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
 # ---------------------------------------------------------------------------
 
 STARTUP_DELAY_SECONDS = 20.0
-DAILY_SECONDS = 24 * 3600.0
-RETRY_AFTER_FAILURE_SECONDS = 3600.0
+DAILY_SECONDS = 5 * 60.0
+RETRY_AFTER_FAILURE_SECONDS = 60.0
 
 _retention_task: Optional["asyncio.Task[None]"] = None
 

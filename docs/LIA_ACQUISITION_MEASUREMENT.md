@@ -1,170 +1,55 @@
-# Legitimate Interests Assessment — first-party acquisition measurement (`acquisition_events`)
+# Service-measurement assessment — 2 October 2026
 
-**Controller:** AutoSafe (sole trader — Henri Rapson)
-
-**Review date:** 2026-10-01
-
-**Status:** engineering reconciliation for owner/legal review; not legal advice. Sourced from
-`DECISIONS.md` D-005, D-006 and D-007 in the organic-acquisition work area (the authority for
-these decisions until Henri amends it). The collector is implemented with **collection OFF**;
-this assessment describes the processing that would begin at the enable gate in
-[`acquisition/COLLECTOR.md`](acquisition/COLLECTOR.md) and is conditional on that gate being met.
-Evidence: [`acquisition/OA-005_EVIDENCE.md`](acquisition/OA-005_EVIDENCE.md).
+Status: implementation candidate; collection stays OFF until the acceptance receipt in `acquisition/OA-005_EVIDENCE.md` establishes the enable gate. This replaces the unreleased D-005/D-007 90-day raw-event design, not a retrospective claim that it was compliant. Metric: `oa-journey-30m-v2`.
 
 ## 1. Processing actually implemented
 
-When a visitor loads a public page or the check tool, or moves through a check, the browser sends
-a small same-origin request ("measurement event") to `POST /api/acquisition/events`. An event holds
-only: an event type (public page or app opened, check started, report created, result displayed /
-unavailable / failed); random identifiers created in the browser for the page visit (`session_id`),
-for one deliberate check (`operation_id`) and for the landing visit (`landing_id`); an allowlisted
-page category (`page_family`, never a path); an arrival category (`source_group`: Google organic,
-paid search, other search, referral, direct, internal, unknown); fixed outcome enums and booleans
-(result kind, match scope, whether the result was supported, saved or unsaved); the software
-release id; the receipt time (stored **truncated to the minute**); and a derived yes/no `is_bot`
-flag.
+The shared script reads navigation type, the referring origin and the presence of paid-click markers. It keeps one random arrival identifier, a start minute, a source class and an allowlisted pilot-page label in sessionStorage for a fixed 30 minutes. Internal page navigation carries this context; there is no link decoration. An off preference uses localStorage for 90 days, solely to remember the objection and never as an identifier. GPC overrides it. Storage/navigation failures leave visits unobserved.
 
-The server stores **no** IP address, User-Agent, Referer, query string, URL, registration,
-postcode, report token or id, vehicle make or model, failure rate, sample size, email or free text.
-The User-Agent is read once to compute `is_bot` and discarded. The client IP is used only by the
-in-memory rate limiter. A redaction filter removes the IP from the rate-limiter's own warning
-message on every route (D-007.2), so no application log carries a client IP for this processing.
-
-Nothing is stored on or read from the visitor's device (no cookies, localStorage, sessionStorage
-or IndexedDB, no fingerprinting). The identifiers exist in page memory only. The landing id reaches
-the app only in the **URL fragment** of the site's own links (`#al=…&src=…`), which browsers never
-send in a request or Referer; the first script in `index.html` removes it before any third-party
-script exists (D-007.1). The arrival category is derived in the browser from the referrer's
-**origin** only, or is `paid_search` when the landing URL carries `gclid`, `gbraid`, `wbraid` or
-`utm_medium=cpc|ppc|paid`; the marker and its value are only tested, never sent or stored (D-006).
-A reload or back/forward is not recorded as a landing (D-006). A browser sending
-`navigator.globalPrivacyControl === true` (or `Sec-GPC: 1`) sends and records nothing.
-
-Storage is the existing Railway Postgres (no new processor): raw events in `acquisition_events`,
-daily event counts in `acquisition_daily`, and per-day landing-level counts in
-`acquisition_landing_daily` (counts only, no identifiers; D-007.4). Access: the site operator only,
-via Railway; there is no read route and no public dashboard.
-
-Purpose recorded for owner review:
-
-- **P1 — Measure, in aggregate, whether visitors arriving from search reach a displayed, supported
-  result,** so broken journeys are found and the free service can be judged against the people it
-  is meant to reach. Product and service improvement only.
-
-**Not a purpose:** advertising, profiling, personalisation, any per-person decision, sale or
-sharing, linkage to a vehicle, report or person, or use of the data to contact anyone. Adding any
-of these requires a new assessment.
+The same-origin endpoint receives only random event, document, arrival and operation IDs; coarse time; source/page/pilot classes; enum/boolean result states and optional release SHA. No registration, postcode, report identifier/token, customer identifier, URL, referrer string, rate, sample size or free text is accepted. IP is used in the in-memory limiter; User-Agent is classified as likely bot/browser and then discarded by application code. This does not remove those fields from Railway's network logs. Events are pseudonymous personal data until aggregation; minute truncation does not prevent timing correlation.
 
 ## 2. Purpose test
 
-P1 is a genuine interest. The service's central promise is a displayed, scope-labelled result;
-server-side report counts cannot show what was displayed (E04) and third-party analytics are not
-permitted on bearer report routes. Knowing whether search visitors actually see a supported result
-is necessary to decide whether the pages, the check flow and the evidence ladder work, and it
-benefits users because failures and dead ends get fixed. It is not a speculative or unlawful
-interest, and it is stated before collection begins (notice, section 6).
+The sole measurement purpose is aggregate understanding and improvement of AutoSafe's public information and check tool: which content is used and whether observed arrivals reach a supported rendered result. It is not advertising-performance measurement, targeting, profiling, pricing, eligibility or model training. Paid-marked arrivals are excluded from collection. The pilot evaluates the usefulness and usability of existing service pages. Do not reuse these identifiers to measure ads, email campaigns or identify leads.
+
+Commercial enquiry qualification and confirmed outcomes remain separate operational records under their existing purposes and bases. No acquisition identifier is added to a lead, report or customer record. Aggregate commercial counts may be discussed beside service statistics, with no person-level join or implied organic conversion rate. GSC search statistics are external aggregate evidence, not an individual attribution join. Automatic Umami loading is retired by this release; historical Umami data is not silently erased or represented as v2 coverage.
 
 ## 3. Necessity and minimisation test
 
-- The measure needs a join between a landing and a later displayed result. A random per-landing id
-  carried for the length of one visit is the least intrusive way to do that without identifying a
-  person or storing anything on the device; a cookie, storage key or fingerprint would be more
-  intrusive and is not used.
-- No field identifies the vehicle, report or person; no content (registration, postcode, rate,
-  sample size, make/model) is collected, because the metric does not need any.
-- The arrival category uses the referrer's origin only. The landing page path is reduced to a
-  category. The paid-click marker is tested, not recorded.
-- Receipt time is truncated to the minute so a row cannot be joined by second to an external
-  timestamped log (D-007.5).
-- Raw events are kept for 90 days, only long enough to compute and audit the metric. Before they
-  are deleted, identifier-free per-day landing counts are written so the metric can be compared
-  year on year (D-007.4); that aggregate, not the raw event, is what is kept for 25 months.
-- Retention runs whenever the tables exist, whatever the ingest flag says, so switching collection
-  off never stops deletion (D-007.3).
-
-Less intrusive controls adopted: fragment (not query) handoff; memory-only identifiers; GPC
-honoured client- and server-side; no IP/UA/Referer/URL stored; no IP in logs; no third-party
-involvement; one retry only, no queue or persisted backlog; collector disabled by default behind
-three independent switches.
+A page counter cannot tell whether an observed arrival reaches a rendered check result. One bounded identifier is needed for that narrow question across public-page navigation. A 30-minute fixed window, no extension on activity, and no URL identifiers replace long-lived or cross-device tracking. No session replay, fingerprint or durable audience identifier is used. The start time is minute-grained and never becomes a retained aggregate dimension. The seven pilot labels identify public content, not a user's submitted vehicle. Aggregates retain metric version, UTC day, coarse classes and counts for three calendar months, enough for a 56-day pilot and review. No annual comparison requires longer retention for this pilot.
 
 ## 4. Balancing test
 
-- **Nature of data:** pseudonymous random identifiers and categorical values. Not special-category.
-  The identifiers are not derived from any input and are not usable to access a report. They may
-  still be personal data in principle (a random id plus a receipt time, held with access to the
-  database), so this assessment treats the processing as personal-data processing, not as
-  anonymous.
-- **Expectations:** a visitor to a website can reasonably expect it to measure its own pages and
-  whether its service works, particularly where it is disclosed in the privacy notice, uses no
-  cookies or storage, sends no data to third parties, and honours Global Privacy Control.
-- **Impact:** negligible. No decision, content, contact or profile results; no recipient other than
-  the existing hosting processor; raw data is short-lived and aggregates hold no identifiers.
-  Residual risks: a database compromise would expose random ids with timestamps and categories (no
-  identity, no vehicle, no content); a raw edge/proxy log held by the hosting provider records
-  request paths and IPs, but the landing id is not in them because it travels in the fragment, and
-  `received_at` is minute-truncated.
-- **Safeguards:** listed in sections 1 and 3, plus rate limiting, strict schema validation
-  (`extra='forbid'`, 2 KB limit), log-capture tests, retention tests with a frozen clock and a
-  Postgres-backed receipt, and a documented enable gate and rollback.
-- **Disclosure:** no sale or sharing. The privacy notice carries a factual entry (fields, retention,
-  basis, objection) that is part of the enable gate.
+The benefit is detecting broken or unhelpful service journeys. Visitors may reasonably object to observation, particularly while checking a car. The visible notice and switch appear at the top of public, app and legal pages; the privacy notice gives the full account. GPC, unavailable storage and expired contexts suppress transmission, including retries. Opting out never changes access to the service. No identifiers are shared with garages or advertising providers. There is no public event or aggregate dashboard.
 
-**Provisional balance:** legitimate interests supports P1 as implemented. The impact on individuals
-is negligible and within reasonable expectations, and the safeguards operate by construction and are
-tested. The balance depends on the conditions in section 7.
+Residual risks: the endpoint is client-reported and can be spoofed; small daily cells can describe one observation; exact receipt timing can potentially correlate with hosting logs; and a duplicated browser tab may inherit sessionStorage. Operator policy forbids linking analytics to leads, operational reports, IP logs, other analytics or third-party records. Keep all detailed counts access-restricted. External reports suppress/combine cells below five and never publish individual event data. Low counts and no direct names do not by themselves establish anonymisation. These safeguards support a limited legitimate-interest assessment, not a general assurance of legal compliance for all website processing.
 
 ## 5. Retention and rights
 
-- Raw events: deleted 90 days after receipt by the scheduled, idempotent job
-  (`acquisition_routes.run_retention_once`), which first rolls each event, exactly once, into the
-  identifier-free daily aggregates.
-- `acquisition_daily` and `acquisition_landing_daily`: deleted after 25 calendar months.
-- Rollback of collection: set the client constants to false and/or unset
-  `ACQUISITION_INGEST_ENABLED` (stops collection immediately; retention continues). Deleting
-  everything: `python migrations/add_acquisition_tables.py --rollback`.
+The server accepts events only during the arrival's fixed window, rechecked inside the write lock. Every five minutes, a job groups closed journeys and deletes their raw events in the same transaction. Normal raw lifetime is at most about 35 minutes from the start; a failed job can extend it, so failures need operational attention and ingestion must be disabled if deletion is overdue. Disable ingestion without disabling retention. Retry logic cannot recreate expired rows after deletion. No ID tombstone is retained. Aggregates expire after three calendar months.
 
-**Objection and rights.** Visitors can object by Global Privacy Control (nothing is then sent or
-recorded) or by email to `autosafehq@gmail.com`, as stated in the notice. Because identifiers are
-random, unlinked to the person and not shown to them, a request to locate or erase "my events"
-generally cannot be fulfilled by looking anything up; the notice says so, and GPC is the reliable
-route. Access, erasure and restriction requests that do identify an event (for example a visitor
-who supplies their own `landing_id` from a copied link) can be met by deleting that row; the same
-statutory timescales apply as for other requests. Do not place identifiers in ordinary tickets or
-logs while handling a request.
+The visible measurement switch is free, immediate and does not require email or login. It clears the local context and stops subsequent transmission; it remembers only an off preference for 90 days. Existing server events expire on the schedule above, rather than promising a retroactive per-person aggregate edit. Global Privacy Control is honoured in the browser and on the endpoint. Users may also contact autosafehq@gmail.com. Random identifiers and deletion limit our ability to locate historical events; do not collect extra identity data simply to identify them. Hosting request logs and backups have separate retention boundaries described below.
 
-## 6. Notice and transparency
+## 6. PECR assessment and hosting boundary
 
-The privacy notice (`static/privacy.html` and `components/PrivacyPage.tsx`) has a factual section,
-table rows and a retention row for this processing. It is written in the present tense and goes
-live on merge, slightly ahead of enabling; D-007.8 accepts that this over-discloses rather than
-under-discloses and requires the gap to be kept short. The notice text is part of the enable gate
-and is re-read immediately before the flags are flipped.
+PECR regulation 6 applies to this browser storage/access. Calling it cookieless, memory-only or a URL fragment would not remove the need to assess PECR. The implementation is designed for the statistical-purposes exception: sole service-improvement purpose, clear information, a simple free objection, prompt aggregation and deletion of individual observations. The 90-day preference is solely for remembering the user's requested objection. UK GDPR Article 6(1)(f) is assessed separately above; it does not substitute for PECR conditions. A change to advertising purposes, identity linkage or retention invalidates this decision and requires reassessment before release.
+
+Railway is the existing hosting processor. Live account metadata on 2 October confirms Hobby. Railway's documentation gives seven days of log availability for this plan, with older logs becoming visible after some upgrades; that is not evidence of physical deletion after seven days. HTTP logs can include IP address, User-Agent, path, request ID and timestamp. The collector uses a fixed path, no query, no referrer and no credentials, with identifiers only in the validated body; application logs never record the body. Operational log access is restricted and must not be used for analytics linkage. Provider storage/backups and platform logging cannot be erased by the collector's SQL DELETE. No whole-platform deletion guarantee is made.
+
+The workspace's preferred region is us-west2; the service's legacy single-region API field is null. This is not evidence of the actual database/service placement or UK-only processing. Railway's standard DPA and transfer provisions must govern its processing; provider DPA/transfer/backup configuration needs an account-specific check in the acceptance receipt. No new processor is introduced. These checks are for this collector's release, not a claim of a complete historical infrastructure audit.
 
 ## 7. Operational conditions
 
-This assessment is conditional on:
-
-- the enable gate in `COLLECTOR.md` being completed: migration run before ingest is enabled,
-  synthetic staging events received and aggregated, and a production synthetic event checked and
-  deleted;
-- **recording Railway's HTTP-log retention** for the service (request paths and IPs are logged at
-  the edge; the design keeps the landing id out of them, but their retention is not otherwise
-  established) — **open at the date of this review**;
-- both client flags (`ACQUISITION_COLLECTOR_ENABLED` and the public script's `ENABLED`) being flipped
-  together, enforced by a test, with the server flag kept as the fast rollback;
-- the retention job running and being checked (log line `acquisition_retention …`, zero raw rows
-  older than 90 days);
-- no new field, identifier, storage mechanism, recipient or purpose being added without a refreshed
-  assessment; and
-- the accepted limitations being reported with any figure from the metric: observed landings only,
-  new-tab and typed-URL sessions unattributed, untagged paid traffic indistinguishable from
-  organic, reused copied CTA links counted once per landing, `restored_link` renders that carry an
-  in-memory landing id counted with `entry_mode` reported, and a client being able to post
-  `internal_test` (excluded from the metric).
+Before client enablement: verify the notice and switch in the rendered browser; pass SQLite and real PostgreSQL tests; record migration and production internal-test receipt/dedup/deletion/GPC/disabled-ingest behaviour; verify actual hosting/backup/processor configuration; verify no Umami loader; keep current pilot labels and metric version frozen. CI and deployment controls remain enforced. If retention is overdue, pause ingestion and investigate; collection is not a prerequisite for the check tool. Do not silently alter the metric in flight.
 
 ## 8. Review triggers
 
-Review before any new field or identifier, any storage on the device, any third-party processor or
-recipient, any use beyond P1, any linkage to a vehicle, report or person, any change to retention
-or to the fragment/query handoff, any change to the notice wording that alters what is disclosed, a
-security incident, a change in Railway logging behaviour, or by 2027-10-01, whichever occurs first.
+Review before adding a dimension or processor, extending the window/retention, joining individual records, changing purposes, restoring legacy analytics or adding advertising use. Review again at the 28/56-day pilot decision. Observed counts never establish unique people, all visits, an MOT outcome, a qualified enquiry or revenue.
+
+Sources checked 2 October 2026:
+
+- [ICO storage and access technologies](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/what-are-storage-and-access-technologies/)
+- [ICO exceptions and conditions](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/what-are-the-exceptions/)
+- [ICO PECR and UK GDPR](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/how-do-the-pecr-rules-relate-to-the-uk-gdpr/)
+- [Railway HTTP logs and log availability](https://docs.railway.com/observability/logs)
+- [Railway DPA](https://railway.com/legal/dpa)

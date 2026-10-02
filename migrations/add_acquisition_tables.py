@@ -1,43 +1,19 @@
-"""
-Create the first-party acquisition collector tables (OA-005, DECISIONS.md D-005).
+"""Add the three acquisition_v2 tables. Idempotent, additive and transactional.
 
-Adds two NEW tables and touches nothing that exists, so it is safe to run
-before, after or without the collector code:
-
-    acquisition_events  raw events, 90-day retention (random IDs, enums, booleans,
-                        release SHA, received_at, derived is_bot; no IP, User-Agent,
-                        Referer, query string or URL)
-    acquisition_daily   daily aggregate counts, 25-month retention, no IDs
-
-The DDL is imported from acquisition_store.py, the same statements the
-collector uses to ensure its schema, so this script and the runtime cannot
-drift. It is idempotent (CREATE ... IF NOT EXISTS).
-
-Usage:
-    DATABASE_URL="postgresql://..." python migrations/add_acquisition_tables.py
-    DATABASE_URL="postgresql://..." python migrations/add_acquisition_tables.py --dry-run
-    DATABASE_URL="postgresql://..." python migrations/add_acquisition_tables.py --rollback
-
---dry-run prints every statement without opening a database connection or
-requiring DATABASE_URL.
-
-Running it is optional: when ACQUISITION_INGEST_ENABLED is set, the collector
-creates the same tables itself on first use. Running it explicitly lets the
-owner create (and inspect) the tables before enabling ingest.
-
---rollback DROPS both tables and every row in them. It is the data-deletion
-path if the collector is withdrawn; flipping ACQUISITION_COLLECTOR_ENABLED /
-ACQUISITION_INGEST_ENABLED off stops collection without deleting anything.
+Raw rows cover one fixed 30-minute journey; aggregation deletes them atomically.
+Counts are retained for three calendar months. No existing customer or v1 table
+is touched. --rollback is restricted to explicit disposable local staging.
 """
 import argparse
 import os
 import sys
+from urllib.parse import urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import psycopg2  # noqa: E402
 
-from acquisition_store import POSTGRES_DDL, POSTGRES_ROLLBACK_DDL  # noqa: E402
+from acquisition_store import POSTGRES_DDL, POSTGRES_ROLLBACK_DDL, _SCHEMA_LOCK_KEY  # noqa: E402
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -62,23 +38,28 @@ def run(statements, dry_run):
         return
 
     conn = psycopg2.connect(DATABASE_URL.replace("postgres://", "postgresql://"))
-    conn.autocommit = True
-    cur = conn.cursor()
-    for sql in statements:
-        print("Executing: {}".format(sql[:100]))
-        cur.execute(sql)
-    cur.close()
-    conn.close()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_advisory_xact_lock(%s)", (_SCHEMA_LOCK_KEY,))
+                for sql in statements:
+                    print("Executing: {}".format(sql[:100]))
+                    cur.execute(sql)
+    finally:
+        conn.close()
     print("Done.")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Create (or drop) the acquisition collector tables.")
     parser.add_argument("--rollback", action="store_true",
-                        help="DROP acquisition_events and acquisition_daily (deletes all collected rows).")
+                        help="Drop only acquisition_v2 tables in disposable local staging.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print the SQL that would run, without connecting to a database.")
     args = parser.parse_args()
+    if args.rollback and not args.dry_run:
+        if os.environ.get("ACQUISITION_DISPOSABLE_STAGING") != "1" or urlparse(DATABASE_URL or "").hostname not in ("localhost", "127.0.0.1", "postgres"):
+            raise SystemExit("rollback requires explicit disposable local staging")
     run(rollback_statements() if args.rollback else forward_statements(), args.dry_run)
 
 

@@ -191,7 +191,7 @@ describe('acquisition events: in-memory completion markers', () => {
   });
 });
 
-describe('event schema (docs/acquisition/event_schema_v1.json) agrees with the typed events', () => {
+describe('event schema (docs/acquisition/event_schema_v2.json) agrees with the typed events', () => {
   const schema = loadEventSchema();
 
   it('every sample event built by the real emitter validates', () => {
@@ -212,7 +212,7 @@ describe('event schema (docs/acquisition/event_schema_v1.json) agrees with the t
     expect(validates(schema, mutate({ operation_id: 'AB12CDE' }))).toBe(false);
     expect(validates(schema, mutate({ event_id: 'not-random' }))).toBe(false);
     expect(validates(schema, mutate({ event: 'check_finished' }))).toBe(false);
-    expect(validates(schema, mutate({ schema_version: 2 }))).toBe(false);
+    expect(validates(schema, mutate({ schema_version: 1 }))).toBe(false);
     const { operation_id: _omit, ...withoutOp } = base as unknown as Record<string, unknown>;
     expect(validates(schema, withoutOp)).toBe(false);
   });

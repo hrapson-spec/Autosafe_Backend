@@ -96,7 +96,7 @@ test.describe('D-007.1: third parties never see the handoff (Ads consent ACCEPTE
       () => (window as unknown as { __externalScriptAppends: Array<{ src: string; hash: string; href: string }> }).__externalScriptAppends,
     );
     expect(appends.some((a) => a.src.includes('googletagmanager.com'))).toBe(true);
-    expect(appends.some((a) => a.src.includes('umami'))).toBe(true);
+    expect(appends.some((a) => a.src.includes('umami'))).toBe(false);
     expect(external.length).toBeGreaterThan(0);
 
     // The fragment was already gone from location when each external script was attached.
@@ -131,8 +131,8 @@ test.describe('D-007.1: third parties never see the handoff (Ads consent ACCEPTE
   });
 });
 
-test.describe('D-007.1: the SEO registration form hands off through the fragment', () => {
-  test('location.assign(/app + fragment) keeps the fragment across the navigation and the app consumes it', async ({ page }) => {
+test.describe('SEO registration form uses an undecorated app URL', () => {
+  test('the form carries no attribution or registration in the URL', async ({ page }) => {
     // Use the real inline submit handler from the server-rendered template.
     const template = readFileSync(resolve(process.cwd(), 'templates/seo_base.html'), 'utf8');
     const handler = [...template.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes('reg-lookup-form'));
@@ -159,9 +159,43 @@ test.describe('D-007.1: the SEO registration form hands off through the fragment
     await page.waitForURL(/\/app(#.*)?$/);
     await expect(registrationInput(page)).toBeVisible();
     // The browser kept the fragment on the navigation commit...
-    expect(navigated.some((u) => u.endsWith(`/app#al=${AL}&src=${SRC}`))).toBe(true);
+    expect(navigated.some((u) => u.endsWith(`/app`))).toBe(true);
+    expect(navigated.some((u) => u.includes(AL))).toBe(false);
     // ...and index.html's head script consumed it.
     expect(new URL(page.url()).hash).toBe('');
     expect(page.url()).not.toContain(AL);
+  });
+});
+
+
+test.describe('bounded measurement controls in a real browser', () => {
+  test('retains the source through an internal page hop and a visible objection stops collection', async ({page}) => {
+    const source = readFileSync(resolve(process.cwd(),'static/acquisition-landing.js'),'utf8').replace('var ENABLED = false;','var ENABLED = true;');
+    const events: Record<string,unknown>[] = [];
+    await page.route('**/api/acquisition/events',route=>{
+      events.push(route.request().postDataJSON());
+      return route.fulfill({status:202,contentType:'application/json',body:'{"status":"accepted"}'});
+    });
+    await page.route('**/static/acquisition-landing.js',route=>route.fulfill({contentType:'application/javascript',body:source}));
+    for (const path of ['/guides/mot-cost','/mot-check/vauxhall/corsa/']) {
+      await page.route('**'+path,route=>route.fulfill({contentType:'text/html',body:
+        '<!doctype html><html><head><script src="/static/acquisition-landing.js"></script></head><body><h1>Measurement test page</h1><a href="/mot-check/vauxhall/corsa/">Model page</a><a href="/app">Check tool</a></body></html>'}));
+    }
+    await page.goto('/guides/mot-cost',{referer:'https://www.google.com/'});
+    await expect(page.getByRole('button',{name:'Turn measurement off'})).toBeVisible();
+    await expect.poll(()=>events.length).toBe(1);
+    await page.getByRole('link',{name:'Model page'}).click();
+    expect(events).toHaveLength(1);
+    await page.getByRole('link',{name:'Check tool'}).click();
+    await expect(registrationInput(page)).toBeVisible();
+    const context=await page.evaluate(()=>window.autosafeMeasurement?.getContext());
+    expect(context?.sourceGroup).toBe('google_organic');expect(context?.pilotGroup).toBe('cost');
+    expect(context?.landingId).toBe(events[0].landing_id);
+    expect(page.url()).not.toContain(String(events[0].landing_id));
+    await page.getByRole('button',{name:'Turn measurement off'}).click();
+    await expect(page.getByRole('button',{name:'Measurement off — turn on'})).toBeVisible();
+    await page.reload();
+    expect(events).toHaveLength(1);
+    expect(await page.evaluate(()=>window.autosafeMeasurement?.getContext())).toBeNull();
   });
 });

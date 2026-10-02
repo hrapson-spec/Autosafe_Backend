@@ -43,10 +43,11 @@ def uid() -> str:
 
 def envelope(**over):
     base = {
-        "schema_version": 1,
-        "metric_version": "oa-metric-v1-draft",
+        "schema_version": 2,
+        "metric_version": "oa-journey-30m-v2",
         "event_id": uid(),
         "session_id": uid(),
+        "landing_id": uid(), "window_start_minute": store_mod.minute(store_mod.utcnow()), "pilot_group": "none",
         "page_family": "guide",
         "source_group": "google_organic",
     }
@@ -124,7 +125,7 @@ def post(client, body, headers=None, raw=None):
     return client.post(ROUTE, content=data, headers=h)
 
 
-def rows(path, sql="SELECT * FROM acquisition_events"):
+def rows(path, sql="SELECT * FROM acquisition_v2_events"):
     if not os.path.exists(path):
         return []
     conn = sqlite3.connect(path)
@@ -161,7 +162,7 @@ class TestAcceptance:
             assert r.json() == {"status": "accepted"}
         stored = rows(path)
         assert [r["event"] for r in stored] == [e["event"] for e in events]
-        assert all(r["rolled_up_at"] is None for r in stored)
+        assert all(r["window_start_minute"] for r in stored)
 
     def test_demo_outcome_group_is_accepted(self, collector):
         client, path = collector
@@ -175,7 +176,7 @@ class TestAcceptance:
     def test_paid_search_landing_is_accepted_and_stored(self, collector):
         client, path = collector
         assert post(client, landing(source_group="paid_search")).status_code == 202
-        assert rows(path)[0]["source_group"] == "paid_search"
+        assert rows(path) == []  # advertising arrivals are not collected
         # the paid-click marker itself is not a field the collector knows
         for field in ("gclid", "gbraid", "wbraid", "utm_medium", "utm_campaign"):
             ev = landing(source_group="paid_search")
@@ -300,7 +301,7 @@ class TestRejection:
         assert post(client, None, raw=padded).status_code == 202
 
     @pytest.mark.parametrize("mutate", [
-        lambda e: e.update(schema_version=2),
+        lambda e: e.update(schema_version=1),
         lambda e: e.update(schema_version="1"),
         lambda e: e.update(schema_version=True),
         lambda e: e.update(event_id=uid().upper()),
@@ -339,7 +340,7 @@ class TestRejection:
         lambda e: e.update(render_delivered=False),
         lambda e: e.update(render_delivered=1),
         lambda e: e.update(rate_valid=1),
-        lambda e: e.update(schema_version=1.0),
+        lambda e: e.update(schema_version=2.0),
         lambda e: e.update(rate_valid=None),
         lambda e: e.update(outcome_group="unavailable"),
         lambda e: e.update(outcome_group="error"),
@@ -372,13 +373,12 @@ class TestRejection:
         r = post(client, landing(), headers={"Content-Type": "text/plain"})
         assert r.status_code == 400 and rows(path) == []
 
-    def test_query_string_on_the_collector_is_ignored_and_never_stored(self, collector):
+    def test_query_string_on_the_collector_is_rejected(self, collector):
         client, path = collector
-        r = client.post(ROUTE + "?reg=AB12CDE&token=zzz", content=json.dumps(landing()),
-                        headers={"Content-Type": "application/json", "User-Agent": BROWSER_UA})
-        assert r.status_code == 202
-        dump = json.dumps(rows(path))
-        assert "AB12CDE" not in dump and "zzz" not in dump
+        r = client.post(ROUTE + "?registration=SECRET", json=landing(), headers={"User-Agent":BROWSER_UA})
+        assert r.status_code == 400
+        assert rows(path) == []
+
 
 
 # ---------------------------------------------------------------------------
@@ -402,7 +402,7 @@ class TestPrivacy:
                        "evil.example", "cookiesecret", "testclient"):
             assert needle not in dump, needle
         row = rows(path)[0]
-        assert set(row) == set(store_mod.COLUMNS) | {"id", "rolled_up_at"}
+        assert set(row) == set(store_mod.COLUMNS)
 
     def test_record_type_has_no_field_that_could_carry_a_request_secret(self):
         banned = {"ip", "user_agent", "ua", "referer", "referrer", "url", "path", "query", "cookie", "host", "origin"}
@@ -597,7 +597,7 @@ class TestOtherRoutesUnaffected:
         after = client.get("/api/v2/reports/" + "a" * 43)
         assert {k.lower() for k in after.headers} == baseline
         assert after.headers.get("cache-control") == before.get("cache-control")
-        assert after.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+        assert after.headers["referrer-policy"] == "no-referrer"
 
     def test_non_collector_paths_are_not_marked_no_store_by_the_collector(self, collector):
         client, _ = collector
@@ -613,10 +613,10 @@ class TestOtherRoutesUnaffected:
 
 
 # ---------------------------------------------------------------------------
-# Wire schema parity with docs/acquisition/event_schema_v1.json
+# Wire schema parity with docs/acquisition/event_schema_v2.json
 # ---------------------------------------------------------------------------
 
-ENVELOPE_ONLY = {"session_id", "landing_id", "release_sha"}
+ENVELOPE_ONLY = {"session_id", "landing_id", "release_sha", "window_start_minute", "pilot_group"}
 
 
 def to_event_schema_form(ev):
@@ -757,8 +757,9 @@ def run(store, coro):
 
 def rec(received_at, **over):
     base = dict(
-        event_id=uid(), received_at=received_at, schema_version=1, metric_version="oa-metric-v1-draft",
+        event_id=uid(), received_at=received_at, schema_version=2, metric_version="oa-journey-30m-v2",
         event="landing_observed", session_id=uid(), landing_id=uid(), page_family="guide",
+        window_start_minute=store_mod.minute(received_at), pilot_group="none",
         source_group="google_organic", is_bot=False, observation_state="observed",
     )
     base.update(over)
@@ -766,284 +767,168 @@ def rec(received_at, **over):
 
 
 def ins(store, r):
+    store.clock = lambda: r.received_at
     return run(store, store.insert_event(r))
 
 
 def daily(store):
     return run(store, store.fetch_all(
         "SELECT day, page_family, source_group, event, outcome_group, entry_mode, persistence_mode, is_bot, count "
-        "FROM acquisition_daily ORDER BY day, page_family, source_group, event, outcome_group, entry_mode, "
+        "FROM acquisition_v2_daily ORDER BY day, page_family, source_group, event, outcome_group, entry_mode, "
         "persistence_mode, is_bot"))
 
 
 def raw_count(store):
-    return run(store, store.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"]
+    return run(store, store.fetch_all("SELECT COUNT(*) AS n FROM acquisition_v2_events"))[0]["n"]
 
 
 NOW = datetime(2026, 12, 20, 12, 0, 0, tzinfo=UTC)
 
 
-class TestRetention:
-    def test_insert_is_idempotent_on_event_id(self, store):
-        r = rec(NOW)
-        assert ins(store, r) is True
-        assert ins(store, r) is False
-        assert raw_count(store) == 1
-
-    def test_rollup_counts_each_event_exactly_once_across_reruns(self, store):
-        d1 = NOW - timedelta(days=3, hours=1)   # day 1
-        d2 = NOW - timedelta(days=2, hours=1)   # day 2
-        young = NOW - timedelta(hours=23)
-        for _ in range(3):
-            ins(store, rec(d1))
-        ins(store, rec(d1, is_bot=True))
-        ins(store, rec(d2, event="result_rendered", landing_id=uid(), page_family="app", outcome_group="exact_comparison",
-                       entry_mode="fresh_check", persistence_mode="saved", supported_result=True,
-                       render_delivered=True, rate_valid=True, sample_nonzero=True, scope_visible=True,
-                       result_kind="comparison", match_scope="exact_band", observation_state=None))
-        ins(store, rec(young))
-        first = run(store, store.run_retention(NOW))
-        assert first.rolled_up_events == 5 and not first.skipped_locked
-        agg = daily(store)
-        assert sum(a["count"] for a in agg) == 5
-        by = {(str(a["day"])[:10], a["event"], bool(a["is_bot"]), a["outcome_group"]): a["count"] for a in agg}
-        assert by[(d1.date().isoformat(), "landing_observed", False, "none")] == 3
-        assert by[(d1.date().isoformat(), "landing_observed", True, "none")] == 1
-        assert by[(d2.date().isoformat(), "result_rendered", False, "exact_comparison")] == 1
-        # rerun, and again: nothing changes
-        for _ in range(3):
-            again = run(store, store.run_retention(NOW))
-            assert again.rolled_up_events == 0
-        assert daily(store) == agg
-        # the young event is rolled up exactly once when it ages past one day
-        later = NOW + timedelta(hours=2)
-        assert run(store, store.run_retention(later)).rolled_up_events == 1
-        assert sum(a["count"] for a in daily(store)) == 6
-        assert run(store, store.run_retention(later)).rolled_up_events == 0
-        assert sum(a["count"] for a in daily(store)) == 6
-
-    def test_same_day_split_across_runs_accumulates_without_double_count(self, store):
-        t = NOW - timedelta(days=5)
-        ins(store, rec(t))
-        run(store, store.run_retention(t + timedelta(days=1, minutes=1)))
-        ins(store, rec(t + timedelta(minutes=30)))
-        run(store, store.run_retention(t + timedelta(days=1, hours=1)))
-        agg = daily(store)
-        assert len(agg) == 1 and agg[0]["count"] == 2
-
-    def test_raw_events_are_deleted_after_90_days_and_only_then(self, store):
-        old = NOW - timedelta(days=90, minutes=1)
-        edge = NOW - timedelta(days=89, hours=23)
-        ins(store, rec(old))
-        ins(store, rec(edge))
-        res = run(store, store.run_retention(NOW))
-        assert res.rolled_up_events == 2 and res.deleted_raw_events == 1
-        assert raw_count(store) == 1
-        assert sum(a["count"] for a in daily(store)) == 2   # the deleted event survives in the aggregate
-        again = run(store, store.run_retention(NOW))
-        assert again.deleted_raw_events == 0
-
-    def test_event_older_than_90_days_never_seen_before_is_rolled_then_deleted(self, store):
-        ins(store, rec(NOW - timedelta(days=200)))
-        res = run(store, store.run_retention(NOW))
-        assert res.rolled_up_events == 1 and res.deleted_raw_events == 1
-        assert raw_count(store) == 0
-
-    def test_aggregates_are_deleted_after_25_months(self, store):
-        keep = datetime(2024, 11, 20, 8, tzinfo=UTC)    # 25 months before 2026-12-20 is 2024-11-20
-        drop = datetime(2024, 11, 19, 8, tzinfo=UTC)
-        ins(store, rec(keep))
-        ins(store, rec(drop))
-        # Roll both up on the day they are one day old (so the aggregate rows exist)...
-        run(store, store.run_retention(datetime(2024, 11, 21, 12, tzinfo=UTC)))
-        assert len(daily(store)) == 2
-        # ...then run at NOW: 25 calendar months before 2026-12-20 is 2024-11-20.
-        res = run(store, store.run_retention(NOW))
-        assert res.aggregate_cutoff_day == "2024-11-20"
-        assert res.deleted_aggregate_rows == 2  # one acquisition_daily row + one acquisition_landing_daily row
-        remaining = daily(store)
-        assert [str(a["day"])[:10] for a in remaining] == ["2024-11-20"]
-
-    def test_months_before_clamps_month_ends(self):
-        assert store_mod.months_before(date(2026, 3, 31), 1) == date(2026, 2, 28)
-        assert store_mod.months_before(date(2028, 3, 31), 1) == date(2028, 2, 29)
-        assert store_mod.months_before(date(2026, 1, 15), 25) == date(2023, 12, 15)
-        assert store_mod.months_before(date(2026, 12, 20), 25) == date(2024, 11, 20)
-
-    def test_naive_clock_is_refused(self, store):
-        with pytest.raises(ValueError):
-            run(store, store.run_retention(datetime(2026, 1, 1)))
-
-    def test_concurrent_runs_cannot_double_count(self, store):
-        t = NOW - timedelta(days=4)
-        for _ in range(20):
-            ins(store, rec(t))
-
-        async def both():
-            return await asyncio.gather(store.run_retention(NOW), store.run_retention(NOW))
-
-        a, b = run(store, both())
-        assert a.rolled_up_events + b.rolled_up_events == 20
-        assert sum(x["count"] for x in daily(store)) == 20
-
-    def test_aggregate_rows_carry_no_identifier_columns(self, store):
-        ins(store, rec(NOW - timedelta(days=3)))
-        run(store, store.run_retention(NOW))
-        cols = set(daily(store)[0])
-        assert cols == {"day", "page_family", "source_group", "event", "outcome_group",
-                        "entry_mode", "persistence_mode", "is_bot", "count"}
-
-
-class TestLandingAggregates:
-    """D-007.4: per-day landing-level counts so the primary metric survives raw deletion."""
-
-    def landing_rows(self, store):
-        return run(store, store.fetch_all(
-            "SELECT day, source_group, page_family, landings, landings_with_supported_result "
-            "FROM acquisition_landing_daily ORDER BY day, source_group, page_family"))
-
-    def _journey(self, store, t, *, family="guide", source="google_organic", complete=False, fail_render=False,
-                 bot=False, landings=1):
+class TestBoundedJourney:
+    def journey(self, store, start=NOW, pilot="none", source="google_organic"):
         lid, op = uid(), uid()
-        for _ in range(landings):
-            ins(store, rec(t, landing_id=lid, page_family=family, source_group=source, is_bot=bot))
-        if complete:
-            ins(store, rec(t, event="result_rendered", landing_id=lid, operation_id=op, page_family="app",
-                           source_group=source, is_bot=bot, supported_result=True, render_delivered=True,
-                           outcome_group="prediction"))
-        if fail_render:
-            ins(store, rec(t, event="render_failed", landing_id=lid, operation_id=op, page_family="app",
-                           source_group=source, is_bot=bot, stage="render"))
-        return lid
+        common = dict(landing_id=lid, window_start_minute=store_mod.minute(start), pilot_group=pilot, source_group=source)
+        arrival = rec(start, **common)
+        assert ins(store, arrival)
+        assert not ins(store, arrival)
+        def add(event, elapsed=1, operation=op, **kw):
+            return ins(store, rec(start + timedelta(minutes=elapsed), **common, event=event,
+                        operation_id=operation, entry_mode="fresh_check", **kw))
+        return lid, op, add
 
-    def test_counts_reproduce_the_raw_metric_before_raw_deletion(self, store):
-        t = NOW - timedelta(days=3, hours=2)
-        self._journey(store, t, complete=True)
-        self._journey(store, t, family="home")
-        self._journey(store, t, family="model", complete=True)
-        self._journey(store, t, family="make", complete=True, fail_render=True)   # render_failed wins
-        self._journey(store, t, source="other_search", complete=True)             # excluded by source
-        self._journey(store, t, source="paid_search", complete=True)              # excluded by source
-        self._journey(store, t, bot=True, complete=True)                          # bot: never counted
-        self._journey(store, t, family="app", complete=True)                      # not a public family
-        window = (NOW - timedelta(days=10), NOW)
-        raw = run(store, store.primary_metric(*window))
-        assert raw == {"denominator": 4, "numerator": 2}
-        res = run(store, store.run_retention(NOW))
-        assert res.rolled_up_landings == 7  # every non-bot landing: 4 organic public + other + paid + app
-        agg = run(store, store.landing_aggregate_metric((NOW - timedelta(days=10)).date(), (NOW + timedelta(days=1)).date()))
-        assert agg == raw
-        # ... and still after the raw rows are deleted
-        late = NOW + timedelta(days=100)
-        run(store, store.run_retention(late))
+    def raw(self, store):
+        return run(store, store.raw_metric(NOW.replace(hour=0), NOW.replace(hour=0) + timedelta(days=1)))
+
+    def agg(self, store, pilot=None):
+        return run(store, store.landing_aggregate_metric(NOW.date(), NOW.date() + timedelta(days=1), pilot))
+
+    def test_late_completion_in_window_survives_atomic_aggregation_and_deletion(self, store):
+        _, _, add = self.journey(store)
+        add("check_started")
+        early = run(store, store.run_retention(NOW + timedelta(minutes=20)))
+        assert early.rolled_up_events == early.deleted_raw_events == 0
+        assert self.raw(store) == {"denominator":1,"numerator":0}
+        add("result_rendered", elapsed=29, supported_result=True, render_delivered=True)
+        before = self.raw(store)
+        assert before == {"denominator":1,"numerator":1}
+        result = run(store, store.run_retention(NOW + timedelta(minutes=30)))
+        assert result.rolled_up_events == result.deleted_raw_events == 3
         assert raw_count(store) == 0
-        assert run(store, store.landing_aggregate_metric((NOW - timedelta(days=10)).date(), (NOW + timedelta(days=1)).date())) == raw
+        assert self.agg(store) == before
+        assert run(store, store.primary_metric(NOW.replace(hour=0), NOW + timedelta(days=1))) == before
+        assert run(store, store.run_retention(NOW + timedelta(minutes=35))).rolled_up_events == 0
+        assert self.agg(store) == before
 
-    def test_rows_hold_counts_only_by_day_source_and_family(self, store):
-        self._journey(store, NOW - timedelta(days=3), complete=True)
-        run(store, store.run_retention(NOW))
-        rows_ = self.landing_rows(store)
-        assert set(rows_[0]) == {"day", "source_group", "page_family", "landings", "landings_with_supported_result"}
-        assert (rows_[0]["landings"], rows_[0]["landings_with_supported_result"]) == (1, 1)
+    def test_late_failure_in_window_cancels_previously_rendered_operation(self, store):
+        _, _, add = self.journey(store)
+        add("check_started")
+        add("result_rendered", elapsed=2, supported_result=True, render_delivered=True)
+        assert self.raw(store)["numerator"] == 1
+        add("render_failed", elapsed=29)
+        assert self.raw(store) == {"denominator":1,"numerator":0}
+        run(store, store.run_retention(NOW + timedelta(minutes=31)))
+        assert self.agg(store) == {"denominator":1,"numerator":0}
+        assert raw_count(store) == 0
 
-    def test_exactly_once_across_reruns_and_concurrent_runs(self, store):
-        t = NOW - timedelta(days=3)
-        for _ in range(5):
-            self._journey(store, t, complete=True)
-        for _ in range(3):
-            self._journey(store, t)
+    def test_after_window_events_and_replayed_old_arrival_cannot_recreate_deleted_ids(self, store):
+        lid, _, add = self.journey(store)
+        add("check_started")
+        assert not add("result_rendered", elapsed=30, supported_result=True, render_delivered=True)
+        run(store, store.run_retention(NOW + timedelta(minutes=31)))
+        assert not add("render_failed", elapsed=32)
+        assert not ins(store, rec(NOW + timedelta(minutes=32), landing_id=lid,
+                                 window_start_minute=store_mod.minute(NOW)))
+        assert raw_count(store) == 0
+        assert self.agg(store) == {"denominator":1,"numerator":0}
 
-        async def both():
-            return await asyncio.gather(store.run_retention(NOW), store.run_retention(NOW))
+    def test_repeated_checks_count_one_landing_and_another_success_can_survive_one_failure(self, store):
+        _, _, add = self.journey(store)
+        add("check_started")
+        add("result_rendered", supported_result=True, render_delivered=True)
+        add("render_failed")
+        second = uid()
+        add("check_started", operation=second)
+        add("result_rendered", operation=second, supported_result=True, render_delivered=True)
+        add("result_rendered", operation=second, supported_result=True, render_delivered=True)
+        assert self.raw(store) == {"denominator":1,"numerator":1}
+        run(store, store.run_retention(NOW + timedelta(minutes=31)))
+        assert self.agg(store) == {"denominator":1,"numerator":1}
 
-        a, b = run(store, both())
-        assert a.rolled_up_landings + b.rolled_up_landings == 8
-        for _ in range(3):
-            assert run(store, store.run_retention(NOW)).rolled_up_landings == 0
-        rows_ = self.landing_rows(store)
-        assert sum(r["landings"] for r in rows_) == 8 and sum(r["landings_with_supported_result"] for r in rows_) == 5
+    def test_unobserved_start_or_restored_link_does_not_complete_a_landing(self, store):
+        lid, op, add = self.journey(store)
+        add("result_rendered", supported_result=True, render_delivered=True)
+        assert self.raw(store)["numerator"] == 0
+        add("check_started")
+        add("render_failed")
+        restore_op = uid()
+        add("check_started", operation=restore_op)
+        assert ins(store, rec(NOW, landing_id=lid, operation_id=restore_op,
+                             event="result_rendered", entry_mode="restored_link",
+                             supported_result=True, render_delivered=True))
+        assert self.raw(store)["numerator"] == 0
 
-    def test_a_duplicated_landing_id_is_counted_once(self, store):
-        t = NOW - timedelta(days=3)
-        self._journey(store, t, complete=True, landings=3)  # same landing_id, three landing_observed events
-        run(store, store.run_retention(NOW))
-        rows_ = self.landing_rows(store)
-        assert sum(r["landings"] for r in rows_) == 1
-        # a later replay of the same landing_id in a second run is not counted again
-        lid = run(store, store.fetch_all("SELECT landing_id FROM acquisition_events LIMIT 1"))[0]["landing_id"]
-        ins(store, rec(t + timedelta(hours=1), landing_id=str(lid), page_family="guide"))
-        run(store, store.run_retention(NOW + timedelta(days=1)))
-        assert sum(r["landings"] for r in self.landing_rows(store)) == 1
+    def test_pilot_source_and_window_cannot_change_under_one_identifier(self, store):
+        lid, _, _ = self.journey(store, pilot="cost")
+        for changes in (dict(pilot_group="corsa"), dict(source_group="direct"),
+                        dict(window_start_minute=store_mod.minute(NOW)-1)):
+            base = dict(landing_id=lid,pilot_group="cost")
+            base.update(changes)
+            assert not ins(store, rec(NOW, **base))
+        assert raw_count(store) == 1
 
-    def test_young_landings_are_not_rolled_up_until_they_age(self, store):
-        self._journey(store, NOW - timedelta(hours=3), complete=True)
-        assert run(store, store.run_retention(NOW)).rolled_up_landings == 0
-        assert self.landing_rows(store) == []
-        assert run(store, store.run_retention(NOW + timedelta(days=1, hours=1))).rolled_up_landings == 1
+    def test_duplicate_arrival_event_ids_and_concurrent_finalisers_count_once(self, store):
+        lid, _, _ = self.journey(store)
+        ins(store, rec(NOW, landing_id=lid))  # second event ID, same journey
+        async def jobs():
+            return await asyncio.gather(*(store.run_retention(NOW + timedelta(minutes=31)) for _ in range(3)))
+        results = run(store, jobs())
+        assert sum(r.deleted_raw_events for r in results) == 2
+        assert self.agg(store) == {"denominator":1,"numerator":0}
+        assert raw_count(store) == 0
 
-    def test_landing_aggregates_are_deleted_after_25_months(self, store):
-        old = datetime(2024, 11, 19, 8, tzinfo=UTC)
-        keep = datetime(2024, 11, 20, 8, tzinfo=UTC)
-        self._journey(store, old, complete=True)
-        self._journey(store, keep, complete=True)
-        run(store, store.run_retention(datetime(2024, 11, 21, 12, tzinfo=UTC)))
-        assert len(self.landing_rows(store)) == 2
-        run(store, store.run_retention(NOW))
-        assert [str(r["day"])[:10] for r in self.landing_rows(store)] == ["2024-11-20"]
+    def test_pilot_dimensions_survive_deletion_and_paid_or_bot_traffic_is_excluded(self, store):
+        self.journey(store,pilot="cost")
+        self.journey(store,pilot="corsa")
+        self.journey(store,source="direct")
+        assert not ins(store,rec(NOW,source_group="paid_search"))
+        ins(store,rec(NOW,is_bot=True))
+        run(store, store.run_retention(NOW + timedelta(minutes=31)))
+        assert self.agg(store) == {"denominator":2,"numerator":0}
+        assert self.agg(store,"cost") == {"denominator":1,"numerator":0}
+        rows = run(store,store.fetch_all("SELECT * FROM acquisition_v2_landing_daily"))
+        assert all(r["metric_version"] == store_mod.METRIC_VERSION for r in rows)
+        assert not any("id" in key or key in ("received_at","window_start_minute") for r in rows for key in r)
 
+    def test_orphan_events_deleted_without_inventing_a_denominator(self,store):
+        ins(store,rec(NOW,event="check_started",operation_id=uid(),entry_mode="fresh_check"))
+        run(store,store.run_retention(NOW+timedelta(minutes=31)))
+        assert raw_count(store)==0
+        assert self.agg(store)=={"denominator":0,"numerator":0}
 
-class TestPrimaryMetric:
-    def test_numerator_and_denominator_follow_the_spec(self, store):
-        t = NOW - timedelta(hours=3)
-        window = (NOW - timedelta(days=1), NOW)
-        # A: organic guide landing, completes (supported result). counts 1/1
-        a = uid()
-        ins(store, rec(t, landing_id=a))
-        op_a = uid()
-        ins(store, rec(t, event="result_rendered", landing_id=a, operation_id=op_a, page_family="app",
-                       supported_result=True, render_delivered=True, outcome_group="prediction"))
-        ins(store, rec(t, event="result_rendered", landing_id=a, operation_id=uid(), page_family="app",
-                       supported_result=True, render_delivered=True, outcome_group="prediction"))  # second result, same landing
-        # B: organic home landing, only a reference result -> denominator only
-        b = uid()
-        ins(store, rec(t, landing_id=b, page_family="home"))
-        ins(store, rec(t, event="result_rendered", landing_id=b, operation_id=uid(), page_family="app",
-                       supported_result=False, render_delivered=True, outcome_group="dataset_reference"))
-        # C: organic landing, no attempt -> denominator only
-        ins(store, rec(t, landing_id=uid(), page_family="model"))
-        # D: other_search landing with completion -> excluded entirely
-        d = uid()
-        ins(store, rec(t, landing_id=d, source_group="other_search"))
-        ins(store, rec(t, event="result_rendered", landing_id=d, operation_id=uid(), page_family="app",
-                       supported_result=True, render_delivered=True, outcome_group="prediction"))
-        # E: bot organic landing -> excluded
-        ins(store, rec(t, landing_id=uid(), is_bot=True))
-        # F: organic landing on the product page itself -> not a public landing
-        ins(store, rec(t, landing_id=uid(), page_family="app"))
-        # G: organic landing whose render later failed for the same operation (render_failed wins)
-        g, op_g = uid(), uid()
-        ins(store, rec(t, landing_id=g, page_family="make"))
-        ins(store, rec(t, event="result_rendered", landing_id=g, operation_id=op_g, page_family="app",
-                       supported_result=True, render_delivered=True, outcome_group="prediction"))
-        ins(store, rec(t, event="render_failed", landing_id=g, operation_id=op_g, page_family="app", stage="render"))
-        # H: landing outside the window -> excluded
-        ins(store, rec(NOW - timedelta(days=5), landing_id=uid()))
-        # J: paid_search landing that completes -> in neither numerator nor denominator (D-006)
-        j = uid()
-        ins(store, rec(t, landing_id=j, source_group="paid_search"))
-        ins(store, rec(t, event="result_rendered", landing_id=j, operation_id=uid(), page_family="app",
-                       source_group="paid_search", supported_result=True, render_delivered=True,
-                       outcome_group="prediction"))
-        # I: unrelated restored-link result without a landing -> irrelevant
-        ins(store, rec(t, event="result_rendered", landing_id=None, operation_id=None, page_family="app",
-                       supported_result=True, render_delivered=True, outcome_group="prediction"))
-        m = run(store, store.primary_metric(*window))
-        assert m == {"denominator": 4, "numerator": 1}   # A, B, C, G eligible; only A completes
+    def test_aggregate_expiry_and_utc_midnight_cohort(self,store):
+        start=NOW.replace(hour=23,minute=55)
+        self.journey(store,start=start)
+        run(store,store.run_retention(start+timedelta(minutes=31)))
+        assert self.agg(store)["denominator"]==1
+        result=run(store,store.run_retention(start+timedelta(days=100)))
+        assert result.deleted_aggregate_rows==2
+        assert self.agg(store)=={"denominator":0,"numerator":0}
 
+    def test_new_collection_stops_if_raw_deletion_is_overdue(self,store):
+        self.journey(store)
+        with pytest.raises(store_mod.RetentionOverdue):
+            ins(store,rec(NOW+timedelta(minutes=36)))
+        assert raw_count(store)==1
+        run(store,store.run_retention(NOW+timedelta(minutes=36)))
+        assert ins(store,rec(NOW+timedelta(minutes=36)))
 
-# ---------------------------------------------------------------------------
-# Background job
-# ---------------------------------------------------------------------------
+    def test_future_start_and_naive_clock_are_refused(self,store):
+        assert not ins(store,rec(NOW,window_start_minute=store_mod.minute(NOW)+1))
+        with pytest.raises(ValueError):
+            run(store,store.run_retention(NOW.replace(tzinfo=None)))
+        assert store_mod.months_before(date(2024,5,31),3)==date(2024,2,29)
+
 
 class TestBackgroundRetention:
     def test_not_started_when_no_store_is_configured(self, monkeypatch):
@@ -1062,14 +947,14 @@ class TestBackgroundRetention:
         s = SqliteStore(str(tmp_path / "off.sqlite"))
         asyncio.run(s.ensure_schema())
         old_event = rec(NOW - timedelta(days=100))
-        asyncio.run(s.insert_event(old_event))
+        ins(s,old_event)
         routes.set_store_for_tests(s)
         try:
             res = asyncio.run(routes.run_retention_once(now=NOW))
         finally:
             routes.set_store_for_tests(None)
         assert res is not None and res.deleted_raw_events == 1
-        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"] == 0
+        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_v2_events"))[0]["n"] == 0
 
     def test_background_task_runs_with_ingest_off_and_stops_cleanly(self, monkeypatch, tmp_path):
         monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
@@ -1088,7 +973,7 @@ class TestBackgroundRetention:
             asyncio.run(go())
         finally:
             routes.set_store_for_tests(None)
-        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_events"))[0]["n"] == 0
+        assert asyncio.run(s.fetch_all("SELECT COUNT(*) AS n FROM acquisition_v2_events"))[0]["n"] == 0
 
     def test_with_ingest_off_and_no_tables_nothing_is_created(self, monkeypatch, tmp_path):
         monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
@@ -1105,7 +990,7 @@ class TestBackgroundRetention:
         monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "")
         path = str(tmp_path / "partial.sqlite")
         conn = sqlite3.connect(path)
-        conn.execute("CREATE TABLE acquisition_events (id INTEGER)")
+        conn.execute("CREATE TABLE acquisition_v2_events (id INTEGER)")
         conn.commit()
         conn.close()
         s = SqliteStore(path)
@@ -1118,7 +1003,7 @@ class TestBackgroundRetention:
         conn = sqlite3.connect(path)
         names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         conn.close()
-        assert names == {"acquisition_events"}
+        assert names == {"acquisition_v2_events"}
 
     def test_runs_in_background_without_blocking_and_stops_cleanly(self, monkeypatch, tmp_path):
         monkeypatch.setenv("ACQUISITION_INGEST_ENABLED", "1")
@@ -1223,15 +1108,15 @@ class TestMigrationScript:
         spec.loader.exec_module(mod)
         mod.run(mod.forward_statements(), dry_run=True)
         out = capsys.readouterr().out
-        assert "CREATE TABLE IF NOT EXISTS acquisition_events" in out
-        assert "CREATE TABLE IF NOT EXISTS acquisition_daily" in out
-        assert "UNIQUE (event_id)" in out
+        assert "CREATE TABLE IF NOT EXISTS acquisition_v2_events" in out
+        assert "CREATE TABLE IF NOT EXISTS acquisition_v2_daily" in out
+        assert "event_id UUID PRIMARY KEY" in out
         for banned in ("ip ", "user_agent", "referer", "url "):
             assert banned not in out.lower()
-        assert "CREATE TABLE IF NOT EXISTS acquisition_landing_daily" in out
-        assert mod.rollback_statements() == ["DROP TABLE IF EXISTS acquisition_landing_daily",
-                                             "DROP TABLE IF EXISTS acquisition_daily",
-                                             "DROP TABLE IF EXISTS acquisition_events"]
+        assert "CREATE TABLE IF NOT EXISTS acquisition_v2_landing_daily" in out
+        assert mod.rollback_statements() == ["DROP TABLE IF EXISTS acquisition_v2_landing_daily",
+                                             "DROP TABLE IF EXISTS acquisition_v2_daily",
+                                             "DROP TABLE IF EXISTS acquisition_v2_events"]
 
 
 class TestSchemaEnsure:

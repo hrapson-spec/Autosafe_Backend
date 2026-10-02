@@ -1,6 +1,6 @@
 """Test-only JSON Schema evaluator (a separate implementation from the
 collector's pydantic models) for the keywords docs/acquisition/
-event_schema_v1.json uses: type, const, enum, pattern, required, properties,
+event_schema_v2.json uses: type, const, enum, pattern, required, properties,
 additionalProperties:false, oneOf, allOf, if/then, not. It exists so the
 collector's hand-written combination rules can be checked against the
 documented schema over a full grid (tests/test_acquisition_collector.py).
@@ -9,7 +9,7 @@ import json
 import re
 from pathlib import Path
 
-SCHEMA_PATH = Path(__file__).resolve().parent.parent / "docs" / "acquisition" / "event_schema_v1.json"
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "docs" / "acquisition" / "event_schema_v2.json"
 SUPPORTED = {
     "$schema", "$id", "title", "description", "type", "const", "enum", "pattern", "required",
     "properties", "additionalProperties", "oneOf", "allOf", "if", "then", "not",

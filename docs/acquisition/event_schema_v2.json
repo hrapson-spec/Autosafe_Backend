@@ -1,0 +1,736 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:autosafe:acquisition:event:v2",
+  "title": "AutoSafe bounded journey event v2 (collection OFF pending acceptance)",
+  "description": "Event-specific acknowledgement schema v2. Wire envelope and fixed window validation are specified in EVENT_SCHEMA_v2.md and COLLECTOR.md. A rendered acknowledgement is client-reported, not evidence of model qualification or an MOT outcome. Render failure within the fixed window cancels that operation.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "landing_observed"
+        },
+        "page_family": {
+          "enum": [
+            "home",
+            "app",
+            "guide",
+            "make",
+            "model",
+            "comparison",
+            "pillar",
+            "problem_hub",
+            "other_public"
+          ],
+          "description": "OA-005 D-005: allowlisted page family; the landing path itself is never sent or stored"
+        },
+        "source_group": {
+          "enum": [
+            "google_organic",
+            "other_search",
+            "direct",
+            "referral",
+            "unknown",
+            "internal",
+            "paid_search",
+            "internal_test"
+          ]
+        },
+        "observation_state": {
+          "enum": [
+            "observed",
+            "consent_not_given",
+            "unsupported"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "page_family",
+        "source_group",
+        "observation_state"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "check_started"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "const": "fresh_check"
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "operation_id",
+        "entry_mode"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "report_created"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "const": "fresh_check"
+        },
+        "result_kind": {
+          "enum": [
+            "comparison",
+            "vehicle_prediction"
+          ]
+        },
+        "match_scope": {
+          "enum": [
+            "exact_band",
+            "age_band_only",
+            "model_average",
+            "population_default",
+            "unavailable",
+            "model_prediction"
+          ]
+        },
+        "persistence_mode": {
+          "enum": [
+            "saved",
+            "inline_unsaved"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "operation_id",
+        "entry_mode",
+        "result_kind",
+        "match_scope",
+        "persistence_mode"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "result_kind": {
+                "const": "vehicle_prediction"
+              }
+            },
+            "required": [
+              "result_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "match_scope": {
+                "const": "model_prediction"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "match_scope": {
+                "const": "model_prediction"
+              }
+            },
+            "required": [
+              "match_scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "result_kind": {
+                "const": "vehicle_prediction"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "result_rendered"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "enum": [
+            "fresh_check",
+            "restored_link"
+          ]
+        },
+        "persistence_mode": {
+          "enum": [
+            "saved",
+            "inline_unsaved"
+          ]
+        },
+        "render_delivered": {
+          "const": true
+        },
+        "supported_result": {
+          "type": "boolean"
+        },
+        "outcome_group": {
+          "enum": [
+            "prediction",
+            "exact_comparison",
+            "broader_supported_comparison",
+            "dataset_reference",
+            "demo"
+          ]
+        },
+        "rate_valid": {
+          "type": "boolean"
+        },
+        "sample_nonzero": {
+          "type": "boolean"
+        },
+        "scope_visible": {
+          "type": "boolean",
+          "description": "v1 (D-003): data-derived, non-discriminating invariant: scope disclosure text available for this state; scope class is shown without interaction on the result card"
+        },
+        "result_kind": {
+          "enum": [
+            "comparison",
+            "vehicle_prediction"
+          ]
+        },
+        "match_scope": {
+          "enum": [
+            "exact_band",
+            "age_band_only",
+            "model_average",
+            "population_default",
+            "model_prediction"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "entry_mode",
+        "persistence_mode",
+        "render_delivered",
+        "supported_result",
+        "outcome_group",
+        "rate_valid",
+        "scope_visible",
+        "result_kind",
+        "match_scope"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "prediction"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "result_kind": {
+                "const": "vehicle_prediction"
+              },
+              "match_scope": {
+                "const": "model_prediction"
+              },
+              "supported_result": {
+                "const": true
+              },
+              "rate_valid": {
+                "const": true
+              },
+              "scope_visible": {
+                "const": true
+              }
+            },
+            "not": {
+              "required": [
+                "sample_nonzero"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "exact_comparison"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "result_kind": {
+                "const": "comparison"
+              },
+              "match_scope": {
+                "const": "exact_band"
+              },
+              "rate_valid": {
+                "const": true
+              }
+            },
+            "required": [
+              "sample_nonzero"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "broader_supported_comparison"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "result_kind": {
+                "const": "comparison"
+              },
+              "match_scope": {
+                "enum": [
+                  "age_band_only",
+                  "model_average"
+                ]
+              },
+              "rate_valid": {
+                "const": true
+              }
+            },
+            "required": [
+              "sample_nonzero"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "dataset_reference"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "result_kind": {
+                "const": "comparison"
+              },
+              "match_scope": {
+                "const": "population_default"
+              },
+              "supported_result": {
+                "const": false
+              }
+            },
+            "required": [
+              "sample_nonzero"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "match_scope": {
+                "const": "model_prediction"
+              }
+            },
+            "required": [
+              "match_scope"
+            ]
+          },
+          "then": {
+            "properties": {
+              "outcome_group": {
+                "enum": [
+                  "prediction",
+                  "demo"
+                ]
+              }
+            },
+            "not": {
+              "required": [
+                "sample_nonzero"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "result_kind": {
+                "const": "vehicle_prediction"
+              }
+            },
+            "required": [
+              "result_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "match_scope": {
+                "const": "model_prediction"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "const": "demo"
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "properties": {
+              "supported_result": {
+                "const": false
+              }
+            },
+            "if": {
+              "properties": {
+                "result_kind": {
+                  "const": "comparison"
+                }
+              },
+              "required": [
+                "result_kind"
+              ]
+            },
+            "then": {
+              "required": [
+                "sample_nonzero"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "result_kind": {
+                "const": "comparison"
+              },
+              "match_scope": {
+                "enum": [
+                  "exact_band",
+                  "age_band_only",
+                  "model_average",
+                  "population_default"
+                ]
+              }
+            },
+            "required": [
+              "result_kind",
+              "match_scope"
+            ]
+          },
+          "then": {
+            "required": [
+              "sample_nonzero"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "supported_result": {
+                "const": true
+              }
+            },
+            "required": [
+              "supported_result"
+            ]
+          },
+          "then": {
+            "properties": {
+              "rate_valid": {
+                "const": true
+              },
+              "scope_visible": {
+                "const": true
+              },
+              "outcome_group": {
+                "enum": [
+                  "prediction",
+                  "exact_comparison",
+                  "broader_supported_comparison"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome_group": {
+                "enum": [
+                  "exact_comparison",
+                  "broader_supported_comparison"
+                ]
+              }
+            },
+            "required": [
+              "outcome_group"
+            ]
+          },
+          "then": {
+            "if": {
+              "properties": {
+                "scope_visible": {
+                  "const": true
+                }
+              },
+              "required": [
+                "scope_visible"
+              ]
+            },
+            "then": {
+              "properties": {
+                "supported_result": {
+                  "const": true
+                },
+                "sample_nonzero": {
+                  "const": true
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "result_unavailable"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "enum": [
+            "fresh_check",
+            "restored_link"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "not_found",
+            "expired",
+            "unavailable",
+            "error"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "entry_mode",
+        "reason"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "check_failed"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "const": "fresh_check"
+        },
+        "error_category": {
+          "enum": [
+            "invalid_registration",
+            "vehicle_not_found",
+            "dvsa_unavailable",
+            "rate_limited",
+            "internal_error",
+            "report_not_found",
+            "report_expired",
+            "storage_unavailable",
+            "idempotency_conflict",
+            "undeclared_parameter",
+            "network_error",
+            "invalid_response",
+            "unknown"
+          ]
+        },
+        "stage": {
+          "enum": [
+            "create_report"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "operation_id",
+        "entry_mode",
+        "error_category",
+        "stage"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2
+        },
+        "metric_version": {
+          "const": "oa-journey-30m-v2"
+        },
+        "event_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "event": {
+          "const": "render_failed"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "entry_mode": {
+          "enum": [
+            "fresh_check",
+            "restored_link"
+          ]
+        },
+        "stage": {
+          "enum": [
+            "lazy_load",
+            "render",
+            "contract_invalid"
+          ]
+        }
+      },
+      "required": [
+        "schema_version",
+        "metric_version",
+        "event_id",
+        "event",
+        "entry_mode",
+        "stage"
+      ]
+    }
+  ]
+}

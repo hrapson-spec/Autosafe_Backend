@@ -37,6 +37,7 @@ function body(call: unknown[]): Record<string, unknown> {
 beforeEach(() => {
   __resetAcquisitionStateForTests();
   vi.useFakeTimers();
+  setAcquisitionContext({landingId: LANDING, sourceGroup: 'google_organic', pageFamily: 'app', windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'none'});
 });
 
 afterEach(() => {
@@ -64,8 +65,8 @@ describe('transport request shape (force-enabled in test)', () => {
   it('POSTs same-origin with keepalive, no credentials, no referrer, no cache', () => {
     const fetchImpl: FetchMock = vi.fn(() => ok(202));
     const sink = createFetchSink({ fetchImpl: fetchImpl as unknown as typeof fetch });
-    setAcquisitionContext({ landingId: LANDING, sourceGroup: 'google_organic', pageFamily: 'app' });
-    const event = { schema_version: 1, metric_version: 'm', event_id: OP, ...STARTED } as AcquisitionEvent;
+    setAcquisitionContext({ windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'none', landingId: LANDING, sourceGroup: 'google_organic', pageFamily: 'app' });
+    const event = { schema_version: 2, metric_version: 'm', event_id: OP, ...STARTED } as AcquisitionEvent;
     sink.emit(event);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
@@ -90,7 +91,7 @@ describe('transport request shape (force-enabled in test)', () => {
     expect(wire.session_id).toMatch(UUID);
     expect(Object.keys(wire).sort()).toEqual([
       'entry_mode', 'event', 'event_id', 'landing_id', 'metric_version', 'operation_id', 'page_family',
-      'schema_version', 'session_id', 'source_group',
+      'pilot_group', 'schema_version', 'session_id', 'source_group', 'window_start_minute',
     ]);
   });
 
@@ -105,16 +106,12 @@ describe('transport request shape (force-enabled in test)', () => {
     expect(sessions.has(body(fetchImpl.mock.calls[3]).session_id as string)).toBe(false);
   });
 
-  it('defaults to source unknown, page family app, no landing id, and omits release_sha when the build has none', () => {
-    const fetchImpl: FetchMock = vi.fn(() => ok(202));
-    createFetchSink({ fetchImpl: fetchImpl as unknown as typeof fetch }).emit({ event_id: 'x', ...STARTED } as unknown as AcquisitionEvent);
-    const wire = body(fetchImpl.mock.calls[0]);
-    expect(getAcquisitionContext()).toEqual({ sourceGroup: 'unknown', pageFamily: 'app' });
-    expect(wire.source_group).toBe('unknown');
-    expect(wire.page_family).toBe('app');
-    expect('landing_id' in wire).toBe(false);
-    expect(releaseSha()).toBeUndefined();
-    expect('release_sha' in wire).toBe(false);
+  it('missing attribution is unobserved rather than an invented unknown landing', () => {
+    setAcquisitionContext({sourceGroup:'unknown',pageFamily:'app'});
+    const fetchImpl = vi.fn(() => ok(202));
+    createFetchSink({fetchImpl:fetchImpl as typeof fetch}).emit({event_id:'x',...STARTED} as unknown as AcquisitionEvent);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(getAcquisitionContext().landingId).toBeUndefined();
   });
 
   it('carries the build release sha when one is defined', () => {
@@ -128,7 +125,7 @@ describe('transport request shape (force-enabled in test)', () => {
 
   it('a landing event keeps its own page family and source group', () => {
     const fetchImpl: FetchMock = vi.fn(() => ok(202));
-    setAcquisitionContext({ landingId: LANDING, sourceGroup: 'direct', pageFamily: 'app' });
+    setAcquisitionContext({ windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'none', landingId: LANDING, sourceGroup: 'direct', pageFamily: 'app' });
     createFetchSink({ fetchImpl: fetchImpl as unknown as typeof fetch }).emit({
       event: 'landing_observed', event_id: 'x', page_family: 'home', source_group: 'google_organic',
       observation_state: 'observed',
@@ -151,7 +148,7 @@ describe('transport request shape (force-enabled in test)', () => {
     const wire = body(spy.mock.calls[0] as unknown[]);
     expect(wire.event).toBe('check_started');
     expect(wire.event_id).toMatch(UUID);
-    expect(wire.schema_version).toBe(1);
+    expect(wire.schema_version).toBe(2);
   });
 });
 
@@ -242,7 +239,7 @@ describe('no storage of any kind', () => {
     const f: FetchMock = vi.fn(() => Promise.reject(new TypeError('x')));
     const sink = createFetchSink({ fetchImpl: f as unknown as typeof fetch });
     sink.emit({ event_id: 'e1', ...STARTED } as unknown as AcquisitionEvent);
-    setAcquisitionContext({ landingId: LANDING, sourceGroup: 'direct', pageFamily: 'app' });
+    setAcquisitionContext({ windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'none', landingId: LANDING, sourceGroup: 'direct', pageFamily: 'app' });
     await vi.advanceTimersByTimeAsync(20_000);
     expect(setItem).not.toHaveBeenCalled();
     expect(getItem).not.toHaveBeenCalled();

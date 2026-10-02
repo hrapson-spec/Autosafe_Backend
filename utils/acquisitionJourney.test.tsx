@@ -75,6 +75,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete window.autosafeMeasurement;
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   __resetAcquisitionStateForTests();
@@ -95,7 +96,7 @@ describe('collector flag false (as shipped)', () => {
 
 describe('force-enabled in test', () => {
   it('sends check_started, report_created and result_rendered with one session and the landing id, and nothing sensitive', async () => {
-    window.__autosafeLandingHandoff = { al: AL, src: 'google_organic' }; // as left by index.html's head script
+    window.autosafeMeasurement = { getContext: () => ({landingId: AL, sourceGroup: 'google_organic', pageFamily:'app', windowStartMinute: Math.floor(Date.now()/60000), pilotGroup:'cost'}), isOff: () => false, setOff: vi.fn() };
     initAcquisitionLanding(true);
     expect(installAcquisitionTransport(true)).toBe(true);
     await journey();
@@ -111,7 +112,7 @@ describe('force-enabled in test', () => {
     expect(wires[0].operation_id).toBe(wires[2].operation_id);
 
     for (const w of wires) {
-      const { session_id: _s, landing_id: _l, release_sha: _r, page_family: _p, source_group: _g, ...event } = w;
+      const { session_id: _s, landing_id: _l, release_sha: _r, window_start_minute: _w, pilot_group: _c, page_family: _p, source_group: _g, ...event } = w;
       expect(validates(schema, event), JSON.stringify(event)).toBe(true);
     }
     const all = fetchSpy.mock.calls.map((c) => JSON.stringify(c)).join('\n');
