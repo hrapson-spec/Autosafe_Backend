@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import type { ReportV2 } from '../types';
@@ -91,7 +91,9 @@ describe('ReportScreen: success', () => {
     expect(screen.getByTestId('dashboard-postcode')).toHaveTextContent('SW1A 1AA');
 
     expect(getReport).toHaveBeenCalledWith(fixtureExactHigh.report_token);
-    expect(trackReportView).toHaveBeenCalledTimes(1);
+    // A mounted dashboard probe does not guarantee that ReportScreen's
+    // passive reporting effect has flushed on a busy CI runner.
+    await waitFor(() => expect(trackReportView).toHaveBeenCalledTimes(1));
     expect(trackReportView).toHaveBeenCalledWith(
       fixtureExactHigh.vehicle.make,
       fixtureExactHigh.vehicle.model,
