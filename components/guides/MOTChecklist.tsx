@@ -8,7 +8,7 @@ const MOTChecklist: React.FC = () => {
       metaTitle="DIY Pre-MOT Checklist - What to Check Before Your MOT Test"
       metaDescription="Complete DIY pre-MOT checklist. Check lights, tyres, brakes, wipers and more before your MOT test. Avoid common failures and save money on retests."
       canonicalPath="/guides/mot-checklist"
-      lastUpdated="21 January 2026"
+      lastUpdated="2 October 2026"
     >
       <div className="prose prose-slate max-w-none">
         <p className="text-lg text-slate-600 leading-relaxed mb-8">
@@ -19,7 +19,7 @@ const MOTChecklist: React.FC = () => {
         <section className="mb-8">
           <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Lights and Signals</h2>
           <p className="text-slate-600 leading-relaxed mb-4">
-            Lighting failures account for around 18% of all MOT failures. Most are easy to fix yourself.
+            Check that the required lights work. Ask a garage about faults you cannot assess safely.
           </p>
           <ul className="text-slate-600 space-y-2 list-disc list-inside">
             <li><strong>Headlights:</strong> Check both dipped and main beam work</li>
@@ -53,7 +53,7 @@ const MOTChecklist: React.FC = () => {
         <section className="mb-8">
           <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Windscreen and Wipers</h2>
           <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li><strong>Chips and cracks:</strong> Damage larger than 10mm in the driver's view area (Zone A) will fail</li>
+            <li><strong>Chips and cracks:</strong> Damage needs assessment for its location, size and effect on the driver’s view. The 10mm zone A and 40mm swept-area thresholds are not automatic failure rules. See the <a href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles/3-visibility">DVSA visibility guidance</a></li>
             <li><strong>Wiper blades:</strong> Should clear the screen effectively without smearing</li>
             <li><strong>Washer jets:</strong> Must spray fluid onto the screen</li>
             <li><strong>Washer fluid:</strong> Top up the reservoir</li>

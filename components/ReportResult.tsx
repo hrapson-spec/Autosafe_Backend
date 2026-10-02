@@ -93,7 +93,8 @@ function greatestCommonDivisor(a: number, b: number): number {
 // candidate by approximation error plus a mild penalty on the denominator, so
 // simple human fractions (1 in 3, 2 in 5) win over marginally-closer but
 // clunkier ones (3 in 8). Denominators run 2..10; anything that rounds to 0 or
-// 100% at every denominator falls back to the "fewer than 1 in 100" floor.
+// 100% at every denominator uses a percentage-sized fraction instead. A
+// very high estimate must never be described by the low-probability floor.
 function failureFrequency(failureRisk: number): { text: string; predictionSummary: string } {
   const floor = {
     text: 'fewer than 1 in 100',
@@ -115,7 +116,12 @@ function failureFrequency(failureRisk: number): { text: string; predictionSummar
   }
 
   if (!best) {
-    return floor;
+    const text = failureRisk < 0.01
+      ? 'fewer than 1 in 100'
+      : failureRisk > 0.99
+        ? 'more than 99 in 100'
+        : `about ${Math.round(failureRisk * 100)} in 100`;
+    return { text, predictionSummary: `That’s a chance of ${text}.` };
   }
 
   const divisor = greatestCommonDivisor(best.numerator, best.denominator);
@@ -267,11 +273,22 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
                   ? frequency.predictionSummary
                   : comparisonSummary}
               </p>
+              <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+                {isVehiclePrediction
+                  ? 'Model estimate from recorded MOT history. It is not an inspection, diagnosis or guarantee.'
+                  : report.evidence.match_scope === 'unavailable'
+                    ? 'Vehicle-matched evidence is unavailable. The number shown is a dataset reference only.'
+                    : vehicleComparison
+                      ? 'Historical group comparison. It does not assess the current condition of your car.'
+                      : 'Dataset reference only. It does not assess the current condition of your car.'}
+              </p>
               {isVehiclePrediction && (
                 <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
                   {report.risk.failure_risk < 0.5
                     ? 'A pass is still more likely, but it’s worth checking the most common trouble spots before test day.'
-                    : 'A fail is more likely than not — it’s worth checking the most common trouble spots before test day.'}
+                    : report.risk.failure_risk > 0.5
+                      ? 'A fail is more likely than not in this model estimate — check the suggested areas before test day.'
+                      : 'This model estimate gives the same chance to a pass and a fail. Check the suggested areas before test day.'}
                 </p>
               )}
             </div>

@@ -94,14 +94,14 @@ describe('App: home page rendering', () => {
         name: 'Fix it before they find it.',
       })
     ).toBeInTheDocument();
-    expect(screen.getByText('1 in 4 cars fails its MOT. Will yours?')).toBeInTheDocument();
+    expect(screen.getByText('Start with your MOT record. Know what to check next.')).toBeInTheDocument();
     expect(screen.queryByText('See what the MOT evidence says.')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Registration Number', { exact: false })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Postcode' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /check this car/i })).toBeInTheDocument();
     expect(await screen.findByText(/148M\+ recorded MOT tests analysed/)).toBeInTheDocument();
     expect(screen.queryByText(/vehicles checked this month/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Free & instant')).toBeInTheDocument();
+    expect(screen.getByText('Free to check')).toBeInTheDocument();
   });
 
   it('prefills from one-use session storage without putting the registration in the URL', async () => {

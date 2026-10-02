@@ -6,14 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AutoSafe is a UK MOT failure risk service. **Current RC1 user path (truth):**
 the React UI calls `POST /api/v2/reports`; the backend resolves recorded MOT
-history and returns the closest supported comparable-vehicle rate with explicit
-mileage/evidence provenance, persistence state, and an opaque share token. It
-is not a diagnosis or an exact-vehicle prediction. `GET /api/v2/reports/{token}`
+history and attempts the existing V55 model path. Typed availability failures
+fall back to a comparable-vehicle rate. `result_kind` distinguishes the model
+estimate from comparison/reference evidence; neither is a diagnosis or a
+guarantee. Serving a model estimate does not establish predictive qualification.
+Results include provenance, persistence state and an opaque share token when
+saved. `GET /api/v2/reports/{token}`
 restores a persisted share. Legacy `/api/vehicle`, `/api/risk`, and
 `/api/risk/v55` routes remain compatibility surfaces but are not the RC1
 browser flow. `scripts/claim_sweep.py` enforces the public-claim boundary in CI.
 The release packet is `docs/release_rc1/README.md`; the earlier remediation plan
 of record is `work/reviews/REMEDIATION_PLAN_2026-07-03.md`.
+The current public-claims decision is `docs/acquisition/OA-002_CLAIMS_DECISION.md`.
 
 **Production URL:** https://www.autosafe.one
 **Deployment:** Railway.app (auto-deploys from `main` branch)

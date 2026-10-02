@@ -1,204 +1,41 @@
 import React from 'react';
 import GuideLayout from './GuideLayout';
 
-const CommonFailures: React.FC = () => {
-  return (
-    <GuideLayout
-      title="Understanding MOT Failures"
-      metaTitle="Most Common MOT Failures UK - Why Cars Fail & How to Prevent"
-      metaDescription="Discover the most common reasons cars fail their MOT in the UK. Learn about lighting, suspension, brakes and tyre failures, plus how to prevent them."
-      canonicalPath="/guides/common-mot-failures"
-      lastUpdated="21 January 2026"
-    >
-      <div className="prose prose-slate max-w-none">
-        <p className="text-lg text-slate-600 leading-relaxed mb-8">
-          Nearly 40% of vehicles fail their MOT on the first attempt. Understanding the most common
-          reasons for failure can help you prepare and avoid costly retests.
-        </p>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">1. Lighting and Signalling (18.9%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            The most common cause of MOT failure. Issues range from simple blown bulbs to more
-            complex electrical faults.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Blown headlight, brake light, or indicator bulbs</li>
-            <li>Incorrect headlight aim (too high or too low)</li>
-            <li>Damaged or discoloured lens covers</li>
-            <li>Faulty number plate lights</li>
-            <li>Hazard warning lights not working</li>
-          </ul>
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg mt-4">
-            <p className="text-green-900 text-sm">
-              <strong>Prevention:</strong> Most lighting failures are easily fixed with replacement bulbs
-              costing just a few pounds. Check all lights weekly.
-            </p>
-          </div>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">2. Suspension (13.2%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Suspension components wear gradually, making it hard to notice deterioration during normal driving.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Worn shock absorbers (dampers)</li>
-            <li>Damaged or perished rubber bushings</li>
-            <li>Ball joint wear or play</li>
-            <li>Corroded or damaged springs</li>
-            <li>Worn anti-roll bar links or bushes</li>
-          </ul>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Signs to watch for:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Excessive bouncing after bumps</li>
-            <li>Knocking or clunking noises from wheels</li>
-            <li>Uneven tyre wear</li>
-            <li>Vehicle pulling to one side</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">3. Brakes (10.2%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Brakes are safety-critical and thoroughly tested during the MOT.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Worn brake pads or discs</li>
-            <li>Corroded or seized brake components</li>
-            <li>Uneven braking (imbalance between sides)</li>
-            <li>Faulty handbrake mechanism</li>
-            <li>Brake fluid leaks</li>
-            <li>ABS warning light illuminated</li>
-          </ul>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
-            <p className="text-amber-900 text-sm">
-              <strong>Important:</strong> Never ignore brake warning signs. Squealing, grinding,
-              or a spongy pedal all indicate problems that will likely fail the MOT.
-            </p>
-          </div>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">4. Tyres (7.7%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Tyre failures are entirely preventable with regular checks.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Failure reasons:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Tread depth below 1.6mm legal minimum</li>
-            <li>Cuts or bulges in the sidewall</li>
-            <li>Exposed cords or fabric</li>
-            <li>Incorrect tyre size for the vehicle</li>
-            <li>Mixing radial and cross-ply tyres incorrectly</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">5. Visibility (6.8%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            The driver must have clear visibility of the road ahead.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Windscreen damage in driver's line of sight</li>
-            <li>Worn or damaged wiper blades</li>
-            <li>Faulty windscreen washer system</li>
-            <li>Damaged or missing mirrors</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">6. Emissions (5.4%)</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            All vehicles must meet emissions standards. Diesel vehicles are subject to stricter testing.
-          </p>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Faulty catalytic converter</li>
-            <li>Diesel particulate filter (DPF) problems</li>
-            <li>Engine management faults affecting emissions</li>
-            <li>Exhaust leaks</li>
-            <li>Visible smoke from the exhaust</li>
-          </ul>
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mt-4">
-            <p className="text-blue-900 text-sm">
-              <strong>Tip:</strong> Take a longer drive before your MOT to ensure the engine
-              and catalytic converter are up to temperature. This can improve emissions test results.
-            </p>
-          </div>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">7. Steering (4.1%)</h2>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Excessive play in the steering wheel</li>
-            <li>Worn steering rack or column</li>
-            <li>Damaged or leaking power steering components</li>
-            <li>Worn track rod ends</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">8. Exhaust System (3.8%)</h2>
-          <h3 className="font-medium text-slate-900 mt-4 mb-2">Common issues:</h3>
-          <ul className="text-slate-600 space-y-2 list-disc list-inside">
-            <li>Corroded or holed exhaust pipes</li>
-            <li>Loose or insecure mountings</li>
-            <li>Exhaust leaks</li>
-            <li>Missing or damaged heat shields</li>
-          </ul>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">MOT Failure Statistics by Vehicle Age</h2>
-          <p className="text-slate-600 leading-relaxed mb-4">
-            Older vehicles have higher failure rates:
-          </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="py-3 pr-4 font-medium text-slate-900">Vehicle Age</th>
-                  <th className="py-3 font-medium text-slate-900">Approx. Failure Rate</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-600">
-                <tr className="border-b border-slate-100">
-                  <td className="py-3 pr-4">3-5 years</td>
-                  <td className="py-3">25-30%</td>
-                </tr>
-                <tr className="border-b border-slate-100">
-                  <td className="py-3 pr-4">6-10 years</td>
-                  <td className="py-3">35-40%</td>
-                </tr>
-                <tr className="border-b border-slate-100">
-                  <td className="py-3 pr-4">11-15 years</td>
-                  <td className="py-3">45-50%</td>
-                </tr>
-                <tr>
-                  <td className="py-3 pr-4">15+ years</td>
-                  <td className="py-3">50-55%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <div className="p-6 bg-slate-100 rounded-lg">
-          <h3 className="font-medium text-slate-900 mb-2">Data source</h3>
-          <p className="text-slate-600 text-sm">
-            Failure statistics are based on DVSA MOT testing data. Individual results vary based
-            on vehicle make, model, and maintenance history.
-          </p>
-        </div>
-      </div>
-    </GuideLayout>
-  );
-};
+const CommonFailures: React.FC = () => (
+  <GuideLayout
+    title="Common MOT Failure Points: What to Check"
+    metaTitle="Common MOT Failure Points: What to Check | AutoSafe"
+    metaDescription="Understand MOT inspection areas and the limits of recorded failure data."
+    canonicalPath="/guides/common-mot-failures"
+    lastUpdated="2 October 2026"
+  >
+    <div className="prose prose-slate max-w-none">
+      <p>An MOT examines specified safety and environmental requirements. These inspection areas are not a ranking of failure frequency or a diagnosis of your vehicle.</p>
+      <p>For cars and light commercial vehicles in Great Britain, read the <a href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles">current DVSA inspection manual</a>. Requirements depend on vehicle class and age; Northern Ireland has separate guidance.</p>
+      <h2>Ten areas covered by the inspection</h2>
+      <ul>
+            <li><strong>Lights and electrical equipment:</strong> Inspectors check required lamps, indicators, reflectors and relevant electrical equipment.</li>
+            <li><strong>Brakes:</strong> The test covers braking performance and the condition and operation of braking systems.</li>
+            <li><strong>Steering:</strong> Steering condition, operation and excessive play are assessed.</li>
+            <li><strong>Tyres and wheels:</strong> The inspection covers tyre condition, fitment and tread, as well as wheels and bearings.</li>
+            <li><strong>Suspension:</strong> Springs, dampers, suspension arms and joints are inspected.</li>
+            <li><strong>Visibility:</strong> The windscreen, mirrors, wipers and washers must provide the required view.</li>
+            <li><strong>Body and structure:</strong> The inspection includes structural condition, corrosion and relevant attachments.</li>
+            <li><strong>Seatbelts and other equipment:</strong> Restraints, warning systems and other required equipment are checked where applicable.</li>
+            <li><strong>Exhaust and emissions:</strong> Exhaust condition, emissions, noise and relevant warning lights are covered.</li>
+            <li><strong>Vehicle identification:</strong> Registration plates and the vehicle identification number are checked.</li>
+      </ul>
+      <h2>Start with your recorded history</h2>
+      <p>Review previous defects and advisories, whether repairs were completed, and any new symptoms. An advisory is a reason to investigate; it is not proof of a current defect or the next result. Ask a competent professional about safety-critical work.</p>
+      <h2>Understand the data</h2>
+      <p>Compare figures only when their periods, populations and test definitions are compatible. Component categories can overlap in one failed test. Age or component rankings are not published here without reviewed definitions.</p>
+      <h2>Questions about MOT failures</h2>
+          <h3>What percentage of recorded tests failed in AutoSafe’s comparison dataset?</h3><p>The dataset contains 148,509,908 recorded tests and 39,969,903 failures, giving a recorded-test failure rate of 26.9%. The source-record coverage period is not established here. This is not a current annual UK rate or a percentage of unique cars.</p>
+          <h3>Does an age-group failure rate tell me whether my car will pass?</h3><p>No. A group rate describes recorded tests. Compare groups only when their periods, populations and test definitions are compatible. Vehicle age alone does not establish the condition of your car.</p>
+          <h3>Does windscreen damage automatically cause an MOT failure?</h3><p>Assessment depends on location, size and its effect on the driver’s view. The DVSA manual states that failure for damage is justified only when it significantly affects the view of the road. Have damage assessed by a competent professional.</p>
+      <p>See the <a href="https://www.gov.uk/guidance/mot-inspection-manual-for-private-passenger-and-light-commercial-vehicles/3-visibility">DVSA visibility requirements</a>, our <a href="/guides/mot-failure-rates-by-car">failure-rate explanation</a> and the <a href="/app/guides/mot-checklist">pre-MOT checklist</a>.</p>
+    </div>
+  </GuideLayout>
+);
 
 export default CommonFailures;

@@ -1,22 +1,25 @@
 # AutoSafe Architecture
 
-## Authoritative RC1 path
+## Authoritative v2 report path
 
 ```text
 Browser (React/Vite)
   -> POST /api/v2/reports
      -> DVSA vehicle and latest MOT record lookup
      -> mileage provenance resolution
-     -> weighted evidence ladder
+     -> existing V55 model estimate when available, otherwise weighted evidence ladder
         PostgreSQL mot_risk -> SQLite risks -> labelled dataset reference
      -> typed ReportResponse
      -> PostgreSQL risk_checks persistence
   -> GET /api/v2/reports/{opaque token} for saved-report restoration
 ```
 
-The v2 result is a historical comparison rate with provenance. The product does
-not call the V55 model in this path and does not present the rate as a vehicle
-diagnosis or future-outcome forecast.
+The v2 route attempts the existing V55 inference path and falls back to the
+historical comparison ladder on typed availability failures. `result_kind`
+distinguishes `vehicle_prediction` (a model estimate) from `comparison`.
+Neither is an inspection, diagnosis or guarantee. Integration and successful
+rendering do not establish statistical qualification; see
+`docs/acquisition/OA-002_CLAIMS_DECISION.md` for the current claim boundary.
 
 `prediction_source` names the source of the displayed number. Matched cohort
 figures use `postgres` or `sqlite`; both degraded scopes use
@@ -43,6 +46,7 @@ tracking is disabled on bearer-token report routes.
 | `report_contract.py` | Strict v2 request/response/error models and enums |
 | `report_routes.py` | Typed errors, idempotency, persistence ordering, token retrieval, `/api/version` |
 | `report_service.py` | Vehicle/MOT mapping, mileage provenance, evidence fallback ladder |
+| `prediction_service.py` | Existing V55 inference adapter, validity checks and typed availability failures |
 | `database.py` | PostgreSQL pool, v2 weighted queries, saved-report persistence, lead persistence |
 | `dvsa_client.py` / `dvla_client.py` | External vehicle-data clients |
 
