@@ -666,6 +666,8 @@ class TestSitemapLastmodRule(unittest.TestCase):
         self.assertEqual(by_path["/"], expect(*page_revisions.homepage_sources(), dataset=False))
         self.assertIn("App.tsx", page_revisions.homepage_sources())
         self.assertIn("components/HeroForm.tsx", page_revisions.homepage_sources())
+        self.assertNotIn("components/ReportScreen.tsx", page_revisions.homepage_sources())
+        self.assertNotIn("components/ResultErrorBoundary.tsx", page_revisions.homepage_sources())
         self.assertFalse([p for p in page_revisions.TRACKED_SOURCES if ".test." in p])
 
     def test_sitemap_index_lastmod_is_the_latest_entry_of_each_sub_sitemap(self):

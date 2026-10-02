@@ -114,11 +114,9 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   author chooses `--significant "reason"` (moves the date; default today, `--date` to override) or
   `--non-significant "reason"` (hash only). No clock is read at runtime. Sitemap-index lastmod = latest
   entry of each sub-sitemap.
-- Sources per page (after review): homepage `/` = `index.html` + `App.tsx` + `components/**` (non-test
-  modules; over-inclusive by design — report-screen components are tracked too, so a copy change there
-  moves the homepage date); every server-rendered page = `seo_pages.py` (Python-built copy: comparison
+- Sources per page (after review): homepage `/` = `index.html`, `App.tsx`, HeroForm and its rendered UI dependencies (explicitly listed in `page_revisions.py`); every server-rendered page = `seo_pages.py` (Python-built copy: comparison
   titles, 404 text, related-model selection) + `seo_base.html` + its template; guides/legal = their
-  HTML file. New component files are auto-tracked (glob) and fail the manifest test until reviewed.
+  HTML file. New components rendered on the homepage must be added to that explicit list and reviewed.
 - Seeded history (one-off, from inspected diffs): all nine SEO templates 2026-07-11 (RC1 rewrite);
   `seo_base.html` 2026-02-06 (creation; it contributes only header/nav/CTA/footer/related-links
   boilerplate, and every later edit was boilerplate, consent, styling or analytics); the nine guides
@@ -139,8 +137,7 @@ only `/api/`, `/app/`, `/health`, `/ready` (so `/terms` and `/privacy` are crawl
   index: content 2026-07-18, makes/models/comparisons 2026-07-11. Compared with production
   (2026-01-29 ×428 / 2026-07-11 ×14) this moves the dataset-page family to the date their content
   was actually rewritten and the legal/home pages forward by six to seven days.
-- Limits: the homepage date is driven by any tracked SPA module, including report-screen components
-  that do not render on `/` (accepted over-inclusion). The dataset
+- Integration correction (2026-10-02): report-only components no longer affect the homepage date. The dataset
   date stays `DATASET_ARTIFACT_REVISION` (owned by report_contract.py). Significance is an author
   judgement recorded with a reason; the test enforces that a judgement is recorded, not what it is.
   Sitemap cache maxsize 1 → 8 so the five sitemap documents no longer evict each other.
@@ -260,3 +257,7 @@ changed) so `tests/test_seo.py::TestSitemapLastmodRule` passes on the merged tre
 Verification by the worker (two measurement scripts, byte-identical old-vs-new renders, exact state
 snapshots) plus one independent review (Sonnet reviewer, reproduction-verified) whose findings are
 listed above and addressed in 27a632d and the following commit. The review did not re-verify the fixes.
+
+## Combined release review — 2026-10-02
+
+The original broad SPA glob has been narrowed to the components rendered on the homepage. Adding the result error boundary during OA-004 integration exposed a false homepage lastmod change; report-only sources now have no effect on `/`. Earlier statements about automatic tracking of all components describe the branch before this correction. Existing significant revision dates are preserved; integration changes to metadata/error handling are classified as non-significant.
