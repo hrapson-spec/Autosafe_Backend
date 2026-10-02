@@ -142,6 +142,28 @@ describe('ReportResult', () => {
   });
 
   it.each([
+    [0.005, 'fewer than 1 in 100'],
+    [0.04, 'about 4 in 100'],
+    [0.96, 'about 96 in 100'],
+    [0.999, 'more than 99 in 100'],
+  ])('keeps an extreme %s estimate consistent with its frequency', (failureRisk, frequency) => {
+    render(<ReportResult
+      report={{ ...fixtureVehiclePrediction, risk: { ...fixtureVehiclePrediction.risk, failure_risk: failureRisk } }}
+      onReminder={vi.fn()} onGarage={vi.fn()}
+    />);
+    expect(screen.getByText(`That’s a chance of ${frequency}.`)).toBeInTheDocument();
+  });
+
+  it('does not say one outcome is more likely for a 50% estimate', () => {
+    render(<ReportResult
+      report={{ ...fixtureVehiclePrediction, risk: { ...fixtureVehiclePrediction.risk, failure_risk: 0.5 } }}
+      onReminder={vi.fn()} onGarage={vi.fn()}
+    />);
+    expect(screen.queryByText(/more likely/)).not.toBeInTheDocument();
+    expect(screen.getByText(/same chance to a pass and a fail/)).toBeInTheDocument();
+  });
+
+  it.each([
     ['a null', null],
     ['a malformed', 'not-a-date'],
     ['an impossible', '2027-02-30T00:00:00'],

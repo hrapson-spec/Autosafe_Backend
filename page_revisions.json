@@ -2,23 +2,23 @@
   "_rule": "lastmod = max(dataset artifact revision where the page renders dataset figures, significant_revision of every source that renders the page). significant_revision moves only when the author records a change as --significant (main content); boilerplate, footer, markup, styling, analytics and language-tag edits are --non-significant. No runtime clock is used.",
   "files": {
     "index.html": {
-      "sha256": "3bf55d9e9e4631fd346bb9f18adea4c9e03029fc95334857956648ec6c0a2572",
-      "significant_revision": "2026-07-17",
-      "reason": "c37c75e 2026-07-17: homepage result-state paragraph reworded (main content)",
+      "sha256": "64ce5959fb5cccddc931adb0c47465016ed255cdd2e1b39afd8c3f354b92e3e9",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": false,
-        "reason": "Integrate report metadata controls and render acknowledgement without public copy changes"
+        "significant": true,
+        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
       }
     },
     "App.tsx": {
-      "sha256": "4579a34c6db884e0f637bf79927acff8b097205609497e10e338b49db18e9a87",
-      "significant_revision": "2026-07-18",
-      "reason": "f30bc38/b951b7f 2026-07-18: homepage headline and social-proof copy changed",
+      "sha256": "6b73211b7c2f1fe98a4865518cc931bf340f5cf72b8edb1ba2dc3389a3bae646",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
         "date": "2026-10-02",
-        "significant": false,
-        "reason": "Integrate report metadata controls and render acknowledgement without public copy changes"
+        "significant": true,
+        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
       }
     },
     "components/HeroForm.tsx": {
@@ -202,23 +202,23 @@
       }
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "4c80841d42bc701e72d056d0a07ece783f494e8ec32906c97708d177e63e4e0c",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "4e4f162bb6f5542ae7417812137c513cbf38b2f9b232fd8fdddf25b5439ae058",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
       }
     },
     "static/guides/common-mot-failures.html": {
-      "sha256": "eee1e593c9852a824f58a4df584112f9fcc2229de0703aea9d206380c011d3bf",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "b005a3a786e5f4998b9b7d8d85bb92b35aadbe628ec05e4e6a258c68cdec6098",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
       }
     },
     "static/guides/when-is-mot-due.html": {
@@ -232,23 +232,23 @@
       }
     },
     "static/guides/mot-failure-rates-by-car.html": {
-      "sha256": "4f55b1082681844d97e838c9402382dc41164a9dbff835389912ba44730b33da",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "4cda0e4e8894642c02e9855a01de9ad8c00f17a5f16e6ab72586733d24c382b6",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance"
       }
     },
     "static/guides/mot-rules-2026.html": {
-      "sha256": "9599f2531a7cbde86e82501b0a355602156ccc76f073974132d7bf2b6980ffa4",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "f7bf312643ec3adf1928936b3abc6e8a9b58ea037602253b1f820b7b98a0fc58",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides"
       }
     },
     "static/guides/mot-defect-categories.html": {
@@ -262,13 +262,13 @@
       }
     },
     "static/guides/mot-cost.html": {
-      "sha256": "482c3e796c35c9138c58041f0cd9656e6b5c3d05e470c8d4b58ee6c43002fb77",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "c25a3dbe17c5db1d3d0f3c881feb6cb88eae29c517929391bbd96ea8500acb74",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides"
       }
     },
     "static/guides/mot-history-check.html": {
@@ -282,13 +282,13 @@
       }
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "90e21f44dfa9c2ed18aed0cf0473c31c828535d5cfdee1c664ecc662fad16ffe",
-      "significant_revision": "2026-07-11",
-      "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
+      "sha256": "9c8a352a869775eae100a1d42609d6475b78b9122f10ce428e4a225954cd522d",
+      "significant_revision": "2026-10-02",
+      "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance",
       "last_change": {
-        "date": "2026-10-01",
-        "significant": false,
-        "reason": "7325720 Umami tag; OA-006 H lang=en-GB"
+        "date": "2026-10-02",
+        "significant": true,
+        "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance"
       }
     }
   }

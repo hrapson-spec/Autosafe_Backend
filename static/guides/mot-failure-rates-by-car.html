@@ -30,7 +30,7 @@
       "author": {"@type": "Organization", "name": "AutoSafe", "url": "https://www.autosafe.one"},
       "publisher": {"@type": "Organization", "name": "AutoSafe", "url": "https://www.autosafe.one"},
       "datePublished": "2026-02-05",
-      "dateModified": "2026-07-11",
+      "dateModified": "2026-10-02",
       "mainEntityOfPage": "https://www.autosafe.one/guides/mot-failure-rates-by-car"
     }
     </script>
@@ -47,7 +47,7 @@
         {
           "@type": "Question",
           "name": "What is the dataset-wide recorded failure rate?",
-          "acceptedAnswer": {"@type": "Answer", "text": "The checked-in AutoSafe artifact contains 148,509,908 recorded tests and 39,969,903 failures, a dataset-wide rate of 26.9%."}
+          "acceptedAnswer": {"@type": "Answer", "text": "The checked-in AutoSafe artifact contains 148,509,908 recorded tests and 39,969,903 failures, a dataset-wide rate of 26.9%. The source-record coverage period is not established here; this is not a current annual UK rate or a percentage of unique cars."}
         },
         {
           "@type": "Question",
@@ -96,47 +96,16 @@
             </div>
 
             <div class="note">
-                <p><strong>Interpretation boundary:</strong> the 26.9% figure is a dataset reference, not a result for your car. A physical inspection and the official MOT are the only ways to assess its current condition and test outcome.</p>
+                <p><strong>Interpretation boundary:</strong> the 26.9% figure describes recorded tests in this dataset. The source-record coverage period is not established here. It is not a current annual UK rate, a percentage of unique cars, or a result for your car. A physical inspection and the official MOT are the only ways to assess its current condition and test outcome.</p>
             </div>
 
             <h2>Why model, age and mileage matter</h2>
 
             <p>A model-wide average can hide material differences between newer and older vehicles. AutoSafe therefore starts with the narrowest supported group: model family, age band and available mileage band. If that cohort has no usable evidence, the report broadens to age-only, then model-wide, then the dataset reference, and labels the scope used.</p>
 
-            <h2>Recorded rates by age band</h2>
-
-            <p>These are exact weighted aggregates from the checked-in artifact. The bands are dataset groups, not promises about an individual vehicle.</p>
-
-            <table class="data-table">
-                <thead><tr><th>Age band</th><th>Recorded tests</th><th>Recorded failure rate</th></tr></thead>
-                <tbody>
-                    <tr><td>0–2 years</td><td>8,335,239</td><td class="number">11.52%</td></tr>
-                    <tr><td>3–5 years</td><td>33,562,625</td><td class="number">14.60%</td></tr>
-                    <tr><td>6–10 years</td><td>52,383,079</td><td class="number">25.04%</td></tr>
-                    <tr><td>11–15 years</td><td>33,834,406</td><td class="number">38.07%</td></tr>
-                    <tr><td>15+ years</td><td>20,394,536</td><td class="number">39.78%</td></tr>
-                </tbody>
-            </table>
-
-            <p>Age composition is one reason simple “best model” rankings can mislead. A model dominated by newer vehicles is not directly comparable with one dominated by older vehicles. AutoSafe therefore does not use this static guide to make a durable best/worst recommendation.</p>
-
-            <h2>Dataset-wide component context</h2>
-
-            <p>The source artifact also contains component-category rates. These weighted aggregates show how often recorded tests involved each category across the dataset. They are not diagnosed faults.</p>
-
-            <table class="data-table">
-                <thead><tr><th>Component category</th><th>Weighted recorded rate</th></tr></thead>
-                <tbody>
-                    <tr><td>Lamps, reflectors and electrical equipment</td><td class="number">5.57%</td></tr>
-                    <tr><td>Suspension</td><td class="number">4.28%</td></tr>
-                    <tr><td>Brakes</td><td class="number">3.44%</td></tr>
-                    <tr><td>Tyres</td><td class="number">2.96%</td></tr>
-                    <tr><td>Visibility</td><td class="number">2.34%</td></tr>
-                    <tr><td>Body, chassis and structure</td><td class="number">1.74%</td></tr>
-                    <tr><td>Steering</td><td class="number">0.94%</td></tr>
-                </tbody>
-            </table>
-
+            <h2>Compare compatible groups</h2>
+            <p>Recorded failure rates vary between groups. Compare figures only when the groups, coverage periods and test definitions are compatible. A group rate cannot establish the condition of your car.</p>
+            <p>Age-band and component tables are withheld while their definitions, numerators, denominators and coverage lack a documented review. Component categories may overlap within a test and should not be added as though they were exclusive. A source-file revision date does not establish the period covered by its records.</p>
             <h2>How to use a comparison responsibly</h2>
 
             <ol>
@@ -155,7 +124,7 @@
 
             <h2>Methodology and provenance</h2>
 
-            <p>The primary artifact is <code>prod_data_clean.csv.gz</code>. Its 254,145 cohort rows sum to 148,509,908 tests and 39,969,903 failures. Overall and age-band rates above use total failures divided by total tests. Component rates use sample-size weighting. The release claim sweep recalculates the totals from the gzip CSV and fails if the contract metadata or public dataset-size claim drifts.</p>
+            <p>The primary artifact is <code>prod_data_clean.csv.gz</code>. Its 254,145 cohort rows sum to 148,509,908 tests and 39,969,903 failures. The dataset-wide rate uses total recorded failures divided by total recorded tests. Those totals count tests, not unique vehicles. The underlying record coverage period is not established here. The release claim sweep recalculates the totals from the gzip CSV and fails if the contract metadata or public dataset-size claim drifts.</p>
 
             <div class="faq-section">
                 <h2>Frequently Asked Questions</h2>
@@ -167,12 +136,12 @@
 
                 <div class="faq-item">
                     <h3>Do older groups record more failures?</h3>
-                    <p>In this artifact, the weighted rate rises from 11.52% for the 0–2 band to 39.78% for the 15+ band. That is a group-level association and does not determine any individual vehicle's result.</p>
+                    <p>That requires compatible age groups, test definitions and coverage periods. Age alone does not determine the condition or next result of an individual vehicle.</p>
                 </div>
 
                 <div class="faq-item">
                     <h3>Can AutoSafe predict whether my car will pass?</h3>
-                    <p>No. AutoSafe reports recorded details and comparable-vehicle evidence. It does not inspect the car or determine its next MOT result.</p>
+                    <p>An AutoSafe report may contain a labelled model estimate, a group comparison, a dataset reference or unavailable evidence. None inspects the car or determines its next MOT result.</p>
                 </div>
             </div>
 

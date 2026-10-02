@@ -50,10 +50,10 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 bg-[#F0F0F0]">
       <Helmet>
-        <title>AutoSafe | MOT Records &amp; Next-MOT Failure Insight</title>
-        <meta name="description" content="Check recorded MOT details. When AutoSafe can assess the vehicle's recorded MOT history, it shows a predicted chance of failing the next MOT; otherwise a clearly labelled comparison with similar vehicles." />
-        <meta property="og:title" content="Check your car's MOT record — and, where available, its predicted chance of failing the next test." />
-        <meta property="og:description" content="Recorded MOT details with a predicted failing chance where available — and a clearly labelled comparable-vehicle failure rate when it isn't." />
+        <title>AutoSafe | MOT Records &amp; Evidence</title>
+        <meta name="description" content="Check recorded MOT history, understand the evidence behind your result, and prepare for your next test. Estimates and comparisons are clearly labelled." />
+        <meta property="og:title" content="Check your MOT record and understand the evidence." />
+        <meta property="og:description" content="Recorded MOT history and clearly labelled results to help you prepare. A report cannot inspect your car or guarantee its next MOT result." />
         <link rel="canonical" href="https://www.autosafe.one/" />
       </Helmet>
       {/* Navbar - Elegant, Classy, Prominent Logo */}
@@ -88,7 +88,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </h1>
 
               <p className="text-lg md:text-xl text-slate-500 font-light tracking-wide max-w-lg mx-auto font-sans">
-                1 in 4 cars fails its MOT. Will yours?
+                Start with your MOT record. Know what to check next.
               </p>
             </div>
 
@@ -105,7 +105,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 tracking-wide mt-4">
               <span>{stats ? `${stats.mot_records} recorded MOT tests analysed` : 'Recorded DVSA MOT tests'}</span>
               <span className="hidden md:inline" aria-hidden="true">&middot;</span>
-              <span>Free &amp; instant</span>
+              <span>Free to check</span>
             </div>
           </div>
 
@@ -117,9 +117,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                 <BrainCircuit className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="font-serif text-2xl text-slate-900 font-medium">Trusted Evidence</h3>
+              <h3 className="font-serif text-2xl text-slate-900 font-medium">Recorded History</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                We assess your vehicle from its official recorded DVSA MOT history, and state clearly when only comparable-vehicle or broader make-and-model data is available.
+                Review recorded DVSA MOT details where available. Your report explains when a record or supporting evidence is missing.
               </p>
             </div>
 
@@ -128,9 +128,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               <div className="p-4 bg-slate-200/50 rounded-full text-slate-800 mb-2 group-hover:bg-white group-hover:shadow-md transition-all duration-300">
                 <Database className="w-8 h-8 stroke-[1.5]" />
               </div>
-              <h3 className="font-serif text-2xl text-slate-900 font-medium">Matched Context</h3>
+              <h3 className="font-serif text-2xl text-slate-900 font-medium">Labelled Results</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Every report labels exactly what supports the result — a per-vehicle assessment from recorded history, or a comparison with its mileage source, scope and sample size.
+                See whether your result is a model estimate, a comparison with recorded outcomes, or a broader dataset reference. Availability depends on the evidence returned.
               </p>
             </div>
 
@@ -141,7 +141,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               </div>
               <h3 className="font-serif text-2xl text-slate-900 font-medium">The Road Ahead</h3>
               <p className="text-slate-500 font-light leading-relaxed max-w-xs text-sm md:text-base">
-                Where supporting component data exists, we show patterns for comparable vehicles—not a diagnosis—and explain when evidence is unavailable.
+                Review previous advisories and practical checks before your MOT. A report cannot assess your car’s current condition or guarantee the next result.
               </p>
             </div>
 
