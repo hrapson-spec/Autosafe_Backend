@@ -636,6 +636,38 @@ async def check_risk_unavailable_typed(client: httpx.AsyncClient) -> Dict:
     return body
 
 
+async def check_garage_outcome_confirmation(client: httpx.AsyncClient, pool) -> None:
+    """Exercise only the fixed synthetic fixture; never contact a garage."""
+    from scripts.seed_staging_data import STAGING_ASSIGNMENT_IDS, STAGING_GARAGE_ID
+    aid = STAGING_ASSIGNMENT_IDS[-1]
+    garage = await pool.fetchrow("SELECT email, leads_converted FROM garages WHERE id=$1", STAGING_GARAGE_ID)
+    assert garage and garage["email"] == "rc1-garage@staging.invalid", "missing synthetic fixture"
+    url = f"/api/garage/outcome/{aid}"
+    before = await pool.fetchrow("SELECT outcome, outcome_reported_at FROM lead_assignments WHERE id=$1", aid)
+    assert before and before["outcome"] is None, "fixture must start unreported"
+    for outcome in ("won", "lost", "no_response"):
+        response = await client.get(url, params={"result": outcome}, headers={"Purpose": "prefetch"})
+        assert response.status_code == 200 and 'name="confirmed"' in response.text
+        assert response.headers["cache-control"] == "no-store"
+    assert (await client.head(url, params={"result": "won"})).status_code == 405
+    assert await pool.fetchval("SELECT outcome FROM lead_assignments WHERE id=$1", aid) is None
+    headers = {"Origin": str(client.base_url).rstrip("/")}
+    assert (await client.post(url, json={"outcome": "won"}, headers=headers)).status_code == 400
+    # Concurrent duplicate submissions must serialize on the assignment row.
+    responses = await asyncio.gather(*[
+        client.post(url, json={"outcome": "won", "confirmed": True}, headers=headers) for _ in range(3)
+    ])
+    assert all(r.status_code == 200 for r in responses)
+    assert await pool.fetchval("SELECT leads_converted FROM garages WHERE id=$1", STAGING_GARAGE_ID) == garage["leads_converted"] + 1
+    confirmed_at = await pool.fetchval("SELECT outcome_reported_at FROM lead_assignments WHERE id=$1", aid)
+    assert confirmed_at is not None
+    assert (await client.post(url, json={"outcome": "won", "confirmed": True}, headers=headers)).status_code == 200
+    assert await pool.fetchval("SELECT outcome_reported_at FROM lead_assignments WHERE id=$1", aid) == confirmed_at
+    response = await client.post(url, data={"outcome": "lost", "confirmed": "yes"}, headers=headers)
+    assert response.status_code == 303
+    assert await pool.fetchval("SELECT leads_converted FROM garages WHERE id=$1", STAGING_GARAGE_ID) == garage["leads_converted"]
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -715,6 +747,8 @@ async def main_async(args: argparse.Namespace) -> int:
                 "4k-vehicle-odometer", "/api/vehicle typed odometer object (R1-T2)",
                 check_vehicle_odometer(client),
             )
+            await runner.run("4m-outcome-confirmation", "scanner-safe GET and idempotent confirmed POST",
+                             check_garage_outcome_confirmation(client, pool))
             if args.simulate_store_outage:
                 await runner.run(
                     "4l-risk-unavailable", "/api/risk typed unavailable tier (stores simulated down)",
