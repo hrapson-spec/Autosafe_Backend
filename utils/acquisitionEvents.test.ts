@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import acquisitionEventsSource from './acquisitionEvents.ts?raw';
 import acknowledgementSource from './resultAcknowledgement.ts?raw';
 import boundarySource from '../components/ResultErrorBoundary.tsx?raw';
+import indexSource from '../index.tsx?raw';
 import {
   ACQUISITION_COLLECTOR_ENABLED,
   ACQUISITION_METRIC_VERSION,
@@ -27,7 +28,7 @@ const OP = '0b0e7a52-5d5c-4f55-9a52-3c6e1f1c8a10';
 
 /** One representative input per event type, plus the optional-field variants. */
 export const SAMPLE_INPUTS: AcquisitionEventInput[] = [
-  { event: 'landing_observed', landing_path: '/app/guides/mot-checklist', source_group: 'google_organic', observation_state: 'observed' },
+  { event: 'landing_observed', page_family: 'guide', source_group: 'google_organic', observation_state: 'observed' },
   { event: 'check_started', operation_id: OP, entry_mode: 'fresh_check' },
   { event: 'report_created', operation_id: OP, entry_mode: 'fresh_check', result_kind: 'comparison', match_scope: 'exact_band', persistence_mode: 'saved' },
   { event: 'report_created', operation_id: OP, entry_mode: 'fresh_check', result_kind: 'vehicle_prediction', match_scope: 'model_prediction', persistence_mode: 'inline_unsaved' },
@@ -42,6 +43,7 @@ export const SAMPLE_INPUTS: AcquisitionEventInput[] = [
   { event: 'check_failed', operation_id: OP, entry_mode: 'fresh_check', error_category: 'rate_limited', stage: 'create_report' },
   { event: 'render_failed', operation_id: OP, entry_mode: 'fresh_check', stage: 'lazy_load' },
   { event: 'render_failed', entry_mode: 'restored_link', stage: 'render' },
+  { event: 'landing_observed', page_family: 'home', source_group: 'internal', observation_state: 'observed' },
 ];
 
 const FORBIDDEN_KEYS = [
@@ -59,21 +61,41 @@ beforeEach(() => {
 });
 afterEach(() => __resetAcquisitionStateForTests());
 
-describe('acquisition events: collection is OFF and has no transport', () => {
+describe('acquisition events: collection is OFF (the OA-005 transport exists but is not installed)', () => {
   it('the collector flag is false', () => {
     expect(ACQUISITION_COLLECTOR_ENABLED).toBe(false);
   });
 
+  const stripComments = (source: string) =>
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
   it.each([
-    ['utils/acquisitionEvents.ts', acquisitionEventsSource],
     ['utils/resultAcknowledgement.ts', acknowledgementSource],
     ['components/ResultErrorBoundary.tsx', boundarySource],
   ])('%s contains no network transport', (_name, source) => {
     // Strip comments so the documentation of the rule does not trip the rule.
-    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    const code = stripComments(source);
     for (const token of ['fetch(', 'sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'new Image(', 'navigator.']) {
       expect(code, token).not.toContain(token);
     }
+  });
+
+  it('utils/acquisitionEvents.ts has exactly one transport (fetch) and no storage or alternative channel', () => {
+    const code = stripComments(acquisitionEventsSource);
+    expect(code.match(/fetch\(|doFetch\(/g)).toHaveLength(1);
+    expect(code).toContain('doFetch(ACQUISITION_ENDPOINT');
+    for (const token of [
+      'sendBeacon', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'new Image(',
+      'localStorage', 'sessionStorage', 'indexedDB', 'document.cookie', 'caches.',
+    ]) {
+      expect(code, token).not.toContain(token);
+    }
+  });
+
+  it('the transport is installed only from index.tsx, through the flag-gated installer', () => {
+    expect(indexSource).toContain('if (ACQUISITION_COLLECTOR_ENABLED) installAcquisitionTransport();');
+    expect(acquisitionEventsSource).toContain('enabled: boolean = ACQUISITION_COLLECTOR_ENABLED');
+    expect(acquisitionEventsSource).toContain('if (!enabled || globalPrivacyControlSet()) return false;');
   });
 
   it('the default sink drops events and emit never throws, even with a throwing sink', () => {
@@ -253,11 +275,15 @@ describe('event schema (docs/acquisition/event_schema_v1.json) agrees with the t
     expect(validates(schema, captured[captured.length - 1])).toBe(false);
   });
 
-  it('landing_path cannot be a report route', () => {
-    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object), landing_path: '/app/report/9c7f2b1a' } as AcquisitionEventInput);
+  it('landing_observed carries an allowlisted page family, never a path', () => {
+    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object), page_family: '/app/report/9c7f2b1a' } as unknown as AcquisitionEventInput);
     expect(validates(schema, captured[captured.length - 1])).toBe(false);
-    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object), landing_path: '/app?reg=AB12CDE' } as AcquisitionEventInput);
+    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object), page_family: '/app?reg=AB12CDE' } as unknown as AcquisitionEventInput);
     expect(validates(schema, captured[captured.length - 1])).toBe(false);
+    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object), landing_path: '/guides/mot-cost' } as unknown as AcquisitionEventInput);
+    expect(validates(schema, captured[captured.length - 1])).toBe(false);
+    emitAcquisitionEvent({ ...(SAMPLE_INPUTS[0] as object) } as AcquisitionEventInput);
+    expect(validates(schema, captured[captured.length - 1])).toBe(true);
   });
 
   it('the schema enum sets equal the TypeScript enum sets for error categories', () => {

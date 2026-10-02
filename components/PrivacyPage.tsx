@@ -99,6 +99,11 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3 pr-4">Automatic</td>
                     <td className="py-3">Yes - but not personally identifiable</td>
                   </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">First-party page and check-outcome measurement events: random identifiers, page category, arrival category, outcome category, release version, receipt time and an automated-request flag (see "First-party measurement" below)</td>
+                    <td className="py-3 pr-4">Your browser, automatically</td>
+                    <td className="py-3">Yes - raw events for 90 days, then daily counts without identifiers for 25 months. No IP address, User-Agent, page address, referrer address, registration or postcode is stored with them</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -137,6 +142,10 @@ const PrivacyPage: React.FC = () => {
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Understanding how our site is used</td>
                     <td className="py-3">Legitimate interests - improving our service (aggregated data only)</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">Measuring whether visitors from search reach a displayed result (first-party, cookieless)</td>
+                    <td className="py-3">Legitimate interests - improving our service (see "First-party measurement" below)</td>
                   </tr>
                 </tbody>
               </table>
@@ -234,6 +243,10 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3 pr-4">Application access logs</td>
                     <td className="py-3">Disabled; application logs exclude raw VRN, raw postcode, email content and saved-report tokens</td>
                   </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">First-party measurement events</td>
+                    <td className="py-3">Raw events deleted after 90 days; daily aggregate counts without identifiers kept for 25 months</td>
+                  </tr>
                   <tr>
                     <td className="py-3 pr-4">Analytics data</td>
                     <td className="py-3">Limited allowlisted event data under the configured processor retention; no VRN, postcode, email or saved-report token event fields</td>
@@ -294,6 +307,40 @@ const PrivacyPage: React.FC = () => {
             </p>
             <p className="text-slate-600 leading-relaxed">
               We use Google Ads conversion tracking, which sets cookies to measure advertising effectiveness. <strong>These cookies are only set if you accept them</strong> via the consent banner shown on your first visit; if you decline, no advertising cookies are set and the site works fully. These cookies are used solely for conversion measurement and not for personalised advertising. You can change your choice at any time by clearing the site's data in your browser, which will show the banner again.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">First-party measurement of visits and check outcomes</h2>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              We measure, in aggregate, whether visitors who arrive at our public pages from a search engine go on to see a result in the check tool. We use this only to improve the service. We do not use it for advertising, profiling or any decision about an individual.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>What each measurement event contains:</strong></p>
+            <ul className="text-slate-600 space-y-2 list-disc list-inside mb-4">
+              <li>the type of event: a public page or the check tool was opened, a check was started, a report was created, or a result was displayed, could not be shown or failed;</li>
+              <li>random identifiers created by your browser for the page visit, for the check and for the landing visit. They are not derived from your registration, postcode, report link or anything else you enter;</li>
+              <li>a page category (for example home page, guide, make page, model page or the check tool), not the page address;</li>
+              <li>where you arrived from, as one of: Google search, paid search, another search engine, another website, direct, our own site or unknown. Your browser works this out from the website domain that sent you, or from the presence of an advertising-click marker in the address you opened (the marker and its value are tested in your browser and are never sent or kept); we do not send or keep the address of the page that referred you;</li>
+              <li>category and yes/no values describing the outcome (for example the kind of result displayed and whether the report was saved), the software release version and the time we receive the event (recorded to the minute);</li>
+              <li>a yes/no flag, worked out from your browser's User-Agent when the event arrives, saying whether the request looks automated. We do not store the User-Agent.</li>
+            </ul>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              <strong>What we do not record in these events:</strong> your IP address (it is used in memory only, to limit abuse), User-Agent, the referring page, the page address or query string, registration number, postcode, saved-report link, vehicle make or model, any failure rate or sample size, email address, or any free text.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              <strong>How it works.</strong> The events are ordinary requests to our own server, like loading a page. Nothing is stored on, or read from, your device: no cookies, local storage, session storage or IndexedDB, and no fingerprinting. The random identifiers exist only in the page's memory. When you follow a link from one of our public pages to the check tool, a random identifier and the arrival category are added at the end of the link address, after a #, which browsers never send to any server; the tool removes them from the address bar as soon as it loads, before any other script runs, and does not store them. A reload or going back or forward is not counted as a new visit; a new tab or a typed address starts a new, separate measurement. On saved-report pages the same kind of event is sent without the report link or any part of it.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              <strong>Lawful basis.</strong> Legitimate interests (UK GDPR Article 6(1)(f)). Our interest is knowing whether the free service works for the people it is meant to reach, which also lets us fix broken journeys. The data is pseudonymous, minimal and short-lived.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              <strong>How long we keep it.</strong> Individual events are deleted after 90 days. Before then they are rolled up into daily counts, including daily counts of landing visits and of those that reached a displayed result, that contain no identifiers; those counts are kept for 25 months so that we can compare one year with the next.
+            </p>
+            <p className="text-slate-600 leading-relaxed mb-4">
+              <strong>Who can see it.</strong> The events are stored in our existing database, hosted by Railway (listed above); no new service provider is involved. Only the site operator can access them. There is no public dashboard.
+            </p>
+            <p className="text-slate-600 leading-relaxed">
+              <strong>How to object.</strong> If your browser sends a Global Privacy Control signal, we send and record nothing. You can also object by emailing <a href="mailto:autosafehq@gmail.com" className="text-blue-600 hover:underline">autosafehq@gmail.com</a>. Because the identifiers are random and not linked to you, we may not be able to find events that relate to you; the Global Privacy Control signal is the reliable way to opt out.
             </p>
           </section>
 

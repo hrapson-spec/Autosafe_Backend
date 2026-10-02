@@ -21,6 +21,29 @@
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="/static/favicon.png" />
 
+    <!-- OA-005 D-007.1: MUST stay the first executing inline script in <head>.
+         The first-party landing handoff arrives in the URL fragment
+         (#al=<id>&src=<group>). Fragments are never sent in requests or
+         Referer headers; this removes it from the address bar before gtag,
+         Umami or any other script exists, and leaves the raw strings in a
+         window variable that index.tsx reads once (it never reads the URL for
+         this again). Nothing is stored. -->
+    <script>
+      (function () {
+        try {
+          var hash = window.location.hash;
+          if (hash.length < 2) return;
+          var params = new URLSearchParams(hash.slice(1));
+          if (!params.has('al') && !params.has('src')) return;
+          window.__autosafeLandingHandoff = { al: params.get('al'), src: params.get('src') };
+          params.delete('al');
+          params.delete('src');
+          var rest = params.toString();
+          history.replaceState(history.state, '', window.location.pathname + window.location.search + (rest ? '#' + rest : ''));
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Structured Data -->
     <script type="application/ld+json">
     {

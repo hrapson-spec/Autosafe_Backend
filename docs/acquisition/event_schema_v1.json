@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:autosafe:acquisition:event:v1",
   "title": "AutoSafe acquisition event v1 (PROPOSED - collection OFF; awaits OA-005)",
-  "description": "Proposed safe-field event schema. scope_visible v1 (DECISIONS.md D-003): the visibility requirement is met by the scope class shown without interaction on the result card (prediction / <make model> comparison, not a prediction for the registration / dataset-wide reference comparison); the exact_band/age_band_only/model_average detail is reported through match_scope and outcome_group and is not part of the visibility test. scope_visible stays a data-derived (scope disclosure text available) non-discriminating invariant; a DOM-observed check would be a future metric version. outcome_group demo (DECISIONS.md D-004): a report with vehicle_data_source demo is a delivered render but never a supported vehicle result, for otherwise-renderable scopes; the unavailable scope takes precedence over demo and is result_unavailable, never result_rendered. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win.",
+  "description": "Proposed safe-field event schema. scope_visible v1 (DECISIONS.md D-003): the visibility requirement is met by the scope class shown without interaction on the result card (prediction / <make model> comparison, not a prediction for the registration / dataset-wide reference comparison); the exact_band/age_band_only/model_average detail is reported through match_scope and outcome_group and is not part of the visibility test. scope_visible stays a data-derived (scope disclosure text available) non-discriminating invariant; a DOM-observed check would be a future metric version. outcome_group demo (DECISIONS.md D-004): a report with vehicle_data_source demo is a delivered render but never a supported vehicle result, for otherwise-renderable scopes; the unavailable scope takes precedence over demo and is result_unavailable, never result_rendered. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win. OA-005 wire note: the collector request body is an event plus the envelope fields session_id, landing_id (required on landing_observed), release_sha (optional) and, on every event, page_family and source_group (see docs/acquisition/COLLECTOR.md); landing_observed carries page_family (an allowlisted family, not a path) and source_group (internal = same-site referrer, paid_search = URL carried a paid-click marker (never sent), internal_test = synthetic traffic).",
   "oneOf": [
     {
       "type": "object",
@@ -22,12 +22,19 @@
         "event": {
           "const": "landing_observed"
         },
-        "landing_path": {
-          "type": "string",
-          "pattern": "^/[a-z0-9/_-]{0,119}$",
-          "not": {
-            "pattern": "^/app/report"
-          }
+        "page_family": {
+          "enum": [
+            "home",
+            "app",
+            "guide",
+            "make",
+            "model",
+            "comparison",
+            "pillar",
+            "problem_hub",
+            "other_public"
+          ],
+          "description": "OA-005 D-005: allowlisted page family; the landing path itself is never sent or stored"
         },
         "source_group": {
           "enum": [
@@ -36,6 +43,8 @@
             "direct",
             "referral",
             "unknown",
+            "internal",
+            "paid_search",
             "internal_test"
           ]
         },
@@ -52,7 +61,7 @@
         "metric_version",
         "event_id",
         "event",
-        "landing_path",
+        "page_family",
         "source_group",
         "observation_state"
       ]
