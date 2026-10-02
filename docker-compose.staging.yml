@@ -49,7 +49,8 @@ services:
         python3 create_risk_checks_table.py &&
         python3 create_leads_table.py &&
         python3 create_garages_table.py &&
-        python3 migrations/add_report_contract_columns.py
+        python3 migrations/add_report_contract_columns.py &&
+        python3 migrations/add_acquisition_tables.py
       "
     environment:
       DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
@@ -68,6 +69,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
       PORT: "8000"
+      ACQUISITION_INGEST_ENABLED: "1"
       BASE_URL: http://127.0.0.1:8100
       # >= 32 chars, staging-only value -- see docs/STAGING.md. Real
       # secret management (Railway env / CI secrets) applies outside
@@ -103,6 +105,9 @@ services:
       sh -c "
         python3 scripts/seed_staging_data.py &&
         python3 scripts/staging_acceptance.py --base-url http://app:8000 --expected-share-base-url http://127.0.0.1:8100 --expected-backend-sha ${GIT_SHA:-unknown} &&
+        python3 scripts/acquisition_synthetic_check.py &&
+        python3 -m pip install pytest &&
+        python3 -m pytest tests/test_acquisition_collector.py -q &&
         python3 scripts/retention_sweep.py --months 1 &&
         python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
         python3 scripts/retention_sweep.py --months 1 --execute --batch 50 &&
@@ -113,6 +118,8 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:staging_only_pw@postgres:5432/postgres
       BASE_URL: http://app:8000
+      ACQUISITION_DISPOSABLE_STAGING: "1"
+      ACQUISITION_TEST_PG_DSN: postgresql://postgres:staging_only_pw@postgres:5432/postgres
       GIT_SHA: ${GIT_SHA:-unknown}
       VRM_HMAC_KEY: ${VRM_HMAC_KEY:-staging_only_hmac_key_min_32_chars_ok}
     depends_on:

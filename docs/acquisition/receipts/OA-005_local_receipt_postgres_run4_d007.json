@@ -1,0 +1,218 @@
+{
+  "base_url": "http://127.0.0.1:8765",
+  "source_group_used": "google_organic",
+  "started_utc": "2026-10-01T21:42:02.516810+00:00",
+  "posts": [
+    {
+      "journey": "J1 organic guide landing, supported prediction displayed",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "report_created",
+        "result_rendered"
+      ],
+      "statuses": [
+        202,
+        202,
+        202,
+        202
+      ]
+    },
+    {
+      "journey": "J2 organic home landing, dataset reference only",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "report_created",
+        "result_rendered"
+      ],
+      "statuses": [
+        202,
+        202,
+        202,
+        202
+      ]
+    },
+    {
+      "journey": "J3 organic model landing, no check attempted",
+      "events": [
+        "landing_observed"
+      ],
+      "statuses": [
+        202
+      ]
+    },
+    {
+      "journey": "J4 other_search guide landing, completes (not Google organic)",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "report_created",
+        "result_rendered"
+      ],
+      "statuses": [
+        202,
+        202,
+        202,
+        202
+      ]
+    },
+    {
+      "journey": "J5 organic make landing, check failed",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "check_failed"
+      ],
+      "statuses": [
+        202,
+        202,
+        202
+      ]
+    },
+    {
+      "journey": "J6 organic comparison landing, render then render_failed",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "report_created",
+        "result_rendered",
+        "render_failed"
+      ],
+      "statuses": [
+        202,
+        202,
+        202,
+        202,
+        202
+      ]
+    },
+    {
+      "journey": "J7 crawler-like user agent, organic landing",
+      "events": [
+        "landing_observed"
+      ],
+      "statuses": [
+        202
+      ]
+    },
+    {
+      "journey": "J8 paid_search guide landing, completes (excluded: not organic)",
+      "events": [
+        "landing_observed",
+        "check_started",
+        "report_created",
+        "result_rendered"
+      ],
+      "statuses": [
+        202,
+        202,
+        202,
+        202
+      ]
+    }
+  ],
+  "duplicate_resend": 202,
+  "all_202": true,
+  "unique_events_sent": 26,
+  "raw_rows": 26,
+  "metric_before_rollup": {
+    "denominator": 5,
+    "numerator": 1
+  },
+  "rollup_first_run": {
+    "rolled_up": 26,
+    "deleted_raw": 0,
+    "rolled_up_landings": 7
+  },
+  "rollup_rerun": {
+    "rolled_up": 0,
+    "deleted_raw": 0,
+    "rolled_up_landings": 0
+  },
+  "daily_total": 26,
+  "daily_by_event": {
+    "check_failed": 1,
+    "check_started": 6,
+    "landing_observed": 8,
+    "render_failed": 1,
+    "report_created": 5,
+    "result_rendered": 5
+  },
+  "metric_after_rollup": {
+    "denominator": 5,
+    "numerator": 1
+  },
+  "landing_aggregate_metric": {
+    "denominator": 5,
+    "numerator": 1
+  },
+  "landing_daily_rows": [
+    {
+      "day": "2026-10-01",
+      "source_group": "google_organic",
+      "page_family": "comparison",
+      "landings": 1,
+      "landings_with_supported_result": 0
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "google_organic",
+      "page_family": "guide",
+      "landings": 1,
+      "landings_with_supported_result": 1
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "google_organic",
+      "page_family": "home",
+      "landings": 1,
+      "landings_with_supported_result": 0
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "google_organic",
+      "page_family": "make",
+      "landings": 1,
+      "landings_with_supported_result": 0
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "google_organic",
+      "page_family": "model",
+      "landings": 1,
+      "landings_with_supported_result": 0
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "other_search",
+      "page_family": "guide",
+      "landings": 1,
+      "landings_with_supported_result": 1
+    },
+    {
+      "day": "2026-10-01",
+      "source_group": "paid_search",
+      "page_family": "guide",
+      "landings": 1,
+      "landings_with_supported_result": 1
+    }
+  ],
+  "raw_rows_after_100_days": 0,
+  "landing_aggregate_metric_after_raw_deleted": {
+    "denominator": 5,
+    "numerator": 1
+  },
+  "checks": {
+    "raw_rows_equals_unique_events_sent": true,
+    "rollup_counts_every_event_once": true,
+    "rerun_adds_nothing": true,
+    "metric_matches_expectation": true,
+    "landing_aggregates_reproduce_raw_metric": true,
+    "landing_aggregates_survive_raw_deletion": true
+  },
+  "expected_metric": {
+    "denominator": 5,
+    "numerator": 1
+  }
+}

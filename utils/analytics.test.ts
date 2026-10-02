@@ -1,6 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { trackConversion, trackFunnel, trackPageView, trackReportView } from './analytics';
 
 type Payload = Record<string, unknown>;
@@ -161,117 +159,12 @@ describe('page views', () => {
   });
 });
 
-// The shipped before-send filters live in index.html and static/umami.js;
-// exercise the real source text, not a copy.
-const ROOT = resolve(__dirname, '..');
-
-function loadIndexBeforeSend(): BeforeSend {
-  const html = readFileSync(resolve(ROOT, 'index.html'), 'utf-8');
-  const match = html.match(/window\.autosafeUmamiBeforeSend = function[\s\S]*?\n {6}\};/);
-  if (!match) throw new Error('autosafeUmamiBeforeSend not found in index.html');
-  new Function(match[0])();
-  return window.autosafeUmamiBeforeSend as BeforeSend;
-}
-
-function loadStaticBeforeSend(): BeforeSend {
-  new Function(readFileSync(resolve(ROOT, 'static', 'umami.js'), 'utf-8'))();
-  return window.autosafeUmamiBeforeSend as BeforeSend;
-}
-
-describe.each([
-  ['index.html', loadIndexBeforeSend],
-  ['static/umami.js', loadStaticBeforeSend],
-])('Umami before-send filter (%s)', (_name, load) => {
-  it('reduces url to the path and an external referrer to its origin', () => {
-    window.history.replaceState({}, '', '/guides/mot-cost?reg=AB12CDE&postcode=SW1A1AA#x');
-    const beforeSend = load();
-
-    const out = beforeSend('event', {
-      url: 'https://www.autosafe.one/guides/mot-cost?reg=AB12CDE&postcode=SW1A1AA#x',
-      referrer: 'https://www.google.com/search?q=AB12CDE',
-      name: 'reg_entered',
-    });
-
-    expect(out).toEqual({ url: '/guides/mot-cost', referrer: 'https://www.google.com/', name: 'reg_entered' });
-    expect(JSON.stringify(out)).not.toMatch(/AB12CDE|SW1A/);
-  });
-
-  it('blanks same-site and malformed referrers', () => {
-    window.history.replaceState({}, '', '/app');
-    const beforeSend = load();
-
-    expect((beforeSend('event', { referrer: `${window.location.origin}/app/report/token` }) as Payload).referrer).toBe('');
-    expect((beforeSend('event', { referrer: 'not a url' }) as Payload).referrer).toBe('');
-  });
-
-  it('drops every payload on a bearer report route', () => {
-    window.history.replaceState({}, '', '/app');
-    const beforeSend = load();
-    window.history.pushState({}, '', '/app/report/opaque-bearer-token');
-
-    expect(beforeSend('event', { url: '/app/report/opaque-bearer-token' })).toBe(false);
-  });
-
-  it.each(['/app/Report/opaque-bearer-token', '/app/REPORT/opaque-bearer-token'])(
-    'drops every payload on the case variant %s',
-    (path) => {
-      window.history.replaceState({}, '', '/app');
-      const beforeSend = load();
-      window.history.pushState({}, '', path);
-
-      expect(beforeSend('event', { url: path })).toBe(false);
-    },
-  );
-});
-
-describe('index.html inline analytics gate', () => {
-  function inlineAllowed(path: string): boolean {
-    const html = readFileSync(resolve(ROOT, 'index.html'), 'utf-8');
-    const match = html.match(/window\.autosafeAnalyticsAllowed = [^;]+;/);
-    if (!match) throw new Error('autosafeAnalyticsAllowed assignment not found in index.html');
-    window.history.replaceState({}, '', path);
-    new Function(match[0])();
-    return (window as unknown as { autosafeAnalyticsAllowed: boolean }).autosafeAnalyticsAllowed;
-  }
-
-  it.each([
-    ['/app/report/opaque-bearer-token', false],
-    ['/app/Report/opaque-bearer-token', false],
-    ['/app/REPORT/opaque-bearer-token', false],
-    ['/app', true],
-    ['/app/terms', true],
-    ['/app/reports', true],
-  ])('allows analytics on %s: %s', (path, allowed) => {
-    expect(inlineAllowed(path)).toBe(allowed);
-  });
-});
-
-describe('static/umami.js loader', () => {
-  it('does not load Umami at all on a report route', () => {
-    window.history.replaceState({}, '', '/app/report/opaque-bearer-token');
-    new Function(readFileSync(resolve(ROOT, 'static', 'umami.js'), 'utf-8'))();
-
-    expect(document.head.querySelector('script[data-website-id]')).toBeNull();
-    expect(window.autosafeUmamiBeforeSend).toBeUndefined();
-  });
-
-  it.each(['/app/Report/opaque-bearer-token', '/app/REPORT/opaque-bearer-token'])(
-    'does not load Umami at all on the case variant %s',
-    (path) => {
-      window.history.replaceState({}, '', path);
-      new Function(readFileSync(resolve(ROOT, 'static', 'umami.js'), 'utf-8'))();
-
-      expect(document.head.querySelector('script[data-website-id]')).toBeNull();
-      expect(window.autosafeUmamiBeforeSend).toBeUndefined();
-    },
-  );
-
-  it('loads Umami with automatic tracking off and the before-send filter attached', () => {
-    window.history.replaceState({}, '', '/guides/mot-cost');
-    new Function(readFileSync(resolve(ROOT, 'static', 'umami.js'), 'utf-8'))();
-
-    const script = document.head.querySelector('script[data-website-id]');
-    expect(script?.getAttribute('data-auto-track')).toBe('false');
-    expect(script?.getAttribute('data-before-send')).toBe('autosafeUmamiBeforeSend');
+describe('legacy analytics collection is retired', () => {
+  it('ships no automatic Umami loader in either entry surface', async () => {
+    const index = await import('../index.html?raw');
+    const loader = await import('../static/umami.js?raw');
+    expect(index.default).not.toContain('umami-production-cb51.up.railway.app/script.js');
+    expect(loader.default).not.toContain('createElement');
+    expect(loader.default).not.toContain('fetch(');
   });
 });

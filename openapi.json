@@ -1585,6 +1585,49 @@
         "summary": "Seo Homepage"
       }
     },
+    "/api/acquisition/events": {
+      "post": {
+        "operationId": "record_acquisition_event_api_acquisition_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object"
+              }
+            }
+          },
+          "description": "Strictly validated; see docs/acquisition/COLLECTOR.md. Max 2048 bytes.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Accepted or duplicate (idempotent on event_id)."
+          },
+          "400": {
+            "description": "Malformed or non-conforming event."
+          },
+          "404": {
+            "description": "Collector not enabled on this server."
+          },
+          "413": {
+            "description": "Body larger than 2048 bytes."
+          },
+          "429": {
+            "description": "Rate limited."
+          },
+          "503": {
+            "description": "Event could not be recorded; the client may retry once."
+          }
+        },
+        "summary": "Record one bounded service measurement event"
+      }
+    },
     "/api/admin/dvsa-test": {
       "get": {
         "description": "Test DVSA API connectivity (admin only).\n\nAttempts OAuth token fetch and test lookup to diagnose issues.\nReturns detailed diagnostic information.",

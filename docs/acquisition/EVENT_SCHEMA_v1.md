@@ -1,31 +1,40 @@
-# Acquisition event schema v1 (PROPOSED)
+# Acquisition event schema v1
 
-Status: **proposed, collection OFF.** This documents the typed, safe-field events that
-`utils/acquisitionEvents.ts` can build (ticket OA-004). Nothing in this branch sends
-them anywhere: the default sink is a no-op, `ACQUISITION_COLLECTOR_ENABLED` is `false`,
-and there is no fetch / sendBeacon / XHR transport in the code.
+Status: **collection OFF** (`ACQUISITION_COLLECTOR_ENABLED = false`). This documents the
+typed, safe-field events that `utils/acquisitionEvents.ts` builds (ticket OA-004). OA-005
+adds the first-party transport, collector and storage described in
+[`COLLECTOR.md`](COLLECTOR.md) under the privacy decision D-005; none of it runs until the
+enable gate in that document is met.
 
 Authoritative semantics: `product/commercial/organic-acquisition/MEASUREMENT.md`
 (frozen source/API contract 2.0 at `7325720`). Machine-readable schema:
 [`event_schema_v1.json`](event_schema_v1.json) (JSON Schema 2020-12,
 `additionalProperties: false`, enums only).
 
-## Not decided here (awaits OA-005)
+## Wire envelope (OA-005, D-005)
 
-The following are **not approved** and nothing in this schema or branch decides them:
+The collector request body is one event plus these envelope fields: `session_id` (random UUID
+per document), `landing_id` (random UUID; required on `landing_observed`, optional otherwise),
+`release_sha` (optional hex build id), and, on every event, `page_family` and `source_group`.
+The transport adds them to every event except where the event carries its own (`landing_observed`
+carries `page_family` and `source_group`). The schema file describes the event proper; the
+collector's strict models (`acquisition_routes.py`) accept exactly schema + envelope, and a
+test checks the combination rules against this schema over a full grid. Source groups are
+`google_organic`, `other_search`, `direct`, `referral`, `unknown`, `internal` (same-site
+referrer), `paid_search` (the landing URL carried `gclid`, `gbraid`, `wbraid` or `utm_medium`
+of cpc/ppc/paid, case-insensitive; takes precedence over the referrer; the marker and its value
+are never sent or stored; D-006) and `internal_test` (synthetic traffic). `landing_observed`
+is emitted only for a fresh navigation (Navigation Timing `navigate`), not a reload or
+back/forward; with no Navigation Timing API it is emitted. `page_family` is an allowlisted category
+(`home app guide make model comparison pillar problem_hub other_public`), never a path.
 
-- the collector endpoint (`POST /api/acquisition/events` is a proposal in MEASUREMENT.md);
-- storage, processors, retention and access;
-- session identifiers and session persistence (memory-only vs short-lived first-party
-  storage); `session_id`, `release_sha` and `received_at` are collector-side/OA-005
-  fields and are deliberately absent from the client event types in this branch;
-- purpose, legal basis / consent analysis, and notice;
-- the final `metric_version` value (the code carries the placeholder
-  `oa-metric-v1-draft`), the landing-path allowlist, and the source-group taxonomy
-  rules.
+## Still not decided here
+
+- the final `metric_version` value (the code carries the placeholder `oa-metric-v1-draft`);
+- anything not in D-005 (access beyond the site operator, third-party processors: none).
 
 Pseudonymous operation and event identifiers may still be personal data; their handling
-is subject to the OA-005 decision.
+(random, memory only, 90-day raw retention) is the subject of D-005 and the privacy notice.
 
 ## What an event does and does not establish
 
@@ -55,7 +64,7 @@ restored/shared links.
 
 | Event | Emitted when | Event-specific fields |
 |---|---|---|
-| `landing_observed` | **Defined, not emitted in this branch** (needs the approved session design) | `landing_path`, `source_group`, `observation_state` |
+| `landing_observed` | OA-005: `static/acquisition-landing.js` on public pages, and `utils/acquisitionLanding.ts` for a direct landing on `/` or `/app`; once per document; never on report routes; **only when collection is enabled** | `page_family`, `source_group`, `observation_state` (+ envelope `landing_id`) |
 | `check_started` | `App.tsx`: accepted submission, before the API call; once per logical operation (a retry of the same unresolved operation keeps its id and does not re-announce) | `operation_id`, `entry_mode=fresh_check` |
 | `report_created` | `App.tsx`: validated `createReport` success, before navigation | `operation_id`, `entry_mode`, `result_kind`, `match_scope`, `persistence_mode` |
 | `result_rendered` | `ReportScreen`, from `ReportDashboard`'s post-commit effect (deferred one macrotask and cancelled on unmount), only when the final non-loading view is mounted, the runtime boundary is clear, and `classifyResult` reports a delivered state other than unavailable | `entry_mode`, `persistence_mode`, `render_delivered` (always true here), `supported_result`, `outcome_group`, `rate_valid`, `sample_nonzero` (omitted for `model_prediction`), `scope_visible`, `result_kind`, `match_scope`, `operation_id` (when a deliberate check) |

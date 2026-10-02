@@ -1,0 +1,34 @@
+{
+ "raw_metric": {
+  "denominator": 3,
+  "numerator": 1
+ },
+ "rolled_up_landings": 4,
+ "aggregate_metric": {
+  "denominator": 3,
+  "numerator": 1
+ },
+ "landing_daily_rows": [
+  {
+   "day": "2026-10-01",
+   "source_group": "google_organic",
+   "page_family": "guide",
+   "landings": "3",
+   "landings_with_supported_result": "1"
+  },
+  {
+   "day": "2026-10-01",
+   "source_group": "paid_search",
+   "page_family": "guide",
+   "landings": "1",
+   "landings_with_supported_result": "1"
+  }
+ ],
+ "rerun_rolled_up_landings": 0,
+ "raw_rows_after_100_days": 0,
+ "aggregate_metric_after_raw_deleted": {
+  "denominator": 3,
+  "numerator": 1
+ },
+ "reproduces": true
+}

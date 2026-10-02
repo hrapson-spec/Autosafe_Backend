@@ -43,13 +43,9 @@ def test_bearer_report_routes_disable_automatic_analytics():
     index = (ROOT / "index.html").read_text(encoding="utf-8")
     assert "!/^\\/app\\/report\\//" in index
     assert "if (!window.autosafeAnalyticsAllowed) return" in index
-    assert "if (window.autosafeAnalyticsAllowed)" in index
-    assert "data-auto-track', 'false'" in index
     assert "send_page_view: false" in index
     assert "G-8PV2HG1QDC" not in index
     assert '<script defer src="https://umami' not in index
-    assert "data-before-send', 'autosafeUmamiBeforeSend'" in index
-    assert "payload.url = window.location.pathname" in index
 
 
 def test_standalone_and_seo_pages_load_the_filtered_umami_page_view_loader():
@@ -65,10 +61,8 @@ def test_standalone_and_seo_pages_load_the_filtered_umami_page_view_loader():
         assert "umami-production" not in source, page.name
 
     loader = (ROOT / "static" / "umami.js").read_text(encoding="utf-8")
-    assert "if (/^\\/app\\/report\\//i.test(window.location.pathname)) return;" in loader
-    assert "script.setAttribute('data-auto-track', 'false')" in loader
-    assert "script.setAttribute('data-before-send', 'autosafeUmamiBeforeSend')" in loader
-    assert "payload.url = window.location.pathname" in loader
+    assert "createElement" not in loader and "fetch(" not in loader
+    assert "umami-production-cb51.up.railway.app/script.js" not in (ROOT / "index.html").read_text()
 
 
 def test_standalone_static_pages_use_the_shared_consent_gate():

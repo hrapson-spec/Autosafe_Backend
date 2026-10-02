@@ -33,7 +33,7 @@ const PrivacyPage: React.FC = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 1 October 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 2 October 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -99,6 +99,11 @@ const PrivacyPage: React.FC = () => {
                     <td className="py-3 pr-4">Automatic</td>
                     <td className="py-3">Yes - but not personally identifiable</td>
                   </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">First-party page and check-outcome measurement events: random identifiers, page category, arrival category, outcome category, release version, receipt time and an automated-request flag (see "First-party measurement" below)</td>
+                    <td className="py-3 pr-4">Your browser, automatically</td>
+                    <td className="py-3">Raw events normally deleted within about 35 minutes; daily counts without identifiers kept for three calendar months. No IP address, User-Agent, page address, referrer address, registration or postcode is stored with them</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -137,6 +142,10 @@ const PrivacyPage: React.FC = () => {
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Understanding how our site is used</td>
                     <td className="py-3">Legitimate interests - improving our service (aggregated data only)</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">Measuring whether visitors from search reach a displayed result (bounded first-party measurement)</td>
+                    <td className="py-3">Legitimate interests - improving our service (see "First-party measurement" below)</td>
                   </tr>
                 </tbody>
               </table>
@@ -188,7 +197,7 @@ const PrivacyPage: React.FC = () => {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Umami Analytics</td>
-                    <td className="py-3 pr-4">Aggregated website statistics</td>
+                    <td className="py-3 pr-4">Historical website statistics; new collection retired</td>
                     <td className="py-3">Self-hosted in the configured service region</td>
                   </tr>
                   <tr>
@@ -233,6 +242,10 @@ const PrivacyPage: React.FC = () => {
                   <tr className="border-b border-slate-100">
                     <td className="py-3 pr-4">Application access logs</td>
                     <td className="py-3">Disabled; application logs exclude raw VRN, raw postcode, email content and saved-report tokens</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-3 pr-4">First-party measurement events</td>
+                    <td className="py-3">Raw events normally deleted within about 35 minutes; daily aggregate counts without identifiers kept for three calendar months</td>
                   </tr>
                   <tr>
                     <td className="py-3 pr-4">Analytics data</td>
@@ -287,14 +300,25 @@ const PrivacyPage: React.FC = () => {
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Cookies</h2>
             <p className="text-slate-600 leading-relaxed mb-4">
-              We use cookieless Umami Analytics for aggregate page-view and website event statistics. Page views record only the page path (never query strings or saved-report links) and the referring site's domain; event payloads are configured without direct identifiers; like any web service, its hosting infrastructure may process network metadata such as an IP address for delivery and security.
-            </p>
+              Automatic Umami collection has been retired. Historical statistics remain separate from the bounded website measurement described below.</p>
             <p className="text-slate-600 leading-relaxed mb-4">
               Analytics events use a fixed allowlist and never include registration, postcode, email address or saved-report token. Automatic analytics are disabled on saved-report link routes, and those values are not placed in analytics URLs.
             </p>
             <p className="text-slate-600 leading-relaxed">
               We use Google Ads conversion tracking, which sets cookies to measure advertising effectiveness. <strong>These cookies are only set if you accept them</strong> via the consent banner shown on your first visit; if you decline, no advertising cookies are set and the site works fully. These cookies are used solely for conversion measurement and not for personalised advertising. You can change your choice at any time by clearing the site's data in your browser, which will show the banner again.
             </p>
+          </section>
+
+          <section id="website-measurement" className="mb-8">
+            <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">First-party measurement of visits and check outcomes</h2>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Purpose.</strong> When website measurement is on, we use it only to understand and improve these pages and the check tool in aggregate. We do not use these observations for advertising, profiling or decisions about you, and do not link them to garage enquiries or customer records.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Browser storage.</strong> We keep a random arrival identifier, its start minute, a source category and a public pilot-page label in sessionStorage for a fixed 30-minute window. This lets a journey from a guide through a model page into the check tool retain its original arrival category. We do not add measurement identifiers to links. Reloads and back/forward navigation do not create another arrival. Some visits cannot be observed, including when storage is blocked or the window expires.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Events.</strong> Our server receives random event, document, arrival and check-operation identifiers; page, source and pilot categories; software version; coarse time; and yes/no or category values about a check or displayed result. A pilot label identifies one of a small set of public pages, not the vehicle you enter. No registration, postcode, customer identifier, report link, page/referrer address, query value, failure rate, sample size or free text is accepted. We exclude visits carrying recognised paid-click markers, without keeping their values. IP addresses are used in memory to limit abuse and User-Agent is used to classify likely automated traffic; neither is stored in the measurement rows.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Your choice.</strong> Use the measurement switch at the top of the page to turn it off, without charge or loss of access to the service. This clears the browser journey and stops further transmission, including retries. We remember only your off choice in localStorage for 90 days; it is not an identifier. Global Privacy Control also turns measurement off. Turning it on starts observation only on a later eligible arrival, not retrospectively.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Retention.</strong> The browser journey expires after 30 minutes. Every five minutes we aggregate closed journeys into daily counts and delete their individual events in the same transaction, normally within about 35 minutes of the journey starting. A processing outage can delay deletion; we stop new collection if deletion becomes overdue and investigate. The counts contain no random identifiers and are kept for three calendar months. Existing events follow this expiry even if you turn measurement off; we cannot undo a historical count for a particular person after its identifiers have been deleted.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Privacy basis.</strong> We assess browser storage and access under the PECR statistical-purposes exception, with clear information and a free way to object. Separately, our UK GDPR basis is legitimate interests in improving the service, Article 6(1)(f). Individual events are pseudonymous. We restrict access to the operator, minimise the data and prohibit linking it to other records. Small counts and coarse timestamps can still carry privacy risks, so detailed statistics are not public.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Hosting logs.</strong> Railway hosts the existing database and processes network metadata for delivery and security, including IP address, User-Agent, request path and timestamp. This is separate from our measurement rows. Its Hobby plan provides seven days of log availability, which is not a verified physical-deletion deadline. Our database deletion does not erase provider backups or platform logs. We do not use those logs to identify or enrich measurement journeys. The measurement database is hosted in Railway’s US West region; processing is subject to its standard data-processing and international-transfer arrangements.</p>
+            <p className="text-slate-600 leading-relaxed mb-4"><strong>Contact.</strong> You can also object or ask about this processing at autosafehq@gmail.com. Because we do not attach measurement identifiers to your customer details and delete them promptly, we may be unable to locate past observations about you. We will explain any applicable limits when handling a rights request.</p>
           </section>
 
           <section className="mb-8">

@@ -379,8 +379,7 @@ class TestReportShellTransform(unittest.TestCase):
         self.assertIn('src="/assets/index-CCCC3333.js"', self.shell)
         self.assertIn('href="/assets/index-DDDD4444.css"', self.shell)
         self.assertIn("window.autosafeAnalyticsAllowed = !/^\\/app\\/report\\//", self.shell)
-        self.assertIn("autosafeUmamiBeforeSend", self.shell)
-        self.assertIn("data-auto-track", self.shell)
+        self.assertIn("acquisition-landing.js", self.shell)
         self.assertIn('<div id="root">', self.shell)
         self.assertIn("charset", self.shell)
         self.assertIn('name="viewport"', self.shell)
@@ -460,8 +459,8 @@ class TestClientRegexCaseFlags(unittest.TestCase):
 
     def test_every_report_route_regex_has_the_i_flag(self):
         expected = {
-            "index.html": 2,        # autosafeAnalyticsAllowed + inline before-send
-            "static/umami.js": 2,   # loader gate + before-send
+            "index.html": 1,        # autosafeAnalyticsAllowed + inline before-send
+            "static/umami.js": 0,   # loader gate + before-send
             "static/consent.js": 1,  # standalone/SEO pages' mirror of the gate
             "utils/analytics.ts": 1,
         }

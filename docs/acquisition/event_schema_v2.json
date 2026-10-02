@@ -1,19 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:autosafe:acquisition:event:v1",
-  "title": "AutoSafe acquisition event v1 (PROPOSED - collection OFF; awaits OA-005)",
-  "description": "Proposed safe-field event schema. scope_visible v1 (DECISIONS.md D-003): the visibility requirement is met by the scope class shown without interaction on the result card (prediction / <make model> comparison, not a prediction for the registration / dataset-wide reference comparison); the exact_band/age_band_only/model_average detail is reported through match_scope and outcome_group and is not part of the visibility test. scope_visible stays a data-derived (scope disclosure text available) non-discriminating invariant; a DOM-observed check would be a future metric version. outcome_group demo (DECISIONS.md D-004): a report with vehicle_data_source demo is a delivered render but never a supported vehicle result, for otherwise-renderable scopes; the unavailable scope takes precedence over demo and is result_unavailable, never result_rendered. If a render error occurs after result_rendered, both events can exist for one operation: aggregation must let render_failed win. OA-005 wire note: the collector request body is an event plus the envelope fields session_id, landing_id (required on landing_observed), release_sha (optional) and, on every event, page_family and source_group (see docs/acquisition/COLLECTOR.md); landing_observed carries page_family (an allowlisted family, not a path) and source_group (internal = same-site referrer, paid_search = URL carried a paid-click marker (never sent), internal_test = synthetic traffic).",
+  "$id": "urn:autosafe:acquisition:event:v2",
+  "title": "AutoSafe bounded journey event v2 (collection OFF pending acceptance)",
+  "description": "Event-specific acknowledgement schema v2. Wire envelope and fixed window validation are specified in EVENT_SCHEMA_v2.md and COLLECTOR.md. A rendered acknowledgement is client-reported, not evidence of model qualification or an MOT outcome. Render failure within the fixed window cancels that operation.",
   "oneOf": [
     {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -71,11 +70,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -106,11 +104,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -206,11 +203,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -594,11 +590,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -640,11 +635,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
@@ -699,11 +693,10 @@
       "additionalProperties": false,
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "metric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9.-]{0,31}$"
+          "const": "oa-journey-30m-v2"
         },
         "event_id": {
           "type": "string",
