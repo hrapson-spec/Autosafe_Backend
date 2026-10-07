@@ -29,6 +29,7 @@ from acquisition_store import AcquisitionRecord
 logger = logging.getLogger(__name__)
 
 ROUTE_PATH = "/api/acquisition/events"
+PAID_ROUTE_PATH = "/api/acquisition/paid-events"
 MAX_BODY_BYTES = 2048
 RATE_LIMIT = "120/minute"
 RECORD_TIMEOUT_SECONDS = 2.0
@@ -226,6 +227,36 @@ AcquisitionEventModel = Annotated[
 _EVENT_ADAPTER: TypeAdapter = TypeAdapter(AcquisitionEventModel)
 
 
+PAID_METRIC_VERSION = "paid-journey-30m-v1"
+PAID_GROUPS = ("discover_owner", "discover_buyer", "search_owner", "search_buyer")
+
+
+def parse_paid_event(payload: Any) -> BaseModel:
+    """Paid envelope is versioned separately; reuse the strict result contract.
+
+    No URL, click ID, registration or text is accepted. Consent is asserted
+    by the browser and never treated as independently verified by the server.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError("invalid_event")
+    data = dict(payload)
+    if (data.get("metric_version") != PAID_METRIC_VERSION
+            or data.get("source_group") != "paid_search"
+            or data.get("pilot_group") not in PAID_GROUPS
+            or data.pop("consent_granted", None) is not True):
+        raise ValueError("invalid_paid_envelope")
+    group = data["pilot_group"]
+    original_event = data.get("event")
+    if original_event in ("landing_observed", "page_viewed") and data.get("observation_state") != "observed":
+        raise ValueError("invalid_paid_observation")
+    if original_event == "page_viewed":
+        data["event"] = "landing_observed"
+    data.update(metric_version="oa-journey-30m-v2", pilot_group="none")
+    event = _EVENT_ADAPTER.validate_python(data)
+    return event.model_copy(update={"metric_version": PAID_METRIC_VERSION,
+                                   "pilot_group": group, "event": original_event})
+
+
 def parse_event(payload: Any) -> BaseModel:
     """Validate a decoded JSON value. Raises ValidationError on any deviation."""
     return _EVENT_ADAPTER.validate_python(payload)
@@ -367,9 +398,14 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
     @app.middleware("http")
     async def _acquisition_no_store(request, call_next):
         response = await call_next(request)
-        if request.url.path == ROUTE_PATH:
+        if request.url.path in (ROUTE_PATH, PAID_ROUTE_PATH):
             response.headers["Cache-Control"] = "no-store"
         return response
+
+    @app.post(PAID_ROUTE_PATH, status_code=202, include_in_schema=False)
+    @limiter.limit(RATE_LIMIT)
+    async def record_paid_event(request: Request):
+        return await record_acquisition_event(request)
 
     @app.post(
         ROUTE_PATH,
@@ -395,7 +431,8 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
     @limiter.limit(RATE_LIMIT)
     async def record_acquisition_event(request: Request):
         global _breaker_until
-        if not ingest_enabled():
+        paid = request.url.path == PAID_ROUTE_PATH
+        if not ingest_enabled() or (paid and os.environ.get("PAID_ACQUISITION_ENABLED", "").lower() != "true"):
             return _json(404, {"detail": "Not Found"})
         # Global Privacy Control: honour the objection server-side too.
         if request.headers.get("sec-gpc", "").strip() == "1":
@@ -416,8 +453,8 @@ def register_acquisition_routes(app: FastAPI, limiter) -> None:
         if not isinstance(payload, dict):
             return _reject(400, "invalid_event")
         try:
-            event = parse_event(payload)
-        except ValidationError:
+            event = parse_paid_event(payload) if paid else parse_event(payload)
+        except (ValidationError, ValueError):
             return _reject(400, "invalid_event")
 
         store = _get_store()

@@ -1,0 +1,37 @@
+{% extends "seo_model.html" %}
+{% block pilot_guidance %}
+<style>
+  .data-table { display:block; max-width:100%; overflow-x:auto; }
+  #cohort-comparison label { display:grid; gap:0.5rem; max-width:100%; }
+  #cohort-comparison select { max-width:100%; }
+</style>
+<section aria-labelledby="cohort-heading" id="cohort-comparison">
+  <h2 id="cohort-heading">Explore recorded outcomes by age and mileage</h2>
+  <p>Choose a group to see its recorded MOT outcomes for {{ make_display }} {{ model_display }}.
+    This comparison describes past tests. It does not assess a particular car's condition or predict its next result.</p>
+  {% if cohorts %}
+  <div style="display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0">
+    <label>Age band <select id="cohort-age" style="padding:12px;min-height:44px;background:var(--card-bg);color:var(--text-primary);border:1px solid var(--border-color)">
+      <option value="">Choose age</option>
+      {% for group in cohorts|map(attribute='age_band')|unique %}<option value="{{ group }}">{{ group }} years</option>{% endfor %}
+    </select></label>
+    <label>Mileage band <select id="cohort-mileage" style="padding:12px;min-height:44px;background:var(--card-bg);color:var(--text-primary);border:1px solid var(--border-color)">
+      <option value="">Choose mileage</option>
+      {% for group in cohorts|map(attribute='mileage_band')|unique %}<option value="{{ group }}">{{ group }} miles</option>{% endfor %}
+    </select></label>
+  </div>
+  <p id="cohort-outcome" role="status" aria-live="polite">Choose both bands to compare the recorded group with the whole model group.</p>
+  <p>Only groups with at least 100 recorded tests are shown. A missing combination has insufficient available evidence;
+    we do not substitute a broader group. Different age and mileage mixes can explain differences in historical rates.
+    These are test counts, which may include repeated vehicles.</p>
+  <details><summary>See all available age and mileage groups</summary>
+    <table class="data-table"><thead><tr><th>Age (years)</th><th>Mileage (miles)</th><th>Recorded failures</th><th>Tests</th><th>Failure rate</th></tr></thead>
+    <tbody>{% for c in cohorts %}<tr><td>{{ c.age_band }}</td><td>{{ c.mileage_band }}</td><td>{{ '{:,}'.format(c.total_failures) }}</td><td>{{ '{:,}'.format(c.total_tests) }}</td><td>{{ '%.1f'|format(c.fail_rate * 100) }}%</td></tr>{% endfor %}</tbody></table>
+  </details>
+  <script type="application/json" id="cohort-data">{{ {'cohorts': cohorts, 'overall': overall_fail_rate}|tojson }}</script>
+  <script src="/static/cohort-comparison.js" defer></script>
+  {% else %}<p>Age and mileage comparisons are currently unavailable for this model. The aggregate evidence below remains available.</p>{% endif %}
+  <p><a href="/guides/mot-history-check">How to read a vehicle's recorded MOT history</a> ·
+    <a href="/guides/mot-checklist">Prepare for an MOT</a> · <a href="/app">Check a specific vehicle</a></p>
+</section>
+{% endblock %}

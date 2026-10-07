@@ -2,13 +2,13 @@
   "_rule": "lastmod = max(dataset artifact revision where the page renders dataset figures, significant_revision of every source that renders the page). significant_revision moves only when the author records a change as --significant (main content); boilerplate, footer, markup, styling, analytics and language-tag edits are --non-significant. No runtime clock is used.",
   "files": {
     "index.html": {
-      "sha256": "97b3574920c1827340fd98053d7b86c42c3f70cf09967a58f219c8fa4dc4ffd3",
+      "sha256": "7a8e384db13f847fcac26e2431c9aa934ec91b341b649cc7761cdfa4d24eaade",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Add separately consented paid measurement; organic definition unchanged"
       }
     },
     "App.tsx": {
@@ -82,23 +82,23 @@
       }
     },
     "seo_pages.py": {
-      "sha256": "73b812af2244acfdc7db567ed47989348012e192b546296d378480a9b3cea453",
+      "sha256": "62ed71f3cca7826ba61a0626449e364f594df0632a30e75f9f0716098ca748d5",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "Route five existing pilot pages to separate content templates; empty extension blocks preserve all other rendered pages and their revision dates"
+        "reason": "Conditional routing and query for the frozen treatment template; control content unchanged"
       }
     },
     "templates/seo_base.html": {
-      "sha256": "384bcaab07b37d96dd71ab3a93ed44cd76bcbff54a86c0e51632f1f4758545d3",
+      "sha256": "6e5a68a7dbed9fe04cfef664ea68e474486b1faa28675763a131d1b75a6f8676",
       "significant_revision": "2026-02-06",
       "reason": "6b9ff53 2026-02-06: shared layout created; every later edit (disclaimer footer, nav/CTA copy, consent gate, styling, Umami tag, footer link targets, lang) is boilerplate",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Add separately consented paid measurement; organic definition unchanged"
       }
     },
     "templates/seo_index.html": {
@@ -149,6 +149,16 @@
         "date": "2026-10-02",
         "significant": false,
         "reason": "Add scoped extension points and remove hidden FAQ markup only on pilot data pages; improve comparison contrast and display existing age-band sample evidence"
+      }
+    },
+    "templates/programme_model.html": {
+      "sha256": "86ae3104cafcf8e5d3a7075d132ab01631ec15dc03b4aa51d67c2b20b254241a",
+      "significant_revision": "2026-10-07",
+      "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only",
+      "last_change": {
+        "date": "2026-10-07",
+        "significant": true,
+        "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only"
       }
     },
     "templates/seo_compare.html": {
@@ -242,13 +252,13 @@
       }
     },
     "static/privacy.html": {
-      "sha256": "a079458fc0ea171b1e1a0ace92a21980428812bf6b9ca6acd5f9ae0314c00e6f",
-      "significant_revision": "2026-10-02",
-      "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable",
+      "sha256": "b5b64fb479aed251ccf8a3a98cd615237b5da2f237234b0c6ad38b8c69e3596c",
+      "significant_revision": "2026-10-07",
+      "reason": "Add the separate optional paid-measurement privacy notice",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": true,
-        "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable"
+        "reason": "Add the separate optional paid-measurement privacy notice"
       }
     },
     "static/guides/mot-checklist.html": {

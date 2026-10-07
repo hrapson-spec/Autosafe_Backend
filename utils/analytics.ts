@@ -88,6 +88,7 @@ function sendPageView(): void {
  * views requested while waiting collapse into one for the route current then.
  */
 export function trackPageView(): void {
+  window.autosafePaidMeasurement?.pageView();
   if (!analyticsAllowed()) return;
   if (window.umami?.track) {
     sendPageView();
