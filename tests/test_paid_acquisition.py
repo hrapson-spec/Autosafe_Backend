@@ -98,7 +98,8 @@ def test_paid_rollup_deduplicates_and_render_failure_wins(tmp_path, backend):
         assert not await store.fetch_all(f'SELECT * FROM {stores.EVENTS}')
         rows = await store.fetch_all(f'SELECT * FROM {stores.LANDINGS}')
         assert rows[0]['landings'] == 1 and rows[0]['landings_with_supported_result'] == 0
-        rows = await store.fetch_all(f'SELECT * FROM {stores.DAILY} WHERE event = ?', ('page_viewed',))
+        placeholder = '$1' if backend == 'postgres' else '?'
+        rows = await store.fetch_all(f'SELECT * FROM {stores.DAILY} WHERE event = {placeholder}', ('page_viewed',))
         assert rows[0]['count'] == 1
     async def isolated():
         nonlocal store

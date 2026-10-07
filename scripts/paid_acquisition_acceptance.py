@@ -48,7 +48,7 @@ async def check_paid_store(dsn):
         assert not await store.fetch_all(f'SELECT * FROM {stores.EVENTS}')
         rows = await store.fetch_all(f'SELECT * FROM {stores.LANDINGS}')
         assert rows[0]['landings'] == 1 and rows[0]['landings_with_supported_result'] == 0
-        rows = await store.fetch_all(f'SELECT * FROM {stores.DAILY} WHERE event = ?', ('page_viewed',))
+        rows = await store.fetch_all(f'SELECT * FROM {stores.DAILY} WHERE event = $1', ('page_viewed',))
         assert rows[0]['count'] == 1
         return {'backend': 'postgres', 'raw_deleted': 5, 'arrivals': 1, 'useful': 0, 'page_views': 1}
     finally:
