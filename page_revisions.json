@@ -12,23 +12,23 @@
       }
     },
     "App.tsx": {
-      "sha256": "e5ccf510261ad98a897e6208a87d20240ba96eb7cc9794c716ed4dd5a8de387d",
+      "sha256": "ae41e87722d5071b5435274fa9bf5c95f63495991b1ddc3f20960332f099cff2",
       "significant_revision": "2026-10-02",
       "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": true,
-        "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction"
+        "date": "2026-10-07",
+        "significant": false,
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/HeroForm.tsx": {
-      "sha256": "5b939abe424d6397abbfaaac07c2f4ba40c07f833f48e646543a23d12e6ba1eb",
+      "sha256": "ae38288839bb577b1cdb7d39edc4f94592c40458137d22c90ffb795d8642ffb0",
       "significant_revision": "2026-07-18",
       "reason": "f30bc38 2026-07-18: social-proof copy removed",
       "last_change": {
-        "date": "2026-07-18",
-        "significant": true,
-        "reason": "f30bc38 2026-07-18: social-proof copy removed"
+        "date": "2026-10-07",
+        "significant": false,
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/Icons.tsx": {
@@ -62,13 +62,13 @@
       }
     },
     "components/ui/Input.tsx": {
-      "sha256": "c8e7c8da8455336d8aa8dc273329040de54496fbe42236f7e63be82a34d056fe",
+      "sha256": "e92e1cbb53f207f227b32cc06f1797bb0c659ac5ac3452287f8b2fb66be39ded",
       "significant_revision": "2026-01-19",
       "reason": "1d422ba 2026-01-19: created (UI primitive); later edit is accessibility markup",
       "last_change": {
-        "date": "2026-01-21",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "03b26db accessibility attributes"
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/ui/Button.tsx": {

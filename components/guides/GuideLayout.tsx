@@ -51,7 +51,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+        <article className="bg-white rounded-2xl shadow-xs p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">{title}</h1>
           <p className="text-slate-400 text-sm mb-8">Last updated: {lastUpdated}</p>
 

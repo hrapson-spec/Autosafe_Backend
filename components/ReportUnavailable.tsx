@@ -62,8 +62,8 @@ const ReportUnavailable: React.FC<ReportUnavailableProps> = ({ reason, onShown }
         </div>
       </nav>
 
-      <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-8 md:p-10 text-center space-y-6">
+      <main className="grow flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xs p-8 md:p-10 text-center space-y-6">
           <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
             <AlertCircle className="w-6 h-6 text-red-500" aria-hidden="true" />
           </div>

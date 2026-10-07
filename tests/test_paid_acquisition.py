@@ -1,5 +1,6 @@
 """Paid consent, isolation, deduplication and failure precedence."""
 import asyncio
+import os
 from dataclasses import asdict
 from datetime import timedelta
 from uuid import uuid4
@@ -64,7 +65,10 @@ def test_route_flag_consent_gpc_and_duplicate(tmp_path, monkeypatch):
         routes.set_store_for_tests(None)
 
 
-def test_paid_rollup_deduplicates_and_render_failure_wins(tmp_path):
+@pytest.mark.parametrize('backend', ['sqlite', 'postgres'])
+def test_paid_rollup_deduplicates_and_render_failure_wins(tmp_path, backend):
+    if backend == 'postgres' and not os.environ.get('ACQUISITION_TEST_PG_DSN'):
+        pytest.skip('Disposable PostgreSQL DSN not supplied')
     now = stores.utcnow().replace(second=0,microsecond=0)
     store = stores.SqliteStore(str(tmp_path/'events.db'), clock=lambda:now)
     lid, op = str(uuid4()), str(uuid4())
@@ -96,7 +100,28 @@ def test_paid_rollup_deduplicates_and_render_failure_wins(tmp_path):
         assert rows[0]['landings'] == 1 and rows[0]['landings_with_supported_result'] == 0
         rows = await store.fetch_all(f'SELECT * FROM {stores.DAILY} WHERE event = ?', ('page_viewed',))
         assert rows[0]['count'] == 1
-    asyncio.run(run())
+    async def isolated():
+        nonlocal store
+        if backend == 'sqlite':
+            await run()
+            return
+        import asyncpg
+        dsn = os.environ['ACQUISITION_TEST_PG_DSN']
+        schema = 'paid_test_' + uuid4().hex
+        admin = await asyncpg.connect(dsn)
+        await admin.execute(f'CREATE SCHEMA "{schema}"')
+        pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2,
+                                        server_settings={'search_path': schema})
+        async def get_pool():
+            return pool
+        store = stores.PostgresStore(get_pool, clock=lambda:now)
+        try:
+            await run()
+        finally:
+            await pool.close()
+            await admin.execute(f'DROP SCHEMA "{schema}" CASCADE')
+            await admin.close()
+    asyncio.run(isolated())
 
 
 def test_screen_defaults_require_second_batch_and_never_force_winner():

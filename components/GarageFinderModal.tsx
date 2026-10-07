@@ -509,7 +509,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
                     }}
                     className="sr-only"
                   />
-                  <span className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  <span className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                     consentGiven
                       ? 'bg-slate-900 border-slate-900'
                       : consentError
@@ -549,7 +549,7 @@ const GarageFinderModal: React.FC<GarageFinderModalProps> = ({
                     onChange={e => setMarketingConsent(e.target.checked)}
                     className="sr-only"
                   />
-                  <span className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  <span className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                     marketingConsent
                       ? 'bg-slate-900 border-slate-900'
                       : 'border-slate-300'

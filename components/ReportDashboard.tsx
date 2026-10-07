@@ -168,7 +168,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
           role="status"
           className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
         >
-          <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {demoBannerText}
         </div>
       )}
@@ -179,7 +179,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
             <a
               href="/"
               aria-label="AutoSafe home"
-              className="rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+              className="rounded-lg focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
             >
               <Logo className="h-7 w-7" />
             </a>
@@ -263,17 +263,17 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
           onSubmit={handleEmailReport}
           className="flex flex-col items-start gap-3 sm:flex-row sm:items-end"
         >
-          <div className="flex flex-shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Mail className="h-4 w-4 text-slate-500" aria-hidden="true" />
             <span className="text-sm font-medium text-slate-700">Email me this report</span>
           </div>
-          <div className="flex w-full flex-grow gap-2 sm:w-auto">
+          <div className="flex w-full grow gap-2 sm:w-auto">
             <input
               type="email"
               placeholder="your@email.com"
               value={emailReportEmail}
               onChange={(event) => setEmailReportEmail(event.target.value)}
-              className="min-w-0 flex-grow rounded-lg border border-slate-200 px-3 py-2 text-sm transition-all focus:border-slate-900 focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
+              className="min-w-0 grow rounded-lg border border-slate-200 px-3 py-2 text-sm transition-all focus:border-slate-900 focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
               required
             />
             <Button
@@ -305,7 +305,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
           role="status"
           className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-800"
         >
-          <Check className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+          <Check className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <div>
             <p className="font-semibold">Request received</p>
             <p className="text-sm text-green-700">A local garage will contact you shortly.</p>
@@ -336,7 +336,7 @@ const ReportDashboard: React.FC<ReportDashboardProps> = ({ report, postcode, onR
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 transition-colors hover:bg-slate-50">
           <span className="font-semibold text-slate-900">How this result was calculated</span>
           <ChevronDown
-            className="h-5 w-5 flex-shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+            className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180"
             aria-hidden="true"
           />
         </summary>

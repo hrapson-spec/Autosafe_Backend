@@ -70,7 +70,7 @@ const HeroForm: React.FC<HeroFormProps> = ({ onSubmit, isLoading, initialRegistr
   };
 
   return (
-    <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm p-8 md:p-10">
+    <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-xs p-8 md:p-10">
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <Input
           id="registration"
