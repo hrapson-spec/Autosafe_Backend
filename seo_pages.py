@@ -438,7 +438,10 @@ def _query_model_cohorts(conn, make: str, model: str) -> list[dict]:
               AND age_band != 'Unknown' AND mileage_band != 'Unknown'
             GROUP BY age_band, mileage_band
             HAVING SUM(Total_Tests) >= 100 AND COUNT(Total_Failures) = COUNT(*)
-            ORDER BY age_band, mileage_band""", params).fetchall()
+            ORDER BY CASE age_band WHEN '0-2' THEN 1 WHEN '3-5' THEN 2
+                      WHEN '6-10' THEN 3 WHEN '11-15' THEN 4 WHEN '15+' THEN 5 ELSE 6 END,
+                     CASE mileage_band WHEN '0-30k' THEN 1 WHEN '30k-60k' THEN 2
+                      WHEN '60k-100k' THEN 3 WHEN '100k+' THEN 4 ELSE 5 END""", params).fetchall()
     return [{"age_band": r["age_band"], "mileage_band": r["mileage_band"],
              "total_tests": int(r["total_tests"]), "total_failures": int(r["total_failures"]),
              "fail_rate": float(r["total_failures"] / r["total_tests"])}

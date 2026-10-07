@@ -82,13 +82,13 @@
       }
     },
     "seo_pages.py": {
-      "sha256": "62ed71f3cca7826ba61a0626449e364f594df0632a30e75f9f0716098ca748d5",
+      "sha256": "21c1884cb84425fc3d6c562356a1c0e45ae1689469f431b1a182292782dad3fe",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
       "last_change": {
         "date": "2026-10-07",
         "significant": false,
-        "reason": "Conditional routing and query for the frozen treatment template; control content unchanged"
+        "reason": "Order treatment cohort controls in natural age and mileage order; preserve controls"
       }
     },
     "templates/seo_base.html": {
