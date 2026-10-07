@@ -25,7 +25,7 @@ RUN npm ci
 # frontend stage cannot build. Verified via grep across index.tsx/App.tsx/
 # types.ts/components//services//utils//hooks for other root-level
 # relative imports; styles.css was the only one missing from the spec.
-COPY index.html index.tsx App.tsx types.ts styles.css vite.config.ts tsconfig.json tailwind.config.js postcss.config.js ./
+COPY index.html index.tsx App.tsx types.ts styles.css vite.config.ts tsconfig.json postcss.config.js ./
 COPY components/ ./components/
 COPY services/ ./services/
 COPY utils/ ./utils/
