@@ -72,6 +72,7 @@ TRACKED_SOURCES: tuple[str, ...] = (
     "templates/seo_component_hub.html",
     "templates/seo_make.html",
     "templates/seo_model.html",
+    "templates/programme_model.html",
     "templates/seo_compare.html",
     "templates/pilot_corsa.html",
     "templates/pilot_c3.html",

@@ -75,9 +75,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
         </div>
       </nav>
 
-      <main id="main-content" className="flex-grow flex flex-col">
+      <main id="main-content" className="grow flex flex-col">
         {/* Landing Hero Section - Centered Layout */}
-        <div className="relative flex-grow flex flex-col items-center justify-start pt-12 pb-20 px-4 md:px-6">
+        <div className="relative grow flex flex-col items-center justify-start pt-12 pb-20 px-4 md:px-6">
 
           <div className="relative z-10 w-full max-w-3xl mx-auto flex flex-col items-center gap-12 mb-10">
 
@@ -165,9 +165,9 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
               Data from DVSA • Not official government advice.
             </div>
             <div className="flex justify-center gap-4 text-xs text-slate-600 font-semibold tracking-widest uppercase">
-              <Link to="/app/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Terms</Link>
-              <Link to="/app/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Privacy</Link>
-              <a href="mailto:autosafehq@gmail.com" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded">Feedback</a>
+              <Link to="/app/terms" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded-sm">Terms</Link>
+              <Link to="/app/privacy" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded-sm">Privacy</Link>
+              <a href="mailto:autosafehq@gmail.com" className="hover:text-slate-900 transition-colors py-2 px-3 min-h-[44px] flex items-center focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 rounded-sm">Feedback</a>
             </div>
           </div>
 

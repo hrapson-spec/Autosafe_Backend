@@ -2,33 +2,33 @@
   "_rule": "lastmod = max(dataset artifact revision where the page renders dataset figures, significant_revision of every source that renders the page). significant_revision moves only when the author records a change as --significant (main content); boilerplate, footer, markup, styling, analytics and language-tag edits are --non-significant. No runtime clock is used.",
   "files": {
     "index.html": {
-      "sha256": "97b3574920c1827340fd98053d7b86c42c3f70cf09967a58f219c8fa4dc4ffd3",
+      "sha256": "7a8e384db13f847fcac26e2431c9aa934ec91b341b649cc7761cdfa4d24eaade",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Add separately consented paid measurement; organic definition unchanged"
       }
     },
     "App.tsx": {
-      "sha256": "e5ccf510261ad98a897e6208a87d20240ba96eb7cc9794c716ed4dd5a8de387d",
+      "sha256": "ae41e87722d5071b5435274fa9bf5c95f63495991b1ddc3f20960332f099cff2",
       "significant_revision": "2026-10-02",
       "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": true,
-        "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction"
+        "date": "2026-10-07",
+        "significant": false,
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/HeroForm.tsx": {
-      "sha256": "5b939abe424d6397abbfaaac07c2f4ba40c07f833f48e646543a23d12e6ba1eb",
+      "sha256": "ae38288839bb577b1cdb7d39edc4f94592c40458137d22c90ffb795d8642ffb0",
       "significant_revision": "2026-07-18",
       "reason": "f30bc38 2026-07-18: social-proof copy removed",
       "last_change": {
-        "date": "2026-07-18",
-        "significant": true,
-        "reason": "f30bc38 2026-07-18: social-proof copy removed"
+        "date": "2026-10-07",
+        "significant": false,
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/Icons.tsx": {
@@ -62,13 +62,13 @@
       }
     },
     "components/ui/Input.tsx": {
-      "sha256": "c8e7c8da8455336d8aa8dc273329040de54496fbe42236f7e63be82a34d056fe",
+      "sha256": "e92e1cbb53f207f227b32cc06f1797bb0c659ac5ac3452287f8b2fb66be39ded",
       "significant_revision": "2026-01-19",
       "reason": "1d422ba 2026-01-19: created (UI primitive); later edit is accessibility markup",
       "last_change": {
-        "date": "2026-01-21",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "03b26db accessibility attributes"
+        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
       }
     },
     "components/ui/Button.tsx": {
@@ -82,23 +82,23 @@
       }
     },
     "seo_pages.py": {
-      "sha256": "73b812af2244acfdc7db567ed47989348012e192b546296d378480a9b3cea453",
+      "sha256": "21c1884cb84425fc3d6c562356a1c0e45ae1689469f431b1a182292782dad3fe",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: retired local/insight pages; reworded Python-built page text (404 messages, link selection)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": false,
-        "reason": "Route five existing pilot pages to separate content templates; empty extension blocks preserve all other rendered pages and their revision dates"
+        "reason": "Order treatment cohort controls in natural age and mileage order; preserve controls"
       }
     },
     "templates/seo_base.html": {
-      "sha256": "384bcaab07b37d96dd71ab3a93ed44cd76bcbff54a86c0e51632f1f4758545d3",
+      "sha256": "5889d9bb476750b54a24e39db1e18d5527a9e2ca4510bad8a80ff69647cf658c",
       "significant_revision": "2026-02-06",
       "reason": "6b9ff53 2026-02-06: shared layout created; every later edit (disclaimer footer, nav/CTA copy, consent gate, styling, Umami tag, footer link targets, lang) is boilerplate",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "templates/seo_index.html": {
@@ -149,6 +149,16 @@
         "date": "2026-10-02",
         "significant": false,
         "reason": "Add scoped extension points and remove hidden FAQ markup only on pilot data pages; improve comparison contrast and display existing age-band sample evidence"
+      }
+    },
+    "templates/programme_model.html": {
+      "sha256": "86ae3104cafcf8e5d3a7075d132ab01631ec15dc03b4aa51d67c2b20b254241a",
+      "significant_revision": "2026-10-07",
+      "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only",
+      "last_change": {
+        "date": "2026-10-07",
+        "significant": true,
+        "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only"
       }
     },
     "templates/seo_compare.html": {
@@ -242,103 +252,103 @@
       }
     },
     "static/privacy.html": {
-      "sha256": "a079458fc0ea171b1e1a0ace92a21980428812bf6b9ca6acd5f9ae0314c00e6f",
-      "significant_revision": "2026-10-02",
-      "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable",
+      "sha256": "b5b64fb479aed251ccf8a3a98cd615237b5da2f237234b0c6ad38b8c69e3596c",
+      "significant_revision": "2026-10-07",
+      "reason": "Add the separate optional paid-measurement privacy notice",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-07",
         "significant": true,
-        "reason": "Clarify the visible objection fallback when lasting browser preference storage is unavailable"
+        "reason": "Add the separate optional paid-measurement privacy notice"
       }
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "90b6da74f872249e04b6a1e3fb3bbe82792bad98e4a80fb7feed9271129c9ab5",
+      "sha256": "84826e0074fcbf29df2edbacdcf582d557bfd2014ca8ce1cda1b485753cae4ec",
       "significant_revision": "2026-10-02",
       "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/common-mot-failures.html": {
-      "sha256": "1656e25002ea93607647e8c564b145eae11b3aeec8746f4bdfdd7234165e7908",
+      "sha256": "33cd37ccaac118a0c6231c5fc31d802b4e9eb2b5ee6940ac7d57e4a97c3ec58f",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/when-is-mot-due.html": {
-      "sha256": "e91c0b0a545bf6de27fc77849002111f5cbdca5353ad908169fe91f4f951f986",
+      "sha256": "04017b23aae11f6bcb739dde43d9337eb250a20f13744a9b5a5d12c3a6516408",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-failure-rates-by-car.html": {
-      "sha256": "82d51467c8688851806749b7c4a686ce719e583f65e06d6b0742164ad8d68ca6",
+      "sha256": "5d95322ae9957f79e18024865c20a462022e2c576a4f05e6964bc84a90037d46",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-rules-2026.html": {
-      "sha256": "634843e5a191afd653eaf7a47201a6671599db493f1cbbb31bcad7065fd94ed8",
+      "sha256": "a9b5da38566e78b3bbe14d6cdd120860bd9907209c0c68d4146a00f2acba0539",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-defect-categories.html": {
-      "sha256": "8efd6d0f0df90ddb7f367d72b8270f17f379df321f866dbe946bae99216273ab",
+      "sha256": "fe09e36048317a68cd7544c6ef075365823621fd756fa21cb58346f007646a48",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-cost.html": {
-      "sha256": "c86fd6aa380a2b1ec517781a2e363347f41271960894387728668df93b6f2fa0",
+      "sha256": "5002b3a72b8b9178a114e1346a9456b09e5860323a90b2af2c08ec3f0c4c3740",
       "significant_revision": "2026-10-02",
       "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-history-check.html": {
-      "sha256": "c6cc447caef64943c305c13fc2e3e9796204cc24dcdc223c82ccec9a7a429e9b",
+      "sha256": "9def7ea37ab58f6eb63439cf982469ea702a8ff881bccb72cf8bb802f4bb45c3",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "34925e3d3110124847115524b79487c6079a91e0a1a662b2a91cd27979268fa4",
+      "sha256": "a5f9c0d6de5bdaa0c654a673c81bd42ec30159ef0c6b601f85a49b0ac26d538e",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     }
   }

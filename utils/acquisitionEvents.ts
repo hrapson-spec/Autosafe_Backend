@@ -223,6 +223,7 @@ export function emitAcquisitionEvent(input: AcquisitionEventInput): void {
       ...input,
     } as AcquisitionEvent;
     activeSink.emit(event);
+    window.autosafePaidMeasurement?.emit(input);
   } catch {
     // Intentionally swallowed.
   }

@@ -31,9 +31,9 @@ const PrivacyPage: React.FC = () => {
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <article className="bg-white rounded-2xl shadow-sm p-8 md:p-12">
+        <article className="bg-white rounded-2xl shadow-xs p-8 md:p-12">
           <h1 className="font-serif text-4xl font-medium text-slate-900 mb-2">Privacy Notice</h1>
-          <p className="text-slate-400 text-sm mb-8">Last updated: 2 October 2026</p>
+          <p className="text-slate-400 text-sm mb-8">Last updated: 7 October 2026</p>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Who we are</h2>
@@ -320,6 +320,12 @@ const PrivacyPage: React.FC = () => {
             <p className="text-slate-600 leading-relaxed mb-4"><strong>Hosting logs.</strong> Railway hosts the existing database and processes network metadata for delivery and security, including IP address, User-Agent, request path and timestamp. This is separate from our measurement rows. Its Hobby plan provides seven days of log availability, which is not a verified physical-deletion deadline. Our database deletion does not erase provider backups or platform logs. We do not use those logs to identify or enrich measurement journeys. The measurement database is hosted in Railway’s US West region; processing is subject to its standard data-processing and international-transfer arrangements.</p>
             <p className="text-slate-600 leading-relaxed mb-4"><strong>Contact.</strong> You can also object or ask about this processing at autosafehq@gmail.com. Because we do not attach measurement identifiers to your customer details and delete them promptly, we may be unable to locate past observations about you. We will explain any applicable limits when handling a rights request.</p>
           </section>
+
+          <section id="paid-measurement" className="mb-8">
+        <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Optional paid-visit measurement</h2>
+        <p className="text-slate-600 leading-relaxed mb-4">With your separate permission, AutoSafe measures an advertising arrival, page views and whether a supported vehicle report was successfully displayed. This first-party measurement helps us compare the usefulness and cost of advertising. It is separate from Google Ads cookies and our organic service measurement. The site works fully when you decline.</p>
+        <p className="text-slate-600 leading-relaxed mb-4">A random journey identifier is stored in session storage for a fixed 30-minute window. We send only fixed campaign and page categories, coarse timing and result status. We do not send registrations, report tokens, click identifiers, full URLs or advisory text. Individual events are normally aggregated and deleted within about 35 minutes of the window starting, using the existing retention controls described above; aggregates are retained for three calendar months. Our basis for this optional paid measurement is consent. Your separate consent choice is stored in this browser until you withdraw it or clear site data. Withdraw using the paid-measurement bar during your visit, or clear site data. Global Privacy Control and the website measurement objection switch turn collection off. Unobserved visits remain unknown; a render acknowledgement does not establish that a person read the report.</p>
+        </section>
 
           <section className="mb-8">
             <h2 className="font-serif text-2xl font-medium text-slate-900 mb-4">Changes to this notice</h2>

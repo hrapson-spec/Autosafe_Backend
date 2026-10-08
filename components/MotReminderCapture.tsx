@@ -183,17 +183,17 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
     return (
       <div className={`rounded-xl border ${config.borderColor} p-4`}>
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Clock className={`w-4 h-4 ${config.iconColor}`} />
             <span className="text-sm text-slate-700 font-medium">{config.ctaLabel}</span>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto flex-grow">
+          <div className="flex gap-2 w-full sm:w-auto grow">
             <input
               type="email"
               placeholder="your@email.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="flex-grow min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 focus:border-slate-900 transition-all"
+              className="grow min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 focus:border-slate-900 transition-all"
               required
             />
             <Button
@@ -223,9 +223,9 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
     <div className={`rounded-xl border ${config.borderColor} ${config.bgColor} p-5`}>
       <div className="flex items-start gap-3 mb-3">
         {motExpired ? (
-          <AlertTriangle className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
+          <AlertTriangle className={`w-5 h-5 ${config.iconColor} shrink-0 mt-0.5`} />
         ) : (
-          <Clock className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
+          <Clock className={`w-5 h-5 ${config.iconColor} shrink-0 mt-0.5`} />
         )}
         <div>
           <h3 className="font-semibold text-slate-900 text-sm">{config.headline}</h3>
@@ -242,7 +242,7 @@ const MotReminderCapture: React.FC<MotReminderCaptureProps> = ({
             placeholder="your@email.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="flex-grow min-w-0 px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 focus:border-slate-900 transition-all bg-white"
+            className="grow min-w-0 px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 focus:border-slate-900 transition-all bg-white"
             required
           />
           <Button

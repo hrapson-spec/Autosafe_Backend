@@ -428,6 +428,27 @@ def _get_similar_models(make_slug: str, model_slug: str, max_results: int = 4) -
     return results
 
 
+def _query_model_cohorts(conn, make: str, model: str) -> list[dict]:
+    """Recorded age/mileage groups, with no inference or sparse fallback."""
+    where, params = _model_where_clause(make, model)
+    rows = conn.execute(
+        f"""SELECT age_band, mileage_band, SUM(Total_Tests) AS total_tests,
+                   SUM(Total_Failures) AS total_failures
+            FROM risks WHERE {where}
+              AND age_band != 'Unknown' AND mileage_band != 'Unknown'
+            GROUP BY age_band, mileage_band
+            HAVING SUM(Total_Tests) >= 100 AND COUNT(Total_Failures) = COUNT(*)
+            ORDER BY CASE age_band WHEN '0-2' THEN 1 WHEN '3-5' THEN 2
+                      WHEN '6-10' THEN 3 WHEN '11-15' THEN 4 WHEN '15+' THEN 5 ELSE 6 END,
+                     CASE mileage_band WHEN '0-30k' THEN 1 WHEN '30k-60k' THEN 2
+                      WHEN '60k-100k' THEN 3 WHEN '100k+' THEN 4 ELSE 5 END""", params).fetchall()
+    return [{"age_band": r["age_band"], "mileage_band": r["mileage_band"],
+             "total_tests": int(r["total_tests"]), "total_failures": int(r["total_failures"]),
+             "fail_rate": float(r["total_failures"] / r["total_tests"])}
+            for r in rows if r["total_failures"] is not None
+            and 0 <= r["total_failures"] <= r["total_tests"]]
+
+
 def _query_model_age_bands(conn, make: str, model: str) -> list[dict]:
     """Query age-band breakdown for a model (weighted average across mileage bands)."""
     where, params = _model_where_clause(make, model)
@@ -856,6 +877,9 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
                     f"Not enough test data for {make_info['display']} {model_info['display']}."
                 )
             age_bands = _query_model_age_bands(conn, make, model)
+            # Query only the frozen treatment pages. Controls keep their content.
+            cohorts = (_query_model_cohorts(conn, make, model)
+                       if MODEL_TEMPLATES.get((make_slug, model_slug)) == "programme_model.html" else [])
             conn.row_factory = old_factory
 
         # Sibling models (other models from same make, excluding current)
@@ -909,6 +933,7 @@ def register_seo_routes(app: FastAPI, get_sqlite_connection):
             overall_fail_rate=overall["fail_rate"],
             overall_tests=overall["total_tests"],
             age_bands=age_bands,
+            cohorts=cohorts,
             age_band_pages_enabled=age_band_pages_exist(make_slug, model_slug),
             components=overall["components"],
             top_components=overall["components"][:3],

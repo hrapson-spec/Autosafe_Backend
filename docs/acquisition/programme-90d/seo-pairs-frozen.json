@@ -1,0 +1,69 @@
+{
+  "programme": "acquisition-90d-20261007",
+  "frozen_at_utc": "2026-10-07T15:23:57.506194+00:00",
+  "assignment_seed": 20261007,
+  "status": "FROZEN_BEFORE_CONTENT_EDITS",
+  "pairs": [
+    {
+      "pair": 1,
+      "matching_basis": "City cars",
+      "treatment": "https://www.autosafe.one/mot-check/vauxhall/adam/",
+      "control": "https://www.autosafe.one/mot-check/vauxhall/viva/"
+    },
+    {
+      "pair": 2,
+      "matching_basis": "Jeep crossovers",
+      "treatment": "https://www.autosafe.one/mot-check/jeep/compass/",
+      "control": "https://www.autosafe.one/mot-check/jeep/renegade/"
+    },
+    {
+      "pair": 3,
+      "matching_basis": "Compact hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/skoda/scala/",
+      "control": "https://www.autosafe.one/mot-check/kia/ceed/"
+    },
+    {
+      "pair": 4,
+      "matching_basis": "Small hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/nissan/micra/",
+      "control": "https://www.autosafe.one/mot-check/renault/clio/"
+    },
+    {
+      "pair": 5,
+      "matching_basis": "Family crossovers",
+      "treatment": "https://www.autosafe.one/mot-check/dacia/duster/",
+      "control": "https://www.autosafe.one/mot-check/renault/kadjar/"
+    },
+    {
+      "pair": 6,
+      "matching_basis": "Compact hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/vauxhall/astra/",
+      "control": "https://www.autosafe.one/mot-check/hyundai/i30/"
+    },
+    {
+      "pair": 7,
+      "matching_basis": "Executive saloons",
+      "treatment": "https://www.autosafe.one/mot-check/jaguar/xf/",
+      "control": "https://www.autosafe.one/mot-check/volvo/s60/"
+    },
+    {
+      "pair": 8,
+      "matching_basis": "Small hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/toyota/yaris/",
+      "control": "https://www.autosafe.one/mot-check/honda/jazz/"
+    },
+    {
+      "pair": 9,
+      "matching_basis": "Premium hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/bmw/1-series/",
+      "control": "https://www.autosafe.one/mot-check/audi/a3/"
+    },
+    {
+      "pair": 10,
+      "matching_basis": "Compact hatchbacks",
+      "treatment": "https://www.autosafe.one/mot-check/volkswagen/golf/",
+      "control": "https://www.autosafe.one/mot-check/ford/focus/"
+    }
+  ],
+  "baseline": "Account exports, snapshot hashes and reporting gaps retained locally; not published in this public code repository."
+}

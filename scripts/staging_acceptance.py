@@ -747,6 +747,9 @@ async def main_async(args: argparse.Namespace) -> int:
                 "4k-vehicle-odometer", "/api/vehicle typed odometer object (R1-T2)",
                 check_vehicle_odometer(client),
             )
+            from scripts.paid_acquisition_acceptance import check_paid_store
+            await runner.run("4n-paid-retention", "isolated paid Postgres deduplication, failure precedence and retention",
+                             check_paid_store(get_database_url()))
             await runner.run("4m-outcome-confirmation", "scanner-safe GET and idempotent confirmed POST",
                              check_garage_outcome_confirmation(client, pool))
             if args.simulate_store_outage:

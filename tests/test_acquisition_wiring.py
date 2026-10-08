@@ -16,6 +16,18 @@ def test_shared_script_covers_public_app_and_legal_surfaces_for_objection():
     assert "window.location.assign('/app');" in read('templates/seo_base.html')
     assert 'autosafeLandingHandoff' not in read('templates/seo_base.html')
 
+def test_paid_public_scripts_execute_after_objection_controller():
+    pages = ['index.html', 'templates/seo_base.html'] + [
+        str(p.relative_to(ROOT)) for p in (ROOT/'static/guides').glob('*.html')]
+    for page in pages:
+        scripts = re.findall(r'<script\b[^>]*>', read(page))
+        organic = [s for s in scripts if 'src="/static/acquisition-landing.js"' in s]
+        paid = [s for s in scripts if 'src="/static/paid-acquisition.js"' in s]
+        assert len(organic) == len(paid) == 1, page
+        assert scripts.index(organic[0]) < scripts.index(paid[0]), page
+        assert 'async' not in organic[0] and 'async' not in paid[0], page
+        assert ('defer' in organic[0]) == ('defer' in paid[0]), page
+
 def test_measurement_never_decorates_links_or_keeps_direct_inputs():
     code=read('static/acquisition-landing.js')
     assert 'setAttribute(\'href\'' not in code and "'#al='" not in code

@@ -10,3 +10,7 @@ COMPARISON_TEMPLATES = {
     "volkswagen-polo-vs-ford-fiesta": "pilot_polofiesta.html",
     "toyota-yaris-vs-honda-jazz": "pilot_yarisjazz.html",
 }
+
+# Separate 90-day programme; frozen before edits, not the cancelled pilot.
+PROGRAMME_90D_MODELS = (('vauxhall', 'adam'), ('jeep', 'compass'), ('skoda', 'scala'), ('nissan', 'micra'), ('dacia', 'duster'), ('vauxhall', 'astra'), ('jaguar', 'xf'), ('toyota', 'yaris'), ('bmw', '1-series'), ('volkswagen', 'golf'))
+MODEL_TEMPLATES.update({model: "programme_model.html" for model in PROGRAMME_90D_MODELS})

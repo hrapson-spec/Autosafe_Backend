@@ -355,7 +355,7 @@ const ReportResult: React.FC<ReportResultProps> = ({ report, onReminder, onGarag
         </div>
         <a
           href="/app/guides/mot-checklist"
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-black focus:outline-hidden focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
         >
           Start the 10-minute checklist
           <ArrowRight className="h-4 w-4" aria-hidden="true" />

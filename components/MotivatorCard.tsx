@@ -18,7 +18,7 @@ const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
     return (
       <Card className="border-l-4 border-l-orange-400">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-orange-50 flex-shrink-0">
+          <div className="p-2 rounded-lg bg-orange-50 shrink-0">
             <Wrench className="w-5 h-5 text-orange-600" aria-hidden="true" />
           </div>
           <div className="min-w-0">
@@ -56,7 +56,7 @@ const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
     return (
       <Card className={`border-l-4 ${accentColor}`}>
         <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0`}>
+          <div className={`p-2 rounded-lg ${iconBg} shrink-0`}>
             <Clock className={`w-5 h-5 ${iconColor}`} aria-hidden="true" />
           </div>
           <div className="min-w-0">
@@ -74,7 +74,7 @@ const MotivatorCard: React.FC<MotivatorCardProps> = ({ recommendation }) => {
   return (
     <Card className="border-l-4 border-l-slate-300">
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-slate-100 flex-shrink-0">
+        <div className="p-2 rounded-lg bg-slate-100 shrink-0">
           <Mail className="w-5 h-5 text-slate-500" aria-hidden="true" />
         </div>
         <div className="min-w-0">
