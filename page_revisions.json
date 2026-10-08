@@ -92,13 +92,13 @@
       }
     },
     "templates/seo_base.html": {
-      "sha256": "6e5a68a7dbed9fe04cfef664ea68e474486b1faa28675763a131d1b75a6f8676",
+      "sha256": "5889d9bb476750b54a24e39db1e18d5527a9e2ca4510bad8a80ff69647cf658c",
       "significant_revision": "2026-02-06",
       "reason": "6b9ff53 2026-02-06: shared layout created; every later edit (disclaimer footer, nav/CTA copy, consent gate, styling, Umami tag, footer link targets, lang) is boilerplate",
       "last_change": {
-        "date": "2026-10-07",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Add separately consented paid measurement; organic definition unchanged"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "templates/seo_index.html": {
@@ -262,93 +262,93 @@
       }
     },
     "static/guides/mot-checklist.html": {
-      "sha256": "90b6da74f872249e04b6a1e3fb3bbe82792bad98e4a80fb7feed9271129c9ab5",
+      "sha256": "84826e0074fcbf29df2edbacdcf582d557bfd2014ca8ce1cda1b485753cae4ec",
       "significant_revision": "2026-10-02",
       "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/common-mot-failures.html": {
-      "sha256": "1656e25002ea93607647e8c564b145eae11b3aeec8746f4bdfdd7234165e7908",
+      "sha256": "33cd37ccaac118a0c6231c5fc31d802b4e9eb2b5ee6940ac7d57e4a97c3ec58f",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/when-is-mot-due.html": {
-      "sha256": "e91c0b0a545bf6de27fc77849002111f5cbdca5353ad908169fe91f4f951f986",
+      "sha256": "04017b23aae11f6bcb739dde43d9337eb250a20f13744a9b5a5d12c3a6516408",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-failure-rates-by-car.html": {
-      "sha256": "82d51467c8688851806749b7c4a686ce719e583f65e06d6b0742164ad8d68ca6",
+      "sha256": "5d95322ae9957f79e18024865c20a462022e2c576a4f05e6964bc84a90037d46",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: align public result modes, remove unsupported age/category claims and correct sourced visibility and retest guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-rules-2026.html": {
-      "sha256": "634843e5a191afd653eaf7a47201a6671599db493f1cbbb31bcad7065fd94ed8",
+      "sha256": "a9b5da38566e78b3bbe14d6cdd120860bd9907209c0c68d4146a00f2acba0539",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove repeated unsupported annual failure-rate claims from cost and rules guides",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-defect-categories.html": {
-      "sha256": "8efd6d0f0df90ddb7f367d72b8270f17f379df321f866dbe946bae99216273ab",
+      "sha256": "fe09e36048317a68cd7544c6ef075365823621fd756fa21cb58346f007646a48",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-cost.html": {
-      "sha256": "c86fd6aa380a2b1ec517781a2e363347f41271960894387728668df93b6f2fa0",
+      "sha256": "5002b3a72b8b9178a114e1346a9456b09e5860323a90b2af2c08ec3f0c4c3740",
       "significant_revision": "2026-10-02",
       "reason": "Seven existing-page pilot: sourced cost and checklist guidance, distinct model and comparison reading guidance with a clear route to vehicle records",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Fix the two pilot guides narrow legacy container and low-contrast inherited colours; responsive reading width and accessible links"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/mot-history-check.html": {
-      "sha256": "c6cc447caef64943c305c13fc2e3e9796204cc24dcdc223c82ccec9a7a429e9b",
+      "sha256": "9def7ea37ab58f6eb63439cf982469ea702a8ff881bccb72cf8bb802f4bb45c3",
       "significant_revision": "2026-07-11",
       "reason": "f34319e 2026-07-11: RC1 truth remediation rewrote titles, descriptions and body copy (guide body/FAQ copy)",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     },
     "static/guides/first-mot-guide.html": {
-      "sha256": "34925e3d3110124847115524b79487c6079a91e0a1a662b2a91cd27979268fa4",
+      "sha256": "a5f9c0d6de5bdaa0c654a673c81bd42ec30159ef0c6b601f85a49b0ac26d538e",
       "significant_revision": "2026-10-02",
       "reason": "OA-002: remove first-test claims inferred from age bands and correct repeated visibility guidance",
       "last_change": {
-        "date": "2026-10-02",
+        "date": "2026-10-08",
         "significant": false,
-        "reason": "Bounded measurement and privacy controls; no main public-page content change"
+        "reason": "Paid measurement load order and coverage; public guide copy unchanged"
       }
     }
   }

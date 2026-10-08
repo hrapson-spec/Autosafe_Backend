@@ -12,7 +12,7 @@
     try { sessionStorage.removeItem(KEY); } catch (_) {}
   }
   function allowed() {
-    if (!ENABLED || navigator.globalPrivacyControl === true || window.autosafeMeasurement && window.autosafeMeasurement.isOff()) {
+    if (!ENABLED || navigator.globalPrivacyControl === true || !window.autosafeMeasurement || window.autosafeMeasurement.isOff()) {
       clear(); pending = null; return false;
     }
     try { return localStorage.getItem('autosafe_paid_consent_v1') === 'accepted'; }
@@ -28,7 +28,7 @@
     if (/^\/mot-check\/problems\//.test(path)) return 'problem_hub';
     if (/^\/mot-check\/[^/]+\/[^/]+\/?$/.test(path)) return 'model';
     if (/^\/mot-check\/[^/]+\/?$/.test(path)) return 'make';
-    if (path === '/will-my-car-pass-mot') return 'pillar';
+    if (/^\/will-my-car-pass-mot\/?$/.test(path)) return 'pillar';
     if (/^\/mot-check\/?$/.test(path)) return 'other_public';
     return null;
   }

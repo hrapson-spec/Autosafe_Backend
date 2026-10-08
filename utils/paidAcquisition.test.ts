@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import source from '../static/paid-acquisition.js?raw';
+import organicSource from '../static/acquisition-landing.js?raw';
 import './acquisitionLanding';
 let requests: Array<Record<string, unknown>>;
 function load(path='/app?utm_source=google&utm_medium=cpc&utm_campaign=discover_owner&gclid=SECRET', ref='', nav='navigate') {
@@ -12,12 +13,34 @@ function load(path='/app?utm_source=google&utm_medium=cpc&utm_campaign=discover_
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-07T12:00:00Z'));
   sessionStorage.clear(); localStorage.clear(); document.body.replaceChildren(); requests=[];
-  delete window.autosafePaidMeasurement; delete window.autosafeMeasurement;
+  delete window.autosafePaidMeasurement;
+  window.autosafeMeasurement={isOff:()=>false,getContext:()=>null,setOff:()=>undefined};
   Object.defineProperty(navigator,'globalPrivacyControl',{value:false,configurable:true});
   vi.stubGlobal('fetch',vi.fn((_url,init)=>{requests.push(JSON.parse(init.body));return Promise.resolve({status:202});}));
 });
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();vi.useRealTimers();delete window.autosafePaidMeasurement;});
 describe('optional paid measurement',()=>{
+  it('fails closed if the objection controller is unavailable',()=>{
+    delete window.autosafeMeasurement;
+    localStorage.setItem('autosafe_paid_consent_v1','accepted');load();
+    expect(requests).toHaveLength(0);expect(sessionStorage.length).toBe(0);
+  });
+  it('honours a stored objection through the real controller before paid guide arrival',()=>{
+    localStorage.setItem('autosafe_paid_consent_v1','accepted');
+    localStorage.setItem('autosafe_measurement_choice',JSON.stringify({off:true,until:Date.now()+86400000}));
+    history.replaceState(null,'','/guides/mot-checklist?utm_source=google&utm_medium=cpc&utm_campaign=search_owner');
+    window.eval(organicSource);
+    load(location.pathname+location.search);
+    expect(window.autosafeMeasurement!.isOff()).toBe(true);
+    expect(requests).toHaveLength(0);expect(sessionStorage.length).toBe(0);
+  });
+  it.each(['/will-my-car-pass-mot','/will-my-car-pass-mot/'])('observes canonical pillar landing %s',path=>{
+    localStorage.setItem('autosafe_paid_consent_v1','accepted');
+    load(path+'?utm_source=google&utm_medium=cpc&utm_campaign=search_owner');
+    expect(requests.map(r=>r.event)).toEqual(['landing_observed','page_viewed']);
+    expect(requests.every(r=>r.page_family==='pillar')).toBe(true);
+  });
+
   it('stores no journey and sends nothing before separate opt-in or on decline',()=>{
     localStorage.setItem('autosafe_consent','accepted'); load();
     expect(requests).toHaveLength(0);expect(sessionStorage.length).toBe(0);

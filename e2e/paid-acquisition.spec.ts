@@ -5,6 +5,39 @@ import { mockCreateReport, mockGetReport } from './helpers/mockApi';
 import { registrationInput, postcodeInput } from './helpers/heroForm';
 import { fixtureExactHigh } from '../fixtures/reportResponses';
 
+for (const objection of [false, true]) {
+  test(`standalone paid guide with persisted objection ${objection}`, async ({ page }) => {
+    const html=readFileSync(resolve('static/guides/mot-checklist.html'),'utf8');
+    const enabled=readFileSync(resolve('static/paid-acquisition.js'),'utf8').replace('var ENABLED = false;', 'var ENABLED = true;');
+    await page.addInitScript(off=>{
+      localStorage.setItem('autosafe_paid_consent_v1','accepted');
+      if(off) localStorage.setItem('autosafe_measurement_choice',JSON.stringify({off:true,until:Date.now()+86400000}));
+    },objection);
+    await page.route('**/guides/mot-checklist?*',r=>r.fulfill({contentType:'text/html',body:html}));
+    // Delay the first deferred script to expose an immediate-paid-script race.
+    await page.route('**/static/acquisition-landing.js',async r=>{
+      await new Promise(resolve=>setTimeout(resolve,150));
+      await r.fulfill({contentType:'application/javascript',body:readFileSync(resolve('static/acquisition-landing.js'),'utf8')});
+    });
+    await page.route('**/static/paid-acquisition.js',r=>r.fulfill({contentType:'application/javascript',body:enabled}));
+    const events: Array<Record<string,unknown>>=[];
+    await page.route('**/api/acquisition/paid-events',async r=>{
+      events.push(r.request().postDataJSON()); await r.fulfill({status:202,json:{status:'accepted'}});
+    });
+    await page.goto('/guides/mot-checklist?utm_source=google&utm_medium=cpc&utm_campaign=search_owner');
+    await expect.poll(()=>page.evaluate(()=>typeof window.autosafePaidMeasurement)).toBe('object');
+    if(objection) {
+      expect(events).toHaveLength(0);
+      expect(await page.evaluate(()=>sessionStorage.getItem('autosafe_paid_measurement_v1'))).toBeNull();
+    } else {
+      await expect.poll(()=>events.length).toBe(2);
+      expect(events.map(e=>e.event)).toEqual(['landing_observed','page_viewed']);
+      expect(events.every(e=>e.page_family==='guide'&&e.pilot_group==='search_owner')).toBe(true);
+      await expect(page.getByRole('button',{name:'Withdraw permission',exact:true})).toBeVisible();
+    }
+  });
+}
+
 for (const width of [375, 1280]) {
   test(`paid consent and successful render on ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({width, height:900});
