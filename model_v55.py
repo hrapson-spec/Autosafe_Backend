@@ -19,6 +19,7 @@ to properly calculate survivorship features like advisory_cohort_delta,
 mileage_cohort_ratio, model_age_fail_rate_eb, and mech_decay_index_normalized.
 """
 
+import os
 import pickle
 import logging
 from pathlib import Path
@@ -38,11 +39,20 @@ from feature_engineering_v55 import (
 )
 from dvsa_client import VehicleHistory
 from vocab_shim import apply_vocab_shim
+# Adoption-gate 4 (2026-07-04): V2 as-of prior store (see asof_priors.py).
+from asof_priors import AsOfPriorStore, DEFAULT_TABLES_DIR, tables_present
 
 logger = logging.getLogger(__name__)
 
 # Model artifacts directory
 MODEL_DIR = Path(__file__).parent / "catboost_production_v55"
+
+# Adoption-gate 4 feature flag: default OFF so this PR is deploy-safe/no-op.
+# Both this module (whether to even attempt loading the store) and
+# feature_engineering_v55.engineer_features() (whether to use a passed-in
+# store) check this same env var independently -- see that module's
+# docstring for why the double-check is deliberate defense in depth.
+ASOF_PRIORS_ENABLED = os.environ.get("AUTOSAFE_ASOF_PRIORS") == "1"
 
 # Global model instances
 _model: Optional[CatBoostClassifier] = None
@@ -51,6 +61,7 @@ _cohort_stats: Optional[Dict] = None
 _model_hierarchical: Optional[Any] = None  # ModelHierarchicalFeatures for EB priors
 _segment_hierarchical: Optional[Any] = None  # Segment-level rates (make, age_band, mileage_band)
 _model_age_hierarchical: Optional[Dict] = None  # V45: Model-age EB rates (13.4% importance)
+_asof_store: Optional[AsOfPriorStore] = None  # Adoption-gate 4: V2 as-of prior store
 
 
 def load_model() -> bool:
@@ -62,7 +73,7 @@ def load_model() -> bool:
     Returns:
         True if loaded successfully, False otherwise
     """
-    global _model, _calibrator, _cohort_stats, _model_hierarchical, _segment_hierarchical, _model_age_hierarchical
+    global _model, _calibrator, _cohort_stats, _model_hierarchical, _segment_hierarchical, _model_age_hierarchical, _asof_store
 
     try:
         # Load CatBoost model
@@ -131,6 +142,31 @@ def load_model() -> bool:
             logger.warning("Model-age hierarchical not found - model_age_fail_rate_eb will use defaults")
             _model_age_hierarchical = None
 
+        # Adoption-gate 4 (2026-07-04): V2 as-of prior store, feature-flagged
+        # OFF by default (AUTOSAFE_ASOF_PRIORS=1 + artifact-presence check).
+        # A missing/failed store here must NEVER fail load_model() as a
+        # whole -- it silently leaves _asof_store=None, and
+        # engineer_features_with_stats() falls back to the legacy pkl-dict
+        # priors exactly as if the flag were off. See asof_priors.py and
+        # models/asof_priors/README.md.
+        _asof_store = None
+        if ASOF_PRIORS_ENABLED:
+            if tables_present(DEFAULT_TABLES_DIR):
+                try:
+                    _asof_store = AsOfPriorStore.load(DEFAULT_TABLES_DIR)
+                    logger.info("Loaded AsOfPriorStore: %s", _asof_store.health())
+                except Exception as e:
+                    logger.error(
+                        "AUTOSAFE_ASOF_PRIORS=1 but AsOfPriorStore failed to load "
+                        "(falling back to legacy priors): %s", e,
+                    )
+                    _asof_store = None
+            else:
+                logger.warning(
+                    "AUTOSAFE_ASOF_PRIORS=1 but artifacts missing under %s -- "
+                    "falling back to legacy priors", DEFAULT_TABLES_DIR,
+                )
+
         return True
 
     except Exception as e:
@@ -157,6 +193,22 @@ def calibrator_state() -> Dict[str, Any]:
         "A": _calibrator.A,
         "B": _calibrator.B,
     }
+
+
+def asof_priors_state() -> Dict[str, Any]:
+    """Operational as-of-prior-store state for /health diagnostics (adoption-
+    gate 4, 2026-07-04). Mirrors calibrator_state()'s pattern: a disabled,
+    missing, or silently-failed-to-load store must never go unnoticed.
+    """
+    if not ASOF_PRIORS_ENABLED:
+        return {"status": "disabled", "flag": "AUTOSAFE_ASOF_PRIORS"}
+    if _asof_store is None:
+        return {
+            "status": "flag_on_but_not_loaded",
+            "tables_dir": str(DEFAULT_TABLES_DIR),
+            "tables_present": tables_present(DEFAULT_TABLES_DIR),
+        }
+    return {"status": "loaded", **_asof_store.health()}
 
 
 def get_cohort_stats() -> Optional[Dict]:
@@ -205,6 +257,7 @@ def engineer_features_with_stats(
         model_hierarchical=_model_hierarchical,
         model_age_hierarchical=_model_age_hierarchical,
         segment_hierarchical=_segment_hierarchical,
+        asof_store=_asof_store,
     )
 
 
