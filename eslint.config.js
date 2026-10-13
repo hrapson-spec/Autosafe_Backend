@@ -1,7 +1,7 @@
 // ESLint flat config (ESM). Scoped to exactly the app + new tooling files
 // (same allowlist as tsconfig.json's "include") so generated/vendored output
-// (static/, dist/) and root-level build config files (postcss.config.js,
-// tailwind.config.js, this file) are never swept into linting.
+// (static/, dist/) and root-level build config files (tailwind.config.js,
+// this file) are never swept into linting.
 import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
