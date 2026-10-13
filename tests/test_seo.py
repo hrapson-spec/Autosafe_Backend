@@ -7,6 +7,7 @@ elements (canonical tags, structured data, breadcrumbs), and don't regress.
 
 Run with: pytest tests/test_seo.py -v
 """
+import html as html_lib
 import json
 import os
 import re
@@ -860,6 +861,83 @@ class TestPublicHttpBehaviour(unittest.TestCase):
             r = client.get(path)
             self.assertIn('<html lang="en-GB">', r.text, path)
             self.assertNotIn('<html lang="en">', r.text, path)
+
+
+class TestEditorialBatchOne(unittest.TestCase):
+    """Route-specific approved copy changes and neighboring-page isolation."""
+
+    PAGES = {
+        "/mot-check/vauxhall/corsa/": (
+            "Vauxhall Corsa MOT Failure Rates & Record Checks | AutoSafe",
+            "Explore recorded Vauxhall Corsa MOT failure rates by age band, test counts and failure categories. Read the figures alongside your car’s own MOT history.",
+            "Preparing your Corsa for its next MOT? Read the age-band failure rates and test counts below alongside its own MOT history. Check whether earlier advisories were followed up. The figures summarise past tests for a model group; they do not predict your car’s result.",
+        ),
+        "/mot-check/vauxhall/astra/": (
+            "Vauxhall Astra Recorded MOT Failure Rates | AutoSafe",
+            "Explore recorded Vauxhall Astra MOT failure rates by age band, test counts and failure categories. Read the figures alongside your car’s own MOT history.",
+            "Preparing your Astra for its next MOT? Read the age-band failure rates and test counts below alongside its own MOT history. Check whether earlier advisories were followed up. The figures summarise past tests for a model group; they do not predict your car’s result.",
+        ),
+        "/mot-check/compare/renault-clio-vs-peugeot-208/": (
+            "Renault Clio vs Peugeot 208: MOT Failure Rates by Age | AutoSafe",
+            "Compare recorded Renault Clio and Peugeot 208 MOT failure rates by age band, with test counts and failure categories. See how to interpret the differences.",
+            "Comparing a Clio with a 208? Start with the age-band rates and test counts below. The overall rates combine different ages and mileages, so a gap can reflect the mix of tested vehicles. These historical group figures do not establish which individual car is in better condition.",
+        ),
+        "/mot-check/compare/volkswagen-polo-vs-ford-fiesta/": (
+            "VW Polo vs Ford Fiesta: MOT Rates by Age | AutoSafe",
+            "Compare recorded Volkswagen Polo and Ford Fiesta MOT failure rates by age band, with test counts and failure categories. See how to interpret the differences.",
+            "Considering a Polo or a Fiesta? Compare age-band percentages with their test counts below. The overall rates combine different ages and mileages, and raw failure counts also reflect how many tests were recorded. These historical group figures do not predict an individual car’s MOT result.",
+        ),
+    }
+
+    @staticmethod
+    def _metadata(markup, key):
+        for tag in re.findall(r"<meta\b[^>]*>", markup, flags=re.IGNORECASE):
+            attrs = dict(re.findall(r"([\w:-]+)=[\"'](.*?)[\"']", tag))
+            if attrs.get("name") == key or attrs.get("property") == key:
+                return html_lib.unescape(attrs.get("content", ""))
+        return None
+
+    @staticmethod
+    def _visible_text(markup):
+        stripped = re.sub(r"<[^>]+>", " ", markup)
+        return re.sub(r"\s+", " ", html_lib.unescape(stripped))
+
+    def test_approved_route_titles_descriptions_and_leads_render(self):
+        for path, (title, description, lead) in self.PAGES.items():
+            with self.subTest(path=path):
+                response = client.get(path)
+                self.assertEqual(response.status_code, 200)
+                match = re.search(r"<title>(.*?)</title>", response.text, flags=re.DOTALL)
+                self.assertIsNotNone(match)
+                self.assertEqual(html_lib.unescape(match.group(1)), title)
+                self.assertEqual(self._metadata(response.text, "description"), description)
+                self.assertEqual(self._metadata(response.text, "og:description"), description)
+                self.assertEqual(self._metadata(response.text, "twitter:description"), description)
+                self.assertIn(lead, self._visible_text(response.text))
+                # Existing statistic panels and result tables remain rendered.
+                self.assertIn("failure rate from", self._visible_text(response.text))
+
+    def test_astra_checklist_sentence_and_lower_scope_are_preserved(self):
+        response = client.get("/mot-check/vauxhall/astra/")
+        text = self._visible_text(response.text)
+        self.assertIn("Preparing for a test? Use the pre-MOT checklist for visible checks and when to ask a garage.", text)
+        self.assertIn('href="/guides/mot-checklist">pre-MOT checklist</a>', response.text)
+        self.assertIn("Evidence scope: This page summarises past outcomes for a make/model group.", text)
+
+    def test_neighboring_model_and_comparison_pages_keep_their_copy(self):
+        c3 = client.get("/mot-check/citroen/c3/")
+        self.assertEqual(c3.status_code, 200)
+        c3_title = re.search(r"<title>(.*?)</title>", c3.text, flags=re.DOTALL).group(1)
+        self.assertEqual(html_lib.unescape(c3_title), "Citroen C3 MOT Failure Rates & Used-Car Checks | AutoSafe")
+        self.assertIn('href="/guides/mot-checklist">car MOT checklist</a>', c3.text)
+        self.assertNotIn("Preparing your Astra for its next MOT", c3.text)
+
+        yaris = client.get("/mot-check/compare/toyota-yaris-vs-honda-jazz/")
+        self.assertEqual(yaris.status_code, 200)
+        yaris_title = re.search(r"<title>(.*?)</title>", yaris.text, flags=re.DOTALL).group(1)
+        self.assertEqual(html_lib.unescape(yaris_title), "Toyota Yaris vs Honda Jazz: MOT History Comparison | AutoSafe")
+        self.assertIn("Choosing between a Yaris and a Jazz means checking the particular cars", self._visible_text(yaris.text))
+        self.assertNotIn("Comparing a Clio with a 208?", self._visible_text(yaris.text))
 
 
 if __name__ == "__main__":

@@ -162,13 +162,23 @@
       }
     },
     "templates/pilot_corsa.html": {
-      "sha256": "4d4470b4fa91484ff701ce3906cb5feeadc01e64dec69b5504ffc4d3b1c53795",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "05d3047539d93433e4f1af9bce4a6c7ba553dc05cec132d2646c5e79d79f7437",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
+      }
+    },
+    "templates/pilot_astra.html": {
+      "sha256": "f7d99be35f895d96fc20e86e91c996b55d5a93a9af40804593682923f4618582",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
+      "last_change": {
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_c3.html": {
@@ -182,23 +192,23 @@
       }
     },
     "templates/pilot_clio208.html": {
-      "sha256": "e04dd38c53ddb60881542aef4062c20e35f4d9cf39406bc68159524063a9396b",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "029b52b92386d9e28f56c90b6af2ee101687674caf0f01688e1404a6a5a21308",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_polofiesta.html": {
-      "sha256": "f4a4a8276dca3e1f4bbce6f8e8ae355c735480db96be3ef82fc917c9490a0dc4",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "bcebc292c1012a535fa635fefffb2b7bde3574bc103190137de94fe20e267a56",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_yarisjazz.html": {
