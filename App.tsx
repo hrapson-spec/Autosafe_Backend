@@ -83,7 +83,7 @@ function HomePage({ onSubmit, isLoading, errorMessage, stats, initialRegistratio
 
             {/* Text Section - Centered */}
             <div className="text-center space-y-6">
-              <h1 className="text-5xl md:text-7xl font-serif font-medium text-slate-900 tracking-tight leading-tight">
+              <h1 className="home-hero-title text-5xl md:text-7xl font-serif font-medium text-slate-900 tracking-tight leading-tight">
                 Fix it before they find it.
               </h1>
 

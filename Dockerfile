@@ -20,12 +20,12 @@ RUN npm ci
 # Copy the SPA sources.
 # FLAG (deviation from the literal source list): styles.css is included here
 # even though it wasn't enumerated in the task spec. index.tsx does
-# `import './styles.css'` (the @tailwind base/components/utilities
-# entrypoint) — without it `vite build` fails to resolve the import and the
-# frontend stage cannot build. Verified via grep across index.tsx/App.tsx/
+# `import './styles.css'` (the Tailwind v4 entrypoint) — without it `vite
+# build` fails to resolve the import and the frontend stage cannot build.
+# Verified via grep across index.tsx/App.tsx/
 # types.ts/components//services//utils//hooks for other root-level
 # relative imports; styles.css was the only one missing from the spec.
-COPY index.html index.tsx App.tsx types.ts styles.css vite.config.ts tsconfig.json tailwind.config.js postcss.config.js ./
+COPY index.html index.tsx App.tsx types.ts styles.css vite.config.ts tsconfig.json tailwind.config.js ./
 COPY components/ ./components/
 COPY services/ ./services/
 COPY utils/ ./utils/
