@@ -149,6 +149,10 @@ async function openReportViaTransition(page: Page) {
   await mockGetReport(page, TOKEN, fixtureExactHigh, 200);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Fix it before they find it.' })).toBeVisible();
+  // Helmet commits head tags asynchronously after the visible React tree.
+  // Capture the settled homepage, including its owned canonical, so a fast
+  // first render is not compared with a fully committed return navigation.
+  await expect(page.locator('head link[rel="canonical"][data-rh]')).toHaveCount(1);
   const homeBefore = await headState(page);
   await registrationInput(page).fill(REGISTRATION);
   await postcodeInput(page).fill(POSTCODE);
@@ -200,6 +204,7 @@ for (const consent of ['accepted', 'declined'] as const) {
       // Back to the homepage: inherited metadata is intact again.
       await page.goBack();
       await expect(page.getByRole('heading', { name: 'Fix it before they find it.' })).toBeVisible();
+      await expect.poll(() => headState(page)).toEqual(homeBefore);
       const home = await headState(page);
       expect(home).toEqual(homeBefore);
       expect(home.robots).toEqual([]);

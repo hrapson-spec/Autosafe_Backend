@@ -17,6 +17,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence
 
 METRIC_VERSION = "oa-journey-30m-v2"
+PAID_METRIC_VERSION = "paid-journey-30m-v1"
+PAID_GROUPS = ("discover_owner", "discover_buyer", "search_owner", "search_buyer")
 WINDOW_MINUTES = 30
 RAW_RETENTION = ROLLUP_AFTER = timedelta(minutes=WINDOW_MINUTES)
 AGGREGATE_RETENTION_MONTHS = 3
@@ -135,10 +137,13 @@ def admitted(rec, now):
     # Checked again INSIDE the write lock. An old retry cannot recreate an
     # already-finalised journey after its IDs have been deleted.
     start = rec.window_start_minute
-    return (rec.metric_version == METRIC_VERSION and rec.schema_version == 2
-            and rec.landing_id is not None and rec.pilot_group in PILOT_GROUPS
-            and start <= minute(now) < start + WINDOW_MINUTES
-            and rec.source_group != "paid_search")
+    organic = (rec.metric_version == METRIC_VERSION and rec.pilot_group in PILOT_GROUPS
+               and rec.source_group != "paid_search")
+    paid = (rec.metric_version == PAID_METRIC_VERSION and rec.pilot_group in PAID_GROUPS
+            and rec.source_group == "paid_search")
+    return ((organic or paid) and rec.schema_version == 2 and rec.landing_id is not None
+            and start <= minute(now) < start + WINDOW_MINUTES)
+
 
 
 def summarise(rows):
@@ -151,8 +156,17 @@ def summarise(rows):
     successful operation can still complete the journey. Restores never count.
     """
     events = Counter()
+    # Page-view economics require a received, non-bot observed paid arrival.
+    # Missing arrival receipts are unknown, not attributed page views.
+    paid_arrivals = {(str(r["landing_id"]), r["window_start_minute"]) for r in rows
+                     if r["metric_version"] == PAID_METRIC_VERSION
+                     and r["event"] == "landing_observed" and not r["is_bot"]
+                     and r["observation_state"] == "observed"}
     journeys = defaultdict(list)
     for r in rows:
+        if (r["metric_version"] == PAID_METRIC_VERSION and r["event"] == "page_viewed"
+                and (str(r["landing_id"]), r["window_start_minute"]) not in paid_arrivals):
+            continue
         day = datetime.fromtimestamp(r["window_start_minute"] * 60, timezone.utc).date().isoformat()
         key = (day, r["metric_version"], r["source_group"], r["pilot_group"], r["page_family"])
         events[key + (r["event"], r["outcome_group"] or "none", r["entry_mode"] or "none", r["persistence_mode"] or "none", bool(r["is_bot"]))] += 1

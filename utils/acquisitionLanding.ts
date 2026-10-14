@@ -5,10 +5,17 @@ import {
   ACQUISITION_COLLECTOR_ENABLED,
   setAcquisitionContext,
   type AcquisitionContext,
+  type AcquisitionEventInput,
 } from './acquisitionEvents';
 
 declare global {
   interface Window {
+    autosafePaidMeasurement?: {
+      getContext(): { landingId: string; windowStartMinute: number; pilotGroup: string } | null;
+      emit(event: AcquisitionEventInput): void;
+      pageView(): void;
+      setConsent(accept: boolean): void;
+    };
     autosafeMeasurement?: {
       getContext(): AcquisitionContext | null;
       isOff(): boolean;
