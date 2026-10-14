@@ -114,3 +114,17 @@ is dropped. Record gaps as unknown.
 
 No outcome can be declared before observations exist. Hold/inconclusive is a
 valid decision. Existing cancelled pilot/automation is not restarted.
+
+
+## Production changes before experiment release
+
+Production merge `def0578c65a87d579a1ce1cf41231d8a4380f695` released approved
+editorial changes on 13 October, independently of this programme. The Astra
+page overlaps frozen pair 6. Preserve its released title, descriptions and
+introduction by inheriting its editorial template beneath the explorer. The
+original freeze remains unchanged; flag this intervening editorial change in
+later pair comparisons instead of treating the original snapshot as an
+unchanged baseline. No pair is reassigned or silently dropped. The current
+candidate also preserves PR #56's released frontend build and appearance.
+Owner review and exact production acceptance remain required; the calendar
+reaching 14 October does not activate measurement or advertising.

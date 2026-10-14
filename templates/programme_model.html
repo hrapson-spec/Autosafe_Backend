@@ -1,4 +1,4 @@
-{% extends "seo_model.html" %}
+{% extends "pilot_astra.html" if make_slug == "vauxhall" and model_slug == "astra" else "seo_model.html" %}
 {% block pilot_guidance %}
 <style>
   .data-table { display:block; max-width:100%; overflow-x:auto; }

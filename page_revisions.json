@@ -12,23 +12,23 @@
       }
     },
     "App.tsx": {
-      "sha256": "ae41e87722d5071b5435274fa9bf5c95f63495991b1ddc3f20960332f099cff2",
+      "sha256": "f17ba43c8a110c59457c52c3225af3765133c64fdf3f9c1e526400b435af4112",
       "significant_revision": "2026-10-02",
       "reason": "Restore the original homepage subtitle and Free & instant badge at the owner\u2019s instruction",
       "last_change": {
-        "date": "2026-10-07",
+        "date": "2026-10-13",
         "significant": false,
-        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
+        "reason": "Tailwind v4 style-preservation class; no homepage content change"
       }
     },
     "components/HeroForm.tsx": {
-      "sha256": "ae38288839bb577b1cdb7d39edc4f94592c40458137d22c90ffb795d8642ffb0",
+      "sha256": "5b939abe424d6397abbfaaac07c2f4ba40c07f833f48e646543a23d12e6ba1eb",
       "significant_revision": "2026-07-18",
       "reason": "f30bc38 2026-07-18: social-proof copy removed",
       "last_change": {
-        "date": "2026-10-07",
-        "significant": false,
-        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
+        "date": "2026-07-18",
+        "significant": true,
+        "reason": "f30bc38 2026-07-18: social-proof copy removed"
       }
     },
     "components/Icons.tsx": {
@@ -62,13 +62,13 @@
       }
     },
     "components/ui/Input.tsx": {
-      "sha256": "e92e1cbb53f207f227b32cc06f1797bb0c659ac5ac3452287f8b2fb66be39ded",
+      "sha256": "c8e7c8da8455336d8aa8dc273329040de54496fbe42236f7e63be82a34d056fe",
       "significant_revision": "2026-01-19",
       "reason": "1d422ba 2026-01-19: created (UI primitive); later edit is accessibility markup",
       "last_change": {
-        "date": "2026-10-07",
+        "date": "2026-01-21",
         "significant": false,
-        "reason": "Tailwind compiler migration preserves copy and maps equivalent utility classes"
+        "reason": "03b26db accessibility attributes"
       }
     },
     "components/ui/Button.tsx": {
@@ -152,13 +152,13 @@
       }
     },
     "templates/programme_model.html": {
-      "sha256": "86ae3104cafcf8e5d3a7075d132ab01631ec15dc03b4aa51d67c2b20b254241a",
-      "significant_revision": "2026-10-07",
-      "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only",
+      "sha256": "b6ebdf855d153195c7288fb7a9ffe40fa948c71fa3b192e54e9cec86e1f962d9",
+      "significant_revision": "2026-10-14",
+      "reason": "Preserve the released approved Astra editorial copy beneath the programme explorer",
       "last_change": {
-        "date": "2026-10-07",
+        "date": "2026-10-14",
         "significant": true,
-        "reason": "Add the age and mileage explorer with scrollable mobile tables on frozen treatment pages only"
+        "reason": "Preserve the released approved Astra editorial copy beneath the programme explorer"
       }
     },
     "templates/seo_compare.html": {
@@ -172,13 +172,23 @@
       }
     },
     "templates/pilot_corsa.html": {
-      "sha256": "4d4470b4fa91484ff701ce3906cb5feeadc01e64dec69b5504ffc4d3b1c53795",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "05d3047539d93433e4f1af9bce4a6c7ba553dc05cec132d2646c5e79d79f7437",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
+      }
+    },
+    "templates/pilot_astra.html": {
+      "sha256": "f7d99be35f895d96fc20e86e91c996b55d5a93a9af40804593682923f4618582",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
+      "last_change": {
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_c3.html": {
@@ -192,23 +202,23 @@
       }
     },
     "templates/pilot_clio208.html": {
-      "sha256": "e04dd38c53ddb60881542aef4062c20e35f4d9cf39406bc68159524063a9396b",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "029b52b92386d9e28f56c90b6af2ee101687674caf0f01688e1404a6a5a21308",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_polofiesta.html": {
-      "sha256": "f4a4a8276dca3e1f4bbce6f8e8ae355c735480db96be3ef82fc917c9490a0dc4",
-      "significant_revision": "2026-10-02",
-      "reason": "Existing-page pilot: distinct record-reading guidance, visible age-band sample counts and appropriately scoped structured data",
+      "sha256": "bcebc292c1012a535fa635fefffb2b7bde3574bc103190137de94fe20e267a56",
+      "significant_revision": "2026-10-13",
+      "reason": "Batch 1 approved route-specific titles, descriptions and opening copy",
       "last_change": {
-        "date": "2026-10-02",
-        "significant": false,
-        "reason": "Constrain pilot data tables to horizontally scroll inside their container at mobile widths"
+        "date": "2026-10-13",
+        "significant": true,
+        "reason": "Batch 1 approved route-specific titles, descriptions and opening copy"
       }
     },
     "templates/pilot_yarisjazz.html": {

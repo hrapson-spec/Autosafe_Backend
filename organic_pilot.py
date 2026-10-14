@@ -2,6 +2,7 @@
 
 MODEL_TEMPLATES = {
     ("vauxhall", "corsa"): "pilot_corsa.html",
+    ("vauxhall", "astra"): "pilot_astra.html",
     ("citroen", "c3"): "pilot_c3.html",
 }
 

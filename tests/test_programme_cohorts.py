@@ -37,3 +37,16 @@ def test_new_template_has_progressive_fallback_and_safe_json():
     assert 'cohort-data' in html and 'Recorded failures' in html
     assert 'we do not substitute a broader group' in html
     assert 'predict its next result' in html
+
+
+def test_astra_explorer_preserves_released_editorial_copy():
+    html=jinja_env.get_template('programme_model.html').render(
+        make_display='Vauxhall',model_display='Astra',make_slug='vauxhall',model_slug='astra',
+        overall_fail_rate=.3,overall_tests=1000,cohorts=[],components=[],top_components=[],
+        age_bands=[],siblings=[],competitors=[],comparisons=[],similar_models=[],
+        dataset_reference_rate=.25)
+    assert 'Vauxhall Astra Recorded MOT Failure Rates | AutoSafe' in html
+    assert 'Preparing your Astra for its next MOT?' in html
+    assert 'Check whether earlier advisories were followed up.' in html
+    assert 'pre-MOT checklist' in html
+    assert 'id="cohort-comparison"' in html
