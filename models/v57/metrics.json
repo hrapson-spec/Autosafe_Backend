@@ -1,0 +1,27 @@
+{
+  "version": "v57",
+  "n_features": 105,
+  "oot_rows": 228328,
+  "oot_base_rate": 0.25862793875477386,
+  "roc_auc": 0.7135312741243914,
+  "pr_auc": 0.472496326541475,
+  "log_loss": 0.5165794658181119,
+  "brier": 0.1696625026509199,
+  "calibrated_brier": 0.17177412751262824,
+  "train_auc": 0.7466458888373143,
+  "best_iterations": 1233,
+  "protocol_notes": [
+    "early stopping searched on dev 2023-H2 tail (seed 0); OOT untouched",
+    "metrics computed from the summed-ensemble artifact (model.cbm)",
+    "v55 comparator (0.7500) early-stopped on OOT and reported probability-space ensemble means from an unshipped artifact"
+  ],
+  "created": "2026-06-12T19:34:13.242492",
+  "precision_at_1pct": 0.7494524748138415,
+  "lift_at_1pct": 2.897801677661972,
+  "precision_at_5pct": 0.6190434477925718,
+  "lift_at_5pct": 2.3935675734536055,
+  "precision_at_10pct": 0.5705150665732306,
+  "lift_at_10pct": 2.20592975886562,
+  "evaluated": "2026-06-12T19:36:57.750714",
+  "evaluation_source": "oot_eval_frame.parquet (scores from the packaged bundle)"
+}

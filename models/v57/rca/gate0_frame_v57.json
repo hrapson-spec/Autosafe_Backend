@@ -1,0 +1,30 @@
+{
+  "gate_frame": "gate0 fresh cycle-corrected v2 (prereg row construction verbatim)",
+  "utc": "2026-06-12T19:26:17.408641+00:00",
+  "join_coverage": 1.0,
+  "vet_n": 58372,
+  "vet_base_rate": 0.3381587062290139,
+  "primary": {
+    "capture20_v57": 0.33107046962865394,
+    "capture20_v55_saved": 0.3232686559602817,
+    "capture20_H": 0.2906885067522473,
+    "ratio_v57_over_H": 1.1389183333306812,
+    "ratio_v55_over_H": 1.1120792478933554,
+    "gate_ratio": 1.15,
+    "ratio_v57_ci95_bootstrap": [
+      1.1204986712946683,
+      1.1597590439628762
+    ],
+    "verdict_v57": "FAIL"
+  },
+  "secondaries": {
+    "auc_v57_vet": 0.6952809284765181,
+    "auc_v55_vet": 0.6894823740550078,
+    "auc_H_vet": 0.6105244572570501,
+    "first_mot_n": 1628,
+    "first_mot_auc_v57": 0.5921437826358039,
+    "first_mot_auc_v55": 0.5800624464188294,
+    "pooled_auc_v57": 0.6957194939781828,
+    "pooled_auc_v55": 0.6905806143419364
+  }
+}

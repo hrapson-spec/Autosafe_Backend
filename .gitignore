@@ -59,3 +59,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# v57 bundle: CSV/metrics artifacts are versioned despite the global rules
+!models/v57/*.csv
+!models/v57/*.json
+models/v57/oot_eval_frame.parquet
+models/v57/train.log
+!models/v57/rca/*.json
