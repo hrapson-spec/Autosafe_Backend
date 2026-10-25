@@ -1,0 +1,987 @@
+openapi: 3.0.3
+info:
+  title: AutoSafe Garage API
+  version: 1.0.0-draft.1
+  description: |
+    Contract for `/api/garage/v1` (garage pilot, T6 first pass on fixtures).
+
+    Conventions
+    - Authentication is a session cookie (`__Host-garage_session`, HttpOnly, Secure, SameSite=Lax), set by
+      `POST /auth/links/{token}/consume`. Sessions last 14 days and are revocable.
+    - Every private resource is scoped to the workshop of the session. An id that belongs to another workshop
+      is indistinguishable from a missing id: the API answers 404 `not_found`.
+    - Unsafe methods (POST/PATCH/DELETE) made by a browser must be same-origin; cross-site requests get
+      403 `csrf_blocked`.
+    - Dates are `YYYY-MM-DD` Europe/London calendar dates. Timestamps are RFC 3339 with the Europe/London
+      offset (for example `2026-10-26T09:00:00+00:00` or `2026-07-01T09:00:00+01:00`).
+    - Errors always use the `Error` schema.
+    - There are no customer name, email or phone fields anywhere. Free-text fields (`note`, workshop
+      `name`) must not be used for customer personal data; the UI should say so.
+    - Display precision (rounded to the nearest 5 percentage points, low/medium/high band) is decided
+      server side by the assessment provider. The client must not compute bands.
+    - Pilot scope (Henri, 2026-10-25): assessments are for workshop staff only. The API deliberately has no
+      public link, share, print or export (including CSV) endpoint for an assessment; assessments are only
+      readable inside an authenticated staff session.
+    - Booking and import flows never depend on the assessment state: they succeed whether the assessment is
+      pending, available, unavailable, unsupported or failed.
+    - The assessment provider in this first pass is a stub: every supported booking resolves to
+      `unavailable` with reason `model_not_packaged`.
+servers:
+  - url: /api/garage/v1
+tags:
+  - name: auth
+  - name: account
+  - name: imports
+  - name: bookings
+  - name: decisions
+  - name: system
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness and database reachability (no workshop data)
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, enum: [ok]}
+        '503':
+          $ref: '#/components/responses/Error'
+  /auth/signup:
+    post:
+      tags: [auth]
+      operationId: signup
+      summary: Create a workshop with an invite code (R12). Sends a sign-in link to the owner email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invite_code, workshop_name, email]
+              additionalProperties: false
+              properties:
+                invite_code: {type: string, maxLength: 64}
+                workshop_name: {type: string, minLength: 1, maxLength: 120}
+                email: {type: string, format: email, maxLength: 254}
+      responses:
+        '202':
+          description: Workshop created; a sign-in link has been emailed. Nothing is accessible until the link is used.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Accepted'}
+        '403':
+          description: Invite code unknown, used or expired (`invalid_invite`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422':
+          $ref: '#/components/responses/Error'
+  /auth/login-links:
+    post:
+      tags: [auth]
+      operationId: requestLoginLink
+      summary: Email a single-use sign-in link (valid 15 minutes)
+      description: |
+        Always answers 202 whether or not the email has an account (no account enumeration). At most five
+        links per account per hour are sent; extra requests are silently dropped.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              additionalProperties: false
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                workshop_id:
+                  type: string
+                  format: uuid
+                  description: Optional. Choose which workshop to sign in to when the email belongs to several.
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Accepted'}
+        '422':
+          $ref: '#/components/responses/Error'
+  /auth/links/{token}:
+    get:
+      tags: [auth]
+      operationId: showLoginLink
+      summary: Confirm page for a sign-in link. Never consumes the link (prefetch-safe).
+      description: |
+        Returns a small HTML page with a form that POSTs to `/auth/links/{token}/consume`. Mail scanners and
+        browser prefetchers that follow the link therefore cannot use it up. 410 if the link is unknown,
+        expired or already used.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Token'
+      responses:
+        '200':
+          description: 'Confirm page (Cache-Control no-store, Referrer-Policy no-referrer)'
+          content:
+            text/html:
+              schema: {type: string}
+        '410':
+          description: Link invalid, expired or used (HTML page).
+          content:
+            text/html:
+              schema: {type: string}
+  /auth/links/{token}/consume:
+    post:
+      tags: [auth]
+      operationId: consumeLoginLink
+      summary: Consume the link (single use) and start a session
+      description: |
+        Atomic: exactly one concurrent request can consume a link. Accepts a JSON or form body (empty is
+        fine). With `Accept: application/json` it answers 200 JSON; otherwise it answers 303 to the app.
+        The response sets the session cookie.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Token'
+      responses:
+        '200':
+          description: Signed in
+          headers:
+            Set-Cookie:
+              schema: {type: string}
+              description: __Host-garage_session=...; Path=/; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Me'}
+        '303':
+          description: Signed in (HTML form flow); redirects to the app.
+        '403':
+          $ref: '#/components/responses/Error'
+        '410':
+          description: Link invalid, expired or already used (`link_invalid`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Revoke the current session
+      responses:
+        '204': {description: Signed out}
+        '401': {$ref: '#/components/responses/Error'}
+  /me:
+    get:
+      tags: [account]
+      operationId: getMe
+      summary: Current user, role and workshop
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Me'}
+        '401': {$ref: '#/components/responses/Error'}
+  /sessions:
+    get:
+      tags: [account]
+      operationId: listSessions
+      summary: Active sessions. Staff see their own; the owner sees the whole workshop.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Session'}
+        '401': {$ref: '#/components/responses/Error'}
+  /sessions/{session_id}:
+    delete:
+      tags: [account]
+      operationId: revokeSession
+      summary: Revoke a session. Staff can revoke their own; the owner can revoke any in the workshop.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204': {description: Revoked}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /workshop:
+    get:
+      tags: [account]
+      operationId: getWorkshop
+      summary: The signed-in workshop, with fair-use usage today
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Workshop'}
+        '401': {$ref: '#/components/responses/Error'}
+    patch:
+      tags: [account]
+      operationId: updateWorkshop
+      summary: Rename the workshop (owner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, minLength: 1, maxLength: 120}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Workshop'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /staff:
+    get:
+      tags: [account]
+      operationId: listStaff
+      summary: Members of the workshop (owner and staff)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Member'}
+        '401': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [account]
+      operationId: addStaff
+      summary: Add a staff member and email them a sign-in link (owner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              additionalProperties: false
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+      responses:
+        '201':
+          description: Added
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Member'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '409':
+          description: Already an active member (`already_member`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /staff/{membership_id}:
+    delete:
+      tags: [account]
+      operationId: removeStaff
+      summary: Remove a staff member and revoke their sessions (owner only; the owner cannot be removed)
+      parameters:
+        - $ref: '#/components/parameters/MembershipId'
+      responses:
+        '204': {description: Removed}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409':
+          description: Target is the owner (`cannot_remove_owner`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /imports/preview:
+    post:
+      tags: [imports]
+      operationId: previewImport
+      summary: Parse and validate rows without creating bookings
+      description: |
+        Up to 200 data rows per request (`too_many_rows` 422 otherwise; nothing is stored). Required per row:
+        registration, date, type. Row problems never fail the request; each row reports its own status.
+        A preview stays committable for one hour.
+
+        Formats
+        - `paste`: one booking per line, fields separated by tab, comma, semicolon or whitespace, in the order
+          registration, date, type. A header line is detected and skipped.
+        - `csv`: RFC 4180 text with a header row naming `registration`, `date`, `type` (aliases: `reg`, `vrm`,
+          `appointment_date`, `booking_type`). Column order is free.
+        - `manual`: `rows` array.
+
+        Dates: `YYYY-MM-DD` or `DD/MM/YYYY`. Types: `mot`, `service`, `retest`, `service_mot` plus common
+        spellings ("MOT retest", "service + MOT", "full service and mot").
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ImportRequest'}
+      responses:
+        '200':
+          description: Preview
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportPreview'}
+        '401': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /imports/{import_id}/commit:
+    post:
+      tags: [imports]
+      operationId: commitImport
+      summary: Create the bookings from a preview (idempotent)
+      description: |
+        Creates one booking per `new` row, queues an assessment per supported booking and the outcome checks
+        (days 1, 3, 7, 14). Committing the same preview again changes nothing and returns the original result
+        with `already_committed: true`. Importing the same registration + date + type again in a later import
+        creates no duplicate: those rows come back as `duplicate_existing`.
+      parameters:
+        - $ref: '#/components/parameters/ImportId'
+      responses:
+        '200':
+          description: Result
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportResult'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '410':
+          description: Preview expired (`import_expired`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /imports/{import_id}:
+    get:
+      tags: [imports]
+      operationId: getImport
+      summary: A preview or committed import
+      parameters:
+        - $ref: '#/components/parameters/ImportId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImportRecord'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /bookings:
+    get:
+      tags: [bookings]
+      operationId: listBookings
+      summary: Booking list, ordered by appointment date then id
+      parameters:
+        - {name: from, in: query, schema: {type: string, format: date}}
+        - {name: to, in: query, schema: {type: string, format: date}}
+        - {name: booking_type, in: query, schema: {$ref: '#/components/schemas/BookingType'}}
+        - {name: assessment_state, in: query, schema: {$ref: '#/components/schemas/AssessmentState'}}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/BookingStatus'}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+        - {name: cursor, in: query, schema: {type: string}, description: Opaque; from `next_cursor`.}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Booking'}
+                  next_cursor: {type: string, nullable: true}
+        '401': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [bookings]
+      operationId: createBooking
+      summary: Add one booking (manual entry, no preview step)
+      description: Same validation and idempotency as an import row. An existing booking is returned with 200.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ImportRow'}
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '200':
+          description: Already existed (`duplicate`); returned unchanged.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '401': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /bookings/{booking_id}:
+    get:
+      tags: [bookings]
+      operationId: getBooking
+      summary: One booking with its latest assessment, decision and outcome
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    patch:
+      tags: [bookings]
+      operationId: updateBooking
+      summary: Reschedule or cancel a booking
+      description: |
+        Rescheduling changes `appointment_date`, keeps `original_appointment_date`, cancels the pending outcome
+        checks and schedules new ones from the new date. Existing assessment versions are frozen and are not
+        changed. Cancelling cancels pending checks. A cancelled booking cannot be rescheduled.
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                appointment_date: {type: string, format: date}
+                status: {type: string, enum: [cancelled]}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Booking'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409':
+          description: Booking is cancelled (`booking_cancelled`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /bookings/{booking_id}/assessments:
+    get:
+      tags: [bookings]
+      operationId: listAssessments
+      summary: All assessment versions, newest first
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Assessment'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [bookings]
+      operationId: refreshAssessment
+      summary: Staff refresh. Creates a new assessment version (pending) using tests before today.
+      description: |
+        Counts toward the fair-use limit of 50 assessments per workshop per London day when it runs.
+        429 `fair_use_limit` if the limit is already reached today. Refused with 409 while a version is still
+        pending.
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '202':
+          description: New version queued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Assessment'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409':
+          description: A version is already pending (`assessment_pending`) or the booking is cancelled.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '429':
+          description: Fair-use limit reached (`fair_use_limit`).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+  /bookings/{booking_id}/decisions:
+    get:
+      tags: [decisions]
+      operationId: listDecisions
+      summary: Full decision history, newest first
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Decision'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    post:
+      tags: [decisions]
+      operationId: recordDecision
+      summary: Record a decision. History is append-only; the newest row is the current decision.
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision_type]
+              additionalProperties: false
+              properties:
+                decision_type: {$ref: '#/components/schemas/DecisionType'}
+                note:
+                  type: string
+                  maxLength: 500
+                  description: Free text. Must not contain customer personal data.
+      responses:
+        '201':
+          description: Recorded
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Decision'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /bookings/{booking_id}/outcomes:
+    get:
+      tags: [bookings]
+      operationId: listOutcomes
+      summary: Outcome checks for days 1, 3, 7 and 14 after the appointment
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Outcome'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /usage:
+    get:
+      tags: [account]
+      operationId: getUsage
+      summary: Fair-use usage for the current London day
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Usage'}
+        '401': {$ref: '#/components/responses/Error'}
+components:
+  parameters:
+    Token:
+      name: token
+      in: path
+      required: true
+      schema: {type: string, minLength: 20, maxLength: 128}
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    MembershipId:
+      name: membership_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    ImportId:
+      name: import_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    BookingId:
+      name: booking_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Stable machine code, e.g. unauthenticated, forbidden, not_found, validation_error,
+                invalid_invite, link_invalid, csrf_blocked, fair_use_limit, too_many_rows, import_expired,
+                already_member, cannot_remove_owner, booking_cancelled, assessment_pending, upstream_unavailable.
+            message: {type: string}
+            details: {type: object, additionalProperties: true, nullable: true}
+    Accepted:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [accepted]}
+    Role:
+      type: string
+      enum: [owner, staff]
+    BookingType:
+      type: string
+      enum: [mot, service, retest, service_mot]
+    BookingStatus:
+      type: string
+      enum: [active, cancelled]
+    AssessmentState:
+      type: string
+      enum: [pending, available, unavailable, unsupported, failed]
+    DecisionType:
+      type: string
+      enum: [check_repair_history, offer_inspection, adjust_booking_plan, proceed_as_booked]
+    Me:
+      type: object
+      required: [user, workshop, role, memberships]
+      properties:
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id: {type: string, format: uuid}
+            email: {type: string, format: email}
+        workshop:
+          type: object
+          required: [id, name]
+          properties:
+            id: {type: string, format: uuid}
+            name: {type: string}
+        role: {$ref: '#/components/schemas/Role'}
+        membership_id: {type: string, format: uuid}
+        memberships:
+          type: array
+          description: Every workshop this user belongs to (sign in again with `workshop_id` to switch).
+          items:
+            type: object
+            required: [workshop_id, workshop_name, role]
+            properties:
+              workshop_id: {type: string, format: uuid}
+              workshop_name: {type: string}
+              role: {$ref: '#/components/schemas/Role'}
+    Session:
+      type: object
+      required: [id, membership_id, email, created_at, expires_at, current]
+      properties:
+        id: {type: string, format: uuid}
+        membership_id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        created_at: {type: string, format: date-time}
+        last_seen_at: {type: string, format: date-time, nullable: true}
+        expires_at: {type: string, format: date-time}
+        current: {type: boolean}
+    Member:
+      type: object
+      required: [membership_id, email, role, status, created_at]
+      properties:
+        membership_id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        role: {$ref: '#/components/schemas/Role'}
+        status: {type: string, enum: [active]}
+        created_at: {type: string, format: date-time}
+    Workshop:
+      type: object
+      required: [id, name, usage]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        usage: {$ref: '#/components/schemas/Usage'}
+    Usage:
+      type: object
+      required: [date, assessments_used, assessments_limit, assessments_remaining]
+      properties:
+        date: {type: string, format: date, description: Europe/London day}
+        assessments_used: {type: integer}
+        assessments_limit: {type: integer, example: 50}
+        assessments_remaining: {type: integer}
+    ImportRow:
+      type: object
+      required: [registration, date, type]
+      additionalProperties: false
+      properties:
+        registration: {type: string, maxLength: 20}
+        date: {type: string, maxLength: 20, description: 'YYYY-MM-DD or DD/MM/YYYY'}
+        type: {type: string, maxLength: 40, description: A BookingType or a common spelling of one.}
+    ImportRequest:
+      type: object
+      required: [format]
+      additionalProperties: false
+      properties:
+        format: {type: string, enum: [paste, csv, manual]}
+        content:
+          type: string
+          maxLength: 200000
+          description: Required for `paste` and `csv`.
+        rows:
+          type: array
+          maxItems: 1000
+          description: Required for `manual`. More than 200 rows is rejected with `too_many_rows`.
+          items: {$ref: '#/components/schemas/ImportRow'}
+    RowStatus:
+      type: string
+      enum: [new, duplicate_existing, duplicate_in_batch, invalid]
+    RowIssue:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            Errors: missing_registration, invalid_registration, missing_date, invalid_date, date_out_of_range,
+            missing_type, invalid_type. Warning: nonstandard_registration_format.
+        field: {type: string, nullable: true}
+        message: {type: string}
+    PreviewRow:
+      type: object
+      required: [row_number, status, errors, warnings]
+      properties:
+        row_number: {type: integer, description: 1-based position among data rows (header excluded)}
+        status: {$ref: '#/components/schemas/RowStatus'}
+        registration: {type: string, nullable: true, description: Normalised (upper case, no spaces)}
+        appointment_date: {type: string, format: date, nullable: true}
+        booking_type: {allOf: [{$ref: '#/components/schemas/BookingType'}], nullable: true}
+        existing_booking_id: {type: string, format: uuid, nullable: true}
+        duplicate_of_row: {type: integer, nullable: true}
+        errors:
+          type: array
+          items: {$ref: '#/components/schemas/RowIssue'}
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/RowIssue'}
+    ImportCounts:
+      type: object
+      required: [total, new, duplicate_existing, duplicate_in_batch, invalid]
+      properties:
+        total: {type: integer}
+        new: {type: integer}
+        duplicate_existing: {type: integer}
+        duplicate_in_batch: {type: integer}
+        invalid: {type: integer}
+    ImportPreview:
+      type: object
+      required: [import_id, status, counts, rows, expires_at]
+      properties:
+        import_id: {type: string, format: uuid}
+        status: {type: string, enum: [previewed]}
+        counts: {$ref: '#/components/schemas/ImportCounts'}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/PreviewRow'}
+        expires_at: {type: string, format: date-time}
+    ImportResult:
+      type: object
+      required: [import_id, status, already_committed, counts, created_booking_ids]
+      properties:
+        import_id: {type: string, format: uuid}
+        status: {type: string, enum: [committed]}
+        already_committed: {type: boolean}
+        counts: {$ref: '#/components/schemas/ImportCounts'}
+        created_booking_ids:
+          type: array
+          items: {type: string, format: uuid}
+        committed_at: {type: string, format: date-time}
+    ImportRecord:
+      type: object
+      required: [import_id, status, counts, rows]
+      properties:
+        import_id: {type: string, format: uuid}
+        status: {type: string, enum: [previewed, committed, expired]}
+        counts: {$ref: '#/components/schemas/ImportCounts'}
+        rows:
+          type: array
+          items: {$ref: '#/components/schemas/PreviewRow'}
+        created_booking_ids:
+          type: array
+          items: {type: string, format: uuid}
+        expires_at: {type: string, format: date-time}
+        committed_at: {type: string, format: date-time, nullable: true}
+    AssessmentResult:
+      type: object
+      description: Present only when state is `available`.
+      required: [percent_rounded, band]
+      properties:
+        percent_rounded:
+          type: integer
+          minimum: 0
+          maximum: 100
+          multipleOf: 5
+        band: {type: string, enum: [low, medium, high]}
+    Assessment:
+      type: object
+      required: [id, booking_id, version, state, trigger, input_cutoff_date, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        booking_id: {type: string, format: uuid}
+        version: {type: integer, minimum: 1}
+        state: {$ref: '#/components/schemas/AssessmentState'}
+        reason:
+          type: string
+          nullable: true
+          description: |
+            Machine reason. Known values: model_not_packaged, service_only, retest_booking, no_mot_history,
+            no_prior_mot, booking_cancelled, upstream_retrying, upstream_unavailable, upstream_error,
+            fair_use_deferred, provider_error, invalid_provider_output. Providers may add population reasons
+            (for example first_mot, not_class_4).
+        reason_text: {type: string, nullable: true}
+        result:
+          allOf: [{$ref: '#/components/schemas/AssessmentResult'}]
+          nullable: true
+        evidence:
+          type: object
+          nullable: true
+          description: Dated-record summary of the inputs used (evidence gaps are visible here).
+          properties:
+            prior_test_count: {type: integer}
+            latest_prior_test_date: {type: string, format: date, nullable: true}
+            history_fetched_at: {type: string, format: date-time}
+        trigger: {type: string, enum: [import, manual_entry, refresh]}
+        input_cutoff_date:
+          type: string
+          format: date
+          description: Only tests strictly before this date were used (min of import date and appointment date).
+        input_cutoff_at: {type: string, format: date-time}
+        provider:
+          type: object
+          nullable: true
+          properties:
+            name: {type: string}
+            version: {type: string}
+        retry_at: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time, nullable: true}
+    Actor:
+      type: object
+      required: [membership_id, email, role]
+      properties:
+        membership_id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        role: {$ref: '#/components/schemas/Role'}
+    Decision:
+      type: object
+      required: [id, booking_id, decision_type, actor, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        booking_id: {type: string, format: uuid}
+        decision_type: {$ref: '#/components/schemas/DecisionType'}
+        note: {type: string, nullable: true}
+        actor: {$ref: '#/components/schemas/Actor'}
+        assessment_id: {type: string, format: uuid, nullable: true, description: Latest assessment version when the decision was made.}
+        supersedes_id: {type: string, format: uuid, nullable: true}
+        created_at: {type: string, format: date-time}
+    OutcomeStatus:
+      type: string
+      description: |
+        scheduled: not yet due. matched: exactly one candidate test in the window. no_subsequent_test: none yet
+        (final once check_day is 14). ambiguous: more than one candidate; left unresolved on purpose.
+        not_applicable: service-only booking. cancelled: booking cancelled or rescheduled away.
+        failed: upstream lookup failed on every attempt.
+      enum: [scheduled, matched, no_subsequent_test, ambiguous, not_applicable, cancelled, failed]
+    TestRef:
+      type: object
+      required: [test_date, result]
+      properties:
+        test_date: {type: string, format: date}
+        result: {type: string, enum: [PASSED, FAILED]}
+        test_number: {type: string, nullable: true}
+    Outcome:
+      type: object
+      required: [id, booking_id, check_day, status, due_at, final]
+      properties:
+        id: {type: string, format: uuid}
+        booking_id: {type: string, format: uuid}
+        check_day: {type: integer, enum: [1, 3, 7, 14]}
+        status: {$ref: '#/components/schemas/OutcomeStatus'}
+        due_at: {type: string, format: date-time}
+        checked_at: {type: string, format: date-time, nullable: true}
+        matched_test:
+          allOf: [{$ref: '#/components/schemas/TestRef'}]
+          nullable: true
+        candidates:
+          type: array
+          description: All tests in the matching window (appointment date to day 14).
+          items: {$ref: '#/components/schemas/TestRef'}
+        detail: {type: string, nullable: true}
+        final: {type: boolean, description: True for the day-14 check.}
+    Booking:
+      type: object
+      required: [id, registration, appointment_date, original_appointment_date, booking_type, status, source, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        registration: {type: string}
+        appointment_date: {type: string, format: date}
+        original_appointment_date: {type: string, format: date}
+        booking_type: {$ref: '#/components/schemas/BookingType'}
+        status: {$ref: '#/components/schemas/BookingStatus'}
+        source: {type: string, enum: [import, manual]}
+        rescheduled: {type: boolean}
+        created_at: {type: string, format: date-time}
+        assessment:
+          allOf: [{$ref: '#/components/schemas/Assessment'}]
+          nullable: true
+        decision:
+          allOf: [{$ref: '#/components/schemas/Decision'}]
+          nullable: true
+        outcome:
+          allOf: [{$ref: '#/components/schemas/Outcome'}]
+          nullable: true
+          description: The most recent outcome check that has run (null if none yet).

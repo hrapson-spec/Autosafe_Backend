@@ -1,0 +1,5 @@
+{"registration": "BB20BBB", "make": "VAUXHALL", "model": "CORSA", "fuel_type": "Diesel", "engine_size": "1248",
+ "first_used_date": "2020-09-01", "registration_date": "2020-09-01", "manufacture_date": "2020-08-01",
+ "tests": [
+  {"completed_at": "2023-09-05T11:00:00+00:00", "result": "PASSED", "test_number": "100000000011", "odometer_value": 18000, "odometer_unit": "MI", "expiry_date": "2024-09-04", "defects": [{"type": "ADVISORY", "text": "Tyre worn close to legal limit", "dangerous": false}]}
+ ]}
