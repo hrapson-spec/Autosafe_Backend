@@ -25,14 +25,45 @@ describe('groupBookings', () => {
       expect(groupBookings([b]).ranked).toHaveLength(0);
     }
   });
-  it('ties on the rounded percentage fall back to date then registration', () => {
+  it('ties on both key and rounded percentage fall back to date then registration', () => {
     const [a, b] = demoBookings('2026-10-26').filter((x) => x.registration === 'DEMO02' || x.registration === 'DEMO01');
-    a.assessment = { ...a.assessment!, result: { percent_rounded: 30, band: 'medium' } };
-    b.assessment = { ...b.assessment!, result: { percent_rounded: 30, band: 'medium' } };
+    a.assessment = { ...a.assessment!, result: { percent_rounded: 30, band: 'medium' }, rank_key: 5 };
+    b.assessment = { ...b.assessment!, result: { percent_rounded: 30, band: 'medium' }, rank_key: 5 };
     expect(groupBookings([b, a]).ranked.map((x) => x.registration)).toEqual(['DEMO01', 'DEMO02']);
+  });
+  it('the service\'s rank_key orders equal percentages (and wins over date/registration)', () => {
+    const [a, b, c] = demoBookings('2026-10-26').filter((x) => ['DEMO01', 'DEMO02', 'DEMO04'].includes(x.registration));
+    const same = { percent_rounded: 25, band: 'medium' as const };
+    a.assessment = { ...a.assessment!, result: same, rank_key: 100 };
+    b.assessment = { ...b.assessment!, result: same, rank_key: 300 };
+    c.assessment = { ...c.assessment!, result: same, rank_key: 200 };
+    expect(groupBookings([a, b, c]).ranked.map((x) => x.registration)).toEqual(['DEMO02', 'DEMO04', 'DEMO01']);
+  });
+  it('ranking follows rank_key even where the service\'s key and its rounded percentage disagree (the key is the order)', () => {
+    const [a, b] = demoBookings('2026-10-26').filter((x) => x.registration === 'DEMO01' || x.registration === 'DEMO02');
+    a.assessment = { ...a.assessment!, result: { percent_rounded: 45, band: 'high' }, rank_key: 1 };
+    b.assessment = { ...b.assessment!, result: { percent_rounded: 30, band: 'medium' }, rank_key: 2 };
+    expect(groupBookings([a, b]).ranked.map((x) => x.registration)).toEqual(['DEMO02', 'DEMO01']);
+  });
+  it('without keys it falls back to the percentage, then date, appointment time and registration', () => {
+    const [a, b, c] = demoBookings('2026-10-26').filter((x) => ['DEMO01', 'DEMO02', 'DEMO12'].includes(x.registration));
+    for (const x of [a, b, c]) x.assessment = { ...x.assessment!, result: { percent_rounded: 30, band: 'medium' }, rank_key: null };
+    a.appointment_time = '15:00'; b.appointment_time = '08:30'; c.appointment_time = null;
+    c.appointment_date = a.appointment_date = b.appointment_date;
+    expect(groupBookings([c, a, b]).ranked.map((x) => x.appointment_time)).toEqual(['08:30', '15:00', null]);
   });
   it('a booking with no assessment yet is shown as not ranked', () => {
     const b = { ...demoBookings('2026-10-26')[0], assessment: null };
     expect(groupBookings([b]).notRanked).toHaveLength(1);
   });
+});
+
+
+it('does not rank a numerical estimate when ranking permission is false or missing', () => {
+  const source = demoBookings('2026-10-26').find(b => b.assessment?.state === 'available')!;
+  for (const flag of [false, undefined]) {
+    const b = { ...source, assessment: { ...source.assessment!, display_policy: { ...source.assessment!.display_policy!, ranking_enabled: flag } } };
+    expect(groupBookings([b]).ranked).toEqual([]);
+    expect(groupBookings([b]).notRanked).toEqual([b]);
+  }
 });

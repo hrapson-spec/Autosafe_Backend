@@ -81,6 +81,7 @@ class RowReq(_Req):
     registration: str = Field(max_length=20)
     date: str = Field(max_length=20)
     type: str = Field(max_length=40)
+    time: Optional[str] = Field(default=None, max_length=10)     # optional appointment time, 24-hour, London
 
 
 class ImportReq(_Req):
@@ -91,7 +92,17 @@ class ImportReq(_Req):
 
 class BookingPatch(_Req):
     appointment_date: Optional[date] = None
+    appointment_time: Optional[str] = Field(default=None, max_length=10)   # null clears it
     status: Optional[Literal["cancelled"]] = None
+
+
+FeedbackReason = Literal["inaccurate_records", "not_relevant", "too_long", "missing_information", "other"]
+
+
+class FeedbackReq(_Req):
+    value: Literal["helpful", "not_helpful"]
+    reason_code: Optional[FeedbackReason] = None
+    briefing_version: Optional[str] = Field(default=None, max_length=80)
 
 
 class DecisionReq(_Req):
@@ -237,7 +248,7 @@ def build_router() -> APIRouter:
         if "application/json" in request.headers.get("accept", ""):
             resp: Response = JSONResponse(_me(ctx, scope, row["workshop_name"]))
         else:
-            resp = RedirectResponse(ctx.settings.app_url, status_code=303)
+            resp = RedirectResponse(ctx.settings.post_signin_url, status_code=303)
         resp.set_cookie(ctx.settings.cookie_name, stok, max_age=ctx.settings.session_ttl_days * 86400,
                         httponly=True, secure=True, samesite="lax", path="/")
         resp.headers["Cache-Control"] = "no-store"
@@ -314,9 +325,11 @@ def build_router() -> APIRouter:
         rows = [x.model_dump() for x in body.rows] if body.rows is not None else None
         return service.preview_import(ctx, scope, body.format, body.content, rows)
 
-    @r.post("/imports/{import_id}/commit")
-    def commit(import_id: UuidPath, ctx: CtxDep, scope: ScopeDep):
-        return service.commit_import(ctx, scope, str(import_id))
+    @r.post("/imports/{import_id}/commit", status_code=202)
+    def commit(import_id: UuidPath, response: Response, ctx: CtxDep, scope: ScopeDep):
+        rec, status = service.commit_import(ctx, scope, str(import_id))
+        response.status_code = status
+        return rec
 
     @r.get("/imports/{import_id}")
     def get_import(import_id: UuidPath, ctx: CtxDep, scope: ScopeDep):
@@ -337,7 +350,7 @@ def build_router() -> APIRouter:
 
     @r.post("/bookings", status_code=201)
     def create_booking(body: RowReq, response: Response, ctx: CtxDep, scope: ScopeDep):
-        b, created = service.create_booking(ctx, scope, body.registration, body.date, body.type)
+        b, created = service.create_booking(ctx, scope, body.registration, body.date, body.type, body.time)
         if not created:
             response.status_code = 200
         return b
@@ -348,9 +361,11 @@ def build_router() -> APIRouter:
 
     @r.patch("/bookings/{booking_id}")
     def patch_booking(booking_id: UuidPath, body: BookingPatch, ctx: CtxDep, scope: ScopeDep):
-        if body.appointment_date is None and body.status is None:
+        if body.appointment_date is None and body.status is None and "appointment_time" not in body.model_fields_set:
             raise ApiError(422, "validation_error", "nothing to update")
-        return service.update_booking(ctx, scope, str(booking_id), body.appointment_date, body.status == "cancelled")
+        return service.update_booking(ctx, scope, str(booking_id), body.appointment_date, body.status == "cancelled",
+                                      body.appointment_time if "appointment_time" in body.model_fields_set
+                                      else service._UNSET)
 
     @r.get("/bookings/{booking_id}/assessments")
     def assessments(booking_id: UuidPath, ctx: CtxDep, scope: ScopeDep):
@@ -359,6 +374,14 @@ def build_router() -> APIRouter:
     @r.post("/bookings/{booking_id}/assessments", status_code=202)
     def refresh(booking_id: UuidPath, ctx: CtxDep, scope: ScopeDep):
         return service.refresh_assessment(ctx, scope, str(booking_id))
+
+    @r.get("/bookings/{booking_id}/briefing")
+    def briefing(booking_id: UuidPath, ctx: CtxDep, scope: ScopeDep):
+        return service.get_briefing(ctx, scope, str(booking_id))
+
+    @r.put("/bookings/{booking_id}/feedback")
+    def feedback(booking_id: UuidPath, body: FeedbackReq, ctx: CtxDep, scope: ScopeDep):
+        return service.put_feedback(ctx, scope, str(booking_id), body.value, body.reason_code, body.briefing_version)
 
     @r.get("/bookings/{booking_id}/decisions")
     def decisions(booking_id: UuidPath, ctx: CtxDep, scope: ScopeDep):

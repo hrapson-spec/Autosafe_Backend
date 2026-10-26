@@ -6,7 +6,7 @@ import pytest
 from garage.api import jobs, worker
 from garage.api.dvsa import DbThrottle, DvsaNotFound, DvsaTransientError, ThrottledDvsa
 from garage.api.provider import ProviderResult, StubProvider
-from .conftest import day, history, import_rows, make_due, make_workshop, sql
+from .conftest import available, day, history, import_rows, make_due, make_workshop, sql
 
 V = "/api/garage/v1"
 
@@ -16,7 +16,7 @@ def booking(c, bid):
 
 
 def ok(**kw):
-    return ProviderResult(state="available", percent_rounded=25, band="medium", provider_name="t", provider_version="1", **kw)
+    return available(25, **kw)
 
 
 def test_stub_provider_says_model_not_packaged():

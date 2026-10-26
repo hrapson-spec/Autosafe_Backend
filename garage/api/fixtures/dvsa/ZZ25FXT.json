@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 25",
+  "motTests": [
+    {
+      "completedDate": "2019-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-06-07",
+      "motTestNumber": "SYN25000",
+      "odometerUnit": "MI",
+      "odometerValue": "15425",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-06-08",
+      "motTestNumber": "SYN25010",
+      "odometerUnit": "MI",
+      "odometerValue": "22525",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-06-08",
+      "motTestNumber": "SYN25020",
+      "odometerUnit": "MI",
+      "odometerValue": "29625",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-06-08",
+      "motTestNumber": "SYN25030",
+      "odometerUnit": "MI",
+      "odometerValue": "36725",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-06-07",
+      "motTestNumber": "SYN25040",
+      "odometerUnit": "MI",
+      "odometerValue": "43825",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-06-08",
+      "motTestNumber": "SYN25050",
+      "odometerUnit": "MI",
+      "odometerValue": "50925",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-06-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-06-08",
+      "motTestNumber": "SYN25060",
+      "odometerUnit": "MI",
+      "odometerValue": "58025",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-06-08T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": true,
+          "text": "Example tyre cord visible at test",
+          "type": "DANGEROUS"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN25070",
+      "odometerUnit": "MI",
+      "odometerValue": "65125",
+      "registrationAtTimeOfTest": "ZZ25FXT",
+      "testResult": "FAILED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ25FXT",
+  "registrationDate": "2016-01-01"
+}

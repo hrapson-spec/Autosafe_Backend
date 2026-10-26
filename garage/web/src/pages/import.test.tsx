@@ -42,22 +42,73 @@ describe('import', () => {
     expect(testDb.s.bookings.every((b) => b.booking_type === 'mot')).toBe(true);
   });
 
-  it('shows visible progress while the commit is in flight, then the result', async () => {
+  it('the commit is a job: progress shows N of M while it runs, then the result', async () => {
     seedOwner();
-    server.use(http.post(`${API_BASE}/imports/:id/commit`, async ({ params }) => {
-      await delay(250);
-      return HttpResponse.json(testDb.commitImport(String(params.id)));
+    testDb.commitBatchSize = 2;
+    server.use(http.get(`${API_BASE}/imports/:id`, async ({ params }) => {
+      await delay(120);                      // slow polls so each state can be seen
+      return HttpResponse.json(testDb.getImport(String(params.id)));
     }));
     const u = userEvent.setup();
     renderApp('/app/import');
-    await paste(u, 'AB12CDE');
-    const btn = await screen.findByRole('button', { name: 'Import 1 row' });
+    await paste(u, 'AB12CDE\nAB13CDE\nAB14CDE\nAB15CDE\nAB16CDE');
+    const btn = await screen.findByRole('button', { name: 'Import 5 rows' });
     await waitFor(() => expect(btn).toBeEnabled());
     await u.click(btn);
     expect(await screen.findByRole('heading', { name: 'Importing' })).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Importing 1 rows' })).toBeInTheDocument();
-    expect(await screen.findByTestId('import-summary')).toHaveTextContent('Imported 1 of 1 rows.');
+    expect(await screen.findByText(/Importing 0 of 5 rows/)).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: /Imported \d of 5 rows/ });
+    expect(bar).toHaveAttribute('max', '5');
+    expect(await screen.findByText(/Importing 2 of 5 rows/, undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText(/Importing 4 of 5 rows/, undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(testDb.s.bookings).toHaveLength(4);                       // rows exist as the job creates them
+    expect(await screen.findByTestId('import-summary', undefined, { timeout: 3000 })).toHaveTextContent('Imported 5 of 5 rows.');
     expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('a job that gives up shows the failure; Try again continues without adding anything twice', async () => {
+    seedOwner();
+    testDb.commitBatchSize = 2;
+    let failedOnce = false;
+    server.use(http.get(`${API_BASE}/imports/:id`, ({ params }) => {
+      const rec = testDb.getImport(String(params.id));
+      if (!failedOnce && rec.progress && rec.progress.processed >= 2 && rec.status === 'committing') {
+        failedOnce = true;
+        return HttpResponse.json({ ...rec, status: 'failed', failure_reason: 'The import stopped before it finished. Rows already added are kept; commit again to continue.' });
+      }
+      return HttpResponse.json(rec);
+    }));
+    const u = userEvent.setup();
+    renderApp('/app/import');
+    await paste(u, 'AB12CDE\nAB13CDE\nAB14CDE\nAB15CDE\nAB16CDE');
+    const btn = await screen.findByRole('button', { name: 'Import 5 rows' });
+    await waitFor(() => expect(btn).toBeEnabled());
+    await u.click(btn);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/stopped before it finished/);
+    expect(screen.getByText('The import stopped')).toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByTestId('import-summary')).toHaveTextContent('Imported 5 of 5 rows.');
+    expect(testDb.s.bookings.map((b) => b.registration).sort()).toEqual(['AB12CDE', 'AB13CDE', 'AB14CDE', 'AB15CDE', 'AB16CDE']);
+  });
+
+  it('a time column in a CSV is read, shown and sent; an unreadable time flags the row', async () => {
+    seedOwner();
+    const u = userEvent.setup();
+    renderApp('/app/import');
+    await u.click(await screen.findByRole('radio', { name: 'Upload a CSV' }));
+    const csv = 'registration,date,type,appointment time\nAB12CDE,2026-10-27,MOT,9:30\nXY99ZZZ,2026-10-27,MOT,\nZZ11AAA,2026-10-27,MOT,7pm\n';
+    await u.upload(screen.getByLabelText(/CSV file/), new File([csv], 'b.csv', { type: 'text/csv' }));
+    expect(await screen.findByLabelText('Time, row 1')).toHaveValue('09:30');
+    expect(screen.getByLabelText('Time, row 2')).toHaveValue('');
+    const rows = await screen.findAllByTestId('preview-row');
+    expect(rows.map((r) => r.getAttribute('data-flagged'))).toEqual(['false', 'false', 'true']);
+    expect(within(rows[2]).getByText(/Time must be like 09:30/)).toBeInTheDocument();
+    await u.clear(screen.getByLabelText('Time, row 3'));
+    await u.type(screen.getByLabelText('Time, row 3'), '14:05');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Import 3 rows' })).toBeEnabled());
+    await u.click(screen.getByRole('button', { name: 'Import 3 rows' }));
+    await screen.findByTestId('import-summary');
+    expect(testDb.s.bookings.map((b) => [b.registration, b.appointment_time])).toEqual([['AB12CDE', '09:30'], ['XY99ZZZ', null], ['ZZ11AAA', '14:05']]);
   });
 
   it('flags a row that duplicates an existing booking (service check)', async () => {
@@ -146,7 +197,8 @@ describe('import', () => {
     await screen.findByTestId('import-summary');
     const id = Object.keys(testDb.s.previews)[0];
     const again = testDb.commitImport(id);
-    expect(again.already_committed).toBe(true);
+    expect(again.status).toBe(200);
+    expect(again.body.already_committed).toBe(true);
     expect(testDb.s.bookings).toHaveLength(1);
   });
 });

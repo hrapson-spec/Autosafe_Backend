@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
-import type { Assessment, Booking, BriefingExtras, Decision, DecisionType, FeedbackValue } from '../api/types';
+import type { Assessment, Booking, Briefing, Decision, DecisionType, FeedbackReason, FeedbackValue } from '../api/types';
 import { BriefingView } from '../components/BriefingView';
 import { Alert, Spinner } from '../components/ui';
 
-interface Loaded { booking: Booking; decisions: Decision[]; versions: Assessment[]; extras: BriefingExtras | null }
+interface Loaded { booking: Booking; decisions: Decision[]; versions: Assessment[]; briefing: Briefing | null }
 
 export const BriefingPage: React.FC<{ pollMs?: number }> = ({ pollMs = 3000 }) => {
   const { id = '' } = useParams();
@@ -17,9 +17,9 @@ export const BriefingPage: React.FC<{ pollMs?: number }> = ({ pollMs = 3000 }) =
   const load = useCallback(async () => {
     try {
       const [booking, decisions, versions] = await Promise.all([api.booking(id), api.decisions(id), api.assessments(id)]);
-      // The briefing endpoint is PROPOSED (not in the contract yet). Anything but success means "not provided".
-      const extras = await api.briefingExtras(id).catch(() => null);
-      setData({ booking, decisions: decisions.items, versions: versions.items, extras });
+      // A briefing that cannot be loaded must not hide the booking: it becomes an explicit evidence gap.
+      const briefing = await api.briefing(id).catch(() => null);
+      setData({ booking, decisions: decisions.items, versions: versions.items, briefing });
       setError(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not load this briefing.');
@@ -28,7 +28,7 @@ export const BriefingPage: React.FC<{ pollMs?: number }> = ({ pollMs = 3000 }) =
 
   useEffect(() => { void load(); }, [load]);
 
-  const pending = data?.booking.assessment?.state === 'pending';
+  const pending = data?.booking.assessment?.state === 'pending' || data?.briefing?.status === 'pending';
   useEffect(() => {
     if (!pending) return;
     const t = setTimeout(() => void load(), pollMs);
@@ -42,7 +42,14 @@ export const BriefingPage: React.FC<{ pollMs?: number }> = ({ pollMs = 3000 }) =
     await api.decide(id, type, note);
     await load();
   };
-  const onFeedback = async (v: FeedbackValue) => { await api.feedback(id, v); };
+  const onFeedback = async (value: FeedbackValue, reason_code: FeedbackReason | null) => {
+    try {
+      await api.feedback(id, { value, reason_code, briefing_version: data.briefing?.briefing_version ?? null });
+    } catch (e) {
+      await load();      // e.g. the briefing was regenerated: show the current one, then report the failure
+      throw e;
+    }
+  };
   const onRefresh = async () => {
     setRefreshing(true);
     setRefreshError(null);
@@ -57,7 +64,7 @@ export const BriefingPage: React.FC<{ pollMs?: number }> = ({ pollMs = 3000 }) =
   };
   return (
     <BriefingView
-      booking={data.booking} decisions={data.decisions} extras={data.extras} versions={data.versions}
+      booking={data.booking} decisions={data.decisions} briefing={data.briefing} versions={data.versions}
       backTo="/app/bookings" onDecide={onDecide} onFeedback={onFeedback} onRefresh={onRefresh} refreshing={refreshing} refreshError={refreshError}
     />
   );

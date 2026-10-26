@@ -1,21 +1,18 @@
 /**
  * Garage API types, base path /api/garage/v1.
- * Aligned by hand to garage/contract/openapi.yaml (1.0.0-draft.1). A drift test
- * (src/api/contract.test.ts) compares the enums and required fields below with
- * the YAML. Items marked PROPOSED are NOT in the contract.
+ * Aligned by hand to garage/contract/openapi.yaml (1.0.0-draft.2). A drift test
+ * (src/api/contract.test.ts) compares the enums, required fields and endpoints below with the YAML.
  *
- * Contract gaps found while building the first pass (all handled gracefully):
- *  1. No briefing data: no dated source records, recorded advisories or follow-up
- *     questions. PROPOSED GET /bookings/{id}/briefing; a 404 renders an evidence gap.
- *  2. No feedback endpoint (helpful / not helpful). PROPOSED PUT /bookings/{id}/feedback.
- *  3. No demo-data endpoint. The fictional demo is client-side only (/demo).
- *  4. The rounding step is not returned, so copy says "rounded by the service".
- *  5. No unrounded score, so equal percentages tie-break by date then registration.
- *  6. No booking time of day; the list shows the date only.
- *  7. Import commit is one synchronous call: progress is indeterminate, not N of M.
- *  8. Email links go to server-rendered GET /auth/links/{token}; the SPA confirm
- *     page (/auth/confirm?token=) calls POST .../consume and duplicates that page.
- *  9. Decision option labels and help text are client copy for the four enum values.
+ * The nine gaps the first pass reported are closed in draft.2:
+ *  1. Briefing: GET /bookings/{id}/briefing (rule-generated, dated source records, evidence gaps, follow-ups).
+ *  2. Feedback: PUT /bookings/{id}/feedback.
+ *  3. Demo data stays client-side and fictional (src/mocks/fixtures.ts, /demo); the API never serves it.
+ *  4. display_policy on completed assessments: rounding step, band edges and labels, marked provisional.
+ *  5. rank_key: order-only server key; ranking never relies on rounded values and the score is never sent.
+ *  6. appointment_time (HH:MM) on bookings and import rows.
+ *  7. Import commit is asynchronous: a job, then GET /imports/{id} reports processed of total.
+ *  8. The server-rendered confirm page is the only confirm page; the SPA has no /auth/confirm route.
+ *  9. Decision option labels and help text remain client copy for the four enum values.
  *
  * Data rule: no customer name, email or phone anywhere. Staff have an email
  * because they sign in by email link.
@@ -59,8 +56,24 @@ export interface Member {
 
 /** Display precision is decided by the server: the client never computes a percentage or a band (R7). */
 export interface AssessmentResult {
-  percent_rounded: number;
+  percent_rounded: number | null;
   band: Band;
+}
+
+/** How the service turned a probability into what is shown. The client labels what it is given (R7). */
+export interface DisplayPolicy {
+  rounding_pp: number;
+  /** On the rounded scale: low below edges[0], medium from edges[0] to below edges[1], high from edges[1]. */
+  band_edges: [number, number];
+  band_labels: Record<Band, string>;
+  /** True while the values are the stub's, not a frozen model package's. */
+  provisional: boolean;
+  display_state?: 'unavailable' | 'shadow' | 'bands' | 'simulated' | 'percentage';
+  operational_qualified?: boolean;
+  ranking_enabled?: boolean;
+  policy_version?: string;
+  model_version?: string | null;
+  suppression_reason?: string | null;
 }
 
 export interface Assessment {
@@ -71,6 +84,9 @@ export interface Assessment {
   reason?: string | null;
   reason_text?: string | null;
   result?: AssessmentResult | null;
+  display_policy?: DisplayPolicy | null;
+  /** List-cohort ordinal (larger = higher estimated risk), across all filtered bookings before pagination. Detail routes return null. Not a probability. */
+  rank_key?: number | null;
   evidence?: {
     prior_test_count?: number;
     latest_prior_test_date?: string | null;
@@ -106,6 +122,8 @@ export interface Booking {
   id: string;
   registration: string;
   appointment_date: string;
+  /** "HH:MM" 24-hour London, or null (untimed). */
+  appointment_time?: string | null;
   original_appointment_date: string;
   booking_type: BookingType;
   status: BookingStatus;
@@ -128,6 +146,8 @@ export interface ImportRow {
   registration: string;
   date: string;
   type: string;
+  /** Optional appointment time, 24-hour. */
+  time?: string | null;
 }
 
 export type RowStatus = 'new' | 'duplicate_existing' | 'duplicate_in_batch' | 'invalid';
@@ -143,6 +163,7 @@ export interface PreviewRow {
   status: RowStatus;
   registration?: string | null;
   appointment_date?: string | null;
+  appointment_time?: string | null;
   booking_type?: BookingType | null;
   existing_booking_id?: string | null;
   duplicate_of_row?: number | null;
@@ -158,46 +179,108 @@ export interface ImportCounts {
   invalid: number;
 }
 
+export interface ImportProgress {
+  processed: number;
+  total: number;
+}
+
 export interface ImportPreview {
   import_id: string;
   status: 'previewed';
   counts: ImportCounts;
   rows: PreviewRow[];
+  progress?: ImportProgress | null;
   expires_at: string;
 }
 
-export interface ImportResult {
+export const IMPORT_STATUSES = ['previewed', 'committing', 'committed', 'failed', 'expired'] as const;
+export type ImportStatus = (typeof IMPORT_STATUSES)[number];
+
+/** An import in any state: GET /imports/{id}, and the answer to POST /imports/{id}/commit (202, or 200 once finished). */
+export interface ImportRecord {
   import_id: string;
-  status: 'committed';
-  already_committed: boolean;
+  status: ImportStatus;
+  already_committed?: boolean;
   counts: ImportCounts;
-  created_booking_ids: string[];
-  committed_at?: string;
+  rows: PreviewRow[];
+  progress?: ImportProgress | null;
+  created_booking_ids?: string[];
+  failure_reason?: string;
+  expires_at?: string;
+  committed_at?: string | null;
 }
 
-// ---- PROPOSED, not in the contract -------------------------------------
+// ---- briefing and feedback ------------------------------------------------
 
-/** PROPOSED: GET /bookings/{id}/briefing. Dated source records and rule-generated follow-up questions. */
-export interface SourceRecord {
+export const BRIEFING_STATUSES = ['ready', 'pending', 'unavailable'] as const;
+export type BriefingStatus = (typeof BRIEFING_STATUSES)[number];
+export const BRIEFING_RESULTS = ['PASSED', 'FAILED', 'RECTIFIED'] as const;
+export type BriefingResult = (typeof BRIEFING_RESULTS)[number];
+
+export interface BriefingDefect {
+  /** ADVISORY, MINOR, MAJOR, DANGEROUS, PRS (rectified at the test) or another value the source used. */
+  type: string;
+  dangerous: boolean;
+  /** The source's wording, verbatim: a quotation of a past record, not a statement about today. */
+  text: string;
+  recorded_on: string;
+  /** e.g. "Advisory, recorded at test on 21 July 2026". */
+  label: string;
+}
+
+export interface BriefingRecord {
   test_date: string;
-  test_result: 'PASSED' | 'FAILED' | 'PRS' | 'ABANDONED' | 'ABORTED';
+  result: BriefingResult;
   odometer_value: number | null;
-  odometer_unit: 'mi' | 'km' | null;
-  defects: Array<{ type: 'ADVISORY' | 'MINOR' | 'MAJOR' | 'DANGEROUS' | 'PRS' | 'FAIL' | 'USER_ENTERED'; text: string }>;
+  odometer_unit: 'MI' | 'KM' | null;
+  defects: BriefingDefect[];
 }
-export interface FollowUpQuestion {
+
+export interface BriefingGap {
+  rule_id: string;
+  text: string;
+}
+
+export interface BriefingQuestion {
   id: string;
   rule_id: string;
   text: string;
   source_test_date: string | null;
 }
-export interface BriefingExtras {
-  source_records: SourceRecord[];
-  follow_up_questions: FollowUpQuestion[];
+
+export const FEEDBACK_VALUES = ['helpful', 'not_helpful'] as const;
+export type FeedbackValue = (typeof FEEDBACK_VALUES)[number];
+export const FEEDBACK_REASONS = ['inaccurate_records', 'not_relevant', 'too_long', 'missing_information', 'other'] as const;
+export type FeedbackReason = (typeof FEEDBACK_REASONS)[number];
+
+export interface Feedback {
+  value: FeedbackValue;
+  reason_code?: FeedbackReason | null;
+  briefing_version: string;
+  assessment_version: number;
+  updated_at: string;
 }
 
-/** PROPOSED: PUT /bookings/{id}/feedback. */
-export type FeedbackValue = 'helpful' | 'not_helpful';
+export interface Briefing {
+  booking_id: string;
+  status: BriefingStatus;
+  reason?: string | null;
+  reason_text?: string | null;
+  rule_table_version: string;
+  briefing_version: string | null;
+  assessment_id?: string | null;
+  assessment_version?: number | null;
+  history_cutoff_date?: string | null;
+  history_cutoff_at?: string | null;
+  source?: { snapshot_sha256: string; upstream_status: 'ok' | 'not_found'; fetched_at: string } | null;
+  /** Template text from fixed rules. Never mentions an estimate. */
+  summary: string | null;
+  source_records: BriefingRecord[];
+  evidence_gaps: BriefingGap[];
+  follow_up_questions: BriefingQuestion[];
+  /** The calling member's own feedback on this briefing version. */
+  feedback: Feedback | null;
+}
 
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: Record<string, unknown> | null };

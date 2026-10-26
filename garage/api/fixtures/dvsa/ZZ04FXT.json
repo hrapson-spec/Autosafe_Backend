@@ -1,0 +1,105 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 04",
+  "motTests": [
+    {
+      "completedDate": "2019-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-06-06",
+      "motTestNumber": "SYN04000",
+      "odometerUnit": "KM",
+      "odometerValue": "12548",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-06-07",
+      "motTestNumber": "SYN04010",
+      "odometerUnit": "KM",
+      "odometerValue": "19648",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-06-07",
+      "motTestNumber": "SYN04020",
+      "odometerUnit": "KM",
+      "odometerValue": "26748",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-06-07",
+      "motTestNumber": "SYN04030",
+      "odometerUnit": "KM",
+      "odometerValue": "33848",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-06-06",
+      "motTestNumber": "SYN04040",
+      "odometerUnit": "KM",
+      "odometerValue": "40948",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-06-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-06-07",
+      "motTestNumber": "SYN04050",
+      "odometerUnit": "KM",
+      "odometerValue": "48048",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-06-07T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2026-06-07",
+      "motTestNumber": "SYN04060",
+      "odometerUnit": "KM",
+      "odometerValue": "55148",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-06-07T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2027-06-07",
+      "motTestNumber": "SYN04070",
+      "odometerUnit": "KM",
+      "odometerValue": "62248",
+      "registrationAtTimeOfTest": "ZZ04FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ04FXT",
+  "registrationDate": "2016-01-01"
+}

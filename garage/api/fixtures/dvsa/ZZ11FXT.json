@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 11",
+  "motTests": [
+    {
+      "completedDate": "2019-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-06-13",
+      "motTestNumber": "SYN11000",
+      "odometerUnit": "MI",
+      "odometerValue": "13507",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-06-14",
+      "motTestNumber": "SYN11010",
+      "odometerUnit": "MI",
+      "odometerValue": "20607",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-06-14",
+      "motTestNumber": "SYN11020",
+      "odometerUnit": "MI",
+      "odometerValue": "27707",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-06-14",
+      "motTestNumber": "SYN11030",
+      "odometerUnit": "MI",
+      "odometerValue": "34807",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-06-13",
+      "motTestNumber": "SYN11040",
+      "odometerUnit": "MI",
+      "odometerValue": "41907",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-06-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-06-14",
+      "motTestNumber": "SYN11050",
+      "odometerUnit": "MI",
+      "odometerValue": "49007",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-06-14T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example rear lamp did not illuminate",
+          "type": "MAJOR"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN11060",
+      "odometerUnit": "MI",
+      "odometerValue": "56107",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "FAILED"
+    },
+    {
+      "completedDate": "2025-06-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-06-21",
+      "motTestNumber": "SYN11070",
+      "odometerUnit": "MI",
+      "odometerValue": "63207",
+      "registrationAtTimeOfTest": "ZZ11FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ11FXT",
+  "registrationDate": "2016-01-01"
+}

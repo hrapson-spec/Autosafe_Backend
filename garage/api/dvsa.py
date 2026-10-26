@@ -120,6 +120,10 @@ class DvsaClient(Protocol):
 class FakeDvsaClient:
     """Fixture-backed fake. Looks in `histories` first, then FIXTURE_DIR/<REG>.json.
 
+    A fixture file is either the normalised form (`DvsaHistory.to_json()`) or a raw API response (has
+    `motTests`), which goes through the real `parse_api_response`. The 50 `ZZnnFXT.json` files are raw
+    fully synthetic raw-shape responses authored by generate_synthetic_fixtures.py.
+
     A fixture file may be {"__error": "transient"|"permanent"|"not_found"} to simulate upstream trouble.
     `errors[reg]` (an exception instance or class) overrides everything, and may be a list consumed
     one call at a time (the last entry repeats).
@@ -154,6 +158,8 @@ class FakeDvsaClient:
                 if "__error" in d:
                     raise {"transient": DvsaTransientError, "permanent": DvsaPermanentError,
                            "not_found": DvsaNotFound}[d["__error"]](d["__error"])
+                if "motTests" in d:        # a raw MOT History API response (the authored synthetic raw-shape fixtures)
+                    return parse_api_response(registration, d)
                 return DvsaHistory.from_json(d)
         raise DvsaNotFound(registration)
 

@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 41",
+  "motTests": [
+    {
+      "completedDate": "2019-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-08-03",
+      "motTestNumber": "SYN41000",
+      "odometerUnit": "MI",
+      "odometerValue": "17617",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-08-04",
+      "motTestNumber": "SYN41010",
+      "odometerUnit": "MI",
+      "odometerValue": "24717",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-08-04",
+      "motTestNumber": "SYN41020",
+      "odometerUnit": "MI",
+      "odometerValue": "31817",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-08-04",
+      "motTestNumber": "SYN41030",
+      "odometerUnit": "MI",
+      "odometerValue": "38917",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-08-03",
+      "motTestNumber": "SYN41040",
+      "odometerUnit": "MI",
+      "odometerValue": "46017",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-08-04T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-08-04",
+      "motTestNumber": "SYN41050",
+      "odometerUnit": "MI",
+      "odometerValue": "53117",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-08-04T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example rear lamp did not illuminate",
+          "type": "MAJOR"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN41060",
+      "odometerUnit": "MI",
+      "odometerValue": "60217",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "FAILED"
+    },
+    {
+      "completedDate": "2025-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-08-11",
+      "motTestNumber": "SYN41070",
+      "odometerUnit": "MI",
+      "odometerValue": "67317",
+      "registrationAtTimeOfTest": "ZZ41FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ41FXT",
+  "registrationDate": "2016-01-01"
+}

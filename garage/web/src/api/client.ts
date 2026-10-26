@@ -1,6 +1,6 @@
 import type {
-  ApiErrorBody, Assessment, Booking, BookingPage, BriefingExtras, Decision, DecisionType, FeedbackValue,
-  ImportPreview, ImportResult, ImportRow, Me, Member, Usage, Workshop,
+  ApiErrorBody, Assessment, Booking, BookingPage, Briefing, Decision, DecisionType, Feedback, FeedbackReason, FeedbackValue,
+  ImportPreview, ImportRecord, ImportRow, Me, Member, Usage, Workshop,
 } from './types';
 
 export const API_BASE: string = import.meta.env?.VITE_API_BASE ?? '/api/garage/v1';
@@ -48,7 +48,6 @@ const id = encodeURIComponent;
 export const api = {
   signup: (p: { invite_code: string; workshop_name: string; email: string }) => request<{ status: 'accepted' }>('POST', '/auth/signup', p),
   requestLoginLink: (email: string) => request<{ status: 'accepted' }>('POST', '/auth/login-links', { email }),
-  consumeLink: (token: string) => request<Me>('POST', `/auth/links/${id(token)}/consume`, {}),
   logout: () => request<void>('POST', '/auth/logout'),
   me: () => request<Me>('GET', '/me'),
 
@@ -61,7 +60,9 @@ export const api = {
   removeStaff: (membershipId: string) => request<void>('DELETE', `/staff/${id(membershipId)}`),
 
   previewImport: (rows: ImportRow[]) => request<ImportPreview>('POST', '/imports/preview', { format: 'manual', rows }),
-  commitImport: (importId: string) => request<ImportResult>('POST', `/imports/${id(importId)}/commit`),
+  /** Queues the commit and returns at once (202); poll getImport for progress. 200 if it had already finished. */
+  commitImport: (importId: string) => request<ImportRecord>('POST', `/imports/${id(importId)}/commit`),
+  getImport: (importId: string) => request<ImportRecord>('GET', `/imports/${id(importId)}`),
 
   /** Follows next_cursor so a window with more than one page is complete. */
   async bookings(from: string, to: string): Promise<Booking[]> {
@@ -86,10 +87,9 @@ export const api = {
   decide: (bookingId: string, decision_type: DecisionType, note: string) =>
     request<Decision>('POST', `/bookings/${id(bookingId)}/decisions`, note ? { decision_type, note } : { decision_type }),
 
-  /** NOT IN CONTRACT (proposed). A 404 or 405 is treated as "not provided". */
-  briefingExtras: (bookingId: string) => request<BriefingExtras>('GET', `/bookings/${id(bookingId)}/briefing`),
-  /** NOT IN CONTRACT (proposed). */
-  feedback: (bookingId: string, value: FeedbackValue) => request<{ value: FeedbackValue }>('PUT', `/bookings/${id(bookingId)}/feedback`, { value }),
+  briefing: (bookingId: string) => request<Briefing>('GET', `/bookings/${id(bookingId)}/briefing`),
+  feedback: (bookingId: string, body: { value: FeedbackValue; reason_code?: FeedbackReason | null; briefing_version?: string | null }) =>
+    request<Feedback>('PUT', `/bookings/${id(bookingId)}/feedback`, body),
 };
 
 export type Api = typeof api;

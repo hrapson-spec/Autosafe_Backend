@@ -1,12 +1,13 @@
 import { http, HttpResponse } from 'msw';
 import { API_BASE } from '../api/client';
-import { MockDb, MockHttpError } from './db';
+import { MockDb, MockHttpError, MockReply } from './db';
 
 export function createHandlers(db: MockDb) {
   const u = (p: string) => `${API_BASE}${p}`;
   const run = async (fn: () => unknown, status = 200) => {
     try {
       const out = fn();
+      if (out instanceof MockReply) return HttpResponse.json(out.body as object, { status: out.status });
       if (out === undefined) return new HttpResponse(null, { status: 204 });
       return HttpResponse.json(out as object, { status });
     } catch (e) {
@@ -32,6 +33,7 @@ export function createHandlers(db: MockDb) {
 
     http.post(u('/imports/preview'), async ({ request }) => { const b = await body<never>(request); return run(() => db.previewImport(b)); }),
     http.post(u('/imports/:id/commit'), ({ params }) => run(() => db.commitImport(String(params.id)))),
+    http.get(u('/imports/:id'), ({ params }) => run(() => db.getImport(String(params.id)))),
 
     http.get(u('/bookings'), ({ request }) => {
       const q = new URL(request.url).searchParams;
@@ -45,8 +47,7 @@ export function createHandlers(db: MockDb) {
       const b = await body<{ decision_type: never; note?: string }>(request);
       return run(() => db.decide(String(params.id), b.decision_type, b.note), 201);
     }),
-    // PROPOSED, not in the contract:
-    http.get(u('/bookings/:id/briefing'), ({ params }) => run(() => db.briefingExtras(String(params.id)))),
-    http.put(u('/bookings/:id/feedback'), async ({ request, params }) => { const b = await body<{ value: never }>(request); return run(() => db.setFeedback(String(params.id), b.value)); }),
+    http.get(u('/bookings/:id/briefing'), ({ params }) => run(() => db.briefing(String(params.id)))),
+    http.put(u('/bookings/:id/feedback'), async ({ request, params }) => { const b = await body<never>(request); return run(() => db.setFeedback(String(params.id), b)); }),
   ];
 }

@@ -100,6 +100,7 @@ def test_consume_sets_secure_cookie_and_14_day_session(env):
     tok2 = token_from_mail(env, "a@a.example")
     r = c2.post(f"{V}/auth/links/{tok2}/consume", headers={"Accept": "text/html"}, follow_redirects=False)
     assert r.status_code == 303
+    assert r.headers["location"] == env.ctx.settings.app_url.rstrip("/") + "/app"       # the SPA's post-sign-in route
 
 
 def test_login_link_does_not_reveal_accounts_and_is_rate_limited(env):

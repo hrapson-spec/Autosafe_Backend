@@ -1,7 +1,105 @@
-{"registration": "AA19AAA", "make": "FORD", "model": "FOCUS", "fuel_type": "Petrol", "engine_size": "1596",
- "first_used_date": "2019-03-01", "registration_date": "2019-03-01", "manufacture_date": "2019-02-01",
- "tests": [
-  {"completed_at": "2022-03-10T10:00:00+00:00", "result": "PASSED", "test_number": "100000000001", "odometer_value": 21000, "odometer_unit": "MI", "expiry_date": "2023-03-09", "defects": []},
-  {"completed_at": "2023-03-08T09:30:00+00:00", "result": "FAILED", "test_number": "100000000002", "odometer_value": 30500, "odometer_unit": "MI", "expiry_date": null, "defects": [{"type": "MAJOR", "text": "Front brake disc worn", "dangerous": false}]},
-  {"completed_at": "2023-03-12T14:00:00+00:00", "result": "PASSED", "test_number": "100000000003", "odometer_value": 30510, "odometer_unit": "MI", "expiry_date": "2024-03-07", "defects": []}
- ]}
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 50",
+  "motTests": [
+    {
+      "completedDate": "2019-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-03-12",
+      "motTestNumber": "SYN50000",
+      "odometerUnit": "MI",
+      "odometerValue": "18850",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-03-13",
+      "motTestNumber": "SYN50010",
+      "odometerUnit": "MI",
+      "odometerValue": "25950",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-03-13",
+      "motTestNumber": "SYN50020",
+      "odometerUnit": "MI",
+      "odometerValue": "33050",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-03-13",
+      "motTestNumber": "SYN50030",
+      "odometerUnit": "MI",
+      "odometerValue": "40150",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-03-12",
+      "motTestNumber": "SYN50040",
+      "odometerUnit": "MI",
+      "odometerValue": "47250",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-03-13",
+      "motTestNumber": "SYN50050",
+      "odometerUnit": "MI",
+      "odometerValue": "54350",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-03-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2026-03-13",
+      "motTestNumber": "SYN50060",
+      "odometerUnit": "MI",
+      "odometerValue": "61450",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-03-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2027-03-13",
+      "motTestNumber": "SYN50070",
+      "odometerUnit": "MI",
+      "odometerValue": "68550",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "AA19AAA",
+  "registrationDate": "2016-01-01"
+}

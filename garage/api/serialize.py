@@ -4,6 +4,7 @@ from __future__ import annotations
 from .timeutil import london_iso
 
 REASON_TEXT = {
+    "model_not_qualified": "The real model has not qualified for operational estimates or ranking.",
     "model_not_packaged": "The assessment model is not packaged in this build.",
     "service_only": "Service-only bookings have no MOT to assess.",
     "retest_booking": "Retests are not assessed.",
@@ -19,26 +20,43 @@ REASON_TEXT = {
 }
 
 
-def booking(b: dict, assessment=None, decision=None, outcome=None) -> dict:
+def booking(b: dict, assessment=None, decision=None, outcome=None, *, allow_simulated=False) -> dict:
     return {
         "id": b["id"], "registration": b["registration"],
         "appointment_date": b["appointment_date"].isoformat(),
+        "appointment_time": b["appointment_time"].strftime("%H:%M") if b.get("appointment_time") else None,
         "original_appointment_date": b["import_key_date"].isoformat(),
         "booking_type": b["booking_type"], "status": b["status"], "source": b["source"],
         "rescheduled": b["rescheduled_at"] is not None,
         "created_at": london_iso(b["created_at"]),
-        "assessment": assessment_json(assessment) if assessment else None,
+        "assessment": assessment_json(assessment, allow_simulated=allow_simulated) if assessment else None,
         "decision": decision_json(decision) if decision else None,
         "outcome": outcome_json(outcome) if outcome else None,
     }
 
 
-def assessment_json(a: dict) -> dict:
+def assessment_json(a: dict, *, allow_simulated=False) -> dict:
     ev = a["evidence"]
+    # Fail closed for stored legacy/malicious rows as well as current providers.
+    pol = a.get("display_policy") or {}
+    mode = pol.get("display_state", "unavailable")
+    qualified = (pol.get("operational_qualified") is True and pol.get("provisional") is False
+                 and bool(pol.get("model_version")) and bool(pol.get("policy_version"))
+                 and not pol.get("suppression_reason"))
+    allowed = a["state"] == "available" and ((mode == "simulated" and allow_simulated) or (mode in ("percentage", "bands") and qualified))
+    suppressed = a["state"] == "available" and not allowed
+    result = ({"percent_rounded": a["result"].get("percent_rounded"), "band": a["result"].get("band")}
+              if allowed and a["result"] else None)
+    if result and mode == "bands":
+        result = {"band": result["band"], "percent_rounded": None}
     return {
-        "id": a["id"], "booking_id": a["booking_id"], "version": a["version"], "state": a["state"],
-        "reason": a["reason"], "reason_text": a["reason_text"] or REASON_TEXT.get(a["reason"]),
-        "result": a["result"], "evidence": ev, "trigger": a["trigger"],
+        "id": a["id"], "booking_id": a["booking_id"], "version": a["version"], "state": "unavailable" if suppressed else a["state"],
+        "reason": "model_not_qualified" if suppressed else a["reason"],
+        "reason_text": REASON_TEXT["model_not_qualified"] if suppressed else a["reason_text"] or REASON_TEXT.get(a["reason"]),
+        "result": result, "evidence": ev, "trigger": a["trigger"],
+        "display_policy": a.get("display_policy"),
+        # Order-only key (ranking.py). The unrounded score (`score_unrounded`) is never serialised.
+        "rank_key": None,  # assigned only by list_bookings; never expose stored legacy transforms
         "input_cutoff_date": a["input_cutoff_date"].isoformat(),
         "input_cutoff_at": london_iso(a["input_cutoff_at"]),
         "provider": ({"name": a["provider_name"], "version": a["provider_version"]} if a["provider_name"] else None),

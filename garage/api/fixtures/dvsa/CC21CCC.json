@@ -1,2 +1,12 @@
-{"registration": "CC21CCC", "make": "TOYOTA", "model": "YARIS", "fuel_type": "Hybrid", "engine_size": "1490",
- "first_used_date": "2026-01-10", "registration_date": "2026-01-10", "manufacture_date": "2025-12-01", "tests": []}
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 52",
+  "motTests": [],
+  "primaryColour": "BLUE",
+  "registration": "CC21CCC",
+  "registrationDate": "2016-01-01"
+}

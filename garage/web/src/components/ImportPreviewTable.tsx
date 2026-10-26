@@ -14,13 +14,14 @@ export const ImportPreviewTable: React.FC<{
   const update = (key: string, patch: Partial<DraftRow>) => onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   return (
     <div className="overflow-x-auto" role="region" aria-label="Import preview, scrolls sideways on small screens" tabIndex={0}>
-      <table className="w-full min-w-[44rem] text-left text-sm">
+      <table className="w-full min-w-[50rem] text-left text-sm">
         <caption className="sr-only">Rows to import. Edit any cell. Rows with a problem are marked and will be skipped.</caption>
         <thead>
           <tr className="border-b border-slate-300">
             <th scope="col" className="p-2">Row</th>
             <th scope="col" className="p-2">Registration</th>
             <th scope="col" className="p-2">Date</th>
+            <th scope="col" className="p-2">Time (optional)</th>
             <th scope="col" className="p-2">Type</th>
             <th scope="col" className="p-2">Check</th>
             <th scope="col" className="p-2"><span className="sr-only">Remove</span></th>
@@ -35,6 +36,7 @@ export const ImportPreviewTable: React.FC<{
                 <th scope="row" className="p-2 font-semibold">{i + 1}</th>
                 <td className="p-2"><input aria-label={`Registration, row ${i + 1}`} className={cell} value={r.registration} autoCapitalize="characters" onChange={(e) => update(r.key, { registration: e.target.value.toUpperCase() })} /></td>
                 <td className="p-2"><input aria-label={`Date, row ${i + 1}`} type="date" className={cell} value={r.date} onChange={(e) => update(r.key, { date: e.target.value })} /></td>
+                <td className="p-2"><input aria-label={`Time, row ${i + 1}`} inputMode="numeric" placeholder="09:30" className={cell} value={r.time} onChange={(e) => update(r.key, { time: e.target.value })} /></td>
                 <td className="p-2">
                   <select aria-label={`Type, row ${i + 1}`} className={cell} value={r.type} onChange={(e) => update(r.key, { type: e.target.value as BookingType | '' })}>
                     <option value="">Choose…</option>

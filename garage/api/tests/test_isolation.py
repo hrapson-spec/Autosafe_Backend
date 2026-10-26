@@ -24,6 +24,8 @@ ID_ENDPOINTS = [
     ("PATCH", "/bookings/{booking_id}", {"status": "cancelled"}),
     ("GET", "/bookings/{booking_id}/assessments", None),
     ("POST", "/bookings/{booking_id}/assessments", None),
+    ("GET", "/bookings/{booking_id}/briefing", None),
+    ("PUT", "/bookings/{booking_id}/feedback", {"value": "not_helpful", "reason_code": "other"}),
     ("GET", "/bookings/{booking_id}/decisions", None),
     ("POST", "/bookings/{booking_id}/decisions", {"decision_type": "proceed_as_booked", "note": "x"}),
     ("GET", "/bookings/{booking_id}/outcomes", None),
@@ -141,7 +143,7 @@ def test_unknown_or_forged_cookie_is_401_on_every_private_route(env):
                 assert cl.request(m, url, json={}).status_code == 401, (m, route.path)
                 cl.cookies.clear()
             count += 1
-    assert count == 22
+    assert count == 24
 
 
 def test_every_private_route_depends_on_get_scope_and_is_covered_here(env):
@@ -173,7 +175,7 @@ def test_scoped_store_cannot_be_built_without_a_scope(env):
 
 # ------------------------------------------------------------------ the SQL itself
 PRIVATE_TABLES = ("bookings", "booking_events", "imports", "source_snapshots", "assessments", "decisions",
-                  "outcomes", "usage_counters")
+                  "outcomes", "usage_counters", "briefing_feedback")
 GARAGE_DIR = pathlib.Path(__file__).resolve().parents[1]
 
 
@@ -257,10 +259,15 @@ def test_worker_refuses_payloads_pointing_at_another_workshop(two):
     # a payload that also smuggles a workshop id is still evaluated in A's scope
     sql(env, "INSERT INTO jobs (workshop_id, kind, payload) VALUES (%s, 'assess_booking', jsonb_build_object("
              "'assessment_id', %s::text, 'workshop_id', %s::text))", (wa, pend["id"], wb))
+    # an import_commit job owned by A that names B's import
+    sql(env, "INSERT INTO jobs (workshop_id, kind, payload) VALUES (%s, 'import_commit', jsonb_build_object('import_id', %s::text))",
+        (wa, ids["import_id"]))
     calls = len(env.dvsa.calls)
+    imp_before = sql(env, "SELECT status, progress_index FROM imports WHERE id = %s", (ids["import_id"],))
     worker.drain(env.ctx)
     failed = [r for r in sql(env, "SELECT status, last_error FROM jobs WHERE workshop_id = %s AND last_error LIKE 'scope_violation%%'", (wa,))]
-    assert len(failed) == 3
+    assert len(failed) == 4
+    assert sql(env, "SELECT status, progress_index FROM imports WHERE id = %s", (ids["import_id"],)) == imp_before
     assert len(env.dvsa.calls) == calls                                                  # no upstream call was even made
     after_b = sql(env, "SELECT (SELECT count(*) FROM source_snapshots WHERE workshop_id = %s) AS snaps, "
                        "(SELECT string_agg(status, ',' ORDER BY id) FROM outcomes WHERE workshop_id = %s) AS outs", (wb, wb))

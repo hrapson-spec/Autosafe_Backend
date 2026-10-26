@@ -10,6 +10,8 @@ export async function startMockApi() {
   // Mock-only hook so the Playwright flow can read the "email" it was sent.
   (window as unknown as { __garageMock: unknown }).__garageMock = {
     lastTokenFor: (email: string) => db.lastTokenFor(email),
+    /** Stands in for the server-rendered confirm page's POST .../consume (the mock layer cannot render that page). */
+    consumeToken: (token: string) => db.consume(token),
     seedDemoBookings: () => db.seedDemoBookings(),
     fastAssessments: () => { db.pendingPolls = 1; },
   };

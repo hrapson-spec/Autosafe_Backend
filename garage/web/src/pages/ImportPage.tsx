@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
-import type { BookingType, ImportPreview, ImportResult } from '../api/types';
+import type { BookingType, ImportPreview, ImportProgress, ImportRecord } from '../api/types';
 import { MAX_IMPORT_ROWS } from '../api/types';
 import { ImportPreviewTable } from '../components/ImportPreviewTable';
 import { PageHeading } from '../components/Layout';
@@ -22,7 +22,7 @@ const MODES: Array<{ id: Mode; label: string }> = [
 
 interface Snapshot { rows: DraftRow[]; preview: ImportPreview }
 
-export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDebounceMs = 300 }) => {
+export const ImportPage: React.FC<{ previewDebounceMs?: number; commitPollMs?: number }> = ({ previewDebounceMs = 300, commitPollMs = 700 }) => {
   const today = useMemo(() => todayLondon(), []);
   const [mode, setMode] = useState<Mode>('paste');
   const [date, setDate] = useState(today);
@@ -34,7 +34,11 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
   const [snap, setSnap] = useState<{ key: string; preview: ImportPreview } | null>(null);
   const [checking, setChecking] = useState(false);
   const [phase, setPhase] = useState<'edit' | 'importing' | 'done'>('edit');
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [result, setResult] = useState<ImportRecord | null>(null);
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [done, setDone] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,19 +86,38 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
   };
 
   const reset = () => {
-    setRows(null); setSnap(null); setPhase('edit'); setResult(null); setDone(null); setError(null);
+    setRows(null); setSnap(null); setPhase('edit'); setResult(null); setDone(null); setError(null); setFailed(null); setProgress(null);
   };
 
+  /**
+   * The commit is a background job: POST answers at once, then GET /imports/{id} reports processed of total.
+   * Committing again after a failure continues where the job stopped; nothing is ever added twice.
+   */
   const commit = async () => {
     if (!rows || !current) return;
     setError(null);
+    setFailed(null);
+    setProgress({ processed: 0, total: current.counts.new });
     setPhase('importing');
     try {
-      const res = await api.commitImport(current.import_id);
-      setResult(res);
+      let rec = await api.commitImport(current.import_id);
+      while (rec.status === 'committing') {
+        if (!alive.current) return;
+        setProgress(rec.progress ?? null);
+        await new Promise((r) => setTimeout(r, commitPollMs));
+        rec = await api.getImport(current.import_id);
+      }
+      if (!alive.current) return;
+      if (rec.status !== 'committed') {
+        setFailed(rec.failure_reason ?? 'The import stopped before it finished.');
+        return;
+      }
+      setProgress(rec.progress ?? null);
+      setResult(rec);
       setDone({ rows, preview: current });
       setPhase('done');
     } catch (e) {
+      if (!alive.current) return;
       setError(e instanceof ApiError ? e.message : 'The import failed. You can try again.');
       setPhase('edit');
     }
@@ -102,7 +125,7 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
 
   // ------------------------------------------------------------------ done
   if (phase === 'done' && result && done) {
-    const imported = result.created_booking_ids.length;
+    const imported = result.created_booking_ids?.length ?? 0;
     return (
       <div className="space-y-4">
         <PageHeading>Import finished</PageHeading>
@@ -114,7 +137,7 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
         <Card aria-labelledby="res-h">
           <h2 id="res-h" className="text-lg font-bold">Row by row</h2>
           <ul className="mt-2 divide-y divide-slate-200" aria-label="Import results">
-            {done.preview.rows.map((p, i) => {
+            {result.rows.map((p, i) => {
               const reason = p.errors.map((e) => e.message).join('; ');
               const label = p.status === 'new' ? 'Imported' : p.status === 'invalid' ? 'Rejected' : 'Skipped, duplicate';
               return (
@@ -140,15 +163,26 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
 
   // ------------------------------------------------------------- importing
   if (phase === 'importing') {
-    const n = current?.counts.new ?? 0;
+    const total = progress?.total ?? current?.counts.new ?? 0;
+    const processed = progress?.processed ?? 0;
     return (
       <div className="space-y-4">
         <PageHeading>Importing</PageHeading>
         <Card>
-          {/* The commit is a single request, so progress is indeterminate (no value attribute). */}
-          <label htmlFor="imp-progress" className="block font-semibold">Importing {n} {n === 1 ? 'row' : 'rows'}…</label>
-          <progress id="imp-progress" className="mt-2 h-4 w-full" aria-label={`Importing ${n} rows`} />
-          <p role="status" className="sr-only">Importing {n} rows. Please wait.</p>
+          <label htmlFor="imp-progress" className="block font-semibold" data-testid="import-progress">
+            {failed ? 'The import stopped' : `Importing ${processed} of ${total} ${total === 1 ? 'row' : 'rows'}…`}
+          </label>
+          <progress id="imp-progress" className="mt-2 h-4 w-full" value={processed} max={Math.max(total, 1)} aria-label={`Imported ${processed} of ${total} rows`} />
+          <p role="status" className="sr-only">Imported {processed} of {total} rows.</p>
+          {failed && (
+            <>
+              <Alert kind="error" className="mt-3">{failed}</Alert>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Button onClick={() => void commit()}>Try again</Button>
+                <Button variant="secondary" onClick={reset}>Start again</Button>
+              </div>
+            </>
+          )}
         </Card>
       </div>
     );
@@ -216,7 +250,7 @@ export const ImportPage: React.FC<{ previewDebounceMs?: number }> = ({ previewDe
             <ImportPreviewTable rows={rows} checks={checks} onChange={setRows} defaults={{ date, type }} />
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button onClick={commit} disabled={!current || current.counts.new === 0 || tooMany || checking}>
+            <Button onClick={() => void commit()} disabled={!current || current.counts.new === 0 || tooMany || checking}>
               Import {current?.counts.new ?? ready} {(current?.counts.new ?? ready) === 1 ? 'row' : 'rows'}
             </Button>
             <Button variant="secondary" onClick={reset}>Start again</Button>

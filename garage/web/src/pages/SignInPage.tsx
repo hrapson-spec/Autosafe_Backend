@@ -35,6 +35,15 @@ export const SignInPage: React.FC = () => {
           If <strong>{sentTo}</strong> can sign in, a link is on its way. It works once and expires after 15 minutes.
           Opening it brings you to a page where you confirm.
         </p>
+        {import.meta.env.VITE_MOCK_API && <div className="mt-4 rounded border border-amber-300 bg-amber-50 p-3">
+          <p className="text-sm">Fixture mailbox: no email was sent. Continue here to confirm the invented sign-in link.</p>
+          <Button className="mt-2" onClick={() => {
+            const mock = (window as unknown as { __garageMock: { lastTokenFor: (email: string) => string; consumeToken: (token: string) => unknown; fastAssessments: () => void } }).__garageMock;
+            const token = mock.lastTokenFor(sentTo);
+            if (!token) { setError('No fixture link is available. Create a workshop with invite PILOT-0001 first.'); setSentTo(null); return; }
+            mock.fastAssessments(); mock.consumeToken(token); window.location.assign('/app');
+          }}>Confirm fixture sign-in</Button>
+        </div>}
         <Button className="mt-4" variant="secondary" onClick={() => setSentTo(null)}>Use a different address</Button>
       </Card>
     );

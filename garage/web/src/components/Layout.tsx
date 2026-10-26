@@ -22,6 +22,12 @@ export const PageHeading: React.FC<{ children: React.ReactNode; className?: stri
   return <h1 ref={ref} tabIndex={-1} className={`font-serif text-2xl font-bold text-slate-900 sm:text-3xl ${className}`}>{children}</h1>;
 };
 
+const FixtureNotice = () => import.meta.env.VITE_MOCK_API ? (
+  <div role="status" className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950">
+    Fixture simulation — all vehicle histories, estimates and outcomes are invented. Real model unavailable; no email or DVSA calls.
+  </div>
+) : null;
+
 const SkipLink = () => (
   <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">
     Skip to main content
@@ -37,6 +43,7 @@ const Brand = ({ to }: { to: string }) => (
 export const PublicLayout: React.FC = () => (
   <div className="min-h-screen">
     <SkipLink />
+    <FixtureNotice />
     <header className="border-b border-slate-300 bg-white">
       <nav aria-label="Main" className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Brand to="/" />
@@ -62,6 +69,7 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="min-h-screen">
       <SkipLink />
+      <FixtureNotice />
       <header className="border-b border-slate-300 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Brand to="/app/bookings" />

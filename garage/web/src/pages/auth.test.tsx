@@ -41,39 +41,43 @@ describe('sign-in and onboarding', () => {
     expect(testDb.lastTokenFor('nobody@example.test')).toBeNull();
   });
 
-  it('link landing does nothing until the confirm button is pressed; then a first-time owner goes to onboarding', async () => {
-    const u = userEvent.setup();
+  it('the SPA has no confirm page: the server-rendered page is the only one, and the app route after it is /app', async () => {
+    renderApp('/auth/confirm?token=anything');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/MOT bookings/);     // unknown route -> public intro
+    expect(screen.queryByRole('button', { name: /confirm and sign in/i })).toBeNull();
+  });
+
+  it('after the server confirm page signs a first-time owner in, /app sends them to onboarding', async () => {
     testDb.signup({ invite_code: VALID_INVITE_CODE, workshop_name: 'High Street MOT', email: 'o@example.test' });
     const token = testDb.lastTokenFor('o@example.test')!;
-    renderApp(`/auth/confirm?token=${token}`);
-    const btn = await screen.findByRole('button', { name: /confirm and sign in/i });
     expect(testDb.s.sessionUserId).toBeNull();
-    expect(testDb.s.mailbox[token]).toBe('o@example.test'); // landing did not consume the link
-    await u.click(btn);
+    testDb.consume(token);                       // what the server page's POST .../consume does
+    renderApp('/app');
     expect(await screen.findByRole('heading', { name: 'Your workshop is ready' })).toBeInTheDocument();
     expect(screen.getByText('High Street MOT')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open the fictional demo/i })).toHaveAttribute('href', '/demo');
     expect(screen.getByRole('button', { name: /import first bookings/i })).toBeInTheDocument();
-    expect(testDb.s.sessionUserId).not.toBeNull();
   });
 
-  it('a returning user with bookings goes straight to the list', async () => {
-    const u = userEvent.setup();
+  it('a returning user with bookings goes from /app straight to the list', async () => {
     testDb.signup({ invite_code: VALID_INVITE_CODE, workshop_name: 'W', email: 'o@example.test' });
     testDb.consume(testDb.lastTokenFor('o@example.test')!);
     testDb.seedDemoBookings();
     testDb.logout();
     testDb.requestLoginLink('o@example.test');
-    renderApp(`/auth/confirm?token=${testDb.lastTokenFor('o@example.test')}`);
-    await u.click(await screen.findByRole('button', { name: /confirm and sign in/i }));
+    testDb.consume(testDb.lastTokenFor('o@example.test')!);
+    renderApp('/app');
     expect(await screen.findByRole('heading', { name: 'Bookings', level: 1 })).toBeInTheDocument();
   });
 
-  it('a used or bad link shows an error', async () => {
-    const u = userEvent.setup();
-    renderApp('/auth/confirm?token=nope');
-    await u.click(await screen.findByRole('button', { name: /confirm and sign in/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/invalid or has expired/);
+  it('with no session /app asks for sign-in; a used link cannot be consumed twice', async () => {
+    testDb.signup({ invite_code: VALID_INVITE_CODE, workshop_name: 'W', email: 'o@example.test' });
+    const token = testDb.lastTokenFor('o@example.test')!;
+    testDb.consume(token);
+    expect(() => testDb.consume(token)).toThrow(/invalid or has expired/);
+    testDb.logout();
+    renderApp('/app');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('onboarding offers the fictional demo or a first import', async () => {

@@ -3,7 +3,7 @@ import re
 import pytest
 
 from garage.api import worker
-from .conftest import add_staff_and_sign_in, day, import_rows, make_workshop, sql, history
+from .conftest import add_staff_and_sign_in, available, day, import_rows, make_workshop, sql, history
 
 V = "/api/garage/v1"
 
@@ -81,7 +81,7 @@ def test_booking_and_import_flows_work_in_every_assessment_state(env, scenario):
     reg = "AB12CDE"
     env.dvsa.set_history(reg, history(reg, [("2023-01-01", "PASSED")]))
     if scenario == "available":
-        env.provider.result = ProviderResult("available", percent_rounded=30, band="medium", provider_name="t", provider_version="1")
+        env.provider.result = available(30)
     elif scenario == "unsupported":
         env.provider.result = ProviderResult("unsupported", reason="first_mot")
     elif scenario == "failed":

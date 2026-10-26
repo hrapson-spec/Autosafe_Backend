@@ -10,7 +10,7 @@ import csv
 import io
 import re
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 # dvsa_client.py:128 (VRM_BASIC_PATTERN) and :131-137 (UK_PATTERNS)
 VRM_BASIC = re.compile(r"^[A-Z0-9]{2,8}$")
@@ -38,7 +38,10 @@ HEADER_ALIASES = {
     "registration number": "registration", "plate": "registration",
     "date": "date", "appointment date": "date", "appointment_date": "date", "booking date": "date",
     "type": "type", "booking type": "type", "booking_type": "type", "job": "type", "job type": "type",
+    "time": "time", "appointment time": "time", "appointment_time": "time", "booking time": "time",
+    "slot": "time",
 }
+TIME_TOKEN = re.compile(r"^(\d{1,2})[:.h]?(\d{2})$")
 
 
 @dataclass
@@ -57,6 +60,7 @@ class ParsedRow:
     registration: str | None = None
     appointment_date: date | None = None
     booking_type: str | None = None
+    appointment_time: time | None = None      # optional; Europe/London wall-clock, display and ordering only
     errors: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
 
@@ -120,7 +124,17 @@ def normalise_type(raw) -> tuple[str | None, list[Issue]]:
     return t, []
 
 
-def validate_row(n: int, reg, d, typ, today: date, s) -> ParsedRow:
+def parse_time(raw) -> tuple[time | None, list[Issue]]:
+    """Optional. 24-hour H:MM, HH:MM, HHMM or HH.MM. Blank is fine; anything else unreadable is an error."""
+    if raw is None or not str(raw).strip():
+        return None, []
+    m = TIME_TOKEN.fullmatch(str(raw).strip())
+    if m and int(m[1]) < 24 and int(m[2]) < 60:
+        return time(int(m[1]), int(m[2])), []
+    return None, [Issue("invalid_time", "Use a 24-hour time such as 09:30, or leave it blank", "time")]
+
+
+def validate_row(n: int, reg, d, typ, today: date, s, tm=None) -> ParsedRow:
     row = ParsedRow(row_number=n)
     row.registration, e, w = normalise_registration(reg)
     row.errors += e
@@ -128,6 +142,8 @@ def validate_row(n: int, reg, d, typ, today: date, s) -> ParsedRow:
     row.appointment_date, e = parse_date(d, today, s.max_days_ahead, s.max_days_back)
     row.errors += e
     row.booking_type, e = normalise_type(typ)
+    row.errors += e
+    row.appointment_time, e = parse_time(tm)
     row.errors += e
     return row
 
@@ -138,8 +154,20 @@ def _split_paste_line(line: str) -> list[str]:
             return [p.strip() for p in line.split(sep)]
     m = re.match(r"^(.*?)\s+(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})\s+(.*)$", line)
     if m:
-        return [m[1].strip(), m[2], m[3].strip()]
+        return [m[1].strip(), m[2]] + m[3].split()
     return line.split()
+
+
+def _pull_time(tail: list[str]) -> tuple[str, str | None]:
+    """From the cells after the date: the first one that looks like a time is the time; the rest is the type."""
+    tm = None
+    rest = []
+    for c in tail:
+        if tm is None and TIME_TOKEN.fullmatch(c.strip()):
+            tm = c.strip()
+        else:
+            rest.append(c)
+    return " ".join(rest), tm
 
 
 def _is_header(cells: list[str]) -> bool:
@@ -148,12 +176,12 @@ def _is_header(cells: list[str]) -> bool:
 
 
 def raw_rows_from_request(fmt: str, content: str | None, rows: list[dict] | None, max_rows: int):
-    """Return list of (registration, date, type) raw cells. Raises ImportFormatError."""
+    """Return list of (registration, date, type, time) raw cells (time optional). Raises ImportFormatError."""
     out: list[tuple] = []
     if fmt == "manual":
         if rows is None:
             raise ImportFormatError("validation_error", "rows is required for manual entry")
-        out = [(r.get("registration"), r.get("date"), r.get("type")) for r in rows]
+        out = [(r.get("registration"), r.get("date"), r.get("type"), r.get("time")) for r in rows]
     elif fmt == "paste":
         if content is None:
             raise ImportFormatError("validation_error", "content is required for paste")
@@ -166,11 +194,15 @@ def raw_rows_from_request(fmt: str, content: str | None, rows: list[dict] | None
                 first = False
                 continue
             first = False
-            # Typed-out types with spaces ("service + MOT") end up after the date: rejoin the tail.
-            if len(cells) > 3:
-                cells = cells[:2] + [" ".join(cells[2:])]
+            # Typed-out types with spaces ("service + MOT") end up after the date: rejoin the tail, and take an
+            # optional time-of-day token out of it.
+            if len(cells) > 2:
+                typ, tm = _pull_time(cells[2:])
+                cells = cells[:2] + [typ or None]
+            else:
+                tm = None
             cells += [None] * (3 - len(cells))
-            out.append((cells[0], cells[1], cells[2]))
+            out.append((cells[0], cells[1], cells[2], tm))
     elif fmt == "csv":
         if content is None:
             raise ImportFormatError("validation_error", "content is required for csv")
@@ -188,7 +220,7 @@ def raw_rows_from_request(fmt: str, content: str | None, rows: list[dict] | None
                                             f"(missing: {', '.join(sorted(missing))})")
                 continue
             cell = {h: (rec[i].strip() if i < len(rec) else None) for i, h in enumerate(header) if h}
-            out.append((cell.get("registration"), cell.get("date"), cell.get("type")))
+            out.append((cell.get("registration"), cell.get("date"), cell.get("type"), cell.get("time")))
             if len(out) > max_rows:
                 break
     else:

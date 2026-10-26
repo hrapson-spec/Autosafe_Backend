@@ -110,7 +110,7 @@ class Env:
 @pytest.fixture()
 def make_env(dsn):
     def _make(**settings_kw):
-        settings = Settings(database_url=dsn, base_url=ORIGIN, allowed_origins=(ORIGIN,), app_url=ORIGIN + "/",
+        settings = Settings(allow_simulated_assessments=True, database_url=dsn, base_url=ORIGIN, allowed_origins=(ORIGIN,), app_url=ORIGIN + "/",
                             job_backoff_seconds=0, **settings_kw)
         db = dbmod.Database(dsn, 1, 12)
         fake = FakeDvsaClient()
@@ -204,6 +204,14 @@ def sql(env: Env, query: str, args=()):
         return cur.fetchall() if cur.description else None
 
 
+def available(percent: int = 25, score: float | None = None, **kw):
+    """A valid 'available' provider result (stub display policy; unrounded score defaults to the percent)."""
+    from garage.api.provider import STUB_DISPLAY_POLICY, ProviderResult
+    return ProviderResult(state="available", percent_rounded=percent,
+                          band=STUB_DISPLAY_POLICY.band_for(percent), provider_name="t", provider_version="1",
+                          display_policy=__import__("dataclasses").replace(STUB_DISPLAY_POLICY, display_state="simulated", suppression_reason=None, ranking_enabled=True), rank_score=percent / 100 if score is None else score, **kw)
+
+
 def history(reg: str, tests: list[tuple], **kw) -> DvsaHistory:
     """tests: (iso_date, 'PASSED'|'FAILED'[, test_number])"""
     ts = []
@@ -219,14 +227,30 @@ def day(offset: int):
     return london_date(utcnow()) + timedelta(days=offset)
 
 
+def commit_and_run(client: TestClient, import_id: str) -> dict:
+    """POST commit, run the import job(s) to completion, return the import record."""
+    from garage.api import worker
+    r = client.post(f"/api/garage/v1/imports/{import_id}/commit")
+    assert r.status_code in (200, 202), r.text
+    worker.drain(client.app.state.ctx, kinds=("import_commit",))
+    return client.get(f"/api/garage/v1/imports/{import_id}").json()
+
+
 def import_rows(client: TestClient, rows: list[tuple]):
-    """Preview + commit manual rows (reg, date, type). Returns commit JSON."""
+    """Preview + commit manual rows (reg, date, type[, time]) and run the import job to completion.
+    Returns the finished import record (GET /imports/{id})."""
+    from garage.api import worker
     prev = client.post("/api/garage/v1/imports/preview", json={
-        "format": "manual", "rows": [{"registration": r, "date": str(d), "type": t} for r, d, t in rows]})
+        "format": "manual", "rows": [{"registration": r[0], "date": str(r[1]), "type": r[2],
+                                      **({"time": r[3]} if len(r) > 3 else {})} for r in rows]})
     assert prev.status_code == 200, prev.text
-    com = client.post(f"/api/garage/v1/imports/{prev.json()['import_id']}/commit")
-    assert com.status_code == 200, com.text
-    return com.json()
+    iid = prev.json()["import_id"]
+    com = client.post(f"/api/garage/v1/imports/{iid}/commit")
+    assert com.status_code == 202, com.text
+    worker.drain(client.app.state.ctx, kinds=("import_commit",))
+    rec = client.get(f"/api/garage/v1/imports/{iid}")
+    assert rec.status_code == 200 and rec.json()["status"] == "committed", rec.text
+    return rec.json()
 
 
 def make_due(env: Env, kinds=("assess_booking", "outcome_check")):

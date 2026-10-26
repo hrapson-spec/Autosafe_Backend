@@ -1,6 +1,6 @@
 import type { BookingType } from '../api/types';
 import { newKey, parseBookingType, type DraftRow } from './importDraft';
-import { parseFlexibleDate } from './dates';
+import { parseFlexibleDate, parseTime } from './dates';
 import { normaliseRegistration } from './registration';
 
 /** Minimal RFC 4180 parser (quoted fields, doubled quotes, CRLF/LF). */
@@ -36,7 +36,7 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-type Column = 'registration' | 'date' | 'type';
+type Column = 'registration' | 'date' | 'type' | 'time';
 
 const HEADER_ALIASES: Record<string, Column> = {
   registration: 'registration',
@@ -51,6 +51,11 @@ const HEADER_ALIASES: Record<string, Column> = {
   booking_type: 'type',
   'test type': 'type',
   'booking type': 'type',
+  time: 'time',
+  appointment_time: 'time',
+  'appointment time': 'time',
+  'booking time': 'time',
+  slot: 'time',
 };
 
 export interface CsvParseResult {
@@ -85,11 +90,13 @@ export function parseImportCsv(text: string, defaults: { date: string; type: Boo
     const get = (c: Column) => (colIndex[c] === undefined ? '' : (cells[colIndex[c] as number] ?? '').trim());
     const rawDate = get('date');
     const rawType = get('type');
+    const rawTime = get('time');
     return {
       key: newKey(),
       registration: normaliseRegistration(get('registration')),
       date: rawDate === '' ? defaults.date : (parseFlexibleDate(rawDate) ?? rawDate),
       type: rawType === '' ? defaults.type : parseBookingType(rawType),
+      time: rawTime === '' ? '' : (parseTime(rawTime) ?? rawTime),
     };
   });
   return { rows, ignoredColumns: ignored, error: rows.length === 0 ? 'No data rows found.' : null };

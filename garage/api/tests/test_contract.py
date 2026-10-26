@@ -42,7 +42,7 @@ def test_request_bodies_match_pydantic_models(env):
             assert set(want.get("properties", {})) == set(got.get("properties", {})), (m, p)
             assert set(want.get("required", [])) == set(got.get("required", [])), (m, p)
             checked += 1
-    assert checked == 8
+    assert checked == 9
 
 
 def test_query_parameters_match(env):
@@ -65,3 +65,35 @@ def test_contract_states_and_ui_hint():
     text = CONTRACT.read_text().lower()
     assert not re.search(r"\b(customer_name|customer_email|phone_number|mobile)\b", text)
     assert not any(re.search(r"/(export|share|print)", p) for p in doc["paths"])      # pilot: staff-only, no export/share
+
+
+def test_t6b_gap_closures_are_in_the_contract():
+    doc = yaml.safe_load(CONTRACT.read_text())
+    paths, s = doc["paths"], doc["components"]["schemas"]
+    # 1 briefing, 2 feedback
+    assert "get" in paths["/bookings/{booking_id}/briefing"] and "put" in paths["/bookings/{booking_id}/feedback"]
+    assert s["Feedback"]["required"] == ["value", "briefing_version", "assessment_version", "updated_at"]
+    assert s["FeedbackValue"]["enum"] == ["helpful", "not_helpful"]
+    assert s["FeedbackReason"]["enum"] == ["inaccurate_records", "not_relevant", "too_long", "missing_information", "other"]
+    assert s["BriefingRecord"]["properties"]["result"]["enum"] == ["PASSED", "FAILED", "RECTIFIED"]
+    assert s["Briefing"]["properties"]["status"]["enum"] == ["ready", "pending", "unavailable"]
+    # 3 demo data is client-side only and says so
+    assert "NOT served by this API" in doc["info"]["description"] and not any("demo" in p.lower() for p in paths)
+    # 4 display policy, 5 rank_key (order-only; no score of any kind is in the contract)
+    assert set(s["DisplayPolicy"]["required"]) == {"rounding_pp", "band_edges", "band_labels", "provisional"}
+    assert s["DisplayPolicy"]["properties"]["rounding_pp"]["enum"] == [5]
+    assert "display_policy" in s["Assessment"]["properties"] and "rank_key" in s["Assessment"]["properties"]
+    names = {p.lower() for sch in s.values() for p in sch.get("properties", {})}
+    assert not [n for n in names if re.search(r"score|unrounded|probab|raw_percent", n) and n != "rank_key"]
+    # 6 appointment time on bookings, import rows (request and preview) and patch
+    assert "appointment_time" in s["Booking"]["properties"] and "time" in s["ImportRow"]["properties"]
+    assert "appointment_time" in s["PreviewRow"]["properties"]
+    assert "appointment_time" in paths["/bookings/{booking_id}"]["patch"]["requestBody"]["content"]["application/json"]["schema"]["properties"]
+    # 7 asynchronous commit with N of M
+    commit = paths["/imports/{import_id}/commit"]["post"]["responses"]
+    assert set(commit) >= {"200", "202", "404", "410"}
+    assert s["ImportRecord"]["properties"]["status"]["enum"] == ["previewed", "committing", "committed", "failed", "expired"]
+    assert set(s["ImportProgress"]["required"]) == {"processed", "total"} and "ImportResult" not in s
+    # 8 the server-rendered confirm page is the only one
+    assert "text/html" in paths["/auth/links/{token}"]["get"]["responses"]["200"]["content"]
+    assert not any("confirm" in p for p in paths)

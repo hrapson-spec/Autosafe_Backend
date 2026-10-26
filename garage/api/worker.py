@@ -13,10 +13,10 @@ from .timeutil import london_date
 log = logging.getLogger("garage.worker")
 
 
-def run_once(ctx: Ctx, worker_id: str | None = None) -> bool:
-    """Claim and run one due job. True if a job was processed."""
+def run_once(ctx: Ctx, worker_id: str | None = None, kinds: tuple | None = None) -> bool:
+    """Claim and run one due job (optionally only of these kinds). True if a job was processed."""
     wid = worker_id or f"{socket.gethostname()}:{os.getpid()}"
-    job = jobs.claim_one(ctx.db, wid, ctx.settings.job_visibility_timeout_seconds)
+    job = jobs.claim_one(ctx.db, wid, ctx.settings.job_visibility_timeout_seconds, kinds)
     if job is None:
         return False
     try:
@@ -28,9 +28,9 @@ def run_once(ctx: Ctx, worker_id: str | None = None) -> bool:
     return True
 
 
-def drain(ctx: Ctx, limit: int = 10_000, worker_id: str | None = None) -> int:
+def drain(ctx: Ctx, limit: int = 10_000, worker_id: str | None = None, kinds: tuple | None = None) -> int:
     n = 0
-    while n < limit and run_once(ctx, worker_id):
+    while n < limit and run_once(ctx, worker_id, kinds):
         n += 1
     return n
 

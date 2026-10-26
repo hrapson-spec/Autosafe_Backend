@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Booking } from '../api/types';
 import { groupBookings, stateOf } from '../lib/bookings';
-import { formatDay } from '../lib/dates';
+import { formatDay, formatTime } from '../lib/dates';
 import { BOOKING_TYPE_LABEL } from '../lib/importDraft';
 import { AssessmentStatus } from './AssessmentStatus';
 import { DECISION_LABEL } from './DecisionPanel';
@@ -15,7 +15,7 @@ const Row: React.FC<{ b: Booking; to: string; rank?: number; demo?: boolean }> =
     <div className="min-w-[8rem] flex-1">
       <Link to={to} className="text-lg font-bold tracking-wide underline">{b.registration}</Link>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-slate-700">{formatDay(b.appointment_date)}</span>
+        <span className="text-sm text-slate-700">{formatDay(b.appointment_date)}{formatTime(b.appointment_time) && <> <time data-testid="appointment-time">{formatTime(b.appointment_time)}</time></>}</span>
         <Chip>{BOOKING_TYPE_LABEL[b.booking_type]}</Chip>
         {b.rescheduled && <Chip tone="warn">Moved from {formatDay(b.original_appointment_date)}</Chip>}
         {demo && <Chip tone="warn">Fictional demo</Chip>}
@@ -53,7 +53,7 @@ export const BookingListView: React.FC<{ bookings: Booking[]; linkFor: (b: Booki
         id="sec-ranked"
         title="Initial MOTs, highest estimate first"
         count={g.ranked.length}
-        note="Each percentage is the estimated chance of failing or needing rectification during the MOT, rounded by the service. It is built from recorded MOT history and is not an inspection. Equal percentages are listed by date."
+        note="Each percentage is the estimated chance of failing or needing rectification during the MOT, rounded by the service. It is built from recorded MOT history and is not an inspection. Bookings with the same percentage are ordered by the service's finer ranking, which is not shown."
       >
         {g.ranked.length === 0
           ? <p className="mt-2 text-sm text-slate-700">No MOT bookings with an available estimate in this window.</p>

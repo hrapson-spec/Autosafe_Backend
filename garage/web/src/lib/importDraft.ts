@@ -1,6 +1,6 @@
 import type { BookingType, ImportRow, PreviewRow } from '../api/types';
 import { MAX_IMPORT_ROWS } from '../api/types';
-import { isIsoDate, parseFlexibleDate } from './dates';
+import { isIsoDate, parseFlexibleDate, parseTime } from './dates';
 import { isPlausibleRegistration, normaliseRegistration } from './registration';
 
 /** An editable preview row. Fields are strings while being edited. */
@@ -9,6 +9,8 @@ export interface DraftRow {
   registration: string;
   date: string;
   type: BookingType | '';
+  /** Optional appointment time as typed ("" = untimed). */
+  time: string;
 }
 
 let counter = 0;
@@ -18,7 +20,7 @@ export function newKey(): string {
 }
 
 export function emptyRow(date = '', type: BookingType | '' = 'mot'): DraftRow {
-  return { key: newKey(), registration: '', date, type };
+  return { key: newKey(), registration: '', date, type, time: '' };
 }
 
 export const BOOKING_TYPE_LABEL: Record<BookingType, string> = {
@@ -47,7 +49,7 @@ export function rowsFromPaste(text: string, date: string, type: BookingType): Dr
     .split(/[\n\r,;\t]+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => ({ key: newKey(), registration: normaliseRegistration(s), date, type }));
+    .map((s) => ({ key: newKey(), registration: normaliseRegistration(s), date, type, time: '' }));
 }
 
 export type RowKind = 'ok' | 'invalid' | 'duplicate';
@@ -63,6 +65,7 @@ export function checkDraft(rows: DraftRow[], server: PreviewRow[] | null): Map<s
     if (!isPlausibleRegistration(r.registration)) { kind = 'invalid'; messages.push('Registration looks wrong (2 to 8 letters or digits)'); }
     if (!isIsoDate(r.date)) { kind = 'invalid'; messages.push('Date must be a real date'); }
     if (r.type === '') { kind = 'invalid'; messages.push('Choose a booking type'); }
+    if (r.time.trim() !== '' && parseTime(r.time) === null) { kind = 'invalid'; messages.push('Time must be like 09:30, or left blank'); }
     if (kind === 'ok') {
       const k = `${normaliseRegistration(r.registration)}|${r.date}|${r.type}`;
       if (seen.has(k)) { kind = 'duplicate'; messages.push('Duplicate of an earlier row (same registration, date and type)'); }
@@ -81,7 +84,10 @@ export function checkDraft(rows: DraftRow[], server: PreviewRow[] | null): Map<s
 }
 
 export function toImportRows(rows: DraftRow[]): ImportRow[] {
-  return rows.map((r) => ({ registration: normaliseRegistration(r.registration), date: r.date, type: r.type }));
+  return rows.map((r) => ({
+    registration: normaliseRegistration(r.registration), date: r.date, type: r.type,
+    ...(r.time.trim() !== '' ? { time: parseTime(r.time) ?? r.time.trim() } : {}),
+  }));
 }
 
 export function tooManyRows(n: number): boolean {

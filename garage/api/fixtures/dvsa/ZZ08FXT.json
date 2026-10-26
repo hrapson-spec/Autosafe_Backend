@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 08",
+  "motTests": [
+    {
+      "completedDate": "2019-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-03-10",
+      "motTestNumber": "SYN08000",
+      "odometerUnit": "MI",
+      "odometerValue": "13096",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-03-11",
+      "motTestNumber": "SYN08010",
+      "odometerUnit": "MI",
+      "odometerValue": "20196",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-03-11",
+      "motTestNumber": "SYN08020",
+      "odometerUnit": "MI",
+      "odometerValue": "27296",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-03-11",
+      "motTestNumber": "SYN08030",
+      "odometerUnit": "MI",
+      "odometerValue": "34396",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-03-10",
+      "motTestNumber": "SYN08040",
+      "odometerUnit": "MI",
+      "odometerValue": "41496",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-03-11",
+      "motTestNumber": "SYN08050",
+      "odometerUnit": "MI",
+      "odometerValue": "48596",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-03-11",
+      "motTestNumber": "SYN08060",
+      "odometerUnit": "MI",
+      "odometerValue": "55696",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-03-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-03-11",
+      "motTestNumber": "SYN08070",
+      "odometerUnit": "MI",
+      "odometerValue": "62796",
+      "registrationAtTimeOfTest": "ZZ08FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ08FXT",
+  "registrationDate": "2016-01-01"
+}

@@ -4,9 +4,9 @@ Every private read/write goes through `Ctx.scoped(scope)`.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
-from . import auth_store, importing, serialize
+from . import auth_store, briefing, importing, ranking, serialize
 from .context import Ctx
 from .errors import ApiError, not_found
 from .scope import Scope
@@ -60,15 +60,19 @@ def _schedule_outcomes(ctx: Ctx, s, b: dict, now: datetime) -> None:
                   max_attempts=ctx.settings.job_max_attempts)
 
 
-def _hydrate(s, rows: list[dict]) -> list[dict]:
+def _hydrate(ctx, s, rows: list[dict]) -> list[dict]:
     ids = [r["id"] for r in rows]
     if not ids:
         return []
     a, d, o = s.latest_assessments(ids), s.latest_decisions(ids), s.latest_outcomes(ids)
-    return [serialize.booking(r, a.get(r["id"]), d.get(r["id"]), o.get(r["id"])) for r in rows]
+    return [serialize.booking(r, a.get(r["id"]), d.get(r["id"]), o.get(r["id"]), allow_simulated=ctx.settings.allow_simulated_assessments) for r in rows]
 
 
 # ------------------------------------------------------------------ imports
+def _hhmm(t) -> str | None:
+    return t.strftime("%H:%M") if t is not None else None
+
+
 def _classify(rows: list[importing.ParsedRow], existing: list[dict]) -> list[dict]:
     seen: dict[tuple, int] = {}
     out = []
@@ -79,11 +83,13 @@ def _classify(rows: list[importing.ParsedRow], existing: list[dict]) -> list[dic
     for r in rows:
         item = {"row_number": r.row_number, "registration": r.registration,
                 "appointment_date": r.appointment_date.isoformat() if r.appointment_date else None,
+                "appointment_time": _hhmm(r.appointment_time),
                 "booking_type": r.booking_type, "existing_booking_id": None, "duplicate_of_row": None,
                 "errors": [i.as_dict() for i in r.errors], "warnings": [i.as_dict() for i in r.warnings]}
         if not r.valid:
             item["status"] = "invalid"
         else:
+            # Identity is registration + date + type. A different time on the same key is the same booking.
             key = (r.registration, r.booking_type, r.appointment_date)
             if key in ex_index:
                 item["status"], item["existing_booking_id"] = "duplicate_existing", ex_index[key]
@@ -110,53 +116,102 @@ def preview_import(ctx: Ctx, scope: Scope, fmt: str, content, rows) -> dict:
         raw = importing.raw_rows_from_request(fmt, content, rows, s_.max_import_rows)
     except importing.ImportFormatError as e:
         raise ApiError(422, e.code, str(e))
-    parsed = [importing.validate_row(i + 1, *cells, london_date(now), s_) for i, cells in enumerate(raw)]
+    parsed = [importing.validate_row(i + 1, c[0], c[1], c[2], london_date(now), s_, c[3]) for i, c in enumerate(raw)]
     with ctx.scoped(scope) as s:
         keys = [(p.registration, p.appointment_date, p.booking_type) for p in parsed if p.valid]
         items = _classify(parsed, s.find_existing_bookings(keys))
         counts = _counts(items)
         rec = s.create_import(fmt, items, counts, now + timedelta(minutes=s_.preview_ttl_minutes))
     return {"import_id": rec["id"], "status": "previewed", "counts": counts, "rows": items,
-            "expires_at": london_iso(rec["expires_at"])}
+            "progress": None, "expires_at": london_iso(rec["expires_at"])}
 
 
-def commit_import(ctx: Ctx, scope: Scope, import_id: str) -> dict:
+def import_record(imp: dict, now: datetime, already_committed: bool | None = None) -> dict:
+    """The one JSON shape for an import in every state (preview, committing, committed, failed, expired)."""
+    expired = imp["status"] == "previewed" and imp["expires_at"] < now
+    status = "expired" if expired else imp["status"]
+    out = {"import_id": imp["id"], "status": status, "counts": imp["counts"], "rows": imp["rows"],
+           "progress": ({"processed": imp["progress_processed"], "total": imp["progress_total"]}
+                        if imp["progress_total"] is not None else None),
+           "expires_at": london_iso(imp["expires_at"]), "committed_at": london_iso(imp["committed_at"])}
+    if status == "committed" and imp["result"]:
+        out["created_booking_ids"] = imp["result"]["created_booking_ids"]
+    if status == "failed":
+        out["failure_reason"] = "The import stopped before it finished. Rows already added are kept; commit again to continue."
+    if already_committed is not None:
+        out["already_committed"] = already_committed
+    return out
+
+
+def commit_import(ctx: Ctx, scope: Scope, import_id: str) -> tuple[dict, int]:
+    """Queue the commit and return at once (202). The `import_commit` job creates the bookings in batches and
+    GET /imports/{id} reports N of M. Idempotent: committing again never adds a booking twice."""
     now = ctx.clock()
     with ctx.scoped(scope) as s:
         imp = s.get_import(import_id, lock=True)
         if imp is None:
             raise not_found("import")
         if imp["status"] == "committed":
-            return {**imp["result"], "already_committed": True}
-        if imp["expires_at"] < now:
+            return import_record(imp, now, already_committed=True), 200
+        if imp["status"] == "committing":
+            return import_record(imp, now, already_committed=False), 202
+        if imp["status"] == "previewed" and imp["expires_at"] < now:
             raise ApiError(410, "import_expired", "This preview has expired; preview the rows again")
+        total = sum(1 for r in imp["rows"] if r["status"] == "new")
+        imp = s.start_import_commit(import_id, total, now)
+        s.enqueue("import_commit", {"import_id": import_id}, dedupe_key=f"import:{import_id}",
+                  max_attempts=ctx.settings.job_max_attempts)
+        return import_record(imp, now, already_committed=False), 202
+
+
+def import_commit_batch(ctx: Ctx, workshop_id: str, import_id: str) -> str:
+    """One batch of the commit job (one transaction). Returns 'more', 'done' or 'skip'.
+    Raises LookupError when the import is not in this workshop (the worker treats that as a scope violation)."""
+    with ctx.scoped(Scope.system(workshop_id)) as s0:
+        head = s0.get_import(import_id)
+    if head is None:
+        raise LookupError("import not in workshop")
+    if head["status"] != "committing":
+        return "skip"
+    # Bookings are attributed to the member who pressed "commit".
+    scope = Scope(workshop_id=workshop_id, membership_id=head["commit_membership_id"], user_id=None, email=None,
+                  role="system")
+    now = head["commit_requested_at"]          # the import time for the R10 cutoff, stable across retries
+    with ctx.scoped(scope) as s:
+        imp = s.get_import(import_id, lock=True)
+        if imp["status"] != "committing":
+            return "skip"
         s.lock_bookings_write()
-        # Re-check against the database now: another import may have landed since the preview.
-        keys = [(r["registration"], date.fromisoformat(r["appointment_date"]), r["booking_type"])
-                for r in imp["rows"] if r["status"] == "new"]
-        existing = s.find_existing_bookings(keys)
-        ex = {(e["registration"], e["booking_type"], d): e["id"] for e in existing
-              for d in (e["import_key_date"], e["appointment_date"])}
-        rows, created = [], []
-        for r in imp["rows"]:
-            r = dict(r)
-            if r["status"] == "new":
-                d = date.fromisoformat(r["appointment_date"])
-                if (r["registration"], r["booking_type"], d) in ex:
-                    r["status"], r["existing_booking_id"] = "duplicate_existing", ex[(r["registration"], r["booking_type"], d)]
-                else:
-                    b = s.insert_booking(r["registration"], d, r["booking_type"], "import", import_id)
-                    if b is None:
-                        r["status"] = "duplicate_existing"
-                    else:
-                        created.append(b["id"])
-                        _plan_new_booking(ctx, s, b, "import", now)
-            rows.append(r)
+        rows = [dict(r) for r in imp["rows"]]
+        idx, processed = imp["progress_index"], imp["progress_processed"]
+        created = list((imp["result"] or {}).get("created_booking_ids", []))
+        handled = 0
+        while idx < len(rows) and handled < ctx.settings.import_commit_batch_size:
+            r = rows[idx]
+            idx += 1
+            if r["status"] != "new":
+                continue
+            handled += 1
+            processed += 1
+            d = date.fromisoformat(r["appointment_date"])
+            # Re-check now: another import or manual entry may have landed since the preview.
+            hit = [e for e in s.find_existing_bookings([(r["registration"], d, r["booking_type"])])
+                   if d in (e["import_key_date"], e["appointment_date"])]
+            if hit:
+                r["status"], r["existing_booking_id"] = "duplicate_existing", hit[0]["id"]
+                continue
+            tm = time.fromisoformat(r["appointment_time"]) if r.get("appointment_time") else None
+            b = s.insert_booking(r["registration"], d, r["booking_type"], "import", import_id, tm)
+            if b is None:
+                r["status"] = "duplicate_existing"
+                continue
+            created.append(b["id"])
+            _plan_new_booking(ctx, s, b, "import", now)
+        done = idx >= len(rows)
         counts = _counts(rows)
-        result = {"import_id": import_id, "status": "committed", "counts": counts, "created_booking_ids": created,
-                  "committed_at": london_iso(now)}
-        s.mark_import_committed(import_id, rows, counts, result)
-    return {**result, "already_committed": False}
+        result = {"import_id": import_id, "created_booking_ids": created}
+        s.advance_import(import_id, rows, counts, idx, processed, result, done)
+        return "done" if done else "more"
 
 
 def get_import(ctx: Ctx, scope: Scope, import_id: str) -> dict:
@@ -164,19 +219,13 @@ def get_import(ctx: Ctx, scope: Scope, import_id: str) -> dict:
         imp = s.get_import(import_id)
         if imp is None:
             raise not_found("import")
-    expired = imp["status"] == "previewed" and imp["expires_at"] < ctx.clock()
-    out = {"import_id": imp["id"], "status": "expired" if expired else imp["status"], "counts": imp["counts"],
-           "rows": imp["rows"], "expires_at": london_iso(imp["expires_at"]),
-           "committed_at": london_iso(imp["committed_at"])}
-    if imp["result"]:
-        out["created_booking_ids"] = imp["result"]["created_booking_ids"]
-    return out
+    return import_record(imp, ctx.clock())
 
 
 # ----------------------------------------------------------------- bookings
-def create_booking(ctx: Ctx, scope: Scope, reg, d, typ) -> tuple[dict, bool]:
+def create_booking(ctx: Ctx, scope: Scope, reg, d, typ, tm=None) -> tuple[dict, bool]:
     now = ctx.clock()
-    row = importing.validate_row(1, reg, d, typ, london_date(now), ctx.settings)
+    row = importing.validate_row(1, reg, d, typ, london_date(now), ctx.settings, tm)
     if not row.valid:
         raise ApiError(422, "validation_error", "invalid booking",
                        {"errors": [i.as_dict() for i in row.errors]})
@@ -184,16 +233,34 @@ def create_booking(ctx: Ctx, scope: Scope, reg, d, typ) -> tuple[dict, bool]:
         s.lock_bookings_write()
         for e in s.find_existing_bookings([(row.registration, row.appointment_date, row.booking_type)]):
             if row.appointment_date in (e["import_key_date"], e["appointment_date"]):
-                return _hydrate(s, [s.get_booking(e["id"])])[0], False
-        b = s.insert_booking(row.registration, row.appointment_date, row.booking_type, "manual")
+                return _hydrate(ctx, s, [s.get_booking(e["id"])])[0], False
+        b = s.insert_booking(row.registration, row.appointment_date, row.booking_type, "manual",
+                             appointment_time=row.appointment_time)
         _plan_new_booking(ctx, s, b, "manual_entry", now)
-        return _hydrate(s, [b])[0], True
+        return _hydrate(ctx, s, [b])[0], True
 
 
 def list_bookings(ctx: Ctx, scope: Scope, **filters) -> dict:
     with ctx.scoped(scope) as s:
         rows, nxt = s.list_bookings(**filters)
-        return {"items": _hydrate(s, rows), "next_cursor": nxt}
+        # Rank the complete filtered cohort before applying chronological pagination.
+        # Detail endpoints intentionally carry no comparable rank keys.
+        cohort, _ = s.list_bookings(**{**filters, "cursor": None, "limit": None})
+        assessments = s.latest_assessments([b["id"] for b in cohort]) if cohort else {}
+        scores = {}
+        for b in cohort:
+            a = assessments.get(b["id"])
+            if a is None or b["status"] != "active" or b["booking_type"] not in SUPPORTED_FOR_ASSESSMENT:
+                continue
+            shown = serialize.assessment_json(a, allow_simulated=ctx.settings.allow_simulated_assessments)
+            if shown["state"] == "available" and (shown["display_policy"] or {}).get("ranking_enabled") is True and a["score_unrounded"] is not None:
+                scores[b["id"]] = a["score_unrounded"]
+        keys = ranking.ordinal_keys(scores)
+        items = _hydrate(ctx, s, rows)
+        for b in items:
+            if b["assessment"]:
+                b["assessment"]["rank_key"] = keys.get(b["id"])
+        return {"items": items, "next_cursor": nxt}
 
 
 def get_booking(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
@@ -201,11 +268,22 @@ def get_booking(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
         b = s.get_booking(booking_id)
         if b is None:
             raise not_found("booking")
-        return _hydrate(s, [b])[0]
+        return _hydrate(ctx, s, [b])[0]
 
 
-def update_booking(ctx: Ctx, scope: Scope, booking_id: str, new_date: date | None, cancel: bool) -> dict:
+_UNSET = object()
+
+
+def update_booking(ctx: Ctx, scope: Scope, booking_id: str, new_date: date | None, cancel: bool,
+                   new_time=_UNSET) -> dict:
+    """`new_time`: _UNSET leaves it alone; None clears it; a string sets it (HH:MM)."""
     now = ctx.clock()
+    parsed_time = None
+    if new_time is not _UNSET and new_time is not None:
+        parsed_time, errs = importing.parse_time(new_time)
+        if errs or parsed_time is None:
+            raise ApiError(422, "validation_error", "invalid time", {"errors": [i.as_dict() for i in errs] or [
+                {"code": "invalid_time", "field": "appointment_time", "message": "Use a 24-hour time such as 09:30"}]})
     with ctx.scoped(scope) as s:
         b = s.get_booking(booking_id, lock=True)
         if b is None:
@@ -225,18 +303,22 @@ def update_booking(ctx: Ctx, scope: Scope, booking_id: str, new_date: date | Non
                 b = s.reschedule_booking(booking_id, new_date)
                 s.add_event(booking_id, "rescheduled", {"from": old.isoformat(), "to": new_date.isoformat()})
                 _schedule_outcomes(ctx, s, b, now)
+        if new_time is not _UNSET and parsed_time != b["appointment_time"]:
+            old = b["appointment_time"]
+            b = s.set_appointment_time(booking_id, parsed_time)
+            s.add_event(booking_id, "rescheduled", {"time_from": _hhmm(old), "time_to": _hhmm(parsed_time)})
         if cancel:
             s.cancel_open_outcomes(booking_id, "booking_cancelled")
             b = s.cancel_booking(booking_id)
             s.add_event(booking_id, "cancelled")
-        return _hydrate(s, [b])[0]
+        return _hydrate(ctx, s, [b])[0]
 
 
 def list_assessments(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
     with ctx.scoped(scope) as s:
         if s.get_booking(booking_id) is None:
             raise not_found("booking")
-        return {"items": [serialize.assessment_json(a) for a in s.list_assessments(booking_id)]}
+        return {"items": [serialize.assessment_json(a, allow_simulated=ctx.settings.allow_simulated_assessments) for a in s.list_assessments(booking_id)]}
 
 
 def refresh_assessment(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
@@ -254,7 +336,7 @@ def refresh_assessment(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
             reason = "service_only" if b["booking_type"] == "service" else "retest_booking"
             cd, ca = _cutoff(now, b["appointment_date"])
             a = s.create_assessment(booking_id, "refresh", cd, ca, state="unsupported", reason=reason)
-            return serialize.assessment_json(a)
+            return serialize.assessment_json(a, allow_simulated=ctx.settings.allow_simulated_assessments)
         if s.usage(london_date(now)) >= ctx.settings.fair_use_assessments_per_day:
             raise ApiError(429, "fair_use_limit",
                            f"Fair-use limit of {ctx.settings.fair_use_assessments_per_day} assessments per day reached")
@@ -262,7 +344,7 @@ def refresh_assessment(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
         a = s.create_assessment(booking_id, "refresh", cd, ca)
         s.enqueue("assess_booking", {"assessment_id": a["id"]}, dedupe_key=f"assess:{a['id']}",
                   max_attempts=ctx.settings.job_max_attempts)
-        return serialize.assessment_json(a)
+        return serialize.assessment_json(a, allow_simulated=ctx.settings.allow_simulated_assessments)
 
 
 def list_outcomes(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
@@ -270,6 +352,66 @@ def list_outcomes(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
         if s.get_booking(booking_id) is None:
             raise not_found("booking")
         return {"items": [serialize.outcome_json(o) for o in s.list_outcomes(booking_id)]}
+
+
+# ---------------------------------------------------------------- briefing
+FEEDBACK_VALUES = ("helpful", "not_helpful")
+FEEDBACK_REASONS = ("inaccurate_records", "not_relevant", "too_long", "missing_information", "other")
+
+
+def _feedback_json(fb: dict | None, assessment_version: int | None = None) -> dict | None:
+    if fb is None:
+        return None
+    return {"value": fb["value"], "reason_code": fb["reason_code"], "briefing_version": fb["briefing_version"],
+            "assessment_version": assessment_version, "updated_at": london_iso(fb["updated_at"])}
+
+
+def get_briefing(ctx: Ctx, scope: Scope, booking_id: str) -> dict:
+    """Rule-generated briefing from the stored source snapshot of the newest completed assessment version.
+    It does not depend on whether the model produced an estimate (or exists)."""
+    with ctx.scoped(scope) as s:
+        if s.get_booking(booking_id) is None:
+            raise not_found("booking")
+        src = s.latest_briefing_source(booking_id)
+        versions = s.list_assessments(booking_id)
+        fb = s.get_feedback(booking_id, src["assessment_id"]) if src else None
+    base = {"booking_id": booking_id, "rule_table_version": briefing.RULE_TABLE_VERSION, "reason": None,
+            "reason_text": None, "assessment_id": None, "assessment_version": None, "briefing_version": None,
+            "history_cutoff_date": None, "history_cutoff_at": None, "source": None, "summary": None,
+            "source_records": [], "evidence_gaps": [], "follow_up_questions": [], "feedback": None}
+    if src is None:
+        a = versions[0] if versions else None
+        pending = a is None or a["state"] == "pending"
+        reason = a["reason"] if a else None
+        return {**base, "status": "pending" if pending else "unavailable", "reason": reason,
+                "reason_text": (a["reason_text"] or serialize.REASON_TEXT.get(reason)) if a else None}
+    out = briefing.build(src["history"], src["upstream_status"], src["content_sha256"], src["input_cutoff_date"],
+                         src["input_cutoff_at"])
+    return {**base, **out, "status": "ready", "assessment_id": src["assessment_id"], "assessment_version": src["version"],
+            "history_cutoff_at": london_iso(src["input_cutoff_at"]),
+            "source": {"snapshot_sha256": src["content_sha256"], "upstream_status": src["upstream_status"],
+                       "fetched_at": london_iso(src["fetched_at"])},
+            "feedback": _feedback_json(fb, src["version"])}
+
+
+def put_feedback(ctx: Ctx, scope: Scope, booking_id: str, value: str, reason_code: str | None,
+                 briefing_version: str | None) -> dict:
+    """One feedback row per member per booking version (assessment version); sending again replaces it."""
+    if value not in FEEDBACK_VALUES or (reason_code is not None and reason_code not in FEEDBACK_REASONS) \
+            or (reason_code is not None and value != "not_helpful"):
+        raise ApiError(422, "validation_error", "invalid feedback")
+    with ctx.scoped(scope) as s:
+        if s.get_booking(booking_id) is None:
+            raise not_found("booking")
+        src = s.latest_briefing_source(booking_id)
+        if src is None:
+            raise ApiError(409, "briefing_not_ready", "There is no briefing to give feedback on yet")
+        current = briefing.briefing_version(src["content_sha256"])
+        if briefing_version is not None and briefing_version != current:
+            raise ApiError(409, "briefing_version_changed",
+                           "The briefing was regenerated; reload it before giving feedback")
+        row = s.put_feedback(booking_id, src["assessment_id"], value, reason_code, current)
+    return _feedback_json(row, src["version"])
 
 
 # ---------------------------------------------------------------- decisions

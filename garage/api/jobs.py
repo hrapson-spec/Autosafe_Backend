@@ -28,7 +28,7 @@ class Fail:
     error: str
 
 
-def claim_one(db, worker_id: str, visibility_timeout_s: int):
+def claim_one(db, worker_id: str, visibility_timeout_s: int, kinds: tuple | None = None):
     with db.tx() as cur:
         # Recover jobs whose worker died mid-run.
         cur.execute("""UPDATE jobs SET status = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'queued' END,
@@ -38,8 +38,9 @@ def claim_one(db, worker_id: str, visibility_timeout_s: int):
                     (visibility_timeout_s,))
         cur.execute("""UPDATE jobs SET status = 'running', attempts = attempts + 1, locked_at = now(), locked_by = %s
                         WHERE id = (SELECT id FROM jobs WHERE status = 'queued' AND run_at <= now()
+                                      AND (%s::text[] IS NULL OR kind = ANY(%s::text[]))
                                     ORDER BY run_at, id FOR UPDATE SKIP LOCKED LIMIT 1)
-                    RETURNING *""", (worker_id,))
+                    RETURNING *""", (worker_id, list(kinds) if kinds else None, list(kinds) if kinds else None))
         return cur.fetchone()
 
 

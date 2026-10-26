@@ -71,3 +71,15 @@ export function parseFlexibleDate(raw: string): string | null {
   const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   return isIsoDate(iso) ? iso : null;
 }
+
+/** "09:30" (the service sends HH:MM 24-hour London wall-clock) -> "09:30"; anything else -> null. */
+export function formatTime(hhmm: string | null | undefined): string | null {
+  return hhmm && /^([01]\d|2[0-3]):[0-5]\d$/.test(hhmm) ? hhmm : null;
+}
+
+/** Accepts 9:30, 09:30, 0930, 09.30; returns "HH:MM" or null. Blank is not a time. */
+export function parseTime(raw: string): string | null {
+  const m = /^(\d{1,2})[:.]?(\d{2})$/.exec(raw.trim());
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+  return `${m[1].padStart(2, '0')}:${m[2]}`;
+}

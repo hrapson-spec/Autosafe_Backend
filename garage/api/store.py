@@ -6,11 +6,15 @@ scans the package to keep it that way.
 from __future__ import annotations
 
 import base64
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from psycopg2.extras import Json
 
 from .scope import Scope
+
+
+# Within a date: timed bookings in time order, then untimed ones; `id` breaks ties (keyset pagination).
+_TIME_KEY = "coalesce(b.appointment_time, time '24:00')"
 
 
 class Scoped:
@@ -128,11 +132,28 @@ class Scoped:
         return self._one("SELECT * FROM imports WHERE workshop_id = %s AND id = %s" + (" FOR UPDATE" if lock else ""),
                          (self.wid, import_id))
 
-    def mark_import_committed(self, import_id: str, rows: list, counts: dict, result: dict):
+    def start_import_commit(self, import_id: str, total: int, requested_at: datetime):
+        """previewed -> committing (progress 0 of `total`), or failed -> committing (progress kept; resumes)."""
         return self._one(
-            """UPDATE imports SET status = 'committed', rows = %s, counts = %s, result = %s, committed_at = now()
-                WHERE workshop_id = %s AND id = %s RETURNING *""",
-            (Json(rows), Json(counts), Json(result), self.wid, import_id))
+            """UPDATE imports SET status = 'committing', last_error = NULL, commit_requested_at = %s,
+                      commit_membership_id = %s,
+                      progress_total = coalesce(progress_total, %s)
+                WHERE workshop_id = %s AND id = %s AND status IN ('previewed', 'failed') RETURNING *""",
+            (requested_at, self.scope.membership_id, total, self.wid, import_id))
+
+    def advance_import(self, import_id: str, rows: list, counts: dict, index: int, processed: int, result: dict,
+                       done: bool):
+        return self._one(
+            """UPDATE imports SET rows = %s, counts = %s, progress_index = %s, progress_processed = %s, result = %s,
+                      status = CASE WHEN %s THEN 'committed' ELSE status END,
+                      committed_at = CASE WHEN %s THEN now() ELSE committed_at END
+                WHERE workshop_id = %s AND id = %s AND status = 'committing' RETURNING *""",
+            (Json(rows), Json(counts), index, processed, Json(result), done, done, self.wid, import_id))
+
+    def fail_import(self, import_id: str, error: str):
+        return self._one("UPDATE imports SET status = 'failed', last_error = %s "
+                         "WHERE workshop_id = %s AND id = %s AND status = 'committing' RETURNING *",
+                         (error[:500], self.wid, import_id))
 
     def lock_bookings_write(self) -> None:
         """Serialise booking creation per workshop (import commit / manual entry)."""
@@ -150,15 +171,20 @@ class Scoped:
                       (SELECT k.r, k.t FROM unnest(%s::text[], %s::text[]) AS k(r, t))""",
             (self.wid, [k[0] for k in keys], [k[2] for k in keys]))
 
-    def insert_booking(self, registration, appointment_date, booking_type, source, import_id=None):
+    def insert_booking(self, registration, appointment_date, booking_type, source, import_id=None,
+                       appointment_time=None):
         return self._one(
             """INSERT INTO bookings (workshop_id, registration, appointment_date, import_key_date, booking_type,
-                                     source, import_id, created_by_membership_id)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                                     source, import_id, created_by_membership_id, appointment_time)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (workshop_id, registration, import_key_date, booking_type) DO NOTHING
                RETURNING *""",
             (self.wid, registration, appointment_date, appointment_date, booking_type, source, import_id,
-             self.scope.membership_id))
+             self.scope.membership_id, appointment_time))
+
+    def set_appointment_time(self, booking_id: str, appointment_time):
+        return self._one("UPDATE bookings SET appointment_time = %s WHERE workshop_id = %s AND id = %s RETURNING *",
+                         (appointment_time, self.wid, booking_id))
 
     def get_booking(self, booking_id: str, lock: bool = False):
         return self._one("SELECT * FROM bookings WHERE workshop_id = %s AND id = %s" + (" FOR UPDATE" if lock else ""),
@@ -198,14 +224,15 @@ class Scoped:
                          "a.booking_id = b.id ORDER BY a.version DESC LIMIT 1) = %s")
             args.append(assessment_state)
         if cursor:
-            d, i = decode_cursor(cursor)
-            where.append("(b.appointment_date, b.id) > (%s, %s)"); args += [d, i]
+            d, t, i = decode_cursor(cursor)
+            where.append(f"(b.appointment_date, {_TIME_KEY}, b.id) > (%s, %s::time, %s::uuid)"); args += [d, t, i]
         rows = self._all(f"SELECT b.* FROM bookings b WHERE {' AND '.join(where)} "
-                         "ORDER BY b.appointment_date, b.id LIMIT %s", tuple(args) + (limit + 1,))
+                         f"ORDER BY b.appointment_date, {_TIME_KEY}, b.id" + (" LIMIT %s" if limit is not None else ""),
+                         tuple(args) + ((limit + 1,) if limit is not None else ()))
         next_cursor = None
-        if len(rows) > limit:
+        if limit is not None and len(rows) > limit:
             rows = rows[:limit]
-            next_cursor = encode_cursor(rows[-1]["appointment_date"], rows[-1]["id"])
+            next_cursor = encode_cursor(rows[-1]["appointment_date"], rows[-1]["appointment_time"], rows[-1]["id"])
         return rows, next_cursor
 
     def latest_assessments(self, booking_ids: list[str]) -> dict:
@@ -260,15 +287,46 @@ class Scoped:
                          (reason, reason_text, retry_at, self.wid, assessment_id))
 
     def complete_assessment(self, assessment_id, state, reason=None, reason_text=None, result=None,
-                            evidence=None, snapshot_id=None, provider_name=None, provider_version=None):
+                            evidence=None, snapshot_id=None, provider_name=None, provider_version=None,
+                            display_policy=None, rank_key=None, score_unrounded=None):
         return self._one(
             """UPDATE assessments SET state = %s, reason = %s, reason_text = %s, result = %s, evidence = %s,
                       snapshot_id = %s, provider_name = %s, provider_version = %s, retry_at = NULL,
-                      completed_at = now()
+                      display_policy = %s, rank_key = %s, score_unrounded = %s, completed_at = now()
                 WHERE workshop_id = %s AND id = %s AND state = 'pending' RETURNING *""",
             (state, reason, reason_text, Json(result) if result is not None else None,
              Json(evidence) if evidence is not None else None, snapshot_id, provider_name, provider_version,
+             Json(display_policy) if display_policy is not None else None, rank_key, score_unrounded,
              self.wid, assessment_id))
+
+    def latest_briefing_source(self, booking_id: str):
+        """Newest COMPLETED assessment version that has a stored source snapshot, with that snapshot."""
+        return self._one(
+            """SELECT a.id AS assessment_id, a.version, a.state, a.input_cutoff_date, a.input_cutoff_at,
+                      sn.id AS snapshot_id, sn.history, sn.content_sha256, sn.upstream_status, sn.fetched_at
+                 FROM assessments a
+                 JOIN source_snapshots sn ON sn.workshop_id = a.workshop_id AND sn.id = a.snapshot_id
+                WHERE a.workshop_id = %s AND a.booking_id = %s AND a.state <> 'pending'
+                ORDER BY a.version DESC LIMIT 1""", (self.wid, booking_id))
+
+    # ----------------------------------------------------------- feedback
+    def get_feedback(self, booking_id: str, assessment_id: str):
+        """The calling member's own feedback for this booking version (never anyone else's)."""
+        return self._one(
+            """SELECT value, reason_code, briefing_version, updated_at FROM briefing_feedback
+                WHERE workshop_id = %s AND booking_id = %s AND assessment_id = %s AND membership_id = %s""",
+            (self.wid, booking_id, assessment_id, self.scope.membership_id))
+
+    def put_feedback(self, booking_id: str, assessment_id: str, value: str, reason_code, briefing_version: str):
+        return self._one(
+            """INSERT INTO briefing_feedback (workshop_id, booking_id, assessment_id, membership_id, value,
+                                              reason_code, briefing_version)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)
+               ON CONFLICT (workshop_id, booking_id, assessment_id, membership_id)
+               DO UPDATE SET value = EXCLUDED.value, reason_code = EXCLUDED.reason_code,
+                             briefing_version = EXCLUDED.briefing_version, updated_at = now()
+               RETURNING value, reason_code, briefing_version, updated_at""",
+            (self.wid, booking_id, assessment_id, self.scope.membership_id, value, reason_code, briefing_version))
 
     # ---------------------------------------------------------- snapshots
     def insert_snapshot(self, booking_id, kind, upstream_status, history: dict | None, sha: str):
@@ -352,16 +410,19 @@ class Scoped:
                          (self.wid, dedupe_key))
 
 
-def encode_cursor(d: date, i: str) -> str:
-    return base64.urlsafe_b64encode(f"{d.isoformat()}|{i}".encode()).decode()
+def encode_cursor(d: date, t, i: str) -> str:
+    tt = t.isoformat() if t is not None else "24:00:00"
+    return base64.urlsafe_b64encode(f"{d.isoformat()}|{tt}|{i}".encode()).decode()
 
 
 def decode_cursor(c: str):
     from .errors import ApiError
     try:
-        d, i = base64.urlsafe_b64decode(c.encode()).decode().split("|")
+        d, t, i = base64.urlsafe_b64decode(c.encode()).decode().split("|")
         import uuid
         uuid.UUID(i)
-        return date.fromisoformat(d), i
+        if t != "24:00:00":
+            time.fromisoformat(t)
+        return date.fromisoformat(d), t, i
     except Exception:
         raise ApiError(422, "validation_error", "invalid cursor")

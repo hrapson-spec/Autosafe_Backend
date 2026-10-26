@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 33",
+  "motTests": [
+    {
+      "completedDate": "2019-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-07-15",
+      "motTestNumber": "SYN33000",
+      "odometerUnit": "MI",
+      "odometerValue": "16521",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-07-16",
+      "motTestNumber": "SYN33010",
+      "odometerUnit": "MI",
+      "odometerValue": "23621",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-07-16",
+      "motTestNumber": "SYN33020",
+      "odometerUnit": "MI",
+      "odometerValue": "30721",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-07-16",
+      "motTestNumber": "SYN33030",
+      "odometerUnit": "MI",
+      "odometerValue": "37821",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-07-15",
+      "motTestNumber": "SYN33040",
+      "odometerUnit": "MI",
+      "odometerValue": "44921",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-07-16",
+      "motTestNumber": "SYN33050",
+      "odometerUnit": "MI",
+      "odometerValue": "52021",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-07-16",
+      "motTestNumber": "SYN33060",
+      "odometerUnit": "MI",
+      "odometerValue": "59121",
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-07-16T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2027-07-16",
+      "motTestNumber": "SYN33070",
+      "odometerUnit": "MI",
+      "odometerValue": null,
+      "registrationAtTimeOfTest": "ZZ33FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ33FXT",
+  "registrationDate": "2016-01-01"
+}

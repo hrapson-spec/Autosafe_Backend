@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderApp, seedOwner } from '../testUtils';
-import { testDb } from '../mocks/server';
+import { http, HttpResponse } from 'msw';
+import { API_BASE } from '../api/client';
+import { server, testDb } from '../mocks/server';
 import { addDays, formatDay, todayLondon } from '../lib/dates';
 
 describe('booking list', () => {
@@ -107,17 +109,46 @@ describe('booking list', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/daily assessment limit/);
   });
 
-  it('copes with a service that does not provide the proposed briefing or feedback endpoints', async () => {
+  it('a briefing that cannot be loaded does not hide the booking: it becomes an evidence gap, and feedback failures are reported', async () => {
     seedOwner({ demo: true });
-    testDb.supportsExtras = false;
-    const u = userEvent.setup();
+    server.use(
+      http.get(`${API_BASE}/bookings/:id/briefing`, () => HttpResponse.json({ error: { code: 'upstream_unavailable', message: 'down' } }, { status: 503 })),
+      http.put(`${API_BASE}/bookings/:id/feedback`, () => HttpResponse.json({ error: { code: 'briefing_not_ready', message: 'no' } }, { status: 409 })),
+    );
     const id = testDb.s.bookings.find((b) => b.registration === 'DEMO01')!.id;
     renderApp(`/app/bookings/${id}`);
     expect(await screen.findByText('45%')).toBeInTheDocument();
     expect(screen.getByText(/No follow-up questions are available/)).toBeInTheDocument();
-    expect(screen.getByText(/not available from the service yet/)).toBeInTheDocument();
-    await u.click(screen.getByRole('button', { name: 'Helpful' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not save your feedback/);
+    expect(screen.getByText(/briefing could not be loaded/)).toBeInTheDocument();
+  });
+
+  it('loads the briefing from the service and saves feedback against its briefing version', async () => {
+    seedOwner({ demo: true });
+    const u = userEvent.setup();
+    const id = testDb.s.bookings.find((b) => b.registration === 'DEMO01')!.id;
+    const sent: unknown[] = [];
+    server.use(http.put(`${API_BASE}/bookings/:id/feedback`, async ({ request, params }) => {
+      const body = await request.json();
+      sent.push(body);
+      return HttpResponse.json(testDb.setFeedback(String(params.id), body as never));
+    }));
+    renderApp(`/app/bookings/${id}`);
+    expect(await screen.findByTestId('follow-ups')).toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Not helpful' }));
+    await screen.findByRole('status');
+    await u.selectOptions(screen.getByLabelText(/What was wrong/), 'not_relevant');
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[0]).toEqual({ value: 'not_helpful', reason_code: null, briefing_version: 'demo0000demo0000.briefing-rules-1' });
+    expect(sent[1]).toMatchObject({ value: 'not_helpful', reason_code: 'not_relevant' });
+    expect(Object.values(testDb.s.feedback)[0]).toMatchObject({ value: 'not_helpful', reason_code: 'not_relevant', assessment_version: 1 });
+  });
+
+  it('the member\'s saved feedback is shown again after a reload', async () => {
+    seedOwner({ demo: true });
+    const id = testDb.s.bookings.find((b) => b.registration === 'DEMO01')!.id;
+    testDb.setFeedback(id, { value: 'helpful' });
+    renderApp(`/app/bookings/${id}`);
+    expect(await screen.findByRole('button', { name: 'Helpful' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('the booking flow does not depend on the estimate: decisions work for unavailable, unsupported, failed and retest bookings', async () => {
