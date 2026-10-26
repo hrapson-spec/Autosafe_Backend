@@ -481,6 +481,21 @@ export class MockDb {
     this.save();
   }
 
+  /** Invented policy-shape examples only; no model is qualified by this browser fixture. */
+  seedBandPriorityCases() {
+    this.requireUser();
+    this.seedDemoBookings();
+    this.s.bookings = this.s.bookings.filter(b => ['DEMO01', 'DEMO02', 'DEMO04'].includes(b.registration));
+    for (const b of this.s.bookings) {
+      const a = this.s.assessments[b.id][0];
+      if (b.registration === 'DEMO04') continue;
+      this.s.assessments[b.id][0] = { ...a, result: { band: b.registration === 'DEMO01' ? 'high' : 'medium', percent_rounded: null },
+        display_policy: { ...a.display_policy!, display_state: 'bands', provisional: false, operational_qualified: true,
+          model_version: 'synthetic-policy-shape-only', suppression_reason: null, ranking_enabled: b.registration === 'DEMO01' } };
+    }
+    this.save();
+  }
+
   // ---- briefing and feedback ------------------------------------------
   /** Same states as the real endpoint. Real-shape content comes from the backend engine's output (briefingFixtures.json). */
   briefing(id: string): Briefing {

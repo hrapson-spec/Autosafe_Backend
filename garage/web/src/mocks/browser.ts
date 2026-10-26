@@ -13,6 +13,7 @@ export async function startMockApi() {
     /** Stands in for the server-rendered confirm page's POST .../consume (the mock layer cannot render that page). */
     consumeToken: (token: string) => db.consume(token),
     seedDemoBookings: () => db.seedDemoBookings(),
+    seedBandPriorityCases: () => db.seedBandPriorityCases(),
     fastAssessments: () => { db.pendingPolls = 1; },
   };
 }

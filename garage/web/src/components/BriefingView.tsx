@@ -74,7 +74,7 @@ export const BriefingView: React.FC<{
             )}
           </div>
         ) : qualifiedBands(a) ? (
-          <p className="mt-2">{qualifiedBands(a)} band only. Numeric estimates and operational ordering are unavailable unless explicitly qualified by the service policy.</p>
+          <p className="mt-2">{qualifiedBands(a)} band. A percentage is not available for this assessment.</p>
         ) : (
           <div className="mt-2"><AssessmentStatus assessment={a} /></div>
         )}

@@ -232,3 +232,18 @@ describe('BriefingView on real engine output', () => {
     }
   });
 });
+
+
+it.each([true, false])('bands-only briefing hides numeric percentages and ranges when ranking permission is %s', ranking => {
+  const b = demoBookings('2026-10-26')[0];
+  b.assessment = { ...b.assessment!, result: { band: 'high', percent_rounded: 95 }, rank_key: 3,
+    display_policy: { ...b.assessment!.display_policy!, display_state: 'bands', provisional: false, operational_qualified: true,
+      model_version: 'synthetic-policy-shape-only', suppression_reason: null, ranking_enabled: ranking } };
+  setup(0, { booking: b, versions: [b.assessment, { ...b.assessment, id: 'older', version: 2 }] });
+  const card = within(screen.getByRole('region', { name: 'Estimate' }));
+  expect(card.getByText(/High band\. A percentage/)).toBeVisible();
+  expect(card.getByText(/A percentage is not available/)).toBeVisible();
+  expect(card.queryByTestId('band-legend')).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Estimate' })).not.toHaveTextContent('%');
+  expect(card.queryByText(/95/)).not.toBeInTheDocument();
+});

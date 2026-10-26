@@ -67,3 +67,12 @@ it('qualified bands-only policy hides percentages and shadow hides all operation
   expect(qualifiedBands({ ...bands, display_policy: { ...bands.display_policy, provisional: true } })).toBeNull();
   expect(shownEstimate({ ...a, display_policy: { ...a.display_policy!, display_state: 'shadow' } })).toBeNull();
 });
+
+
+it('never returns numerical legend ranges for bands-only, shadow or unqualified policies', () => {
+  const policy = withResult(25, 'medium').display_policy!;
+  for (const display_state of ['bands', 'shadow', 'unavailable'] as const) {
+    expect(bandLegend({ ...policy, display_state })).toBeNull();
+  }
+  expect(bandLegend({ ...policy, display_state: 'percentage', operational_qualified: false })).toBeNull();
+});

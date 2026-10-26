@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { Booking } from '../api/types';
 import { groupBookings, stateOf } from '../lib/bookings';
+import { qualifiedBands } from '../lib/estimate';
 import { formatDay, formatTime } from '../lib/dates';
 import { BOOKING_TYPE_LABEL } from '../lib/importDraft';
 import { AssessmentStatus } from './AssessmentStatus';
@@ -42,6 +43,7 @@ const Section: React.FC<{ id: string; title: string; note?: string; children: Re
 
 export const BookingListView: React.FC<{ bookings: Booking[]; linkFor: (b: Booking) => string; demo?: boolean }> = ({ bookings, linkFor, demo }) => {
   const g = groupBookings(bookings);
+  const hasBands = g.ranked.some(b => !!qualifiedBands(b.assessment));
   const list = (items: Booking[], ranked = false) => (
     <ol className="mt-2 divide-y divide-slate-200" aria-label={ranked ? 'Ranked MOT bookings' : undefined}>
       {items.map((b, i) => <Row key={b.id} b={b} to={linkFor(b)} rank={ranked ? i + 1 : undefined} demo={demo} />)}
@@ -51,16 +53,18 @@ export const BookingListView: React.FC<{ bookings: Booking[]; linkFor: (b: Booki
     <div className="space-y-4">
       <Section
         id="sec-ranked"
-        title="Initial MOTs, highest estimate first"
+        title={hasBands ? "Initial MOTs, highest priority first" : "Initial MOTs, highest estimate first"}
         count={g.ranked.length}
-        note="Each percentage is the estimated chance of failing or needing rectification during the MOT, rounded by the service. It is built from recorded MOT history and is not an inspection. Bookings with the same percentage are ordered by the service's finer ranking, which is not shown."
+        note={hasBands
+          ? "Bookings are prioritised by estimated MOT risk. Some estimates are shown as bands only. Estimates use recorded MOT history and are not an inspection. Bookings with equal priority appear in appointment order."
+          : "Each percentage is the estimated chance of failing or needing rectification during the MOT, rounded by the service. It is built from recorded MOT history and is not an inspection. Bookings with equal priority appear in appointment order."}
       >
         {g.ranked.length === 0
-          ? <p className="mt-2 text-sm text-slate-700">No MOT bookings with an available estimate in this window.</p>
+          ? <p className="mt-2 text-sm text-slate-700">No MOT bookings with prioritisation available in this window.</p>
           : list(g.ranked, true)}
       </Section>
       {g.notRanked.length > 0 && (
-        <Section id="sec-unranked" title="Initial MOTs not ranked yet" count={g.notRanked.length} note="Waiting for an estimate, or one could not be produced.">{list(g.notRanked)}</Section>
+        <Section id="sec-unranked" title="Initial MOTs not ranked yet" count={g.notRanked.length} note="Waiting for an estimate, or prioritisation is not available. Estimates may still be shown.">{list(g.notRanked)}</Section>
       )}
       {g.retests.length > 0 && <Section id="sec-retests" title="Retests" count={g.retests.length} note="Kept apart and not ranked.">{list(g.retests)}</Section>}
       {g.serviceOnly.length > 0 && <Section id="sec-service" title="Service only" count={g.serviceOnly.length} note="Kept apart and not ranked.">{list(g.serviceOnly)}</Section>}
