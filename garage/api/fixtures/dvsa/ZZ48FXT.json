@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 48",
+  "motTests": [
+    {
+      "completedDate": "2019-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-08-10",
+      "motTestNumber": "SYN48000",
+      "odometerUnit": "MI",
+      "odometerValue": "18576",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-08-11",
+      "motTestNumber": "SYN48010",
+      "odometerUnit": "MI",
+      "odometerValue": "25676",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-08-11",
+      "motTestNumber": "SYN48020",
+      "odometerUnit": "MI",
+      "odometerValue": "32776",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-08-11",
+      "motTestNumber": "SYN48030",
+      "odometerUnit": "MI",
+      "odometerValue": "39876",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-08-10",
+      "motTestNumber": "SYN48040",
+      "odometerUnit": "MI",
+      "odometerValue": "46976",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-08-11",
+      "motTestNumber": "SYN48050",
+      "odometerUnit": "MI",
+      "odometerValue": "54076",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-08-11",
+      "motTestNumber": "SYN48060",
+      "odometerUnit": "MI",
+      "odometerValue": "61176",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-08-11T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-08-11",
+      "motTestNumber": "SYN48070",
+      "odometerUnit": "MI",
+      "odometerValue": "68276",
+      "registrationAtTimeOfTest": "ZZ48FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ48FXT",
+  "registrationDate": "2016-01-01"
+}

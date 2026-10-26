@@ -1,0 +1,105 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 50",
+  "motTests": [
+    {
+      "completedDate": "2019-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-03-12",
+      "motTestNumber": "SYN50000",
+      "odometerUnit": "MI",
+      "odometerValue": "18850",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-03-13",
+      "motTestNumber": "SYN50010",
+      "odometerUnit": "MI",
+      "odometerValue": "25950",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-03-13",
+      "motTestNumber": "SYN50020",
+      "odometerUnit": "MI",
+      "odometerValue": "33050",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-03-13",
+      "motTestNumber": "SYN50030",
+      "odometerUnit": "MI",
+      "odometerValue": "40150",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-03-12",
+      "motTestNumber": "SYN50040",
+      "odometerUnit": "MI",
+      "odometerValue": "47250",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-03-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-03-13",
+      "motTestNumber": "SYN50050",
+      "odometerUnit": "MI",
+      "odometerValue": "54350",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-03-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2026-03-13",
+      "motTestNumber": "SYN50060",
+      "odometerUnit": "MI",
+      "odometerValue": "61450",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-03-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2027-03-13",
+      "motTestNumber": "SYN50070",
+      "odometerUnit": "MI",
+      "odometerValue": "68550",
+      "registrationAtTimeOfTest": "AA19AAA",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "AA19AAA",
+  "registrationDate": "2016-01-01"
+}

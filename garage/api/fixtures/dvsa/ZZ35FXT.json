@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 35",
+  "motTests": [
+    {
+      "completedDate": "2019-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-02-18",
+      "motTestNumber": "SYN35000",
+      "odometerUnit": "MI",
+      "odometerValue": "16795",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-02-17",
+      "motTestNumber": "SYN35010",
+      "odometerUnit": "MI",
+      "odometerValue": "23895",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-02-18",
+      "motTestNumber": "SYN35020",
+      "odometerUnit": "MI",
+      "odometerValue": "30995",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-02-18",
+      "motTestNumber": "SYN35030",
+      "odometerUnit": "MI",
+      "odometerValue": "38095",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-02-18",
+      "motTestNumber": "SYN35040",
+      "odometerUnit": "MI",
+      "odometerValue": "45195",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-02-17",
+      "motTestNumber": "SYN35050",
+      "odometerUnit": "MI",
+      "odometerValue": "52295",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-02-18T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-02-18",
+      "motTestNumber": "SYN35060",
+      "odometerUnit": "MI",
+      "odometerValue": "59395",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-02-18T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": true,
+          "text": "Example tyre cord visible at test",
+          "type": "DANGEROUS"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN35070",
+      "odometerUnit": "MI",
+      "odometerValue": "66495",
+      "registrationAtTimeOfTest": "ZZ35FXT",
+      "testResult": "FAILED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ35FXT",
+  "registrationDate": "2016-01-01"
+}

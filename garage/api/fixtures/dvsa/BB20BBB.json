@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 51",
+  "motTests": [
+    {
+      "completedDate": "2019-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-04-13",
+      "motTestNumber": "SYN51000",
+      "odometerUnit": "MI",
+      "odometerValue": "18987",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-04-14",
+      "motTestNumber": "SYN51010",
+      "odometerUnit": "MI",
+      "odometerValue": "26087",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-04-14",
+      "motTestNumber": "SYN51020",
+      "odometerUnit": "MI",
+      "odometerValue": "33187",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-04-14",
+      "motTestNumber": "SYN51030",
+      "odometerUnit": "MI",
+      "odometerValue": "40287",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-04-13",
+      "motTestNumber": "SYN51040",
+      "odometerUnit": "MI",
+      "odometerValue": "47387",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-04-14T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-04-14",
+      "motTestNumber": "SYN51050",
+      "odometerUnit": "MI",
+      "odometerValue": "54487",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-04-14T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example rear lamp did not illuminate",
+          "type": "MAJOR"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN51060",
+      "odometerUnit": "MI",
+      "odometerValue": "61587",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "FAILED"
+    },
+    {
+      "completedDate": "2025-04-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-04-21",
+      "motTestNumber": "SYN51070",
+      "odometerUnit": "MI",
+      "odometerValue": "68687",
+      "registrationAtTimeOfTest": "BB20BBB",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "BB20BBB",
+  "registrationDate": "2016-01-01"
+}

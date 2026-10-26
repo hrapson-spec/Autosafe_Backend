@@ -1,0 +1,109 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 42",
+  "motTests": [
+    {
+      "completedDate": "2019-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-02-05",
+      "motTestNumber": "SYN42000",
+      "odometerUnit": "MI",
+      "odometerValue": "17754",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-02-04",
+      "motTestNumber": "SYN42010",
+      "odometerUnit": "MI",
+      "odometerValue": "24854",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-02-05",
+      "motTestNumber": "SYN42020",
+      "odometerUnit": "MI",
+      "odometerValue": "31954",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-02-05",
+      "motTestNumber": "SYN42030",
+      "odometerUnit": "MI",
+      "odometerValue": "39054",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-02-05",
+      "motTestNumber": "SYN42040",
+      "odometerUnit": "MI",
+      "odometerValue": "46154",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-02-04",
+      "motTestNumber": "SYN42050",
+      "odometerUnit": "MI",
+      "odometerValue": "53254",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-02-05T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-02-05",
+      "motTestNumber": "SYN42060",
+      "odometerUnit": "MI",
+      "odometerValue": "60354",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-02-05T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example washer reservoir replenished at the test",
+          "type": "PRS"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN42070",
+      "odometerUnit": "MI",
+      "odometerValue": "67454",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "FAILED"
+    },
+    {
+      "completedDate": "2026-02-05T10:15:01Z",
+      "defects": [],
+      "expiryDate": "2027-02-05",
+      "motTestNumber": "SYN42071",
+      "odometerUnit": "MI",
+      "odometerValue": "67454",
+      "registrationAtTimeOfTest": "ZZ42FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ42FXT",
+  "registrationDate": "2016-01-01"
+}
