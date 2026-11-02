@@ -6,8 +6,10 @@ scans the package to keep it that way.
 from __future__ import annotations
 
 import base64
+import hashlib
 from datetime import date, datetime, time
 
+import psycopg2
 from psycopg2.extras import Json
 
 from .scope import Scope
@@ -288,15 +290,19 @@ class Scoped:
 
     def complete_assessment(self, assessment_id, state, reason=None, reason_text=None, result=None,
                             evidence=None, snapshot_id=None, provider_name=None, provider_version=None,
-                            display_policy=None, rank_key=None, score_unrounded=None):
+                            display_policy=None, rank_key=None, score_unrounded=None, shadow=None):
         return self._one(
             """UPDATE assessments SET state = %s, reason = %s, reason_text = %s, result = %s, evidence = %s,
                       snapshot_id = %s, provider_name = %s, provider_version = %s, retry_at = NULL,
-                      display_policy = %s, rank_key = %s, score_unrounded = %s, completed_at = now()
+                      display_policy = %s, rank_key = %s, score_unrounded = %s, completed_at = now(),
+                      shadow_margin = %s, shadow_probability = %s, shadow_bundle_sha256 = %s,
+                      shadow_model_version = %s
                 WHERE workshop_id = %s AND id = %s AND state = 'pending' RETURNING *""",
             (state, reason, reason_text, Json(result) if result is not None else None,
              Json(evidence) if evidence is not None else None, snapshot_id, provider_name, provider_version,
              Json(display_policy) if display_policy is not None else None, rank_key, score_unrounded,
+             (shadow or {}).get("margin"), (shadow or {}).get("probability"),
+             (shadow or {}).get("bundle_sha256"), (shadow or {}).get("model_version"),
              self.wid, assessment_id))
 
     def latest_briefing_source(self, booking_id: str):
@@ -329,11 +335,17 @@ class Scoped:
             (self.wid, booking_id, assessment_id, self.scope.membership_id, value, reason_code, briefing_version))
 
     # ---------------------------------------------------------- snapshots
-    def insert_snapshot(self, booking_id, kind, upstream_status, history: dict | None, sha: str):
+    def insert_snapshot(self, booking_id, kind, upstream_status, history: dict | None, sha: str,
+                        raw: bytes | None = None):
+        """`raw` (D-D): the exact upstream response bytes, stored with their sha256; server-side only."""
         return self._one(
-            """INSERT INTO source_snapshots (workshop_id, booking_id, kind, upstream_status, history, content_sha256)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
-            (self.wid, booking_id, kind, upstream_status, Json(history) if history is not None else None, sha))
+            """INSERT INTO source_snapshots (workshop_id, booking_id, kind, upstream_status, history, content_sha256,
+                                            raw_response, raw_sha256)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id, workshop_id, booking_id, kind, upstream_status,
+                                                                  history, content_sha256, fetched_at""",
+            (self.wid, booking_id, kind, upstream_status, Json(history) if history is not None else None, sha,
+             psycopg2.Binary(raw) if raw is not None else None,
+             hashlib.sha256(raw).hexdigest() if raw is not None else None))
 
     # ---------------------------------------------------------- decisions
     @staticmethod

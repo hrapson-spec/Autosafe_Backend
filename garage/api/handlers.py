@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from datetime import date
 
 from . import matching, service
@@ -95,7 +96,8 @@ def assess_booking(ctx: Ctx, scope: Scope, job: dict):
             return Done()
         full: DvsaHistory = res
         hist_json = full.to_json()
-        snap = s.insert_snapshot(booking_id, "assessment_input", "ok", hist_json, sha256_json(hist_json))
+        snap = s.insert_snapshot(booking_id, "assessment_input", "ok", hist_json, sha256_json(hist_json),
+                                 raw=full.raw)
         prior = full.before(a["input_cutoff_date"], a["input_cutoff_at"])
         evidence = {"prior_test_count": len(prior.tests),
                     "latest_prior_test_date": prior.tests[-1].test_date.isoformat() if prior.tests else None,
@@ -132,8 +134,25 @@ def assess_booking(ctx: Ctx, scope: Scope, job: dict):
                               pr.provider_name, pr.provider_version,
                               display_policy=pr.display_policy.to_json() if pr.display_policy else None,
                               rank_key=None,  # response-local ordinal keys are computed only for booking lists
-                              score_unrounded=pr.rank_score if avail and pr.display_policy.ranking_enabled else None)
+                              score_unrounded=pr.rank_score if avail and pr.display_policy.ranking_enabled else None,
+                              shadow=_shadow_values(pr))
         return Done()
+
+
+def _shadow_values(pr) -> dict | None:
+    """Server-only shadow scoring (unqualified bundle): kept only for a non-available result under a
+    shadow/unavailable policy with ranking disabled, and only if well-formed. Never serialised."""
+    pol = pr.display_policy
+    if pr.state == "available" or pol is None or pol.display_state not in ("shadow", "unavailable") \
+            or pol.ranking_enabled:
+        return None
+    m, p = getattr(pr, "shadow_margin", None), getattr(pr, "shadow_probability", None)
+    ok = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)  # noqa: E731
+    if not (ok(m) and ok(p) and 0.0 <= p <= 1.0):
+        return None
+    return {"margin": float(m), "probability": float(p),
+            "bundle_sha256": getattr(pr, "shadow_bundle_sha256", None),
+            "model_version": getattr(pr, "shadow_model_version", None)}
 
 
 def _validate_provider(pr) -> str | None:

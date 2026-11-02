@@ -9,7 +9,7 @@ import logging
 import pathlib
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Callable, Protocol
 
@@ -42,6 +42,9 @@ class DvsaTest:
     odometer_unit: str | None = None
     expiry_date: date | None = None
     defects: tuple = ()
+    # D-D (2026-10-26): fields the API returns that the first normalised model dropped.
+    odometer_result_type: str | None = None
+    data_source: str | None = None
 
     @property
     def test_date(self) -> date:
@@ -52,7 +55,8 @@ class DvsaTest:
                 "test_number": self.test_number, "odometer_value": self.odometer_value,
                 "odometer_unit": self.odometer_unit,
                 "expiry_date": self.expiry_date.isoformat() if self.expiry_date else None,
-                "defects": list(self.defects)}
+                "defects": list(self.defects)}      # D-D fields are deliberately not in the normalised JSON:
+                                                    # the snapshot hash / briefing version must not change; the raw bytes carry them
 
     @classmethod
     def from_json(cls, d: dict) -> "DvsaTest":
@@ -74,6 +78,9 @@ class DvsaHistory:
     manufacture_date: date | None = None
     engine_size: str | None = None
     tests: tuple = ()
+    colour: str | None = None          # DVSA `primaryColour` (D-D)
+    # The exact response bytes this history was parsed from (D-D); server-side only, never serialised.
+    raw: bytes | None = field(default=None, repr=False, compare=False)
 
     def before(self, cutoff_date: date, cutoff_at: datetime) -> "DvsaHistory":
         """Only tests strictly before both the cutoff date (London) and instant (R10)."""
@@ -159,7 +166,7 @@ class FakeDvsaClient:
                     raise {"transient": DvsaTransientError, "permanent": DvsaPermanentError,
                            "not_found": DvsaNotFound}[d["__error"]](d["__error"])
                 if "motTests" in d:        # a raw MOT History API response (the authored synthetic raw-shape fixtures)
-                    return parse_api_response(registration, d)
+                    return parse_api_response(registration, d, raw=f.read_bytes())
                 return DvsaHistory.from_json(d)
         raise DvsaNotFound(registration)
 
@@ -226,12 +233,12 @@ class HttpDvsaClient:
         if r.status_code != 200:
             raise DvsaPermanentError(f"status {r.status_code}")
         try:
-            return parse_api_response(registration, r.json())
+            return parse_api_response(registration, r.json(), raw=r.content)
         except (ValueError, KeyError, TypeError) as exc:
             raise DvsaTransientError("unparseable response") from exc
 
 
-def parse_api_response(registration: str, data) -> DvsaHistory:
+def parse_api_response(registration: str, data, raw: bytes | None = None) -> DvsaHistory:
     if isinstance(data, list):
         if not data:
             raise DvsaNotFound(registration)
@@ -253,6 +260,7 @@ def parse_api_response(registration: str, data) -> DvsaHistory:
         tests.append(DvsaTest(completed_at=_parse_dt(t["completedDate"]), result=result,
                               test_number=t.get("motTestNumber"), odometer_value=odo,
                               odometer_unit=t.get("odometerUnit"),
+                              odometer_result_type=t.get("odometerResultType"), data_source=t.get("dataSource"),
                               expiry_date=date.fromisoformat(exp[:10]) if exp else None,
                               defects=tuple({"type": d.get("type"), "text": d.get("text"),
                                              "dangerous": d.get("dangerous")} for d in defects)))
@@ -263,7 +271,7 @@ def parse_api_response(registration: str, data) -> DvsaHistory:
         first_used_date=_pd((data.get("firstUsedDate") or "")[:10] or None),
         registration_date=_pd((data.get("registrationDate") or "")[:10] or None),
         manufacture_date=_pd((data.get("manufactureDate") or "")[:10] or None),
-        tests=tuple(tests))
+        tests=tuple(tests), colour=data.get("primaryColour"), raw=raw)
 
 
 # ----------------------------------------------------------------- throttle

@@ -34,8 +34,6 @@ class Settings:
     max_days_back: int = 30
     outcome_window_days: int = 14
     import_commit_batch_size: int = 10
-    # Shapes the order-only rank_key (ranking.py). Set GARAGE_RANK_KEY_SECRET in every real environment.
-    rank_key_secret: str = "dev-only-rank-key-secret"
     # Code-injected only for isolated fixture tests; deliberately not environment-configurable.
     allow_simulated_assessments: bool = False
 
@@ -54,5 +52,4 @@ class Settings:
             base_url=base,
             app_url=e("GARAGE_APP_URL", base + "/"),
             allowed_origins=origins,
-            rank_key_secret=e("GARAGE_RANK_KEY_SECRET", "dev-only-rank-key-secret"),
         )

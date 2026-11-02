@@ -420,7 +420,7 @@ def create_app(ctx: Ctx | None = None) -> FastAPI:
 def build_ctx_from_env() -> Ctx:
     from . import mailer
     from .dvsa import DbThrottle, FakeDvsaClient, HttpDvsaClient, ThrottledDvsa
-    from .provider import StubProvider
+    from .providers import provider_from_env
     settings = Settings.from_env()
     db = Database(settings.database_url)
     if os.environ.get("GARAGE_AUTO_MIGRATE") == "1":
@@ -430,4 +430,4 @@ def build_ctx_from_env() -> Ctx:
     backend = os.environ.get("GARAGE_EMAIL_BACKEND", "resend")
     sender = {"resend": mailer.ResendEmailSender, "console": mailer.ConsoleEmailSender}[backend]()
     return Ctx(db=db, settings=settings, dvsa=ThrottledDvsa(inner, DbThrottle(db, settings.dvsa_max_rps)),
-               provider=StubProvider(), mailer=sender)
+               provider=provider_from_env(), mailer=sender)
