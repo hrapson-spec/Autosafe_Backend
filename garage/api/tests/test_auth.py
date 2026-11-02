@@ -62,7 +62,8 @@ def test_prefetch_get_never_consumes(env):
     for _ in range(3):                                        # mail scanner / browser prefetch
         r = scanner.get(f"{V}/auth/links/{tok}", headers={"Accept": "text/html"})
         assert r.status_code == 200 and "<form" in r.text and 'method="post"' in r.text
-        assert r.headers["cache-control"] == "no-store" and r.headers["referrer-policy"] == "no-referrer"
+        assert r.headers["cache-control"] == "no-store" and r.headers["referrer-policy"] == "same-origin"
+    assert '<meta name="referrer" content="same-origin">' in r.text
     assert scanner.get(f"{V}/me").status_code == 401           # GET opened no session
     assert sql(env, "SELECT consumed_at FROM login_tokens WHERE token_hash = %s", (hash_token(tok),))[0]["consumed_at"] is None
     assert other.post(f"{V}/auth/links/{tok}/consume").status_code == 200   # the human's POST still works
@@ -161,3 +162,20 @@ def test_csrf_cross_site_blocked(env):
                json={"format": "manual", "rows": []})
     assert r.status_code == 403
     assert c.get(f"{V}/me").status_code == 200                 # reads unaffected
+
+
+def test_confirmation_preserves_same_origin_post_and_rejects_null_or_cross_origin(env):
+    c = new_client(env)
+    c.post(f"{V}/auth/signup", json={"invite_code": make_invite(env), "workshop_name": "A", "email": "fixture@example.test"})
+    token = token_from_mail(env, "fixture@example.test")
+    confirmation = c.get(f"{V}/auth/links/{token}")
+    assert confirmation.headers["referrer-policy"] == "same-origin"
+    assert '<meta name="referrer" content="same-origin">' in confirmation.text
+    for origin in ("null", "https://outside.invalid"):
+        denied = c.post(f"{V}/auth/links/{token}/consume", headers={"Origin": origin, "Sec-Fetch-Site": "same-origin"})
+        assert denied.status_code == 403 and denied.json()["error"]["code"] == "csrf_blocked"
+    assert sql(env, "SELECT consumed_at FROM login_tokens WHERE token_hash = %s", (hash_token(token),))[0]["consumed_at"] is None
+    accepted = c.post(f"{V}/auth/links/{token}/consume", headers={"Origin": env.ctx.settings.base_url})
+    assert accepted.status_code == 200
+    expired = c.get(f"{V}/auth/links/{token}")
+    assert expired.status_code == 410 and expired.headers["referrer-policy"] == "no-referrer"

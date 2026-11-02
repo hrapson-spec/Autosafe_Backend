@@ -156,16 +156,16 @@ CtxDep = Annotated[Ctx, Depends(get_ctx)]
 UuidPath = Annotated[uuid.UUID, Path()]
 
 
-def _page(title: str, body: str, status: int = 200) -> HTMLResponse:
+def _page(title: str, body: str, status: int = 200, *, referrer_policy: str = "no-referrer") -> HTMLResponse:
     doc = (f'<!doctype html><html lang="en-GB"><head><meta charset="utf-8">'
            f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-           f'<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">'
+           f'<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="{html.escape(referrer_policy)}">'
            f'<title>{html.escape(title)} | AutoSafe Garage</title>'
            f'<style>body{{font:18px/1.6 system-ui,sans-serif;max-width:34rem;margin:3rem auto;padding:0 1.5rem}}'
            f'button{{font:inherit;padding:.65rem 1rem;cursor:pointer}}</style></head>'
            f'<body><main>{body}</main></body></html>')
     return HTMLResponse(doc, status_code=status, headers={
-        "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex",
+        "Cache-Control": "no-store", "Referrer-Policy": referrer_policy, "X-Robots-Tag": "noindex",
         "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'"})
 
 
@@ -226,7 +226,7 @@ def build_router() -> APIRouter:
                      "<h1>Sign in to AutoSafe Garage</h1><p>Opening this page does not sign you in. "
                      "Press the button to continue.</p>"
                      f'<form method="post" action="{PREFIX}/auth/links/{html.escape(token)}/consume">'
-                     "<button type=\"submit\">Sign in</button></form>")
+                     "<button type=\"submit\">Sign in</button></form>", referrer_policy="same-origin")
 
     @r.post("/auth/links/{token}/consume")
     def consume_link(token: str, request: Request, ctx: CtxDep):
