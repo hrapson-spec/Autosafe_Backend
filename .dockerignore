@@ -27,3 +27,16 @@ static/assets/
 e2e-artifacts/
 playwright-report/
 test-results/
+
+# Local garage review runtimes and data are never image inputs.
+garage/.venv*/
+garage/.playwright*/
+garage/web/node_modules/
+garage/web/dist/
+garage/web/dist-mock/
+garage/review/
+**/__pycache__/
+.env
+.env.*
+**/.env
+**/.env.*

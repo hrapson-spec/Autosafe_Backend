@@ -1,0 +1,10 @@
+state/
+dist/
+__pycache__/
+.pytest_cache/
+install.log
+start.json
+reset.json
+*.dump
+
+*_RESULT.json

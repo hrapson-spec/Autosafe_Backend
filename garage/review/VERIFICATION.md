@@ -1,0 +1,26 @@
+# Local full-stack review verification
+
+26 October 2026. Local integration and fixture-only operations evidence. No real model, live DVSA retrieval, external email, production environment/database, protected data, hosted staging, deployment or spend was used. No commit/push was performed by the harness author.
+
+| Check | Measured result |
+|---|---|
+| Baseline combined garage backend + review harness | **284 passed**, 20.28 seconds |
+| Final focused harness safety/build/path/environment checks | **17 passed**, 0.14 seconds |
+| Real browser/API/PostgreSQL integration | **1 passed**, 2.8 seconds |
+| Normal frontend build, MSW disabled | Passed; complete build hash manifest validated |
+| Fixture clone backup, restore and rollback | Passed, **0.325 seconds** |
+| Owned-process stop/restart drill | Owned API and PostgreSQL stopped; port released; new private fixture cluster started |
+| Unrelated browser-mock demonstration | Existing port4174 remained available; no listener/storage reset |
+| Source whitespace | `git diff --check` passed |
+
+The browser test uses a real loopback server and fresh private PostgreSQL cluster, with service workers blocked. It creates two invite-gated workshops through the normal frontend; follows real server confirmation links from a fake mailbox; checks Secure/HttpOnly session attributes; confirms null/outside origins receive403; imports two synthetic bookings from a three-row list with a duplicate; observes202 asynchronous commit and200 idempotent retry; receives actual worker-generated assessments/briefings; records and reloads SQL-backed decisions and feedback; and verifies another workshop gets404 and an empty own list. All browser requests stay on the loopback origin. Desktop and390px phone screenshots were regenerated and visually inspected; phone overflow was checked.
+
+This exposed a real confirmation-flow defect hidden by browser mocks. The former `no-referrer` policy caused Chromium to submit `Origin:null`; the existing CSRF guard correctly rejected it. The focused fix changes **only valid confirmation HTML** to `same-origin`, in both header and meta. Actual browser POST now has the correct same-origin provenance. Backend and browser regressions keep null and cross-origin requests rejected; invalid/expired pages retain `no-referrer`. No cookie or CSRF acceptance rule was weakened. Temporary diagnostic output containing local one-use fixture URLs was kept only in private ignored state; final public-facing test output contains no tokens.
+
+The operations drill pauses the created instance's worker and dumps only its marked private Unix-socket fixture database. It restores a newly created clone, checks every public table's row fingerprint/count and exercises restored application service reads for assessment, briefing, decision and feedback. It commits a deliberately bad schema marker only to the clone, restores that exact clone again, rechecks service reads/fingerprints and verifies the original fixture database stayed unchanged. The tested source state contained two bookings, one decision and one feedback record. Raw dump, run/clone identifiers, detailed fingerprints and lifecycle metadata remain in private ignored state. A separate lifecycle drill verified the exact owned API/PostgreSQL identities exited and released the port before starting a new cluster; old fixture state was retained.
+
+The safe source allowlist and content hashes are in `REVIEW_MANIFEST.json`. The current running instance is discovered with `python -m garage.review.launcher status`; no runtime credentials, raw instance JSON, generated invite/link tokens or database dumps belong in Git. Root-owned Docker exclusions keep this entire local harness and its runtime out of the production consumer image. The separate pinned environment is `garage/.venv-integration`; the accepted guard environment `garage/.venv-review` was not installed into or changed.
+
+These results establish local full-stack integration and a clone-only schema/data recovery exercise. They do not establish real-provider qualification, paid/live API access, population drift acceptance, operational load/latency targets, production backup/restore, deployed-binary rollback, retention qualification or permission to merge/deploy. The real production provider remains the unavailable StubProvider; only this explicitly invoked local harness injects a synthetic provider and fake transports.
+
+Final boundary hardening rejects symlink state/ancestors, symlink current/instance files, traversal, outside or malformed run names, marker/path mismatches, existing unmarked state and reused PostgreSQL paths before runtime/database actions. Synthetic regressions make chmod/bind/process-launch/database entry points fail if reached through an unsafe path and verify that outside sentinels remain unchanged. Ambient PGHOST/PGSERVICE/PGOPTIONS sentinel configuration was supplied to the successful owned start, clone drill and stop/restart proof; it was scrubbed before libpq/native contexts. The pre-hardening state created by this task was marked once only after validating all its existing run markers and stopping its exact owned instance; published code contains no unmarked-state adoption path. The baseline backend API was unchanged by this final harness-only repair.
