@@ -1,10 +1,16 @@
 """BundleV1 provider (INTERFACE_SCORER_V1): verifies a model bundle and runs its scorer as a subprocess.
 
-The bundle is unqualified by construction (`qualified` must be false), so the provider never returns a
-percentage, band or rank score. A successful scoring is reported as `unavailable` under a `shadow`
-DisplayPolicy and carries the raw margin/probability in `ShadowProviderResult` for server-side
-persistence only. Every failure becomes `ProviderResult(state="unavailable", reason=<specific code>)`;
-`assess()` never raises.
+The BundleV1 manifest is unqualified by construction (`qualified` must be false), so by default the provider never
+returns a percentage, band or rank score. A successful scoring is reported as `unavailable` under a `shadow`
+DisplayPolicy and carries the raw margin/probability in `ShadowProviderResult` for server-side persistence only.
+Every failure becomes `ProviderResult(state="unavailable", reason=<specific code>)`; `assess()` never raises.
+
+Qualified mode (route-to-live step 9): when the directory also holds a QUALIFIED_V2.json sidecar that verifies against the
+out-of-band `pin` (qual_v2, synthetic bundles refused unless `allow_synthetic`), AND a `rounding_reading` is configured, a
+successful scoring is reported as `available` under the bundle's qualified DisplayPolicy, with the rounded percentage, the
+band and the unrounded `rank_score`. Any qualification problem (missing sidecar/pin/reading, QualError, unexpected exception)
+leaves the provider in shadow mode and logs only the error code. The sidecar is re-verified (evidence + receipt + pin, not the
+model files, which the scorer hashes itself) on every call, so a bundle changed on disk degrades to shadow.
 """
 from __future__ import annotations
 
@@ -20,9 +26,11 @@ import subprocess
 from dataclasses import dataclass, replace
 from datetime import timezone
 
+from ..display_values import READINGS, rank_score, round_percent
 from ..dvsa import _parse_dt
 from ..provider import STUB_DISPLAY_POLICY, AssessmentRequest, ProviderResult
 from ..timeutil import london_date
+from .qualification import QualifiedDisplay, load_qualification
 
 log = logging.getLogger("garage.provider.bundle")
 
@@ -208,13 +216,34 @@ class BundleProvider:
     """Shadow-only provider over a verified BundleV1 directory."""
     name = "bundle"
 
-    def __init__(self, bundle_dir, timeout_s: float = DEFAULT_TIMEOUT_S):
+    def __init__(self, bundle_dir, timeout_s: float = DEFAULT_TIMEOUT_S, *, pin: str | None = None,
+                 rounding_reading: str | None = None, allow_synthetic: bool = False):
         self._dir = pathlib.Path(bundle_dir)
         self.timeout_s = float(timeout_s)
         vb = verify_bundle(self._dir)           # BundleError here => caller falls back to the stub
         self.version = vb.model_version
         self.model_version = vb.model_version
         self.manifest_sha256 = vb.manifest_sha256
+        self._pin = pin
+        self._reading = rounding_reading
+        self._allow_synthetic = bool(allow_synthetic)
+        self.qualified = False
+        self.qualification_code: str | None = None
+        self._qual, self.qualification_code = self._qualification(verify_base_files=True)
+        self.qualified = self._qual is not None
+        if self._qual is None and self.qualification_code != "no_sidecar":
+            log.error("bundle not qualified (%s): serving shadow only", self.qualification_code)
+
+    def _qualification(self, verify_base_files: bool) -> tuple[QualifiedDisplay | None, str | None]:
+        qd, code = load_qualification(self._dir, pin=self._pin, allow_synthetic=self._allow_synthetic,
+                                      verify_base_files=verify_base_files)
+        if qd is None:
+            return None, code
+        if self._reading not in READINGS:     # no silent default (open decision O9)
+            return None, "rounding_reading_missing" if not self._reading else "rounding_reading_invalid"
+        if qd.model_version != self.model_version or qd.policy.model_version != self.model_version:
+            return None, "model_version_mismatch"
+        return qd, None
 
     # -- result helpers -------------------------------------------------
     def _unavailable(self, reason: str, text: str | None = None) -> ProviderResult:
@@ -296,6 +325,9 @@ class BundleProvider:
             return self._unavailable("scorer_schema_mismatch")
         if d["bundle_manifest_sha256"] != vb.manifest_sha256 or d["model_version"] != vb.model_version:
             return self._unavailable("scorer_bundle_mismatch")
+        qd = self._current_qualification()
+        if qd is not None:
+            return self._qualified_result(qd, float(d["probability"]))
         policy = replace(STUB_DISPLAY_POLICY, display_state="shadow", provisional=True,
                          policy_version=vb.manifest["policy_version"], model_version=vb.model_version,
                          suppression_reason="model_not_qualified", operational_qualified=False,
@@ -305,6 +337,26 @@ class BundleProvider:
             provider_name=self.name, provider_version=self.version, display_policy=policy,
             shadow_margin=float(d["margin"]), shadow_probability=float(d["probability"]),
             shadow_bundle_sha256=vb.manifest_sha256, shadow_model_version=vb.model_version)
+
+    def _current_qualification(self) -> QualifiedDisplay | None:
+        """Per-call re-check (small evidence files; model files are hashed by the scorer). A change on disk degrades to shadow."""
+        if self._qual is None:
+            return None
+        qd, code = self._qualification(verify_base_files=False)
+        if qd is None or qd.receipt_sha256 != self._qual.receipt_sha256:
+            log.error("bundle qualification lost (%s): serving shadow only", code or "receipt_changed")
+            return None
+        return qd
+
+    def _qualified_result(self, qd: QualifiedDisplay, p: float) -> ProviderResult:
+        pol = qd.policy
+        try:
+            pct = round_percent(p, self._reading, pol.rounding_pp)
+            score = rank_score(p)
+        except ValueError:
+            return self._unavailable("scorer_schema_mismatch")
+        return ProviderResult(state="available", percent_rounded=pct, band=pol.band_for(pct), provider_name=self.name,
+                              provider_version=self.version, display_policy=pol, rank_score=score)
 
 
 def _reject_constant(name):

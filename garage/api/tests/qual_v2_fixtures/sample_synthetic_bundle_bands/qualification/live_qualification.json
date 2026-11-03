@@ -1,0 +1,27 @@
+{
+  "completed_at_utc": "2026-11-11T09:00:00Z",
+  "components": {
+    "A8_ledger": {
+      "passed": true,
+      "report_sha256": "08e833a33f50b425cddca745a80e6dd36b169d1a7b059c44f72155602c13b451"
+    },
+    "G1": {
+      "passed": true,
+      "report_sha256": "f5b606ff50463de5e36cb1fe528b998976a2bc501e96d355dce820d4a68de5fe"
+    },
+    "G3D": {
+      "passed": true,
+      "report_sha256": "7f3c04705537d60b1e2e6383a045e8c1627506782f8739c3fbf9e1b91b4bee5f"
+    },
+    "heldout_text": {
+      "passed": true,
+      "report_sha256": "52726ea35fc4444b3268d19645a01e3ed560c0fc47806876bf1e6f410a4b5336"
+    }
+  },
+  "kind": "GARAGE_LIVE_QUALIFICATION_V1",
+  "passed": true,
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

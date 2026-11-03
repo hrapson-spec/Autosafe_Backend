@@ -1,0 +1,28 @@
+{
+  "agrees": true,
+  "implementation_sha256": "bf192af216a4876df6ffe25d0d00b38a4011d360645afd1099437f7e41077896",
+  "kind": "GARAGE_RECOMPUTATION_V1",
+  "predictions_sha256": "6954fc80398244a02c97ea73d7de20427a085f02bd6675719cf935c95c36d82b",
+  "primary_report_sha256": "77f5d0c4a05057e2039ebbde3545ef25396eb0e3eb58e1ea35f34bc36f7ebe49",
+  "recomputed": {
+    "CALIBRATION_PASS": true,
+    "MODEL_PASS": true,
+    "extra_gates": {
+      "brier_below_base_rate": true
+    },
+    "gates": {
+      "bias": true,
+      "delta_auc": true,
+      "display_bands": true,
+      "ece": true,
+      "slope": true,
+      "subgroup_bias": true
+    }
+  },
+  "recomputed_at_utc": "2026-11-15T12:00:00Z",
+  "recomputer_id": "synthetic-recomputer",
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

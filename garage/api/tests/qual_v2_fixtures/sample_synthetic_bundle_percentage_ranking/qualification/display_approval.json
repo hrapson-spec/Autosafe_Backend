@@ -1,0 +1,26 @@
+{
+  "approval_quote": "SYNTHETIC: not a real approval",
+  "approval_source": "synthetic test fixture",
+  "approved_at_utc": "2026-12-21T09:00:00Z",
+  "approved_by": "SYNTHETIC-OWNER",
+  "display": {
+    "band_edges": [
+      20,
+      35
+    ],
+    "band_labels": {
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "display_state": "percentage",
+    "policy_version": "garage-display-synth-v1",
+    "ranking_enabled": true,
+    "rounding_pp": 5
+  },
+  "kind": "GARAGE_DISPLAY_APPROVAL_V1",
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

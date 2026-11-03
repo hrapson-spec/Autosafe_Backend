@@ -1,0 +1,79 @@
+{
+  "display": {
+    "band_edges": [
+      20,
+      35
+    ],
+    "band_labels": {
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "display_state": "percentage",
+    "policy_version": "garage-display-synth-v1",
+    "ranking_enabled": true,
+    "rounding_pp": 5
+  },
+  "evidence": {
+    "assessment_2024_provenance": {
+      "path": "qualification/assessment_2024_provenance.json",
+      "sha256": "5f225ca5f59c0a9bc3e696e323193ef9468e83f302bba15327fc00db09addbda"
+    },
+    "assessment_2024_report": {
+      "path": "qualification/assessment_2024_report.json",
+      "sha256": "77f5d0c4a05057e2039ebbde3545ef25396eb0e3eb58e1ea35f34bc36f7ebe49"
+    },
+    "display_approval": {
+      "path": "qualification/display_approval.json",
+      "sha256": "1625373c395d9704fb2abaf929e6f208db5c246de04422895e5d4d57115dd246"
+    },
+    "g6_shadow": {
+      "path": "qualification/g6_shadow.json",
+      "sha256": "27934f8ebb25c8bf37ea9bb5d299b4b64d75c8696df89cda3fbce7147761830f"
+    },
+    "independent_recomputation": {
+      "path": "qualification/independent_recomputation.json",
+      "sha256": "c66d0faab3e41354d647de8213f8d6bfc47b47e80dee65e49ef942d6fa87072c"
+    },
+    "live_qualification": {
+      "path": "qualification/live_qualification.json",
+      "sha256": "9d633f90cdd9c7417dc08f71d25f15a33686079043e2b7ed2ac1b08203651017"
+    },
+    "pseudo_future_2023": {
+      "path": "qualification/pseudo_future_2023.json",
+      "sha256": "74c576d5ab75620874e8e777b8a579b01393cafe391e2fc3d1242bd7b2ca424a"
+    },
+    "read_2024_entry_receipt": {
+      "path": "qualification/read_2024_entry_receipt.json",
+      "sha256": "2b68eb4d3cc179abe4932ca64c690d2dbb6182bf6934799a21a7523fbe6622d1"
+    },
+    "read_2024_registry_records": {
+      "path": "qualification/read_2024_registry_records.jsonl",
+      "sha256": "d80972617f04e11b63e279cc06b8317c98f87f829815ae9a2b2f8e0f0b29d54e"
+    },
+    "rules_approval": {
+      "path": "qualification/rules_approval.json",
+      "sha256": "3b1260ef72a25533007157104623469817ecbedfb2fad3b585ae9aeb889bbfd0"
+    },
+    "usefulness_gate": {
+      "path": "qualification/usefulness_gate.json",
+      "sha256": "5753576a3bd3bed72ff0709a045db65b7f9effd37a4370c3ad2b875273ed6130"
+    }
+  },
+  "issued_at_utc": "2026-12-22T09:00:00Z",
+  "issued_by": "synthetic-lead",
+  "kind": "GARAGE_QUALIFICATION_RECEIPT_V1",
+  "protocol": {
+    "amendment_sha256": "422528291fb0626a97b8a7005e7fcb04d6f4a2507e9a47e64e730bab5133c648"
+  },
+  "receipt_id": "SYNTHETIC-sample_synthetic_bundle_percentage_ranking",
+  "receipt_version": 1,
+  "subject": {
+    "arm": "challenger/without40",
+    "assessed_base_manifest_sha256": "d235dd872fb6ed45c6b4058f6f8d3ec1d5d50126a4ed1deb241b6fa52a868ee2",
+    "integrated_freeze_sha256": "12dd9774cc96e18b5b1b5d4a4b1e0724c4b3e3f37a3eed1af6a1dac7cfdbc3e3",
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47",
+    "model_version": "garage-synth-v1"
+  },
+  "synthetic_fixture": true
+}

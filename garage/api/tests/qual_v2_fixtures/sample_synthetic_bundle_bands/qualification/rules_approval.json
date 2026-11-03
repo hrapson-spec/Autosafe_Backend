@@ -1,0 +1,47 @@
+{
+  "approval_quote": "SYNTHETIC: not a real approval",
+  "approval_source": "synthetic test fixture",
+  "approved_at_utc": "2026-11-10T09:00:00Z",
+  "approved_by": "SYNTHETIC-OWNER",
+  "kind": "GARAGE_QUALIFICATION_RULES_APPROVAL_V1",
+  "protocol": {
+    "amendment_sha256": "422528291fb0626a97b8a7005e7fcb04d6f4a2507e9a47e64e730bab5133c648"
+  },
+  "rules": {
+    "assessment_2024": {
+      "allow_vacuous_gates": false,
+      "code_sha256": "2a44c66a1d0d30ee6a6d1eac25d77d43d1d915a60fe04c80671611b4c1b1b895",
+      "evaluator": "gate_py_v1"
+    },
+    "band_rule": {
+      "adjacent_lower_bound_gt": 0,
+      "min_band_n": 200,
+      "strictly_increasing": true
+    },
+    "live_required_components": [
+      "G1",
+      "G3D",
+      "heldout_text",
+      "A8_ledger"
+    ],
+    "pseudo_future_2023": {
+      "rule_id": "PF-SYNTH",
+      "rule_sha256": "71ee358d6d99bc947281bb62e464baf1e9da7c36ca3bb05786cab483682b44be"
+    },
+    "read_2024_entry_requirements": {
+      "purpose": "assess_2024_SYNTH",
+      "year": 2024
+    },
+    "serving_parity_max_abs_diff": 0.0,
+    "usefulness_gate": {
+      "partition": "role5",
+      "rule_id": "UF-SYNTH",
+      "rule_sha256": "e68b2d35a0c74161c7f3ae9ea13b02f9789065bbbbc6dbc3fa6603100211b9b8"
+    }
+  },
+  "subject": {
+    "integrated_freeze_sha256": "12dd9774cc96e18b5b1b5d4a4b1e0724c4b3e3f37a3eed1af6a1dac7cfdbc3e3",
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

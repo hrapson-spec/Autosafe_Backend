@@ -1,0 +1,23 @@
+{
+  "code_sha256": "f56b4c38fee8cb724735a4d9d9ec062d5e804ccb40b7ec4a582918910d3bd00f",
+  "gate_id": "pseudo_future_2023",
+  "inputs_sha256": [
+    "f0f353689691094719e195164f38df6f35d624229a61b007e9387b7efccc81aa"
+  ],
+  "kind": "GARAGE_GATE_RESULT_V1",
+  "measured": {
+    "note": "synthetic"
+  },
+  "partition": "role5_y2023",
+  "passed": true,
+  "produced_at_utc": "2026-11-10T10:00:00Z",
+  "produced_by": "synthetic-author",
+  "rule": {
+    "rule_id": "PF-SYNTH",
+    "rule_sha256": "71ee358d6d99bc947281bb62e464baf1e9da7c36ca3bb05786cab483682b44be"
+  },
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

@@ -1,0 +1,1117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autosafe:garage_mvp:QualifiedBundleV2",
+  "title": "QualifiedBundleV2 sidecar (QUALIFIED_V2.json) and the documents it binds",
+  "description": "Root = the sidecar. The bound documents are '#/$defs/<name>'. Structure only: a document that passes this schema is NOT thereby qualified. Qualification is decided by qual_v2.verify (hash bindings, recomputed gate results, registry entries, ordering, pin). A reader must fail closed: any parse error, any schema error, any missing file or any verifier refusal means 'not qualified'. Machine-readable rules that need an owner decision are required fields of the rules approval, never defaults.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_version",
+    "qualified",
+    "synthetic_fixture",
+    "base",
+    "display_state",
+    "ranking_enabled",
+    "display_policy",
+    "qualification",
+    "sidecar_content_sha256"
+  ],
+  "properties": {
+    "bundle_version": {
+      "const": "QualifiedBundleV2"
+    },
+    "qualified": {
+      "const": true
+    },
+    "synthetic_fixture": {
+      "type": "boolean"
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_version",
+        "manifest_file_sha256",
+        "manifest_content_sha256",
+        "arm",
+        "model_version",
+        "integrated_freeze_sha256",
+        "model_identity_sha256"
+      ],
+      "properties": {
+        "bundle_version": {
+          "const": "BundleV1"
+        },
+        "manifest_file_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "manifest_content_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "arm": {
+          "$ref": "#/$defs/nes"
+        },
+        "model_version": {
+          "$ref": "#/$defs/nes"
+        },
+        "integrated_freeze_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "model_identity_sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "display_state": {
+      "enum": [
+        "bands",
+        "percentage"
+      ]
+    },
+    "ranking_enabled": {
+      "type": "boolean"
+    },
+    "display_policy": {
+      "$ref": "#/$defs/appDisplayPolicy"
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt",
+        "files"
+      ],
+      "properties": {
+        "receipt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "content_sha256"
+          ],
+          "properties": {
+            "path": {
+              "const": "qualification/receipt.json"
+            },
+            "content_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/sha"
+          }
+        }
+      }
+    },
+    "sidecar_content_sha256": {
+      "$ref": "#/$defs/sha"
+    }
+  },
+  "$defs": {
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utc": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|\\+00:00)$"
+    },
+    "nes": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^qualification/[A-Za-z0-9][A-Za-z0-9_.+-]*$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_identity_sha256"
+      ],
+      "properties": {
+        "model_identity_sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "approvalSubject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_identity_sha256",
+        "integrated_freeze_sha256"
+      ],
+      "properties": {
+        "model_identity_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "integrated_freeze_sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "bandLabels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "properties": {
+        "low": {
+          "$ref": "#/$defs/nes"
+        },
+        "medium": {
+          "$ref": "#/$defs/nes"
+        },
+        "high": {
+          "$ref": "#/$defs/nes"
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_state",
+        "ranking_enabled",
+        "rounding_pp",
+        "band_edges",
+        "band_labels",
+        "policy_version"
+      ],
+      "properties": {
+        "display_state": {
+          "enum": [
+            "bands",
+            "percentage"
+          ]
+        },
+        "ranking_enabled": {
+          "type": "boolean"
+        },
+        "rounding_pp": {
+          "const": 5
+        },
+        "band_edges": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          }
+        },
+        "band_labels": {
+          "$ref": "#/$defs/bandLabels"
+        },
+        "policy_version": {
+          "$ref": "#/$defs/nes"
+        }
+      }
+    },
+    "appDisplayPolicy": {
+      "description": "Exactly the keys of wt-garage garage/api/provider.py DisplayPolicy.to_json() (read 2026-11-02); the app builds DisplayPolicy from this with band_edges as a tuple.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rounding_pp",
+        "band_edges",
+        "band_labels",
+        "provisional",
+        "display_state",
+        "policy_version",
+        "model_version",
+        "suppression_reason",
+        "operational_qualified",
+        "ranking_enabled"
+      ],
+      "properties": {
+        "rounding_pp": {
+          "const": 5
+        },
+        "band_edges": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          }
+        },
+        "band_labels": {
+          "$ref": "#/$defs/bandLabels"
+        },
+        "provisional": {
+          "const": false
+        },
+        "display_state": {
+          "enum": [
+            "bands",
+            "percentage"
+          ]
+        },
+        "policy_version": {
+          "$ref": "#/$defs/nes"
+        },
+        "model_version": {
+          "$ref": "#/$defs/nes"
+        },
+        "suppression_reason": {
+          "const": null
+        },
+        "operational_qualified": {
+          "const": true
+        },
+        "ranking_enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "receipt_version",
+        "receipt_id",
+        "issued_at_utc",
+        "issued_by",
+        "synthetic_fixture",
+        "subject",
+        "protocol",
+        "display",
+        "evidence"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_QUALIFICATION_RECEIPT_V1"
+        },
+        "receipt_version": {
+          "const": 1
+        },
+        "receipt_id": {
+          "$ref": "#/$defs/nes"
+        },
+        "issued_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "issued_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "arm",
+            "model_version",
+            "integrated_freeze_sha256",
+            "model_identity_sha256",
+            "assessed_base_manifest_sha256"
+          ],
+          "properties": {
+            "arm": {
+              "$ref": "#/$defs/nes"
+            },
+            "model_version": {
+              "$ref": "#/$defs/nes"
+            },
+            "integrated_freeze_sha256": {
+              "$ref": "#/$defs/sha"
+            },
+            "model_identity_sha256": {
+              "$ref": "#/$defs/sha"
+            },
+            "assessed_base_manifest_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "protocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "amendment_sha256"
+          ],
+          "properties": {
+            "amendment_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "display": {
+          "$ref": "#/$defs/display"
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rules_approval",
+            "display_approval",
+            "pseudo_future_2023",
+            "usefulness_gate",
+            "assessment_2024_provenance",
+            "assessment_2024_report",
+            "independent_recomputation",
+            "live_qualification",
+            "read_2024_entry_receipt",
+            "read_2024_registry_records"
+          ],
+          "properties": {
+            "rules_approval": {
+              "$ref": "#/$defs/ref"
+            },
+            "display_approval": {
+              "$ref": "#/$defs/ref"
+            },
+            "pseudo_future_2023": {
+              "$ref": "#/$defs/ref"
+            },
+            "usefulness_gate": {
+              "$ref": "#/$defs/ref"
+            },
+            "assessment_2024_provenance": {
+              "$ref": "#/$defs/ref"
+            },
+            "assessment_2024_report": {
+              "$ref": "#/$defs/ref"
+            },
+            "independent_recomputation": {
+              "$ref": "#/$defs/ref"
+            },
+            "live_qualification": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_entry_receipt": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_registry_records": {
+              "$ref": "#/$defs/ref"
+            },
+            "band_evidence": {
+              "$ref": "#/$defs/ref"
+            },
+            "g6_shadow": {
+              "$ref": "#/$defs/ref"
+            },
+            "serving_parity": {
+              "$ref": "#/$defs/ref"
+            }
+          }
+        }
+      }
+    },
+    "rulesApproval": {
+      "description": "Owner pre-registration of the rules. Must be dated BEFORE the registered 2024 READ_START. Every field under 'rules' is an owner decision (open decisions O1-O8 in REPORT.md); none has a default.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "approved_by",
+        "approved_at_utc",
+        "approval_source",
+        "approval_quote",
+        "subject",
+        "protocol",
+        "rules",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_QUALIFICATION_RULES_APPROVAL_V1"
+        },
+        "approved_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "approved_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "approval_source": {
+          "$ref": "#/$defs/nes"
+        },
+        "approval_quote": {
+          "$ref": "#/$defs/nes"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        },
+        "subject": {
+          "$ref": "#/$defs/approvalSubject"
+        },
+        "protocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "amendment_sha256"
+          ],
+          "properties": {
+            "amendment_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pseudo_future_2023",
+            "usefulness_gate",
+            "assessment_2024",
+            "band_rule",
+            "live_required_components",
+            "read_2024_entry_requirements",
+            "serving_parity_max_abs_diff"
+          ],
+          "properties": {
+            "pseudo_future_2023": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rule_id",
+                "rule_sha256"
+              ],
+              "properties": {
+                "rule_id": {
+                  "$ref": "#/$defs/nes"
+                },
+                "rule_sha256": {
+                  "$ref": "#/$defs/sha"
+                }
+              }
+            },
+            "usefulness_gate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rule_id",
+                "rule_sha256",
+                "partition"
+              ],
+              "properties": {
+                "rule_id": {
+                  "$ref": "#/$defs/nes"
+                },
+                "rule_sha256": {
+                  "$ref": "#/$defs/sha"
+                },
+                "partition": {
+                  "enum": [
+                    "role5",
+                    "y2023",
+                    "y2024"
+                  ]
+                }
+              }
+            },
+            "assessment_2024": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "evaluator",
+                "code_sha256",
+                "allow_vacuous_gates"
+              ],
+              "properties": {
+                "evaluator": {
+                  "const": "gate_py_v1"
+                },
+                "code_sha256": {
+                  "$ref": "#/$defs/sha"
+                },
+                "allow_vacuous_gates": {
+                  "type": "boolean",
+                  "description": "gate.py passes a gate vacuously when no subgroup/band reaches its minimum n; the amendment says low-support groups are not qualified. Owner decision O5."
+                }
+              }
+            },
+            "band_rule": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "min_band_n",
+                "strictly_increasing",
+                "adjacent_lower_bound_gt"
+              ],
+              "properties": {
+                "min_band_n": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "strictly_increasing": {
+                  "type": "boolean"
+                },
+                "adjacent_lower_bound_gt": {
+                  "type": "number"
+                }
+              }
+            },
+            "live_required_components": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/nes"
+              }
+            },
+            "serving_parity_max_abs_diff": {
+              "type": "number",
+              "minimum": 0
+            },
+            "read_2024_entry_requirements": {
+              "type": "object",
+              "description": "Exact key/value pairs the 2024 READ entry receipt must contain (owner decision O6: e.g. kind, year, scopes or purpose). Must be non-empty. Step 6 mints GARAGE_V2024_ASSESSMENT_AUTHORITY_V1 receipts (scopes, year, study); there is no fixed purpose vocabulary yet."
+            }
+          }
+        }
+      }
+    },
+    "displayApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "approved_by",
+        "approved_at_utc",
+        "approval_source",
+        "approval_quote",
+        "subject",
+        "display",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_DISPLAY_APPROVAL_V1"
+        },
+        "approved_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "approved_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "approval_source": {
+          "$ref": "#/$defs/nes"
+        },
+        "approval_quote": {
+          "$ref": "#/$defs/nes"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "display": {
+          "$ref": "#/$defs/display"
+        }
+      }
+    },
+    "declaredGate": {
+      "description": "A gate result whose pass/fail is asserted by gate code that does not exist yet (2023 pseudo-future diagnostic, usefulness gate). The verifier checks binding, rule hash, partition and ordering, and that passed is true; it cannot recompute the metric.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "gate_id",
+        "partition",
+        "subject",
+        "rule",
+        "code_sha256",
+        "inputs_sha256",
+        "measured",
+        "passed",
+        "produced_by",
+        "produced_at_utc",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_GATE_RESULT_V1"
+        },
+        "gate_id": {
+          "enum": [
+            "pseudo_future_2023",
+            "usefulness_gate"
+          ]
+        },
+        "partition": {
+          "enum": [
+            "role5_y2023",
+            "role5",
+            "y2023",
+            "y2024"
+          ]
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "rule": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rule_id",
+            "rule_sha256"
+          ],
+          "properties": {
+            "rule_id": {
+              "$ref": "#/$defs/nes"
+            },
+            "rule_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "code_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "inputs_sha256": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sha"
+          }
+        },
+        "measured": {
+          "type": "object"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "produced_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "produced_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "assessmentProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "report_sha256",
+        "code_sha256",
+        "predictions_sha256",
+        "cohort_sha256",
+        "read_proof_sha256",
+        "base_rate",
+        "produced_by",
+        "produced_at_utc",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_ASSESSMENT_PROVENANCE_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "report_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "code_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "predictions_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "cohort_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "read_proof_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "base_rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "recorded_at_utc",
+            "source_sha256"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "recorded_at_utc": {
+              "$ref": "#/$defs/utc"
+            },
+            "source_sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          }
+        },
+        "produced_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "produced_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "recomputation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "primary_report_sha256",
+        "predictions_sha256",
+        "recomputer_id",
+        "implementation_sha256",
+        "recomputed_at_utc",
+        "recomputed",
+        "agrees",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_RECOMPUTATION_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "primary_report_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "predictions_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "recomputer_id": {
+          "$ref": "#/$defs/nes"
+        },
+        "implementation_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "recomputed_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "agrees": {
+          "type": "boolean"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        },
+        "recomputed": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "gates",
+            "extra_gates",
+            "CALIBRATION_PASS",
+            "MODEL_PASS"
+          ],
+          "properties": {
+            "gates": {
+              "type": "object"
+            },
+            "extra_gates": {
+              "type": "object"
+            },
+            "CALIBRATION_PASS": {
+              "type": "boolean"
+            },
+            "MODEL_PASS": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "liveQualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "completed_at_utc",
+        "passed",
+        "components",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_LIVE_QUALIFICATION_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "completed_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "components": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "passed",
+              "report_sha256"
+            ],
+            "properties": {
+              "passed": {
+                "type": "boolean"
+              },
+              "report_sha256": {
+                "$ref": "#/$defs/sha"
+              }
+            }
+          }
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "bandEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "source_report_sha256",
+        "bands",
+        "produced_at_utc",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_BAND_EVIDENCE_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "source_report_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "bands": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "band",
+              "n",
+              "observed_rate",
+              "adjacent_lower_bound"
+            ],
+            "properties": {
+              "band": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "observed_rate": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "adjacent_lower_bound": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "produced_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "g6Shadow": {
+      "description": "Needed only for display_state 'percentage'. Thresholds are Henri's recorded G6 ruling (DECISIONS.md, 'Henri's rulings on F1'): >=500 pooled supported bookings and PSI <= 0.10 on every input and the score.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "pooled_supported_bookings",
+        "psi_max_inputs",
+        "psi_score",
+        "passed",
+        "produced_at_utc",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_G6_SHADOW_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "pooled_supported_bookings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "psi_max_inputs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "psi_score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "produced_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "servingParity": {
+      "description": "Needed iff the served v1 manifest differs from the assessed one (repackaging for step 8). Binds golden-vector output equality between the two packagings.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "from_base_manifest_sha256",
+        "to_base_manifest_sha256",
+        "golden_vector_sha256",
+        "max_abs_diff",
+        "passed",
+        "produced_at_utc",
+        "synthetic_fixture"
+      ],
+      "properties": {
+        "kind": {
+          "const": "GARAGE_SERVING_PARITY_V1"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject"
+        },
+        "from_base_manifest_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "to_base_manifest_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "golden_vector_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "max_abs_diff": {
+          "type": "number",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "produced_at_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "synthetic_fixture": {
+          "type": "boolean"
+        }
+      }
+    },
+    "entryReceiptMinimal": {
+      "description": "Only the fields the verifier reads from the 2024 READ entry receipt. The registry's entry_receipt_content_sha256 is either rev3 data._digest(whole receipt), or, if the receipt has a content_sha256 field (as step 6's GARAGE_V2024_ASSESSMENT_AUTHORITY_V1 does), that field, which must equal the canonical hash of the receipt without it. Extra fields are allowed and covered by the digest.",
+      "type": "object",
+      "required": [
+        "kind",
+        "entry_id"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/nes"
+        },
+        "entry_id": {
+          "$ref": "#/$defs/nes"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    },
+    "registryRecord": {
+      "description": "A central DATA_ACCESS_REGISTRY.jsonl line as written by the lead (fields observed in the registry 2026-11-02: entry_id, entry_receipt_content_sha256, event, note, programme, proof_sha256, timestamp_utc, verified_by).",
+      "type": "object",
+      "required": [
+        "entry_id",
+        "event",
+        "entry_receipt_content_sha256",
+        "timestamp_utc",
+        "programme",
+        "verified_by"
+      ],
+      "properties": {
+        "entry_id": {
+          "$ref": "#/$defs/nes"
+        },
+        "event": {
+          "enum": [
+            "READ_START",
+            "READ_END"
+          ]
+        },
+        "entry_receipt_content_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "timestamp_utc": {
+          "$ref": "#/$defs/utc"
+        },
+        "programme": {
+          "$ref": "#/$defs/nes"
+        },
+        "verified_by": {
+          "$ref": "#/$defs/nes"
+        },
+        "proof_sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      }
+    }
+  }
+}

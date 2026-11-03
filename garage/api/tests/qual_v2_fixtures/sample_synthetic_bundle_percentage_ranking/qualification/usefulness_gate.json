@@ -1,0 +1,23 @@
+{
+  "code_sha256": "104ec8d8255e0bc0e82af6a179d3466b352e111c0d2c7ee94db7c51e521ab2be",
+  "gate_id": "usefulness_gate",
+  "inputs_sha256": [
+    "41bb66beabd5f200ab86990d6edf72d9d3ba95fa653679482ca861e769e1edbf"
+  ],
+  "kind": "GARAGE_GATE_RESULT_V1",
+  "measured": {
+    "note": "synthetic"
+  },
+  "partition": "role5",
+  "passed": true,
+  "produced_at_utc": "2026-11-10T11:00:00Z",
+  "produced_by": "synthetic-author",
+  "rule": {
+    "rule_id": "UF-SYNTH",
+    "rule_sha256": "e68b2d35a0c74161c7f3ae9ea13b02f9789065bbbbc6dbc3fa6603100211b9b8"
+  },
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

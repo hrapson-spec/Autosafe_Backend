@@ -1,0 +1,56 @@
+{
+  "base": {
+    "arm": "challenger/without40",
+    "bundle_version": "BundleV1",
+    "integrated_freeze_sha256": "12dd9774cc96e18b5b1b5d4a4b1e0724c4b3e3f37a3eed1af6a1dac7cfdbc3e3",
+    "manifest_content_sha256": "d235dd872fb6ed45c6b4058f6f8d3ec1d5d50126a4ed1deb241b6fa52a868ee2",
+    "manifest_file_sha256": "a887c90d16d1345f73c8581c73bb95dd355150188814f41b6e6d8b83a77f4cfe",
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47",
+    "model_version": "garage-synth-v1"
+  },
+  "bundle_version": "QualifiedBundleV2",
+  "display_policy": {
+    "band_edges": [
+      20,
+      35
+    ],
+    "band_labels": {
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "display_state": "percentage",
+    "model_version": "garage-synth-v1",
+    "operational_qualified": true,
+    "policy_version": "garage-display-synth-v1",
+    "provisional": false,
+    "ranking_enabled": true,
+    "rounding_pp": 5,
+    "suppression_reason": null
+  },
+  "display_state": "percentage",
+  "qualification": {
+    "files": {
+      "qualification/assessment_2024_provenance.json": "5f225ca5f59c0a9bc3e696e323193ef9468e83f302bba15327fc00db09addbda",
+      "qualification/assessment_2024_report.json": "77f5d0c4a05057e2039ebbde3545ef25396eb0e3eb58e1ea35f34bc36f7ebe49",
+      "qualification/display_approval.json": "1625373c395d9704fb2abaf929e6f208db5c246de04422895e5d4d57115dd246",
+      "qualification/g6_shadow.json": "27934f8ebb25c8bf37ea9bb5d299b4b64d75c8696df89cda3fbce7147761830f",
+      "qualification/independent_recomputation.json": "c66d0faab3e41354d647de8213f8d6bfc47b47e80dee65e49ef942d6fa87072c",
+      "qualification/live_qualification.json": "9d633f90cdd9c7417dc08f71d25f15a33686079043e2b7ed2ac1b08203651017",
+      "qualification/pseudo_future_2023.json": "74c576d5ab75620874e8e777b8a579b01393cafe391e2fc3d1242bd7b2ca424a",
+      "qualification/read_2024_entry_receipt.json": "2b68eb4d3cc179abe4932ca64c690d2dbb6182bf6934799a21a7523fbe6622d1",
+      "qualification/read_2024_registry_records.jsonl": "d80972617f04e11b63e279cc06b8317c98f87f829815ae9a2b2f8e0f0b29d54e",
+      "qualification/receipt.json": "bd1fe5b14f8d53315dc0b93c2a8c19d4cf0e873e6c4398ab565c1c20edbb3753",
+      "qualification/rules_approval.json": "3b1260ef72a25533007157104623469817ecbedfb2fad3b585ae9aeb889bbfd0",
+      "qualification/usefulness_gate.json": "5753576a3bd3bed72ff0709a045db65b7f9effd37a4370c3ad2b875273ed6130"
+    },
+    "receipt": {
+      "content_sha256": "ca9688826b775abb84e8ab72678712edacc10328fba6808d19a9c42ebb29d1db",
+      "path": "qualification/receipt.json"
+    }
+  },
+  "qualified": true,
+  "ranking_enabled": true,
+  "sidecar_content_sha256": "0bca18132f05c7040f8f2feaace95a8bf4311fdf9f1e0059837cb9fac0679e50",
+  "synthetic_fixture": true
+}
