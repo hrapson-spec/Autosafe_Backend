@@ -290,19 +290,20 @@ class Scoped:
 
     def complete_assessment(self, assessment_id, state, reason=None, reason_text=None, result=None,
                             evidence=None, snapshot_id=None, provider_name=None, provider_version=None,
-                            display_policy=None, rank_key=None, score_unrounded=None, shadow=None):
+                            display_policy=None, rank_key=None, score_unrounded=None, shadow=None, calibrated=None):
         return self._one(
             """UPDATE assessments SET state = %s, reason = %s, reason_text = %s, result = %s, evidence = %s,
                       snapshot_id = %s, provider_name = %s, provider_version = %s, retry_at = NULL,
                       display_policy = %s, rank_key = %s, score_unrounded = %s, completed_at = now(),
                       shadow_margin = %s, shadow_probability = %s, shadow_bundle_sha256 = %s,
-                      shadow_model_version = %s
+                      shadow_model_version = %s, calibrated_probability = %s, calibrated_bundle_sha256 = %s
                 WHERE workshop_id = %s AND id = %s AND state = 'pending' RETURNING *""",
             (state, reason, reason_text, Json(result) if result is not None else None,
              Json(evidence) if evidence is not None else None, snapshot_id, provider_name, provider_version,
              Json(display_policy) if display_policy is not None else None, rank_key, score_unrounded,
              (shadow or {}).get("margin"), (shadow or {}).get("probability"),
              (shadow or {}).get("bundle_sha256"), (shadow or {}).get("model_version"),
+             (calibrated or {}).get("probability"), (calibrated or {}).get("bundle_sha256"),
              self.wid, assessment_id))
 
     def latest_briefing_source(self, booking_id: str):

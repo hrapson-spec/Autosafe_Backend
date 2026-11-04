@@ -8,6 +8,10 @@ than one DVSA test falls in the window, and a PRS ("rectified at the test") appe
 by a PASSED test about a second later (garage/api/briefing.py:19-20). So the F-or-PRS positives are
 systematically status 'ambiguous', not 'matched'. Evaluating G7 on status == 'matched' only would drop them and
 bias the observed rate down. The helper below reads the ordered `candidates` list instead.
+
+SUPERSEDED for G7 / band-order wiring (2026-11-03): `classify.classify_booking_outcome` is the PRS-aware
+classifier with an explicit endpoint and PRS pairing rule; `f_or_prs_from_candidates` cannot pair by time (the
+stored candidates carry only the test DATE) and is kept only for its existing tests.
 """
 from __future__ import annotations
 

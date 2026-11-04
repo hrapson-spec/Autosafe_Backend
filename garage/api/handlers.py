@@ -126,7 +126,7 @@ def assess_booking(ctx: Ctx, scope: Scope, job: dict):
             s.complete_assessment(a["id"], "unavailable", "model_not_qualified",
                                   evidence=evidence, snapshot_id=snap["id"],
                                   provider_name=pr.provider_name, provider_version=pr.provider_version,
-                                  display_policy=pr.display_policy.to_json())
+                                  display_policy=pr.display_policy.to_json(), calibrated=_calibrated_values(pr))
             return Done()
         avail = pr.state == "available"
         result = ({"percent_rounded": pr.percent_rounded if pr.display_policy.display_state != "bands" else None, "band": pr.band} if avail else None)
@@ -135,7 +135,7 @@ def assess_booking(ctx: Ctx, scope: Scope, job: dict):
                               display_policy=pr.display_policy.to_json() if pr.display_policy else None,
                               rank_key=None,  # response-local ordinal keys are computed only for booking lists
                               score_unrounded=pr.rank_score if avail and pr.display_policy.ranking_enabled else None,
-                              shadow=_shadow_values(pr))
+                              shadow=_shadow_values(pr), calibrated=_calibrated_values(pr))
         return Done()
 
 
@@ -153,6 +153,17 @@ def _shadow_values(pr) -> dict | None:
     return {"margin": float(m), "probability": float(p),
             "bundle_sha256": getattr(pr, "shadow_bundle_sha256", None),
             "model_version": getattr(pr, "shadow_model_version", None)}
+
+
+def _calibrated_values(pr) -> dict | None:
+    """Score provenance (migration 0005): the scorer's calibrated probability and the manifest hash of the bundle that
+    produced it, for every scored result, qualified or not. Server-only; never serialised. Unlike _shadow_values this is also
+    kept for an available result, because G6 (score PSI) and G7 monitor exactly the values that are displayed."""
+    p, h = getattr(pr, "calibrated_probability", None), getattr(pr, "calibrated_bundle_sha256", None)
+    ok = isinstance(p, (int, float)) and not isinstance(p, bool) and math.isfinite(p) and 0.0 <= p <= 1.0
+    if not ok or not (isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h)):
+        return None
+    return {"probability": float(p), "bundle_sha256": h}
 
 
 def _validate_provider(pr) -> str | None:

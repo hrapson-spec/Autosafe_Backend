@@ -5,11 +5,11 @@ import logging
 import os
 
 from ..provider import AssessmentProvider, StubProvider
-from .bundle_provider import BundleError, BundleProvider, ShadowProviderResult
+from .bundle_provider import BundleError, BundleProvider, QualifiedProviderResult, ShadowProviderResult
 
 log = logging.getLogger("garage.provider")
 
-__all__ = ["BundleError", "BundleProvider", "ShadowProviderResult", "provider_from_env"]
+__all__ = ["BundleError", "BundleProvider", "QualifiedProviderResult", "ShadowProviderResult", "provider_from_env"]
 
 
 def provider_from_env(environ=None, *, allow_synthetic: bool = False) -> AssessmentProvider:

@@ -14,7 +14,8 @@ V = "/api/garage/v1"
 def test_migrations_apply_once_and_are_idempotent(env):
     assert dbmod.migrate(env.dsn) == []                                         # template already migrated
     assert [r["version"] for r in sql(env, "SELECT version FROM garage_schema_migrations")] == ["0001_init", "0002_briefing_feedback_async_import",
-                                                                                                    "0003_shadow_assessment_columns", "0004_source_snapshot_raw_response"]
+                                                                                                    "0003_shadow_assessment_columns", "0004_source_snapshot_raw_response",
+                                                                                                    "0005_calibrated_score_provenance", "0006_monitoring_runs"]
 
 
 def test_health(env):

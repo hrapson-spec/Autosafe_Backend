@@ -72,6 +72,19 @@ class ShadowProviderResult(ProviderResult):
     shadow_probability: float | None = None
     shadow_bundle_sha256: str | None = None
     shadow_model_version: str | None = None
+    # Score provenance (migration 0005): the scorer's `probability` field, which is the Platt-calibrated probability
+    # (T2c/rev3/spine/serve.py: apply_platt(margin)), with the manifest hash of the bundle that produced it.
+    calibrated_probability: float | None = None
+    calibrated_bundle_sha256: str | None = None
+
+
+@dataclass(frozen=True)
+class QualifiedProviderResult(ProviderResult):
+    """An available (qualified) ProviderResult that also carries the server-only calibrated probability, so monitoring
+    (G6 score PSI, G7) has the same value in qualified mode as ShadowProviderResult gives it in shadow mode.
+    Never serialised to a client."""
+    calibrated_probability: float | None = None
+    calibrated_bundle_sha256: str | None = None
 
 
 def canonical_hash(value) -> str:
@@ -327,7 +340,7 @@ class BundleProvider:
             return self._unavailable("scorer_bundle_mismatch")
         qd = self._current_qualification()
         if qd is not None:
-            return self._qualified_result(qd, float(d["probability"]))
+            return self._qualified_result(qd, float(d["probability"]), vb.manifest_sha256)
         policy = replace(STUB_DISPLAY_POLICY, display_state="shadow", provisional=True,
                          policy_version=vb.manifest["policy_version"], model_version=vb.model_version,
                          suppression_reason="model_not_qualified", operational_qualified=False,
@@ -336,7 +349,8 @@ class BundleProvider:
             state="unavailable", reason="model_not_qualified", reason_text=REASON_TEXT["model_not_qualified"],
             provider_name=self.name, provider_version=self.version, display_policy=policy,
             shadow_margin=float(d["margin"]), shadow_probability=float(d["probability"]),
-            shadow_bundle_sha256=vb.manifest_sha256, shadow_model_version=vb.model_version)
+            shadow_bundle_sha256=vb.manifest_sha256, shadow_model_version=vb.model_version,
+            calibrated_probability=float(d["probability"]), calibrated_bundle_sha256=vb.manifest_sha256)
 
     def _current_qualification(self) -> QualifiedDisplay | None:
         """Per-call re-check (small evidence files; model files are hashed by the scorer). A change on disk degrades to shadow."""
@@ -348,15 +362,17 @@ class BundleProvider:
             return None
         return qd
 
-    def _qualified_result(self, qd: QualifiedDisplay, p: float) -> ProviderResult:
+    def _qualified_result(self, qd: QualifiedDisplay, p: float, manifest_sha256: str) -> ProviderResult:
         pol = qd.policy
         try:
             pct = round_percent(p, self._reading, pol.rounding_pp)
             score = rank_score(p)
         except ValueError:
             return self._unavailable("scorer_schema_mismatch")
-        return ProviderResult(state="available", percent_rounded=pct, band=pol.band_for(pct), provider_name=self.name,
-                              provider_version=self.version, display_policy=pol, rank_score=score)
+        return QualifiedProviderResult(
+            state="available", percent_rounded=pct, band=pol.band_for(pct), provider_name=self.name,
+            provider_version=self.version, display_policy=pol, rank_score=score,
+            calibrated_probability=float(p), calibrated_bundle_sha256=manifest_sha256)
 
 
 def _reject_constant(name):
