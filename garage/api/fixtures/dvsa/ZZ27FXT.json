@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 27",
+  "motTests": [
+    {
+      "completedDate": "2019-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-08-09",
+      "motTestNumber": "SYN27000",
+      "odometerUnit": "MI",
+      "odometerValue": "15699",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-08-10",
+      "motTestNumber": "SYN27010",
+      "odometerUnit": "MI",
+      "odometerValue": "22799",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-08-10",
+      "motTestNumber": "SYN27020",
+      "odometerUnit": "MI",
+      "odometerValue": "29899",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-08-10",
+      "motTestNumber": "SYN27030",
+      "odometerUnit": "MI",
+      "odometerValue": "36999",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-08-09",
+      "motTestNumber": "SYN27040",
+      "odometerUnit": "MI",
+      "odometerValue": "44099",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-08-10",
+      "motTestNumber": "SYN27050",
+      "odometerUnit": "MI",
+      "odometerValue": "51199",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-08-10",
+      "motTestNumber": "SYN27060",
+      "odometerUnit": "MI",
+      "odometerValue": "58299",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-08-10T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2027-08-10",
+      "motTestNumber": "SYN27070",
+      "odometerUnit": "MI",
+      "odometerValue": "9000",
+      "registrationAtTimeOfTest": "ZZ27FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ27FXT",
+  "registrationDate": "2016-01-01"
+}

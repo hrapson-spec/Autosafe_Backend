@@ -1,0 +1,99 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 45",
+  "motTests": [
+    {
+      "completedDate": "2019-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-05-07",
+      "motTestNumber": "SYN45000",
+      "odometerUnit": "MI",
+      "odometerValue": "18165",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-05-08",
+      "motTestNumber": "SYN45010",
+      "odometerUnit": "MI",
+      "odometerValue": "25265",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-05-08",
+      "motTestNumber": "SYN45020",
+      "odometerUnit": "MI",
+      "odometerValue": "32365",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-05-08",
+      "motTestNumber": "SYN45030",
+      "odometerUnit": "MI",
+      "odometerValue": "39465",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-05-07",
+      "motTestNumber": "SYN45040",
+      "odometerUnit": "MI",
+      "odometerValue": "46565",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-08",
+      "motTestNumber": "SYN45050",
+      "odometerUnit": "MI",
+      "odometerValue": "53665",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-05-08T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-05-08",
+      "motTestNumber": "SYN45060",
+      "odometerUnit": "MI",
+      "odometerValue": "60765",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-05-08T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": true,
+          "text": "Example tyre cord visible at test",
+          "type": "DANGEROUS"
+        }
+      ],
+      "expiryDate": null,
+      "motTestNumber": "SYN45070",
+      "odometerUnit": "MI",
+      "odometerValue": "67865",
+      "registrationAtTimeOfTest": "ZZ45FXT",
+      "testResult": "FAILED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ45FXT",
+  "registrationDate": "2016-01-01"
+}

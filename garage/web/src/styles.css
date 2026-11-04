@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root { color-scheme: light; }
+body { background: #f0f0f0; color: #0f172a; font-family: ui-sans-serif, system-ui, sans-serif; }
+.font-serif { font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; }
+
+/* Visible keyboard focus everywhere. */
+:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+h1:focus { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

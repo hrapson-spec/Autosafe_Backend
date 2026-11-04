@@ -1,0 +1,252 @@
+{
+ "ZZ00FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-02-03",
+  "prior_test_count": 8
+ },
+ "ZZ01FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-03-11",
+  "prior_test_count": 8
+ },
+ "ZZ02FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-05",
+  "prior_test_count": 9
+ },
+ "ZZ03FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-05-06",
+  "prior_test_count": 8
+ },
+ "ZZ04FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-06-07",
+  "prior_test_count": 8
+ },
+ "ZZ05FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-08",
+  "prior_test_count": 8
+ },
+ "ZZ06FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-08-09",
+  "prior_test_count": 8
+ },
+ "ZZ07FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-02-10",
+  "prior_test_count": 8
+ },
+ "ZZ08FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-03-11",
+  "prior_test_count": 8
+ },
+ "ZZ09FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2017-04-12",
+  "prior_test_count": 8
+ },
+ "ZZ10FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-05-13",
+  "prior_test_count": 8
+ },
+ "ZZ11FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-06-21",
+  "prior_test_count": 8
+ },
+ "ZZ12FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-15",
+  "prior_test_count": 9
+ },
+ "ZZ13FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-08-16",
+  "prior_test_count": 8
+ },
+ "ZZ14FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-02-17",
+  "prior_test_count": 8
+ },
+ "ZZ15FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-03-18",
+  "prior_test_count": 8
+ },
+ "ZZ16FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-19",
+  "prior_test_count": 8
+ },
+ "ZZ17FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-05-20",
+  "prior_test_count": 8
+ },
+ "ZZ18FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-06-21",
+  "prior_test_count": 8
+ },
+ "ZZ19FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2017-07-22",
+  "prior_test_count": 8
+ },
+ "ZZ20FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-08-03",
+  "prior_test_count": 8
+ },
+ "ZZ21FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-02-11",
+  "prior_test_count": 8
+ },
+ "ZZ22FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-03-05",
+  "prior_test_count": 9
+ },
+ "ZZ23FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-06",
+  "prior_test_count": 8
+ },
+ "ZZ24FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-05-07",
+  "prior_test_count": 8
+ },
+ "ZZ25FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-06-08",
+  "prior_test_count": 8
+ },
+ "ZZ26FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-09",
+  "prior_test_count": 8
+ },
+ "ZZ27FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-08-10",
+  "prior_test_count": 8
+ },
+ "ZZ28FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-02-11",
+  "prior_test_count": 8
+ },
+ "ZZ29FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2017-03-12",
+  "prior_test_count": 8
+ },
+ "ZZ30FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-13",
+  "prior_test_count": 8
+ },
+ "ZZ31FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-05-21",
+  "prior_test_count": 8
+ },
+ "ZZ32FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-06-15",
+  "prior_test_count": 9
+ },
+ "ZZ33FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-16",
+  "prior_test_count": 8
+ },
+ "ZZ34FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-08-17",
+  "prior_test_count": 8
+ },
+ "ZZ35FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-02-18",
+  "prior_test_count": 8
+ },
+ "ZZ36FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-03-19",
+  "prior_test_count": 8
+ },
+ "ZZ37FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-20",
+  "prior_test_count": 8
+ },
+ "ZZ38FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-05-21",
+  "prior_test_count": 8
+ },
+ "ZZ39FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2017-06-22",
+  "prior_test_count": 8
+ },
+ "ZZ40FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-03",
+  "prior_test_count": 8
+ },
+ "ZZ41FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-08-11",
+  "prior_test_count": 8
+ },
+ "ZZ42FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-02-05",
+  "prior_test_count": 9
+ },
+ "ZZ43FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-03-06",
+  "prior_test_count": 8
+ },
+ "ZZ44FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-04-07",
+  "prior_test_count": 8
+ },
+ "ZZ45FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-05-08",
+  "prior_test_count": 8
+ },
+ "ZZ46FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-06-09",
+  "prior_test_count": 8
+ },
+ "ZZ47FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2026-07-10",
+  "prior_test_count": 8
+ },
+ "ZZ48FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2025-08-11",
+  "prior_test_count": 8
+ },
+ "ZZ49FXT": {
+  "history_fetched_at": "2026-10-26T10:00:00+00:00",
+  "latest_prior_test_date": "2017-02-12",
+  "prior_test_count": 8
+ }
+}

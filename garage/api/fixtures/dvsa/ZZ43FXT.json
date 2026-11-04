@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 43",
+  "motTests": [
+    {
+      "completedDate": "2019-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-03-05",
+      "motTestNumber": "SYN43000",
+      "odometerUnit": "MI",
+      "odometerValue": "17891",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-03-06",
+      "motTestNumber": "SYN43010",
+      "odometerUnit": "MI",
+      "odometerValue": "24991",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-03-06",
+      "motTestNumber": "SYN43020",
+      "odometerUnit": "MI",
+      "odometerValue": "32091",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-03-06",
+      "motTestNumber": "SYN43030",
+      "odometerUnit": "MI",
+      "odometerValue": "39191",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-03-05",
+      "motTestNumber": "SYN43040",
+      "odometerUnit": "MI",
+      "odometerValue": "46291",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-03-06",
+      "motTestNumber": "SYN43050",
+      "odometerUnit": "MI",
+      "odometerValue": "53391",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-03-06",
+      "motTestNumber": "SYN43060",
+      "odometerUnit": "MI",
+      "odometerValue": "60491",
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-03-06T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2027-03-06",
+      "motTestNumber": "SYN43070",
+      "odometerUnit": "MI",
+      "odometerValue": null,
+      "registrationAtTimeOfTest": "ZZ43FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ43FXT",
+  "registrationDate": "2016-01-01"
+}

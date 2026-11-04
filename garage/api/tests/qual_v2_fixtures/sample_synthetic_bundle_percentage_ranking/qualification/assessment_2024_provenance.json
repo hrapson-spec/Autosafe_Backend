@@ -1,0 +1,19 @@
+{
+  "base_rate": {
+    "recorded_at_utc": "2026-11-10T09:30:00Z",
+    "source_sha256": "052a1479c87e44072588591adbded17888cf7b06ea9fe23c227df78df8264419",
+    "value": 0.25
+  },
+  "code_sha256": "2a44c66a1d0d30ee6a6d1eac25d77d43d1d915a60fe04c80671611b4c1b1b895",
+  "cohort_sha256": "16accdf4ccc09faa5795285f06e167024b4b8c61ed48f7deb0a9b82ef4d6ec9c",
+  "kind": "GARAGE_ASSESSMENT_PROVENANCE_V1",
+  "predictions_sha256": "6954fc80398244a02c97ea73d7de20427a085f02bd6675719cf935c95c36d82b",
+  "produced_at_utc": "2026-11-15T10:00:00Z",
+  "produced_by": "synthetic-author",
+  "read_proof_sha256": "33ea2e39d6981c3cda0d1652bf5e5789b79881ce3bf13c3694a0d9f4b8482a84",
+  "report_sha256": "77f5d0c4a05057e2039ebbde3545ef25396eb0e3eb58e1ea35f34bc36f7ebe49",
+  "subject": {
+    "model_identity_sha256": "84fa16b57a5872da4470f76afe74f2e89b1ca78e5f1f394b29ba2c68aeba9f47"
+  },
+  "synthetic_fixture": true
+}

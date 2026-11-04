@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 17",
+  "motTests": [
+    {
+      "completedDate": "2019-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-05-19",
+      "motTestNumber": "SYN17000",
+      "odometerUnit": "MI",
+      "odometerValue": "14329",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-05-20",
+      "motTestNumber": "SYN17010",
+      "odometerUnit": "MI",
+      "odometerValue": "21429",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-05-20",
+      "motTestNumber": "SYN17020",
+      "odometerUnit": "MI",
+      "odometerValue": "28529",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-05-20",
+      "motTestNumber": "SYN17030",
+      "odometerUnit": "MI",
+      "odometerValue": "35629",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-05-19",
+      "motTestNumber": "SYN17040",
+      "odometerUnit": "MI",
+      "odometerValue": "42729",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-20",
+      "motTestNumber": "SYN17050",
+      "odometerUnit": "MI",
+      "odometerValue": "49829",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-05-20",
+      "motTestNumber": "SYN17060",
+      "odometerUnit": "MI",
+      "odometerValue": "56929",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-05-20T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2027-05-20",
+      "motTestNumber": "SYN17070",
+      "odometerUnit": "MI",
+      "odometerValue": "9000",
+      "registrationAtTimeOfTest": "ZZ17FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ17FXT",
+  "registrationDate": "2016-01-01"
+}

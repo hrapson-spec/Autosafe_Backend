@@ -1,0 +1,105 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 24",
+  "motTests": [
+    {
+      "completedDate": "2019-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-05-06",
+      "motTestNumber": "SYN24000",
+      "odometerUnit": "KM",
+      "odometerValue": "15288",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-05-07",
+      "motTestNumber": "SYN24010",
+      "odometerUnit": "KM",
+      "odometerValue": "22388",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-05-07",
+      "motTestNumber": "SYN24020",
+      "odometerUnit": "KM",
+      "odometerValue": "29488",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-05-07",
+      "motTestNumber": "SYN24030",
+      "odometerUnit": "KM",
+      "odometerValue": "36588",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-05-06",
+      "motTestNumber": "SYN24040",
+      "odometerUnit": "KM",
+      "odometerValue": "43688",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-07T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-07",
+      "motTestNumber": "SYN24050",
+      "odometerUnit": "KM",
+      "odometerValue": "50788",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-05-07T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2026-05-07",
+      "motTestNumber": "SYN24060",
+      "odometerUnit": "KM",
+      "odometerValue": "57888",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-05-07T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2027-05-07",
+      "motTestNumber": "SYN24070",
+      "odometerUnit": "KM",
+      "odometerValue": "64988",
+      "registrationAtTimeOfTest": "ZZ24FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ24FXT",
+  "registrationDate": "2016-01-01"
+}

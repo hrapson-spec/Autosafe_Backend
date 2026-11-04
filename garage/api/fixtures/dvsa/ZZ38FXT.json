@@ -1,0 +1,93 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 38",
+  "motTests": [
+    {
+      "completedDate": "2019-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-05-20",
+      "motTestNumber": "SYN38000",
+      "odometerUnit": "MI",
+      "odometerValue": "17206",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-05-21",
+      "motTestNumber": "SYN38010",
+      "odometerUnit": "MI",
+      "odometerValue": "24306",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-05-21",
+      "motTestNumber": "SYN38020",
+      "odometerUnit": "MI",
+      "odometerValue": "31406",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-05-21",
+      "motTestNumber": "SYN38030",
+      "odometerUnit": "MI",
+      "odometerValue": "38506",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-05-20",
+      "motTestNumber": "SYN38040",
+      "odometerUnit": "MI",
+      "odometerValue": "45606",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-21",
+      "motTestNumber": "SYN38050",
+      "odometerUnit": "MI",
+      "odometerValue": "52706",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2026-05-21",
+      "motTestNumber": "SYN38060",
+      "odometerUnit": "MI",
+      "odometerValue": "59806",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-21T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-21",
+      "motTestNumber": "SYN38070",
+      "odometerUnit": "MI",
+      "odometerValue": "66906",
+      "registrationAtTimeOfTest": "ZZ38FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ38FXT",
+  "registrationDate": "2016-01-01"
+}

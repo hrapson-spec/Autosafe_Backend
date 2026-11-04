@@ -1,0 +1,31 @@
+{
+  "arm": "challenger/without40",
+  "bundle_version": "BundleV1",
+  "dag_node_ids": [
+    "n1",
+    "n2"
+  ],
+  "display_state": "shadow",
+  "files": {
+    "models/model.txt": "7aa46a05fa37712f9a57829f719831cfdbf18fd9033d0bc2d2852f7396bcbca9",
+    "platt.json": "f9e6c4804c63829de254f1dcc33cddf8358c023965e0aa838444ad73339ca317",
+    "schema.json": "46be172d51c03d4855ea4a3c7d3b65e7f694a81c6e80c6b805281bfbebebfe8e"
+  },
+  "integrated_freeze_sha256": "12dd9774cc96e18b5b1b5d4a4b1e0724c4b3e3f37a3eed1af6a1dac7cfdbc3e3",
+  "manifest_content_sha256": "d235dd872fb6ed45c6b4058f6f8d3ec1d5d50126a4ed1deb241b6fa52a868ee2",
+  "model_version": "garage-synth-v1",
+  "policy_version": "garage-shadow-policy-synth",
+  "qualified": false,
+  "runtime": {
+    "challenger": "/usr/bin/python3"
+  },
+  "schema_sha256": "df0ad6e43880f09c90ebf95f19110178aba6890df0010ebda7485029e2b543b4",
+  "scorer": {
+    "path": "scorer/serve.py",
+    "runtime_executable": "/usr/bin/python3",
+    "sha256": "64e21afd9d7750eda5201c23d10000484d8ac22075f642605560f9e6124bd031"
+  },
+  "scorer_sources": {},
+  "source_root": "/nonexistent",
+  "synthetic_fixture": true
+}

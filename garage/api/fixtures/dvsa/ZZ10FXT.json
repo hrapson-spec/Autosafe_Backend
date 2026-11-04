@@ -1,0 +1,105 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2016-01-01",
+  "fuelType": "Diesel",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2016-01-01",
+  "model": "FIXTURE VARIANT 10",
+  "motTests": [
+    {
+      "completedDate": "2019-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2020-05-12",
+      "motTestNumber": "SYN10000",
+      "odometerUnit": "MI",
+      "odometerValue": "13370",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2020-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2021-05-13",
+      "motTestNumber": "SYN10010",
+      "odometerUnit": "MI",
+      "odometerValue": "20470",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2021-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2022-05-13",
+      "motTestNumber": "SYN10020",
+      "odometerUnit": "MI",
+      "odometerValue": "27570",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2022-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2023-05-13",
+      "motTestNumber": "SYN10030",
+      "odometerUnit": "MI",
+      "odometerValue": "34670",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2023-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2024-05-12",
+      "motTestNumber": "SYN10040",
+      "odometerUnit": "MI",
+      "odometerValue": "41770",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2024-05-13T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2025-05-13",
+      "motTestNumber": "SYN10050",
+      "odometerUnit": "MI",
+      "odometerValue": "48870",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2025-05-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2026-05-13",
+      "motTestNumber": "SYN10060",
+      "odometerUnit": "MI",
+      "odometerValue": "55970",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2026-05-13T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2027-05-13",
+      "motTestNumber": "SYN10070",
+      "odometerUnit": "MI",
+      "odometerValue": "63070",
+      "registrationAtTimeOfTest": "ZZ10FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ10FXT",
+  "registrationDate": "2016-01-01"
+}

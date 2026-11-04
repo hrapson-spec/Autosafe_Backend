@@ -27,3 +27,23 @@ static/assets/
 e2e-artifacts/
 playwright-report/
 test-results/
+
+# Local garage review runtimes and data are never image inputs.
+garage/.venv*/
+garage/.playwright*/
+garage/web/node_modules/
+garage/web/dist/
+garage/web/dist-mock/
+garage/review/
+
+# Test-only content of the garage app is never an image input: the pytest suite, its conftest and contract
+# checker, and every fixture or sample bundle under it (tests/qual_v2_fixtures, sample_synthetic_bundle_*).
+# Nothing at runtime imports garage.api.tests (verified by grep 2026-11-03); the root Dockerfile needs none of it.
+garage/api/tests/
+garage/**/tests/
+**/.pytest_cache/
+**/__pycache__/
+.env
+.env.*
+**/.env
+**/.env.*

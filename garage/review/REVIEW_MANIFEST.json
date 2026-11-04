@@ -1,0 +1,36 @@
+{
+  "scope": "LOCAL_FULLSTACK_FIXTURE_SOURCE_AND_CURATED_EVIDENCE_ONLY",
+  "bundle_sha256": "fc27b4dd97312e03c01dbbb6ddef28a2d3c569b07871d66bbefd5ad56c1a9224",
+  "files": {
+    ".dockerignore": "a7e02bc13f928f3b517c31d7f249433f3bacf4edcc61973b8913361fe378cf8c",
+    "garage/.gitignore": "377d0b93083af59388f536f3e317ff865c476fba32e68c98f5c1d7a42b46589f",
+    "garage/api/app.py": "ec981cd18c017619be30d8a04c6bee47d68cad79d259b3359d1dbc877a05cbae",
+    "garage/api/config.py": "afc8feed8ec0846989f51bb8f371c119bfab917715f92d63247883838768217e",
+    "garage/api/tests/test_auth.py": "54ffa961116c2cdf25aa46caf14ca18946989ac3450291627f8acadb85ca0f72",
+    "garage/review/.gitignore": "967e8c04f971fa411dec9b8083b32aa5b87458964f7e3db8d48779f6c5e86d44",
+    "garage/review/README.md": "2386538fe35e2c4157e6ee0e1ce07a5e89aee3cbcdd4d499a4b6cc3d2af38ce7",
+    "garage/review/VERIFICATION.md": "a96b341685fb7fe2e713da67f698d5d2f2301a81557941e3a07cc07bc89f09f1",
+    "garage/review/__init__.py": "3cff8bc5df0735fecf9548d848d98b7ae3f2fd9fbecfd7a1f2d182d6a777b1e8",
+    "garage/review/bootstrap.sh": "bc1d940df72eb4ca8b42fec9d94add0d9e6d20bdc15f641a26c1c9feef28f460",
+    "garage/review/build_frontend.py": "26178a4a182b9868cf6ed999baa8e12a8680d1152c2bca70ba3b56d365f180c4",
+    "garage/review/drill.py": "289950f0aea3ccce3d5d7173baa38a697c5c632f1617ca5b5ffb51a0ff7937bb",
+    "garage/review/e2e/full-stack.spec.ts": "93952b05d17b5d5812f0f4cebc29b0097931bfa5b8861eb1831c9a044aeb54ba",
+    "garage/review/environment.py": "ae1a8f7e1b98bb618d90ea0fd09e35c205552cd89360fbc6117ca976f7f2e937",
+    "garage/review/full-stack-desktop.png": "a298cd3b1404550dc55de367b6f384a3b0d2a826d3d93ec7e8a28406cc89e4a7",
+    "garage/review/full-stack-phone.png": "beae986777b63275c09f6a50efefb014d92615a799893abc61c24adba10fdfcc",
+    "garage/review/launcher.py": "1ab51e27f4746d3c0e130b1a2cc873e27c9bfe24fe94103b5f0284de6268b3dd",
+    "garage/review/paths.py": "cd4c4782913eb8041d1d88c709a3318018c050be52b6b6e98d03f9551a3ab847",
+    "garage/review/playwright.config.ts": "c5bf15565d98f964620f6ae523ee9c227adc49ae6e7cd8e8074c26730b8b10c4",
+    "garage/review/requirements.lock": "873824ceed379aa6479ce61301660025f842de5b5191ddcfa70539212f7bee6c",
+    "garage/review/server.py": "c97fe4cb9e66b22ba41323a50725ba43936ca9682fe51341dd0fd7a1a5822b8d",
+    "garage/review/test_harness.py": "c5071dcc29f5509d192236c04afcd9f2b5c7894ae6671466014d4ea8417ded82"
+  },
+  "excluded": "all state/runtime/build output, venvs, raw logs, invite/link/control tokens, start/reset/clone/drill/lifecycle JSON and dumps",
+  "verification": {
+    "baseline_backend_and_harness_tests": 284,
+    "final_focused_harness_tests": 17,
+    "real_browser_tests": 1,
+    "clone_restore_rollback_passed": true,
+    "marked_boundary_and_pg_scrub_passed": true
+  }
+}

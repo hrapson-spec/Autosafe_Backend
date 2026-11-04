@@ -1,0 +1,4 @@
+# Isolated local review runtimes and browser binaries
+.venv-review/
+.playwright-review/
+.venv-integration/

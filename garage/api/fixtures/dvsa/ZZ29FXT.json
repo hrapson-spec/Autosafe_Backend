@@ -1,0 +1,105 @@
+{
+  "engineSize": "1400",
+  "firstUsedDate": "2007-01-01",
+  "fuelType": "Petrol",
+  "make": "EXAMPLE MOTORS",
+  "manufactureDate": "2007-01-01",
+  "model": "FIXTURE VARIANT 29",
+  "motTests": [
+    {
+      "completedDate": "2010-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2011-03-12",
+      "motTestNumber": "SYN29000",
+      "odometerUnit": "MI",
+      "odometerValue": "15973",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2011-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2012-03-11",
+      "motTestNumber": "SYN29010",
+      "odometerUnit": "MI",
+      "odometerValue": "23073",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2012-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2013-03-12",
+      "motTestNumber": "SYN29020",
+      "odometerUnit": "MI",
+      "odometerValue": "30173",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2013-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2014-03-12",
+      "motTestNumber": "SYN29030",
+      "odometerUnit": "MI",
+      "odometerValue": "37273",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2014-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2015-03-12",
+      "motTestNumber": "SYN29040",
+      "odometerUnit": "MI",
+      "odometerValue": "44373",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2015-03-12T10:15:00Z",
+      "defects": [],
+      "expiryDate": "2016-03-11",
+      "motTestNumber": "SYN29050",
+      "odometerUnit": "MI",
+      "odometerValue": "51473",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2016-03-12T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2017-03-12",
+      "motTestNumber": "SYN29060",
+      "odometerUnit": "MI",
+      "odometerValue": "58573",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    },
+    {
+      "completedDate": "2017-03-12T10:15:00Z",
+      "defects": [
+        {
+          "dangerous": false,
+          "text": "Example front tyre tread observation",
+          "type": "ADVISORY"
+        }
+      ],
+      "expiryDate": "2018-03-12",
+      "motTestNumber": "SYN29070",
+      "odometerUnit": "MI",
+      "odometerValue": "65673",
+      "registrationAtTimeOfTest": "ZZ29FXT",
+      "testResult": "PASSED"
+    }
+  ],
+  "primaryColour": "BLUE",
+  "registration": "ZZ29FXT",
+  "registrationDate": "2007-01-01"
+}

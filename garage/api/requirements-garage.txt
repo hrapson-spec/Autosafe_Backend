@@ -1,0 +1,8 @@
+# Extra requirements for garage/api beyond the root requirements.txt
+# (fastapi, starlette, pydantic, httpx, psycopg2-binary are already pinned there).
+tzdata>=2024.1          # zoneinfo data for Europe/London on slim images
+# test-only
+pytest>=8.0
+pgserver>=0.1.4         # embedded PostgreSQL 16 for local tests (no Docker)
+pyyaml>=6.0
+jsonschema>=4.20
