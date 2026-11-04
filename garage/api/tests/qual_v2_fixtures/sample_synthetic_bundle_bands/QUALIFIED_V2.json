@@ -39,17 +39,17 @@
       "qualification/pseudo_future_2023.json": "74c576d5ab75620874e8e777b8a579b01393cafe391e2fc3d1242bd7b2ca424a",
       "qualification/read_2024_entry_receipt.json": "2b68eb4d3cc179abe4932ca64c690d2dbb6182bf6934799a21a7523fbe6622d1",
       "qualification/read_2024_registry_records.jsonl": "d80972617f04e11b63e279cc06b8317c98f87f829815ae9a2b2f8e0f0b29d54e",
-      "qualification/receipt.json": "50c81d9cfc4c5539d1c0f5cb144511c233d1d9a1d7ec09185e5571a696085d16",
-      "qualification/rules_approval.json": "3b1260ef72a25533007157104623469817ecbedfb2fad3b585ae9aeb889bbfd0",
+      "qualification/receipt.json": "a5a5edb41828794e4ba48df49e14051e7600fa66a3972713dbbbbf7b822a7b3d",
+      "qualification/rules_approval.json": "aa3aaf3b4136e3ef7e1d97a85d62c35aad6cf5542184dfbc5a0d7b4a4fbec3e2",
       "qualification/usefulness_gate.json": "5753576a3bd3bed72ff0709a045db65b7f9effd37a4370c3ad2b875273ed6130"
     },
     "receipt": {
-      "content_sha256": "4679ddf413e7899bb56a479b6aa5c3febadc6ddde5d92208214c039337dae776",
+      "content_sha256": "34894ee5c67b56a8e460bad9656d2487d7bdb744e62a5e5b868ac35980313f75",
       "path": "qualification/receipt.json"
     }
   },
   "qualified": true,
   "ranking_enabled": false,
-  "sidecar_content_sha256": "cce179b4cc2b7b5760a69a126420405fbe6e4ee489db35d9aa5ad4eb3da79706",
+  "sidecar_content_sha256": "ca85144a30df7cff527aa6f636ccaec0fc2690e66d7d1e0a0e498bb48f3413f8",
   "synthetic_fixture": true
 }

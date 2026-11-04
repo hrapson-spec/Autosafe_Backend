@@ -26,8 +26,13 @@ ROLE_FILES = {   # role -> file name inside qualification/
     "usefulness_gate": "usefulness_gate.json", "assessment_2024_provenance": "assessment_2024_provenance.json", "assessment_2024_report": "assessment_2024_report.json",
     "independent_recomputation": "independent_recomputation.json", "live_qualification": "live_qualification.json",
     "read_2024_entry_receipt": "read_2024_entry_receipt.json", "read_2024_registry_records": "read_2024_registry_records.jsonl",
-    "band_evidence": "band_evidence.json", "g6_shadow": "g6_shadow.json", "serving_parity": "serving_parity.json"}
-OPTIONAL_ROLES = ("band_evidence", "g6_shadow", "serving_parity")
+    "band_evidence": "band_evidence.json", "g6_shadow": "g6_shadow.json", "serving_parity": "serving_parity.json",
+    # READ entries 2..4 (rules.read_2024.entries): each registered 2024 READ scope has its own entry receipt and its own READ_START/READ_END lines
+    "read_2024_entry_receipt_2": "read_2024_entry_receipt_2.json", "read_2024_registry_records_2": "read_2024_registry_records_2.jsonl",
+    "read_2024_entry_receipt_3": "read_2024_entry_receipt_3.json", "read_2024_registry_records_3": "read_2024_registry_records_3.jsonl",
+    "read_2024_entry_receipt_4": "read_2024_entry_receipt_4.json", "read_2024_registry_records_4": "read_2024_registry_records_4.jsonl"}
+OPTIONAL_ROLES = ("band_evidence", "g6_shadow", "serving_parity", "read_2024_entry_receipt_2", "read_2024_registry_records_2",
+                  "read_2024_entry_receipt_3", "read_2024_registry_records_3", "read_2024_entry_receipt_4", "read_2024_registry_records_4")
 
 
 def sidecar_hash(sc):
@@ -86,7 +91,7 @@ def write_bundle_v2(out_dir, *, base_bundle_dir, evidence_paths, receipt_id, iss
         os.chmod(str(stage), 0o700)
         src = base["directory"]
         m = base["manifest"]
-        for rel in sorted(set(m["files"]) | {m["scorer"]["path"], "manifest.json"}):          # byte-identical copy of exactly the bound files
+        for rel in sorted(set(m["files"]) | set(base["inventory"]) | {m["scorer"]["path"], "manifest.json"}):          # byte-identical copy of exactly the bound files (a self-contained bundle: all of its inventory)
             dst = stage / rel
             mkdir_private(dst.parent)
             write_private(dst, inside(src, rel).read_bytes())

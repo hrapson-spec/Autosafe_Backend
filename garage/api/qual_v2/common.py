@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SHA = re.compile(r"^[0-9a-f]{64}$")
-_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.+-]*$")
+_SEGMENT = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.+-]*$")      # a leading underscore is allowed (__init__.py in a self-contained bundle); a leading dot never is
 MAX_JSON_BYTES = 16 * 1024 * 1024
 
 

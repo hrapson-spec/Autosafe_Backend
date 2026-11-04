@@ -420,6 +420,24 @@
             },
             "serving_parity": {
               "$ref": "#/$defs/ref"
+            },
+            "read_2024_entry_receipt_2": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_registry_records_2": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_entry_receipt_3": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_registry_records_3": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_entry_receipt_4": {
+              "$ref": "#/$defs/ref"
+            },
+            "read_2024_registry_records_4": {
+              "$ref": "#/$defs/ref"
             }
           }
         }
@@ -483,7 +501,7 @@
             "assessment_2024",
             "band_rule",
             "live_required_components",
-            "read_2024_entry_requirements",
+            "read_2024",
             "serving_parity_max_abs_diff"
           ],
           "properties": {
@@ -580,9 +598,65 @@
               "type": "number",
               "minimum": 0
             },
-            "read_2024_entry_requirements": {
+            "read_2024": {
+              "description": "Owner decision O6 / v2024_prep ambiguity 9: how many 2024 READ_START events there are and what each entry receipt must contain. REQUIRED, no default. 'start_policy' says one READ_START (AMENDMENT_DRAFT.md:71) or two (cohort then outcomes, AMENDMENT_DRAFT.md:13 and v2024_prep/authority.py); the number of 'entries' must equal it, and the receipt must bind exactly that many entry receipts + registry record files, in this order (roles read_2024_entry_receipt, read_2024_entry_receipt_2, ...). Every entry has its own READ_START and READ_END.",
               "type": "object",
-              "description": "Exact key/value pairs the 2024 READ entry receipt must contain (owner decision O6: e.g. kind, year, scopes or purpose). Must be non-empty. Step 6 mints GARAGE_V2024_ASSESSMENT_AUTHORITY_V1 receipts (scopes, year, study); there is no fixed purpose vocabulary yet."
+              "additionalProperties": false,
+              "required": [
+                "start_policy",
+                "assessment_entry",
+                "entries"
+              ],
+              "properties": {
+                "start_policy": {
+                  "enum": [
+                    "one_read_start",
+                    "two_read_starts"
+                  ]
+                },
+                "assessment_entry": {
+                  "$ref": "#/$defs/nes",
+                  "description": "label of the entry whose READ_END proof the 2024 assessment (gate.py report) must carry, and whose READ_START the assessment, the recomputation and a 2024-partition usefulness gate must not precede"
+                },
+                "entries": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "label",
+                      "requirements",
+                      "follows",
+                      "cohort_summary_field"
+                    ],
+                    "properties": {
+                      "label": {
+                        "$ref": "#/$defs/nes"
+                      },
+                      "requirements": {
+                        "type": "object",
+                        "description": "Exact key/value pairs this entry receipt must contain (e.g. kind, year, scopes). Must be non-empty. v2024_prep/authority.py mints GARAGE_V2024_ASSESSMENT_AUTHORITY_V1 receipts (scopes, year, study); there is no fixed purpose vocabulary yet."
+                      },
+                      "follows": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "null for the first entry; for every later entry the label of an EARLIER entry whose READ_END must precede this entry's READ_START (the cohort summary is frozen before label access, AMENDMENT_DRAFT.md:13)"
+                      },
+                      "cohort_summary_field": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "null, or the name of the field of THIS entry receipt that must equal assessment_2024_provenance.cohort_sha256 (v2024_prep: the outcome receipt's cohort_summary_sha256, authority.py:141-146)"
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }

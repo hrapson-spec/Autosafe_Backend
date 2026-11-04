@@ -53,7 +53,7 @@
     },
     "rules_approval": {
       "path": "qualification/rules_approval.json",
-      "sha256": "3b1260ef72a25533007157104623469817ecbedfb2fad3b585ae9aeb889bbfd0"
+      "sha256": "aa3aaf3b4136e3ef7e1d97a85d62c35aad6cf5542184dfbc5a0d7b4a4fbec3e2"
     },
     "usefulness_gate": {
       "path": "qualification/usefulness_gate.json",

@@ -68,19 +68,26 @@ def _ts(doc, key, what):
     return parse_utc(doc[key], what)
 
 
-def _read_entry(root, receipt, rules, ver, registry_path):
-    entry = _load_doc(root, receipt, "read_2024_entry_receipt", "entryReceiptMinimal")
-    req = rules["read_2024_entry_requirements"]
+READ_ROLE_PAIRS = (("read_2024_entry_receipt", "read_2024_registry_records"), ("read_2024_entry_receipt_2", "read_2024_registry_records_2"),
+                   ("read_2024_entry_receipt_3", "read_2024_registry_records_3"), ("read_2024_entry_receipt_4", "read_2024_registry_records_4"))
+START_POLICY_COUNT = {"one_read_start": 1, "two_read_starts": 2}
+
+
+def _read_one_entry(root, receipt, entry_role, records_role, spec, registry_path, ver):
+    """One 2024 READ entry: its entry receipt, its own READ_START + READ_END lines, and (issuance level) the registry's own copy of them."""
+    label = spec["label"]
+    entry = _load_doc(root, receipt, entry_role, "entryReceiptMinimal")
+    req = spec["requirements"]
     if not req or any(k not in entry or entry[k] != want or type(entry[k]) is not type(want) for k, want in req.items()):
-        raise QualError("read_entry_requirements", "entry receipt lacks the owner-registered requirements (non-empty, exact match)")
+        raise QualError("read_entry_requirements", "entry receipt '%s' lacks the owner-registered requirements (non-empty, exact match)" % label)
     if "content_sha256" in entry:                     # step-6 style authority receipt: self-declared content hash, verified here
         if entry["content_sha256"] != canonical_hash({k: x for k, x in entry.items() if k != "content_sha256"}):
-            raise QualError("read_entry_digest", "entry receipt content_sha256 does not match its content")
+            raise QualError("read_entry_digest", "entry receipt '%s' content_sha256 does not match its content" % label)
         digest = entry["content_sha256"]
     else:
         digest = registry_digest(entry)
     try:
-        lines = [l for l in _load_bytes(root, receipt, "read_2024_registry_records").decode("utf-8").splitlines() if l.strip()]
+        lines = [l for l in _load_bytes(root, receipt, records_role).decode("utf-8").splitlines() if l.strip()]
     except UnicodeDecodeError:
         raise QualError("read_entry_records", "not utf-8")
     try:
@@ -91,12 +98,12 @@ def _read_entry(root, receipt, rules, ver, registry_path):
         if isinstance(r, dict) and r.get("event") in ("READ_FAIL", "AUTHORITY_REVOKED"):
             raise QualError("read_entry_failed_or_revoked", str(r.get("event")))
     if len(recs) != 2:
-        raise QualError("read_entry_records", "exactly one READ_START and one READ_END line required")
+        raise QualError("read_entry_records", "entry '%s': exactly one READ_START and one READ_END line required" % label)
     for r in recs:
         check_struct(r, "registryRecord")
     events = sorted(r["event"] for r in recs)
     if events != ["READ_END", "READ_START"]:
-        raise QualError("read_entry_records", "need one READ_START and one READ_END")
+        raise QualError("read_entry_records", "entry '%s': need one READ_START and one READ_END" % label)
     start = next(r for r in recs if r["event"] == "READ_START")
     end = next(r for r in recs if r["event"] == "READ_END")
     for r in (start, end):
@@ -126,10 +133,47 @@ def _read_entry(root, receipt, rules, ver, registry_path):
                 seen.append(r)
         if sorted(json.dumps(r, sort_keys=True) for r in seen) != sorted(json.dumps(r, sort_keys=True) for r in recs):
             raise QualError("registry_mismatch", "registry holds other or different records for this entry (e.g. READ_FAIL, AUTHORITY_REVOKED, a duplicate START)")
+        ver.ok("registry_lines_present_verbatim_and_unrevoked:" + label)
+    ver.ok("read_2024_entry_bound:" + label)
+    return dict(label=label, entry=entry, digest=digest, start=start, end=end, t_start=t_start, t_end=t_end, spec=spec)
+
+
+def _read_entries(root, receipt, rules, ver, registry_path):
+    """Every 2024 READ entry the owner registered (rules.read_2024), each with its own READ_START/READ_END, plus the ordering between them.
+    Whether there is one READ_START or two is the owner's decision (start_policy, required, no default); the receipt must bind exactly that many."""
+    spec = rules["read_2024"]
+    entries = spec["entries"]
+    if len(entries) != START_POLICY_COUNT[spec["start_policy"]]:
+        raise QualError("read_entry_policy_mismatch", "start_policy %s needs %d registered entr%s, rules list %d" % (
+            spec["start_policy"], START_POLICY_COUNT[spec["start_policy"]], "y" if START_POLICY_COUNT[spec["start_policy"]] == 1 else "ies", len(entries)))
+    labels = [e["label"] for e in entries]
+    if len(set(labels)) != len(labels):
+        raise QualError("read_entry_labels", "duplicate entry label")
+    for i, e in enumerate(entries):
+        if i == 0 and e["follows"] is not None:
+            raise QualError("read_entry_follows_invalid", "the first entry cannot follow another")
+        if i > 0 and e["follows"] not in labels[:i]:
+            raise QualError("read_entry_follows_invalid", "entry '%s' must follow an EARLIER registered entry" % e["label"])
+    if spec["assessment_entry"] not in labels:
+        raise QualError("read_entry_assessment_unknown", "assessment_entry is not a registered entry label")
+    ev = receipt["evidence"]
+    bound = [i for i, pair in enumerate(READ_ROLE_PAIRS) if pair[0] in ev or pair[1] in ev]
+    if bound != list(range(len(entries))) or any(READ_ROLE_PAIRS[i][0] not in ev or READ_ROLE_PAIRS[i][1] not in ev for i in bound):
+        raise QualError("read_entry_count_mismatch", "the receipt binds %d READ entr%s, the owner's rules register %d" % (len(bound), "y" if len(bound) == 1 else "ies", len(entries)))
+    got = [_read_one_entry(root, receipt, READ_ROLE_PAIRS[i][0], READ_ROLE_PAIRS[i][1], entries[i], registry_path, ver) for i in range(len(entries))]
+    if len({g["entry"]["entry_id"] for g in got}) != len(got) or len({g["digest"] for g in got}) != len(got):
+        raise QualError("read_entry_duplicate", "two registered entries share an entry_id or a digest: each scope needs its own READ_START/READ_END")
+    by_label = {g["label"]: g for g in got}
+    for g in got[1:]:
+        prior = by_label[g["spec"]["follows"]]
+        if not g["t_start"] > prior["t_end"]:
+            raise QualError("read_entry_order", "entry '%s' READ_START must follow the READ_END of '%s'" % (g["label"], prior["label"]))
+    ver.times.update(read_start=min(g["t_start"] for g in got), read_end=max(g["t_end"] for g in got))
+    ver.ok("read_2024_entries_ordered")
+    ver.ok("read_2024_entry_bound")                                  # all entries (names without a label are kept for v2.0 callers)
+    if registry_path is not None:
         ver.ok("registry_lines_present_verbatim_and_unrevoked")
-    ver.times.update(read_start=t_start, read_end=t_end)
-    ver.ok("read_2024_entry_bound")
-    return start, end
+    return got, by_label[spec["assessment_entry"]]
 
 
 def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allow_unpinned=False, registry_path=None):
@@ -172,14 +216,17 @@ def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allo
     rules = rules_doc["rules"]
     ver.ok("approvals_bind_model_and_amendment")
 
-    start, end = _read_entry(root, receipt, rules, ver, registry_path)
-    t_start, t_end = ver.times["read_start"], ver.times["read_end"]
+    got, assess_entry = _read_entries(root, receipt, rules, ver, registry_path)
+    end = assess_entry["end"]
+    t_start = ver.times["read_start"]                 # the EARLIEST registered READ_START: everything pre-registered or pre-2024 must precede it
+    t_assess = assess_entry["t_start"]                # the assessment entry's own READ_START: the 2024 outcomes cannot exist before it
+    t_last_end = ver.times["read_end"]                # the LATEST READ_END
     t_issued = parse_utc(receipt["issued_at_utc"], "issued_at_utc")
     t_rules = parse_utc(rules_doc["approved_at_utc"], "rules approved_at")
     if not t_rules < t_start:
         raise QualError("rules_not_preregistered", "the owner's rules approval must predate the registered 2024 READ_START")
     ver.ok("rules_preregistered_before_read_start")
-    latest = [t_end, t_rules]
+    latest = [g["t_end"] for g in got] + [t_rules]
 
     # 2023 pseudo-future diagnostic (declared)
     pf = _load_doc(root, receipt, "pseudo_future_2023", "declaredGate")
@@ -195,8 +242,8 @@ def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allo
     ur = rules["usefulness_gate"]
     _declared(ug, "usefulness_gate", PARTITION_FOR_USEFULNESS[ur["partition"]], ur, identity, receipt)
     t = parse_utc(ug["produced_at_utc"], "usefulness produced_at")
-    if (ur["partition"] == "y2024") != (t >= t_start):
-        raise QualError("gate_order", "usefulness gate timing contradicts its registered partition (2024 partition is computed at/after READ_START, others before)")
+    if (ur["partition"] == "y2024" and not t >= t_assess) or (ur["partition"] != "y2024" and not t < t_start):
+        raise QualError("gate_order", "usefulness gate timing contradicts its registered partition (2024 partition is computed at/after the assessment entry's READ_START, others before the first READ_START)")
     latest.append(t)
     ver.ok("usefulness_gate_passed_on_registered_partition")
 
@@ -214,8 +261,12 @@ def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allo
     if prov["read_proof_sha256"] != end["proof_sha256"]:
         raise QualError("assessment_read_mismatch", "the assessment was not produced from the registered READ_END proof")
     t_prod = parse_utc(prov["produced_at_utc"], "assessment produced_at")
-    if t_prod < t_start:
-        raise QualError("gate_order", "assessment produced before READ_START")
+    if t_prod < t_assess:
+        raise QualError("gate_order", "assessment produced before the assessment entry's READ_START")
+    for g in got:                                                    # a registered entry may bind the frozen cohort summary hash (v2024_prep: the outcome receipt)
+        f = g["spec"]["cohort_summary_field"]
+        if f is not None and g["entry"].get(f) != prov["cohort_sha256"]:
+            raise QualError("cohort_summary_not_bound", "entry '%s' field %s is not the assessed cohort summary hash" % (g["label"], f))
     t_base = parse_utc(prov["base_rate"]["recorded_at_utc"], "base_rate recorded_at")
     if not t_base < t_start:
         raise QualError("base_rate_not_prior", "gate.py's base rate must be recorded before the 2024 read")
@@ -240,8 +291,8 @@ def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allo
     if rc["agrees"] is not True or {k: rc["recomputed"][k] for k in ("gates", "extra_gates", "CALIBRATION_PASS", "MODEL_PASS")} != {k: ev[k] for k in ("gates", "extra_gates", "CALIBRATION_PASS", "MODEL_PASS")}:
         raise QualError("recomputation_disagrees", "independent recomputation differs from the values re-derived from the report")
     t_rc = parse_utc(rc["recomputed_at_utc"], "recomputed_at")
-    if t_rc < t_start:
-        raise QualError("gate_order", "recomputation before READ_START")
+    if t_rc < t_assess:
+        raise QualError("gate_order", "recomputation before the assessment entry's READ_START")
     latest.append(t_rc)
     ver.ok("independent_recomputation_agrees")
 
@@ -290,7 +341,7 @@ def verify_receipt(root, receipt, *, base, allow_synthetic=False, pin=None, allo
         t_g6 = parse_utc(g6["produced_at_utc"], "g6 produced_at")
         if not (g6["passed"] is True and g6["pooled_supported_bookings"] >= G6_MIN_BOOKINGS and g6["psi_max_inputs"] <= G6_PSI_MAX and g6["psi_score"] <= G6_PSI_MAX):
             raise QualError("g6_failed", "needs >=500 pooled supported bookings and PSI <= 0.10 on every input and the score")
-        if not t_g6 > t_end:
+        if not t_g6 > t_last_end:
             raise QualError("gate_order", "G6 shadow result must come after the 2024 assessment read")
         if disp["display_state"] == "percentage" and not t_da > t_g6:
             raise QualError("display_approval_order", "percentage approval must postdate the G6 result")

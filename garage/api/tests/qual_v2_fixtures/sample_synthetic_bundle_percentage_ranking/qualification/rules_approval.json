@@ -28,9 +28,20 @@
       "rule_id": "PF-SYNTH",
       "rule_sha256": "71ee358d6d99bc947281bb62e464baf1e9da7c36ca3bb05786cab483682b44be"
     },
-    "read_2024_entry_requirements": {
-      "purpose": "assess_2024_SYNTH",
-      "year": 2024
+    "read_2024": {
+      "assessment_entry": "assessment",
+      "entries": [
+        {
+          "cohort_summary_field": null,
+          "follows": null,
+          "label": "assessment",
+          "requirements": {
+            "purpose": "assess_2024_SYNTH",
+            "year": 2024
+          }
+        }
+      ],
+      "start_policy": "one_read_start"
     },
     "serving_parity_max_abs_diff": 0.0,
     "usefulness_gate": {

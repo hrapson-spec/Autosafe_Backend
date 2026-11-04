@@ -183,3 +183,42 @@ These are all required fields with no defaults.
 - Everything ran on Python 3.9.6 only. The app image is 3.11 and the model runtime is 3.12.
 - App integration (bundle_provider.py, handlers.py) wasn't touched or run. Step 9 still needs its own rounding and rank_score tests (handlers.py:159-186).
 - The fixture's scorer_sources and source_root are absolute rev3 paths, which v2 doesn't verify. Step 8 removes that dependency.
+
+## 7. 3 Nov 2026: integration changes (two-scope READ binding, self-contained base)
+
+Written by the integration stage (claude-sonnet-5-5). Labels: MEASURED (run here), DERIVED (read from cited text), JUDGEMENT. Paths relative to work/garage_mvp/T2c. Full context: integration_v1/REPORT.md.
+
+### 7.1 What changed (this is the re-vendoring list)
+
+Runtime files changed (the five that the app vendors; all other runtime files are byte-identical to before):
+
+| File | sha256 (first 16) | Change |
+|---|---|---|
+| QUALIFIED_BUNDLE_V2.schema.json | e96175014d58c4be | `rules.read_2024_entry_requirements` removed; required `rules.read_2024` added; receipt.evidence gains optional `read_2024_entry_receipt_2..4` and `read_2024_registry_records_2..4` |
+| verify.py | f2b3b91ff1c1ad7a | `_read_entry` replaced by `_read_one_entry` + `_read_entries` (verify.py:71-176); timing checks re-keyed (see 7.2) |
+| bundle_v2.py | 773a44f4d5233689 | 6 new optional roles (ROLE_FILES / OPTIONAL_ROLES, bundle_v2.py:24-36); the writer copies the whole self-contained inventory (bundle_v2.py:94) |
+| base_v1.py | 40eff651f9758667 | reads and checks `selfcontained.inventory` (base_v1.py:42-57); returns `inventory` |
+| common.py | 7d48c3b78a651f12 | `_SEGMENT` allows a leading underscore (so `__init__.py` is a legal bundle path); a leading dot or `..` is still refused (common.py:11) |
+
+Test-side files changed: tests/synth.py, tests/helpers.py, tests/test_defects.py (3 new defects, 1 re-pointed), tests/SAMPLE_PINS.json and both checked-in sample bundles (regenerated with tests/make_sample.py; new pins bands 34894ee5c67b56a8..., percentage_ranking 8e5a09edeb15722e...). New: tests/test_multi_read.py (101 tests), tests/test_selfcontained_base.py (11 tests).
+
+MEASURED: 372 passed, 9 skipped (was 254 passed, 3 skipped). The 6 extra skips are the optional-role hash-binding test for roles that the single-scope fixtures do not carry; the two-scope bundles test them in test_multi_read.py. Python 3.9.6 for the suite; the same code also ran under Python 3.12.15 inside the app's interpreter (integration_v1 golden path).
+
+Breaking change, on purpose: old receipts and the old sample bundles no longer validate (the new rules field is required and has no default). MEASURED: the app's vendored copy (commit e6c0e47) refuses a new bundle with `schema_invalid` and serves shadow, and the app test `test_qual_v2_vendor.py::test_vendored_files_equal_the_t2c_originals_when_present` now fails (49 passed, 1 failed) until the five files are re-vendored and `VENDOR_SHA256.json` plus `tests/qual_v2_fixtures/*` are refreshed.
+
+### 7.2 Two-scope 2024 READ binding (finding 6 closed)
+
+`rules.read_2024` is a required object with no default:
+- `start_policy`: `one_read_start` or `two_read_starts` (owner decision, v2024_prep ambiguity 9: AMENDMENT_DRAFT.md:71 vs :13). The number of `entries` must equal it (1 or 2); the receipt must bind exactly that many entry receipts and registry-record files, in order (`read_entry_policy_mismatch`, `read_entry_count_mismatch`).
+- `entries[i]`: `label`, `requirements` (exact key/values, non-empty, as before), `follows` (null for the first; for later entries the label of an earlier entry) and `cohort_summary_field` (null, or the entry-receipt field that must equal `assessment_2024_provenance.cohort_sha256`, i.e. the frozen cohort summary hash; v2024_prep authority.py:141-146).
+- `assessment_entry`: the label whose READ_START bounds the assessment, the recomputation and a 2024-partition usefulness gate (the 2024 outcomes cannot exist earlier), and whose READ_END `proof_sha256` the gate.py provenance must carry.
+
+Each entry has its own READ_START and READ_END (exactly two registry lines, same entry_id, both bound to the entry receipt digest; the digest is the receipt's own `content_sha256` for step-6 style receipts, authority.py:61). Ordering (JUDGEMENT, derived from AMENDMENT_DRAFT.md:13): a later entry's READ_START must be strictly after the READ_END of the entry it `follows`. Everything pre-registered or pre-2024 (rules, base rate, 2023 diagnostic, live qualification, a non-2024 usefulness gate) must precede the EARLIEST READ_START; G6 must follow the LATEST READ_END. Entry ids and digests must be distinct. In a one-entry bundle every check reduces to the previous behaviour.
+
+MEASURED: 18 of 18 mutations of the new checks and of the base/inventory logic were killed (ordering, summary binding, count and policy mismatch, assessment-entry timing, duplicates, label and follows validation, inventory hashing and copying, underscore paths); the unmutated control passed.
+
+Open (owner): `one_read_start` cannot be produced by authority.py today: it accepts a receipt whose scopes are exactly the cohort set or exactly the outcome set (authority.py:121-122), so a single receipt cannot cover both. Choosing one READ_START needs a v2024_prep ruling (ambiguity 12).
+
+### 7.3 Self-contained base
+
+A SelfContainedV1 manifest lists every bundle file in `selfcontained.inventory` (vendored sources, tz data, runtime pins). base_v1 now checks that inventory (files entries and scorer must be in it; every file hash is verified on read) and the writer copies all of it. Without this the qualified directory would have been missing src/, tz/ and runtime/ and the launcher would refuse it. model_identity_sha256 is unchanged by packaging (MEASURED: equal for the fixture bundle and its self-contained package).

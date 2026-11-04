@@ -39,11 +39,26 @@ def read_base_v1(directory, *, verify_files=True):
     sc = m["scorer"]
     if not isinstance(sc, dict) or not all(isinstance(sc.get(k), str) for k in ("path", "sha256", "runtime_executable")):
         raise QualError("base_manifest_invalid", "scorer block")
+    inventory = {}
+    if "selfcontained" in m:                           # SelfContainedV1 (selfcontained_v1 packager): a BundleV1 superset that lists EVERY file of the bundle (vendored sources, tz, runtime pins)
+        sc_block = m["selfcontained"]
+        inv = sc_block.get("inventory") if isinstance(sc_block, dict) else None
+        if not isinstance(inv, dict) or not inv or not all(is_sha(v) for v in inv.values()):
+            raise QualError("base_manifest_invalid", "selfcontained.inventory")
+        for rel, expected in m["files"].items():
+            if inv.get(rel) != expected:
+                raise QualError("base_manifest_invalid", "files entry not in the selfcontained inventory: " + rel[:80])
+        if inv.get(sc["path"]) != sc["sha256"]:
+            raise QualError("base_manifest_invalid", "scorer entry not in the selfcontained inventory")
+        inventory = dict(inv)
     if verify_files:
+        for rel, expected in inventory.items():            # every vendored file, not only the model files: the launcher refuses the bundle if one differs
+            if file_sha256(inside(d, rel)) != expected:
+                raise QualError("base_file_hash_mismatch", rel[:80])
         for rel, expected in m["files"].items():
             if not is_sha(expected) or file_sha256(inside(d, rel)) != expected:
                 raise QualError("base_file_hash_mismatch", rel[:80])
         if file_sha256(inside(d, sc["path"])) != sc["sha256"]:
             raise QualError("base_scorer_hash_mismatch", sc["path"][:80])
     return {"manifest": m, "manifest_file_sha256": bytes_sha256(mbytes), "manifest_content_sha256": m["manifest_content_sha256"],
-            "model_identity_sha256": model_identity_of(m), "directory": d}
+            "model_identity_sha256": model_identity_of(m), "directory": d, "inventory": inventory}
